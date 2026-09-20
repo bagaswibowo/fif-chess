@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jev-chess
+    restart: unless-stopped
+    ports:
+      - "43173:43173"
+    environment:
+      - TYPESAFE_API_KEY=${TYPESAFE_API_KEY}
+      - SITE_HMAC_KEY=${SITE_HMAC_KEY:-}
+      - SITE_PASSWORD_HMAC=${SITE_PASSWORD_HMAC:-}
+
+  cftunnel-jev-chess:
+    image: cloudflare/cloudflared:latest
+    container_name: cftunnel-jev-chess
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate --protocol http2 run
