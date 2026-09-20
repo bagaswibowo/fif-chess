@@ -65,18 +65,18 @@ export function useChessClock(
     };
   }, [isRunning, turn, isOver]);
 
-  // Dedicated pure effect for timeout detection
+  // Dedicated pure effect for timeout detection with turn validation
   useEffect(() => {
     if (isRunning && !isOver) {
-      if (whiteMs <= 0) {
+      if (turn === "white" && whiteMs <= 0) {
         setIsRunning(false);
         onTimeoutRef.current("white");
-      } else if (blackMs <= 0) {
+      } else if (turn === "black" && blackMs <= 0) {
         setIsRunning(false);
         onTimeoutRef.current("black");
       }
     }
-  }, [whiteMs, blackMs, isRunning, isOver]);
+  }, [whiteMs, blackMs, isRunning, isOver, turn]);
 
   const formatMs = (ms: number) => {
     const totalSeconds = Math.ceil(ms / 1000);
