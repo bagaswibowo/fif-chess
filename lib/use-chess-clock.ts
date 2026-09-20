@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Side } from "@/lib/chess";
 
 export function useChessClock(
@@ -7,90 +7,88 @@ export function useChessClock(
   isOver: boolean,
   onTimeout: (loser: Side) => void
 ) {
-  const getInitialSeconds = useCallback((mode: string) => {
+  const getInitialMs = useCallback((mode: string) => {
     switch (mode) {
-      case "3m": return 180;
-      case "5m": return 300;
-      case "10m": return 600;
-      default: return 9999;
+      case "3m": return 180 * 1000;
+      case "5m": return 300 * 1000;
+      case "10m": return 600 * 1000;
+      default: return 9999 * 1000;
     }
   }, []);
 
-  const [whiteTime, setWhiteTime] = useState(() => getInitialSeconds(timeMode));
-  const [blackTime, setBlackTime] = useState(() => getInitialSeconds(timeMode));
+  const [whiteMs, setWhiteMs] = useState(() => getInitialMs(timeMode));
+  const [blackMs, setBlackMs] = useState(() => getInitialMs(timeMode));
   const [isRunning, setIsRunning] = useState(false);
-  const lastTurnTimeRef = useRef<number>(Date.now());
+  const lastTickRef = useRef<number>(Date.now());
 
   const resetClocks = useCallback((mode: string) => {
-    const initial = getInitialSeconds(mode);
-    setWhiteTime(initial);
-    setBlackTime(initial);
-    lastTurnTimeRef.current = Date.now();
+    const initial = getInitialMs(mode);
+    setWhiteMs(initial);
+    setBlackMs(initial);
+    lastTickRef.current = Date.now();
     setIsRunning(mode !== "unlimited");
-  }, [getInitialSeconds]);
+  }, [getInitialMs]);
 
-  // Delta-timestamp based countdown (prevents clock drift and fast-move exploit)
+  // Millisecond precision timer loop (100ms ticks, exact delta)
   useEffect(() => {
     if (!isRunning || isOver) return;
 
-    lastTurnTimeRef.current = Date.now();
+    lastTickRef.current = Date.now();
 
     const interval = setInterval(() => {
       const now = Date.now();
-      const elapsed = (now - lastTurnTimeRef.current) / 1000;
-      if (elapsed >= 1) {
-        const fullSeconds = Math.floor(elapsed);
-        lastTurnTimeRef.current += fullSeconds * 1000;
-        if (turn === "white") {
-          setWhiteTime((t) => Math.max(0, t - fullSeconds));
-        } else {
-          setBlackTime((t) => Math.max(0, t - fullSeconds));
-        }
+      const delta = now - lastTickRef.current;
+      lastTickRef.current = now;
+
+      if (turn === "white") {
+        setWhiteMs((ms) => {
+          const next = ms - delta;
+          if (next <= 0) {
+            setIsRunning(false);
+            onTimeout("white");
+            return 0;
+          }
+          return next;
+        });
+      } else {
+        setBlackMs((ms) => {
+          const next = ms - delta;
+          if (next <= 0) {
+            setIsRunning(false);
+            onTimeout("black");
+            return 0;
+          }
+          return next;
+        });
       }
-    }, 250);
+    }, 100);
 
     return () => {
-      // Deduct elapsed partial time when turn switches
+      // Deduct exact delta on unmount / turn change without bias
       const now = Date.now();
-      const elapsed = Math.round((now - lastTurnTimeRef.current) / 1000);
-      if (elapsed > 0) {
-        if (turn === "white") {
-          setWhiteTime((t) => Math.max(0, t - elapsed));
-        } else {
-          setBlackTime((t) => Math.max(0, t - elapsed));
-        }
+      const delta = now - lastTickRef.current;
+      lastTickRef.current = now;
+      if (turn === "white") {
+        setWhiteMs((ms) => Math.max(0, ms - delta));
+      } else {
+        setBlackMs((ms) => Math.max(0, ms - delta));
       }
       clearInterval(interval);
     };
-  }, [isRunning, turn, isOver]);
+  }, [isRunning, turn, isOver, onTimeout]);
 
-  // Handle timeout
-  useEffect(() => {
-    if (isRunning && !isOver) {
-      if (whiteTime === 0) {
-        setIsRunning(false);
-        onTimeout("white");
-      } else if (blackTime === 0) {
-        setIsRunning(false);
-        onTimeout("black");
-      }
-    }
-  }, [whiteTime, blackTime, isRunning, isOver, onTimeout]);
-
-  const formatTime = useCallback((seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
+  const formatMs = (ms: number) => {
+    const totalSeconds = Math.ceil(ms / 1000);
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
     return `${m}:${s < 10 ? "0" : ""}${s}`;
-  }, []);
-
-  const formattedWhiteTime = useMemo(() => formatTime(whiteTime), [formatTime, whiteTime]);
-  const formattedBlackTime = useMemo(() => formatTime(blackTime), [formatTime, blackTime]);
+  };
 
   return {
-    whiteTime,
-    blackTime,
-    formattedWhiteTime,
-    formattedBlackTime,
+    whiteTime: Math.ceil(whiteMs / 1000),
+    blackTime: Math.ceil(blackMs / 1000),
+    formattedWhiteTime: formatMs(whiteMs),
+    formattedBlackTime: formatMs(blackMs),
     isRunning,
     setIsRunning,
     resetClocks,
