@@ -20,6 +20,11 @@ export function useChessClock(
   const [blackMs, setBlackMs] = useState(() => getInitialMs(timeMode));
   const [isRunning, setIsRunning] = useState(false);
   const lastTickRef = useRef<number>(Date.now());
+  const onTimeoutRef = useRef(onTimeout);
+
+  useEffect(() => {
+    onTimeoutRef.current = onTimeout;
+  }, [onTimeout]);
 
   const resetClocks = useCallback((mode: string) => {
     const initial = getInitialMs(mode);
@@ -29,7 +34,7 @@ export function useChessClock(
     setIsRunning(mode !== "unlimited");
   }, [getInitialMs]);
 
-  // Millisecond precision timer loop (100ms ticks, exact delta)
+  // Pure timer loop: strictly updates state without side effects
   useEffect(() => {
     if (!isRunning || isOver) return;
 
@@ -41,41 +46,37 @@ export function useChessClock(
       lastTickRef.current = now;
 
       if (turn === "white") {
-        setWhiteMs((ms) => {
-          const next = ms - delta;
-          if (next <= 0) {
-            setIsRunning(false);
-            onTimeout("white");
-            return 0;
-          }
-          return next;
-        });
+        setWhiteMs((prev) => Math.max(0, prev - delta));
       } else {
-        setBlackMs((ms) => {
-          const next = ms - delta;
-          if (next <= 0) {
-            setIsRunning(false);
-            onTimeout("black");
-            return 0;
-          }
-          return next;
-        });
+        setBlackMs((prev) => Math.max(0, prev - delta));
       }
     }, 100);
 
     return () => {
-      // Deduct exact delta on unmount / turn change without bias
       const now = Date.now();
       const delta = now - lastTickRef.current;
       lastTickRef.current = now;
       if (turn === "white") {
-        setWhiteMs((ms) => Math.max(0, ms - delta));
+        setWhiteMs((prev) => Math.max(0, prev - delta));
       } else {
-        setBlackMs((ms) => Math.max(0, ms - delta));
+        setBlackMs((prev) => Math.max(0, prev - delta));
       }
       clearInterval(interval);
     };
-  }, [isRunning, turn, isOver, onTimeout]);
+  }, [isRunning, turn, isOver]);
+
+  // Dedicated pure effect for timeout detection
+  useEffect(() => {
+    if (isRunning && !isOver) {
+      if (whiteMs <= 0) {
+        setIsRunning(false);
+        onTimeoutRef.current("white");
+      } else if (blackMs <= 0) {
+        setIsRunning(false);
+        onTimeoutRef.current("black");
+      }
+    }
+  }, [whiteMs, blackMs, isRunning, isOver]);
 
   const formatMs = (ms: number) => {
     const totalSeconds = Math.ceil(ms / 1000);
