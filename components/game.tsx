@@ -92,7 +92,7 @@ export function Game() {
     });
   }, [lang]);
 
-  const clock = useChessClock(timeMode, turn, effectiveOutcome.over, onTimeout);
+  const { resetClocks, formattedWhiteTime, formattedBlackTime } = useChessClock(timeMode, turn, effectiveOutcome.over, onTimeout);
 
   const askEngine = useCallback(
     async (position: string) => {
@@ -168,12 +168,12 @@ export function Game() {
       setThinking(false);
       setCustomOutcome(null);
       setShowGameOverModal(false);
-      clock.resetClocks(timeMode);
+      resetClocks(timeMode);
       if (side === "black") {
         void askEngine(START_FEN);
       }
     },
-    [askEngine, timeMode, clock],
+    [askEngine, timeMode, resetClocks],
   );
 
   const tryHumanMove = useCallback(
@@ -448,7 +448,7 @@ export function Game() {
                   </div>
                 </div>
                 <div className="bg-[#1a1816] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[#36322d] shadow-inner">
-                  {humanSide === "white" ? clock.formattedBlackTime : clock.formattedWhiteTime}
+                  {humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
                 </div>
               </div>
 
@@ -505,7 +505,7 @@ export function Game() {
                   </div>
                 </div>
                 <div className="bg-[#1a1816] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[#36322d] shadow-inner">
-                  {humanSide === "white" ? clock.formattedWhiteTime : clock.formattedBlackTime}
+                  {humanSide === "white" ? formattedWhiteTime : formattedBlackTime}
                 </div>
               </div>
             </div>
