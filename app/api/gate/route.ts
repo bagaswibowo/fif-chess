@@ -8,11 +8,23 @@ import {
 
 export const runtime = "nodejs";
 
-// In-memory rate limiting against brute-force (5 attempts per 60 seconds per IP)
+// Bounded in-memory sliding window rate limiter (max 5 failed attempts per 60s per client)
 const failedAttempts = new Map<string, { count: number; resetTime: number }>();
+const MAX_TRACKED_IPS = 1000;
+
+function pruneExpired(now: number) {
+  if (failedAttempts.size > MAX_TRACKED_IPS / 2) {
+    for (const [ip, record] of failedAttempts.entries()) {
+      if (now > record.resetTime) {
+        failedAttempts.delete(ip);
+      }
+    }
+  }
+}
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
+  pruneExpired(now);
   const record = failedAttempts.get(ip);
   if (!record || now > record.resetTime) {
     return false;
@@ -22,8 +34,14 @@ function isRateLimited(ip: string): boolean {
 
 function recordFailedAttempt(ip: string) {
   const now = Date.now();
+  pruneExpired(now);
   const record = failedAttempts.get(ip);
   if (!record || now > record.resetTime) {
+    // If map exceeds capacity, clear oldest entries
+    if (failedAttempts.size >= MAX_TRACKED_IPS) {
+      const firstKey = failedAttempts.keys().next().value;
+      if (firstKey) failedAttempts.delete(firstKey);
+    }
     failedAttempts.set(ip, { count: 1, resetTime: now + 60000 });
   } else {
     record.count += 1;
@@ -42,9 +60,11 @@ export async function POST(request: Request) {
     );
   }
 
+  // Prioritize Cloudflare connecting IP to avoid client header spoofing
   const clientIp =
+    request.headers.get("cf-connecting-ip")?.trim() ??
+    request.headers.get("x-real-ip")?.trim() ??
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("cf-connecting-ip") ??
     "127.0.0.1";
 
   if (isRateLimited(clientIp)) {

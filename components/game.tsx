@@ -15,6 +15,7 @@ import { PuzzleView } from "@/components/puzzle-view";
 import { ScanView } from "@/components/scan-view";
 import { CommunityView } from "@/components/community-view";
 import { GameOverModal } from "@/components/game-over-modal";
+import { useChessClock } from "@/lib/use-chess-clock";
 import {
   IconPawn3D,
   IconPuzzle3D,
@@ -59,9 +60,7 @@ export function Game() {
   const [rightTab, setRightTab] = useState<RightTab>("game-setup");
   const [lang, setLang] = useState<"id" | "en">("id");
   const [timeMode, setTimeMode] = useState<string>("5m");
-  const [whiteTime, setWhiteTime] = useState(300);
-  const [blackTime, setBlackTime] = useState(300);
-  const [clockRunning, setClockRunning] = useState(false);
+
   const [customOutcome, setCustomOutcome] = useState<GameOutcome | null>(null);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
   const requestGen = useRef(0);
@@ -82,51 +81,18 @@ export function Game() {
     }
   }, [effectiveOutcome.over]);
 
-  // Clocks
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (clockRunning && !effectiveOutcome.over) {
-      interval = setInterval(() => {
-        if (turn === "white") {
-          setWhiteTime((t) => Math.max(0, t - 1));
-        } else {
-          setBlackTime((t) => Math.max(0, t - 1));
-        }
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [clockRunning, turn, effectiveOutcome.over]);
+  const onTimeout = useCallback((loser: Side) => {
+    setCustomOutcome({
+      over: true,
+      winner: loser === "white" ? "black" : "white",
+      kind: "timeout",
+      label: loser === "white"
+        ? (lang === "id" ? "Waktu Putih Habis" : "White ran out of time")
+        : (lang === "id" ? "Waktu Hitam Habis" : "Black ran out of time"),
+    });
+  }, [lang]);
 
-  // Handle timeout
-  useEffect(() => {
-    if (clockRunning && !effectiveOutcome.over) {
-      if (whiteTime === 0) {
-        setCustomOutcome({
-          over: true,
-          winner: "black",
-          kind: "timeout",
-          label: lang === "id" ? "Waktu Putih Habis" : "White ran out of time",
-        });
-        setClockRunning(false);
-      } else if (blackTime === 0) {
-        setCustomOutcome({
-          over: true,
-          winner: "white",
-          kind: "timeout",
-          label: lang === "id" ? "Waktu Hitam Habis" : "Black ran out of time",
-        });
-        setClockRunning(false);
-      }
-    }
-  }, [whiteTime, blackTime, clockRunning, effectiveOutcome.over, lang]);
-
-  const formatClock = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s < 10 ? "0" : ""}${s}`;
-  };
+  const clock = useChessClock(timeMode, turn, effectiveOutcome.over, onTimeout);
 
   const askEngine = useCallback(
     async (position: string) => {
@@ -202,15 +168,12 @@ export function Game() {
       setThinking(false);
       setCustomOutcome(null);
       setShowGameOverModal(false);
-      const initialSeconds = timeMode === "3m" ? 180 : timeMode === "5m" ? 300 : timeMode === "10m" ? 600 : 9999;
-      setWhiteTime(initialSeconds);
-      setBlackTime(initialSeconds);
-      setClockRunning(timeMode !== "unlimited");
+      clock.resetClocks(timeMode);
       if (side === "black") {
         void askEngine(START_FEN);
       }
     },
-    [askEngine, timeMode],
+    [askEngine, timeMode, clock],
   );
 
   const tryHumanMove = useCallback(
@@ -485,7 +448,7 @@ export function Game() {
                   </div>
                 </div>
                 <div className="bg-[#1a1816] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[#36322d] shadow-inner">
-                  {formatClock(humanSide === "white" ? blackTime : whiteTime)}
+                  {humanSide === "white" ? clock.formattedBlackTime : clock.formattedWhiteTime}
                 </div>
               </div>
 
@@ -542,7 +505,7 @@ export function Game() {
                   </div>
                 </div>
                 <div className="bg-[#1a1816] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[#36322d] shadow-inner">
-                  {formatClock(humanSide === "white" ? whiteTime : blackTime)}
+                  {humanSide === "white" ? clock.formattedWhiteTime : clock.formattedBlackTime}
                 </div>
               </div>
             </div>
