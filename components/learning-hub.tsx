@@ -16,10 +16,6 @@ import {
 import { VisionDrill } from "@/components/vision-drill";
 import { Confetti } from "@/components/confetti";
 
-type Props = {
-  lang?: "id" | "en";
-};
-
 type Chapter = {
   id: number;
   title: string;
@@ -167,6 +163,11 @@ const CONTENT = {
       explanation: "Nc7+ delivers check while attacking Black's queen on c7. Black's queen is captured next move!",
     },
   },
+};
+
+type LangType = keyof typeof CONTENT;
+type Props = {
+  lang?: LangType;
 };
 
 export function LearningHub({ lang = "id" }: Props) {
