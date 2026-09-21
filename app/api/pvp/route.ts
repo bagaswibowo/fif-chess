@@ -55,10 +55,13 @@ function maybePruneStaleRooms() {
   }
 }
 
-// Trusted IP extraction prioritizing Cloudflare connecting IP
 function getClientIp(req: Request): string {
   const cfIp = req.headers.get("cf-connecting-ip");
   if (cfIp) return cfIp.trim();
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
   return "127.0.0.1";
 }
 

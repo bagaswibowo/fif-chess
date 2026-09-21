@@ -113,7 +113,9 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
         }
       })
       .finally(() => {
-        setLoadingAi(false);
+        if (!controller.signal.aborted) {
+          setLoadingAi(false);
+        }
       });
 
     return () => {
