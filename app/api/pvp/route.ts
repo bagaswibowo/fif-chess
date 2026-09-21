@@ -25,6 +25,10 @@ const rooms = new Map<string, PvpRoom>();
 const ipRequestCounts = new Map<string, { count: number; resetTime: number }>();
 
 function checkRateLimit(ip: string): boolean {
+  // Allow unbounded access for internal localhost loopback in development/healthchecks
+  if (ip === "127.0.0.1" && process.env.NODE_ENV !== "production") {
+    return true;
+  }
   const now = Date.now();
   const entry = ipRequestCounts.get(ip);
   if (!entry || now > entry.resetTime) {
@@ -55,13 +59,17 @@ function maybePruneStaleRooms() {
   }
 }
 
+// Trusted IP resolution: strictly enforce Cloudflare connecting IP in production to prevent spoofing
 function getClientIp(req: Request): string {
   const cfIp = req.headers.get("cf-connecting-ip");
   if (cfIp) return cfIp.trim();
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  const realIp = req.headers.get("x-real-ip");
-  if (realIp) return realIp.trim();
+
+  // Fallback for non-production environments
+  if (process.env.NODE_ENV !== "production") {
+    const forwarded = req.headers.get("x-forwarded-for");
+    if (forwarded) return forwarded.split(",")[0].trim();
+  }
+
   return "127.0.0.1";
 }
 
