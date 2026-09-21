@@ -75,6 +75,7 @@ export function Game() {
   // PvP Real-time State
   const [playMode, setPlayMode] = useState<PlayMode>("ai");
   const [pvpRoomCode, setPvpRoomCode] = useState<string>("");
+  const [pvpToken, setPvpToken] = useState<string>("");
   const [pvpJoinInput, setPvpJoinInput] = useState<string>("");
   const [pvpStatus, setPvpStatus] = useState<"idle" | "waiting" | "active" | "finished">("idle");
   const [pvpOpponentName, setPvpOpponentName] = useState<string>("Lawan Online");
@@ -317,6 +318,7 @@ export function Game() {
       const data = await res.json();
       if (data.success) {
         setPvpRoomCode(data.room.code);
+        setPvpToken(data.playerToken);
         setHumanSide("white");
         setPvpStatus("waiting");
         setPlayMode("pvp");
@@ -337,6 +339,7 @@ export function Game() {
       const data = await res.json();
       if (data.success) {
         setPvpRoomCode(data.room.code);
+        setPvpToken(data.playerToken);
         setHumanSide("black");
         setPvpStatus("active");
         setPvpOpponentName(data.room.whiteUser || "Pemain Putih");
@@ -378,6 +381,7 @@ export function Game() {
             to,
             promotion,
             side: humanSide,
+            playerToken: pvpToken,
           }),
         });
         return true;
@@ -390,7 +394,7 @@ export function Game() {
       }
       return true;
     },
-    [askEngine, chess, humanToMove, playMode, pvpRoomCode, humanSide],
+    [askEngine, chess, humanToMove, playMode, pvpRoomCode, humanSide, pvpToken],
   );
 
   const onPieceDrop = ({ sourceSquare, targetSquare }: PieceDropHandlerArgs): boolean => {
