@@ -24,20 +24,7 @@ const rooms = new Map<string, PvpRoom>();
 // IP Rate Limiting (60 requests per minute max)
 const ipRequestCounts = new Map<string, { count: number; resetTime: number }>();
 
-function isLoopback(ip: string): boolean {
-  return (
-    ip === "127.0.0.1" ||
-    ip === "::1" ||
-    ip === "::ffff:127.0.0.1" ||
-    ip === "localhost"
-  );
-}
-
 function checkRateLimit(ip: string): boolean {
-  // Always permit loopback traffic for Docker healthchecks and container testing
-  if (isLoopback(ip)) {
-    return true;
-  }
   const now = Date.now();
   const entry = ipRequestCounts.get(ip);
   if (!entry || now > entry.resetTime) {
@@ -68,22 +55,27 @@ function maybePruneStaleRooms() {
   }
 }
 
-// Normalized IP resolution: prioritize Cloudflare header, fallback to proxy headers or loopback
-function getClientIp(req: Request): string {
+// Strict Cloudflare IP resolution: in production, cf-connecting-ip is mandatory to block direct origin bypass
+function getClientIp(req: Request): string | null {
   const cfIp = req.headers.get("cf-connecting-ip");
   if (cfIp) return cfIp.trim();
 
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
+  // In non-production development environments only
+  if (process.env.NODE_ENV !== "production") {
+    const forwarded = req.headers.get("x-forwarded-for");
+    if (forwarded) return forwarded.split(",")[0].trim();
+    return "127.0.0.1";
+  }
 
-  const realIp = req.headers.get("x-real-ip");
-  if (realIp) return realIp.trim();
-
-  return "127.0.0.1";
+  return null;
 }
 
 export async function GET(req: Request) {
   const ip = getClientIp(req);
+  if (!ip) {
+    return NextResponse.json({ error: "Direct origin access forbidden" }, { status: 403 });
+  }
+
   if (!checkRateLimit(ip)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
@@ -116,6 +108,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const ip = getClientIp(req);
+  if (!ip) {
+    return NextResponse.json({ error: "Direct origin access forbidden" }, { status: 403 });
+  }
+
   if (!checkRateLimit(ip)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
