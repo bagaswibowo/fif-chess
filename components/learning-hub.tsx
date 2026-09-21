@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Chessboard } from "react-chessboard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,147 @@ type Chapter = {
   description: string;
 };
 
+type Achievement = {
+  id: string;
+  name: string;
+  desc: string;
+  unlocked: boolean;
+};
+
+// Static dictionaries outside component to avoid runtime re-allocation
+const CONTENT = {
+  id: {
+    chapters: [
+      {
+        id: 1,
+        title: "1. Dasar Pembukaan",
+        status: "completed",
+        progress: 100,
+        description: "Kontrol petak pusat (e4/d4), perkembangan perwira, dan keamanan raja.",
+      },
+      {
+        id: 2,
+        title: "2. Pertahanan Sayap",
+        status: "completed",
+        progress: 100,
+        description: "Memahami struktur pion Karokann, French, dan Sicilian Defense.",
+      },
+      {
+        id: 3,
+        title: "3. Taktik Garpu & Pin",
+        status: "completed",
+        progress: 100,
+        description: "Eksploitasi percabangan kuda dan pin mutlak jalur terbuka.",
+      },
+      {
+        id: 4,
+        title: "4. Taktik Lanjut & Serangan",
+        status: "active",
+        progress: 65,
+        description: "Skakmat baris belakang, pengorbanan di f7, dan serangan raja.",
+      },
+      {
+        id: 5,
+        title: "5. Babak Akhir (Endgame)",
+        status: "locked",
+        progress: 0,
+        description: "Oposisi raja, promosi pion bebas, dan teknik benteng Lucena.",
+      },
+      {
+        id: 6,
+        title: "6. Strategi Master Tel-U",
+        status: "locked",
+        progress: 0,
+        description: "Permainan posisional mendalam, pencegahan counter-play lawan.",
+      },
+    ] as Chapter[],
+    achievements: [
+      { id: "a1", name: "Langkah Pertama", desc: "Selesaikan 1 puzzle taktik", unlocked: true },
+      { id: "a2", name: "Master Taktik", desc: "Selesaikan 25 teka-teki catur", unlocked: true },
+      { id: "a3", name: "Raja Streak 7D", desc: "Latihan catur 7 hari beruntun", unlocked: true },
+      { id: "a4", name: "Visi Elang", desc: "Capai skor 20+ di Vision Drills", unlocked: true },
+      { id: "a5", name: "Penyihir Catur", desc: "Menangkan 10 babak vs AI", unlocked: false },
+      { id: "a6", name: "Grandmaster Tel-U", desc: "Capai rating 2000 ELO di klub", unlocked: false },
+    ] as Achievement[],
+    quiz: {
+      title: "Uji Taktis Cepat: Garpu Kuda",
+      fen: "r1b1k2r/ppq2ppp/4p3/3N4/8/8/PPP2PPP/R1B1KB1R w KQkq - 0 10",
+      question: "Di posisi ini, ke mana Kuda putih harus melompat untuk mencabangkan Raja dan Menteri lawan?",
+      options: [
+        { label: "Nc7+ (Skak & Garpu)", correct: true, points: 50 },
+        { label: "Nf4 (Mundur ke pusat)", correct: false, points: 0 },
+        { label: "Ne3 (Bertahan di e3)", correct: false, points: 0 },
+      ],
+      explanation: "Langkah Nc7+ memberikan skak sekaligus mengancam menteri Hitam di c7. Raja terpaksa lari dan menteri lawan jatuh!",
+    },
+  },
+  en: {
+    chapters: [
+      {
+        id: 1,
+        title: "1. Opening Principles",
+        status: "completed",
+        progress: 100,
+        description: "Center control (e4/d4), piece development, and king safety.",
+      },
+      {
+        id: 2,
+        title: "2. Flank Defenses",
+        status: "completed",
+        progress: 100,
+        description: "Understanding Caro-Kann, French, and Sicilian pawn structures.",
+      },
+      {
+        id: 3,
+        title: "3. Forks & Absolute Pins",
+        status: "completed",
+        progress: 100,
+        description: "Exploiting knight forks and open-file skewers/pins.",
+      },
+      {
+        id: 4,
+        title: "4. Advanced Attacks",
+        status: "active",
+        progress: 65,
+        description: "Back rank mates, f7 sacrifice drills, and king hunts.",
+      },
+      {
+        id: 5,
+        title: "5. Endgame Techniques",
+        status: "locked",
+        progress: 0,
+        description: "King opposition, passed pawns, and Lucena bridge.",
+      },
+      {
+        id: 6,
+        title: "6. Master Strategy",
+        status: "locked",
+        progress: 0,
+        description: "Prophylaxis, positional outposts, and endgame transitions.",
+      },
+    ] as Chapter[],
+    achievements: [
+      { id: "a1", name: "First Step", desc: "Solve 1 tactical puzzle", unlocked: true },
+      { id: "a2", name: "Tactics Master", desc: "Solve 25 chess puzzles", unlocked: true },
+      { id: "a3", name: "Streak King 7D", desc: "Train 7 consecutive days", unlocked: true },
+      { id: "a4", name: "Eagle Eye", desc: "Reach 20+ score in Vision Drills", unlocked: true },
+      { id: "a5", name: "Chess Wizard", desc: "Win 10 matches vs AI", unlocked: false },
+      { id: "a6", name: "Tel-U Grandmaster", desc: "Reach 2000 ELO in club", unlocked: false },
+    ] as Achievement[],
+    quiz: {
+      title: "Tactical Quiz: Knight Fork",
+      fen: "r1b1k2r/ppq2ppp/4p3/3N4/8/8/PPP2PPP/R1B1KB1R w KQkq - 0 10",
+      question: "In this position, where should the White Knight jump to fork the Black King and Queen?",
+      options: [
+        { label: "Nc7+ (Check & Fork)", correct: true, points: 50 },
+        { label: "Nf4 (Retreat to center)", correct: false, points: 0 },
+        { label: "Ne3 (Defend on e3)", correct: false, points: 0 },
+      ],
+      explanation: "Nc7+ delivers check while attacking Black's queen on c7. Black's queen is captured next move!",
+    },
+  },
+};
+
 export function LearningHub({ lang = "id" }: Props) {
   const [activeSubTab, setActiveSubTab] = useState<"quest" | "vision">("quest");
   const [xp, setXp] = useState(2450);
@@ -47,137 +188,7 @@ export function LearningHub({ lang = "id" }: Props) {
     };
   }, []);
 
-  const chapters: Chapter[] = useMemo(() => {
-    return lang === "id"
-      ? [
-          {
-            id: 1,
-            title: "1. Dasar Pembukaan",
-            status: "completed",
-            progress: 100,
-            description: "Kontrol petak pusat (e4/d4), perkembangan perwira, dan keamanan raja.",
-          },
-          {
-            id: 2,
-            title: "2. Pertahanan Sayap",
-            status: "completed",
-            progress: 100,
-            description: "Memahami struktur pion Karokann, French, dan Sicilian Defense.",
-          },
-          {
-            id: 3,
-            title: "3. Taktik Garpu & Pin",
-            status: "completed",
-            progress: 100,
-            description: "Eksploitasi percabangan kuda dan pin mutlak jalur terbuka.",
-          },
-          {
-            id: 4,
-            title: "4. Taktik Lanjut & Serangan",
-            status: "active",
-            progress: 65,
-            description: "Skakmat baris belakang, pengorbanan di f7, dan serangan raja.",
-          },
-          {
-            id: 5,
-            title: "5. Babak Akhir (Endgame)",
-            status: "locked",
-            progress: 0,
-            description: "Oposisi raja, promosi pion bebas, dan teknik benteng Lucena.",
-          },
-          {
-            id: 6,
-            title: "6. Strategi Master Tel-U",
-            status: "locked",
-            progress: 0,
-            description: "Permainan posisional mendalam, pencegahan counter-play lawan.",
-          },
-        ]
-      : [
-          {
-            id: 1,
-            title: "1. Opening Principles",
-            status: "completed",
-            progress: 100,
-            description: "Center control (e4/d4), piece development, and king safety.",
-          },
-          {
-            id: 2,
-            title: "2. Flank Defenses",
-            status: "completed",
-            progress: 100,
-            description: "Understanding Caro-Kann, French, and Sicilian pawn structures.",
-          },
-          {
-            id: 3,
-            title: "3. Forks & Absolute Pins",
-            status: "completed",
-            progress: 100,
-            description: "Exploiting knight forks and open-file skewers/pins.",
-          },
-          {
-            id: 4,
-            title: "4. Advanced Attacks",
-            status: "active",
-            progress: 65,
-            description: "Back rank mates, f7 sacrifice drills, and king hunts.",
-          },
-          {
-            id: 5,
-            title: "5. Endgame Techniques",
-            status: "locked",
-            progress: 0,
-            description: "King opposition, passed pawns, and Lucena bridge.",
-          },
-          {
-            id: 6,
-            title: "6. Master Strategy",
-            status: "locked",
-            progress: 0,
-            description: "Prophylaxis, positional outposts, and endgame transitions.",
-          },
-        ];
-  }, [lang]);
-
-  const achievements = useMemo(() => {
-    return lang === "id"
-      ? [
-          { id: "a1", name: "Langkah Pertama", desc: "Selesaikan 1 puzzle taktik", unlocked: true },
-          { id: "a2", name: "Master Taktik", desc: "Selesaikan 25 teka-teki catur", unlocked: true },
-          { id: "a3", name: "Raja Streak 7D", desc: "Latihan catur 7 hari beruntun", unlocked: true },
-          { id: "a4", name: "Visi Elang", desc: "Capai skor 20+ di Vision Drills", unlocked: true },
-          { id: "a5", name: "Penyihir Catur", desc: "Menangkan 10 babak vs AI", unlocked: false },
-          { id: "a6", name: "Grandmaster Tel-U", desc: "Capai rating 2000 ELO di klub", unlocked: false },
-        ]
-      : [
-          { id: "a1", name: "First Step", desc: "Solve 1 tactical puzzle", unlocked: true },
-          { id: "a2", name: "Tactics Master", desc: "Solve 25 chess puzzles", unlocked: true },
-          { id: "a3", name: "Streak King 7D", desc: "Train 7 consecutive days", unlocked: true },
-          { id: "a4", name: "Eagle Eye", desc: "Reach 20+ score in Vision Drills", unlocked: true },
-          { id: "a5", name: "Chess Wizard", desc: "Win 10 matches vs AI", unlocked: false },
-          { id: "a6", name: "Tel-U Grandmaster", desc: "Reach 2000 ELO in club", unlocked: false },
-        ];
-  }, [lang]);
-
-  const quizQuestion = useMemo(() => {
-    return {
-      title: lang === "id" ? "Uji Taktis Cepat: Garpu Kuda" : "Tactical Quiz: Knight Fork",
-      fen: "r1b1k2r/ppq2ppp/4p3/3N4/8/8/PPP2PPP/R1B1KB1R w KQkq - 0 10",
-      question:
-        lang === "id"
-          ? "Di posisi ini, ke mana Kuda putih harus melompat untuk mencabangkan Raja dan Menteri lawan?"
-          : "In this position, where should the White Knight jump to fork the Black King and Queen?",
-      options: [
-        { label: "Nc7+ (Skak & Garpu)", correct: true, points: 50 },
-        { label: "Nf4 (Mundur ke pusat)", correct: false, points: 0 },
-        { label: "Ne3 (Bertahan di e3)", correct: false, points: 0 },
-      ],
-      explanation:
-        lang === "id"
-          ? "Langkah Nc7+ memberikan skak sekaligus mengancam menteri Hitam di c7. Raja terpaksa lari dan menteri lawan jatuh!"
-          : "Nc7+ delivers check while attacking Black's queen on c7. Black's queen is captured next move!",
-    };
-  }, [lang]);
+  const localized = CONTENT[lang] || CONTENT.id;
 
   const handleAnswer = (correct: boolean, points: number) => {
     if (quizAnswered) return;
@@ -302,7 +313,7 @@ export function LearningHub({ lang = "id" }: Props) {
 
             <CardContent className="p-4 md:p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                {chapters.map((ch) => (
+                {localized.chapters.map((ch) => (
                   <div
                     key={ch.id}
                     className={`p-4 rounded-2xl border transition-all ${
@@ -360,7 +371,7 @@ export function LearningHub({ lang = "id" }: Props) {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base text-white font-bold flex items-center gap-2">
                   <IconPuzzle3D size={22} />
-                  <span>{quizQuestion.title}</span>
+                  <span>{localized.quiz.title}</span>
                 </CardTitle>
                 <Badge variant="outline" className="border-amber-500/40 text-amber-300 font-bold text-xs">
                   +50 XP
@@ -370,12 +381,12 @@ export function LearningHub({ lang = "id" }: Props) {
 
             <CardContent className="p-4 md:p-6">
               <div className="flex flex-col sm:flex-row gap-5 items-center">
-                {/* Mini Board displaying the real FEN position */}
+                {/* Mini Board displaying the real FEN position via options prop */}
                 <div className="w-[180px] h-[180px] shrink-0 rounded-xl overflow-hidden border-2 border-[#36322d] shadow-lg">
                   <Chessboard
                     options={{
                       id: "quiz-mini-board",
-                      position: quizQuestion.fen,
+                      position: localized.quiz.fen,
                       boardOrientation: "white",
                       allowDragging: false,
                       boardStyle: {
@@ -389,10 +400,10 @@ export function LearningHub({ lang = "id" }: Props) {
 
                 {/* Question & Interactive Choices */}
                 <div className="flex-1 space-y-3 w-full">
-                  <div className="text-sm font-bold text-white">{quizQuestion.question}</div>
+                  <div className="text-sm font-bold text-white">{localized.quiz.question}</div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    {quizQuestion.options.map((opt, i) => (
+                    {localized.quiz.options.map((opt, i) => (
                       <button
                         key={i}
                         onClick={() => handleAnswer(opt.correct, opt.points)}
@@ -423,7 +434,7 @@ export function LearningHub({ lang = "id" }: Props) {
                           ? (lang === "id" ? "Jawaban Tepat! (+50 XP)" : "Correct Move! (+50 XP)")
                           : (lang === "id" ? "Belum Tepat, Pelajari Lagi:" : "Not quite, learn the tactic:")}
                       </div>
-                      <div>{quizQuestion.explanation}</div>
+                      <div>{localized.quiz.explanation}</div>
                     </div>
                   )}
                 </div>
@@ -442,7 +453,7 @@ export function LearningHub({ lang = "id" }: Props) {
 
             <CardContent className="p-4 md:p-6">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {achievements.map((a) => (
+                {localized.achievements.map((a) => (
                   <div
                     key={a.id}
                     className={`p-3.5 rounded-xl border flex flex-col items-center text-center space-y-1.5 transition-all ${
