@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { JevDistribution } from "@/components/jev-distribution";
 import { MoveList } from "@/components/move-list";
 import { PromotionDialog } from "@/components/promotion-dialog";
-import { VisionDrill } from "@/components/vision-drill";
+import { LearningHub } from "@/components/learning-hub";
 import { PuzzleView } from "@/components/puzzle-view";
 import { ScanView } from "@/components/scan-view";
 import { CommunityView } from "@/components/community-view";
@@ -361,7 +361,7 @@ export function Game() {
               }`}
             >
               <IconVision3D size={22} />
-              <span>{lang === "id" ? "Belajar / Visi" : "Vision Drills"}</span>
+              <span>{lang === "id" ? "Belajar & Quest" : "Learn & Quest"}</span>
             </button>
 
             <button
@@ -422,7 +422,7 @@ export function Game() {
 
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col p-2.5 md:p-6 pb-24 md:pb-6 overflow-y-auto max-w-7xl mx-auto w-full">
-        {navTab === "vision" && <VisionDrill lang={lang} />}
+        {navTab === "vision" && <LearningHub lang={lang} />}
         {navTab === "puzzle" && <PuzzleView lang={lang} />}
         {navTab === "scan" && <ScanView onLoadFen={(f) => { setFen(f); setNavTab("play"); }} lang={lang} />}
         {navTab === "community" && <CommunityView lang={lang} />}
@@ -682,7 +682,7 @@ export function Game() {
           <div className={`p-1 rounded-lg ${navTab === "vision" ? "bg-[#3d3a37] text-white" : ""}`}>
             <IconVision3D size={20} />
           </div>
-          <span className="text-[10px] leading-none">{lang === "id" ? "Visi" : "Vision"}</span>
+          <span className="text-[10px] leading-none">{lang === "id" ? "Belajar" : "Learn"}</span>
         </button>
 
         <button

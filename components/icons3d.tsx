@@ -447,3 +447,93 @@ export function IconFlag3D({ size = 48, className = "" }: IconProps) {
     </svg>
   );
 }
+
+// 3D Fire / Streak
+export function IconFire3D({ size = 24, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id="fireOuter" cx="40%" cy="40%" r="60%">
+          <stop stopColor="#fbbf24" />
+          <stop offset="0.5" stopColor="#f97316" />
+          <stop offset="1" stopColor="#dc2626" />
+        </radialGradient>
+        <radialGradient id="fireInner" cx="45%" cy="35%" r="50%">
+          <stop stopColor="#fef08a" />
+          <stop offset="0.7" stopColor="#fbbf24" />
+          <stop offset="1" stopColor="#ea580c" />
+        </radialGradient>
+        <filter id="fireGlow" x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse">
+          <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#ea580c" floodOpacity="0.5" />
+        </filter>
+      </defs>
+      <g filter="url(#fireGlow)">
+        <path d="M32 4C32 4 48 20 48 38C48 48 40.8 56 32 56C23.2 56 16 48 16 38C16 26 26 14 32 4Z" fill="url(#fireOuter)" />
+        <path d="M32 20C32 20 40 30 40 40C40 45 36.4 49 32 49C27.6 49 24 45 24 40C24 33 29 26 32 20Z" fill="url(#fireInner)" />
+      </g>
+    </svg>
+  );
+}
+
+// 3D Gold Star
+export function IconStar3D({ size = 24, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <linearGradient id="starGrad" x1="10" y1="10" x2="54" y2="54" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#fef08a" />
+          <stop offset="0.4" stopColor="#fbbf24" />
+          <stop offset="1" stopColor="#d97706" />
+        </linearGradient>
+        <filter id="starShadow" x="4" y="4" width="56" height="56" filterUnits="userSpaceOnUse">
+          <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#b45309" floodOpacity="0.4" />
+        </filter>
+      </defs>
+      <g filter="url(#starShadow)">
+        <polygon points="32,6 40,24 60,25 44,38 50,56 32,45 14,56 20,38 4,25 24,24" fill="url(#starGrad)" stroke="#f59e0b" strokeWidth="1" />
+      </g>
+    </svg>
+  );
+}
+
+// 3D Medal Badge
+export function IconMedal3D({ size = 24, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <linearGradient id="medalDisc" x1="16" y1="24" x2="48" y2="56" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#fde68a" />
+          <stop offset="0.5" stopColor="#f59e0b" />
+          <stop offset="1" stopColor="#b45309" />
+        </linearGradient>
+      </defs>
+      {/* Ribbons */}
+      <polygon points="22,6 32,24 16,24" fill="#3b82f6" />
+      <polygon points="42,6 48,24 32,24" fill="#ef4444" />
+      {/* Medal Body */}
+      <circle cx="32" cy="40" r="16" fill="url(#medalDisc)" stroke="#d97706" strokeWidth="1.5" />
+      <circle cx="32" cy="40" r="11" fill="none" stroke="#fef3c7" strokeWidth="1.5" strokeDasharray="3 2" />
+    </svg>
+  );
+}
+
+// 3D Lock
+export function IconLock3D({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <linearGradient id="shackleGrad" x1="20" y1="12" x2="44" y2="32" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#94a3b8" />
+          <stop offset="1" stopColor="#475569" />
+        </linearGradient>
+        <linearGradient id="lockBody" x1="16" y1="28" x2="48" y2="58" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#f59e0b" />
+          <stop offset="1" stopColor="#b45309" />
+        </linearGradient>
+      </defs>
+      <path d="M22 30V20C22 14.5 26.5 10 32 10C37.5 10 42 14.5 42 20V30" stroke="url(#shackleGrad)" strokeWidth="6" strokeLinecap="round" fill="none" />
+      <rect x="16" y="28" width="32" height="26" rx="6" fill="url(#lockBody)" stroke="#92400e" strokeWidth="1.5" />
+      <circle cx="32" cy="40" r="3.5" fill="#78350f" />
+    </svg>
+  );
+}
