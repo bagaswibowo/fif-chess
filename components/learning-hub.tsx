@@ -10,6 +10,7 @@ import {
   IconStar3D,
   IconFire3D,
   IconMedal3D,
+  IconLock3D,
   IconTrophy3D,
   IconPuzzle3D,
   IconVision3D,
@@ -149,14 +150,17 @@ export const QUEST_CHAPTERS: QuestChapter[] = [
   },
 ];
 
+export type LangType = "id" | "en";
+
 type Props = {
-  lang?: "id" | "en";
+  lang?: LangType;
 };
 
 export function LearningHub({ lang = "id" }: Props) {
   const [activeSubTab, setActiveSubTab] = useState<"quest" | "vision">("quest");
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
-  const [completedChapters, setCompletedChapters] = useState<number[]>([1]); // Bab 1 aktif
+  const [unlockedChapters, setUnlockedChapters] = useState<number[]>([1]);
+  const [completedChapters, setCompletedChapters] = useState<number[]>([]);
   const [currentFen, setCurrentFen] = useState(QUEST_CHAPTERS[0].fen);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [status, setStatus] = useState<"unsolved" | "correct" | "wrong">("unsolved");
@@ -165,6 +169,41 @@ export function LearningHub({ lang = "id" }: Props) {
   const [showCelebration, setShowCelebration] = useState(false);
 
   const celebrationTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load progress from localStorage on initial client mount
+  useEffect(() => {
+    try {
+      const savedCompleted = localStorage.getItem("fif_chess_quest_completed");
+      const savedUnlocked = localStorage.getItem("fif_chess_quest_unlocked");
+      const savedXp = localStorage.getItem("fif_chess_quest_xp");
+
+      if (savedCompleted) {
+        const parsed = JSON.parse(savedCompleted);
+        if (Array.isArray(parsed)) setCompletedChapters(parsed);
+      }
+      if (savedUnlocked) {
+        const parsed = JSON.parse(savedUnlocked);
+        if (Array.isArray(parsed)) setUnlockedChapters(parsed);
+      }
+      if (savedXp) {
+        const num = parseInt(savedXp, 10);
+        if (!isNaN(num)) setXp(num);
+      }
+    } catch {
+      // Graceful fallback if localStorage is unavailable
+    }
+  }, []);
+
+  // Save progress changes
+  const saveProgress = useCallback((newCompleted: number[], newUnlocked: number[], newXp: number) => {
+    try {
+      localStorage.setItem("fif_chess_quest_completed", JSON.stringify(newCompleted));
+      localStorage.setItem("fif_chess_quest_unlocked", JSON.stringify(newUnlocked));
+      localStorage.setItem("fif_chess_quest_xp", newXp.toString());
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -194,16 +233,21 @@ export function LearningHub({ lang = "id" }: Props) {
   }, [chapter.fen]);
 
   // Click-to-Move Handler
-  const onSquareClick = ({ square }: { square: string; piece?: any }) => {
+  const onSquareClick = ({ square }: { square: string; piece?: { pieceType: string } | null }) => {
     if (status === "correct") return;
 
+    let game: Chess;
+    try {
+      game = new Chess(currentFen);
+    } catch {
+      return;
+    }
+
     const clickedSq = square.toLowerCase() as Square;
-    const game = new Chess(currentFen);
 
     // 1. If no square currently selected:
     if (!selectedSquare) {
       const pieceOnSquare = game.get(clickedSq);
-      // Only select if there is a piece belonging to active side
       if (pieceOnSquare && pieceOnSquare.color === chapter.turn) {
         setSelectedSquare(clickedSq);
       }
@@ -250,10 +294,23 @@ export function LearningHub({ lang = "id" }: Props) {
         setStatus("correct");
         setSelectedSquare(null);
 
-        // Award XP and complete chapter if not completed yet
+        // Award XP and complete chapter cleanly
+        let nextCompleted = completedChapters;
+        let nextUnlocked = unlockedChapters;
+        let nextXp = xp;
+
         if (!completedChapters.includes(chapter.id)) {
-          setCompletedChapters((prev) => [...prev, chapter.id, chapter.id + 1]);
-          setXp((prev) => prev + chapter.xp);
+          nextCompleted = [...completedChapters, chapter.id];
+          setCompletedChapters(nextCompleted);
+
+          if (chapter.id < QUEST_CHAPTERS.length && !unlockedChapters.includes(chapter.id + 1)) {
+            nextUnlocked = [...unlockedChapters, chapter.id + 1];
+            setUnlockedChapters(nextUnlocked);
+          }
+
+          nextXp = xp + chapter.xp;
+          setXp(nextXp);
+          saveProgress(nextCompleted, nextUnlocked, nextXp);
         }
 
         setShowCelebration(true);
@@ -270,9 +327,15 @@ export function LearningHub({ lang = "id" }: Props) {
     }
   };
 
-  // Auto-play Solution
+  // Auto-play Solution (Zero free XP on reveal to prevent gamification exploitation)
   const autoPlaySolution = () => {
-    const game = new Chess(chapter.fen);
+    let game: Chess;
+    try {
+      game = new Chess(chapter.fen);
+    } catch {
+      return;
+    }
+
     const from = chapter.solutionUci.slice(0, 2) as Square;
     const to = chapter.solutionUci.slice(2, 4) as Square;
     game.move({ from, to, promotion: chapter.promotion || "q" });
@@ -282,9 +345,11 @@ export function LearningHub({ lang = "id" }: Props) {
     setSelectedSquare(null);
     setHintLevel(2);
 
-    if (!completedChapters.includes(chapter.id)) {
-      setCompletedChapters((prev) => [...prev, chapter.id, chapter.id + 1]);
-      setXp((prev) => prev + chapter.xp);
+    // Unlocks next chapter so learner is not stuck, but awards 0 XP
+    if (chapter.id < QUEST_CHAPTERS.length && !unlockedChapters.includes(chapter.id + 1)) {
+      const nextUnlocked = [...unlockedChapters, chapter.id + 1];
+      setUnlockedChapters(nextUnlocked);
+      saveProgress(completedChapters, nextUnlocked, xp);
     }
 
     setShowCelebration(true);
@@ -342,7 +407,7 @@ export function LearningHub({ lang = "id" }: Props) {
   }, [selectedSquare, hintLevel, status, chapter.solutionUci]);
 
   const uniqueCompleted = useMemo(() => {
-    return completedChapters.filter((c, i, a) => a.indexOf(c) === i && c <= 6).length;
+    return new Set(completedChapters).size;
   }, [completedChapters]);
 
   return (
@@ -455,26 +520,32 @@ export function LearningHub({ lang = "id" }: Props) {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
                 {QUEST_CHAPTERS.map((ch, idx) => {
                   const isDone = completedChapters.includes(ch.id);
+                  const isUnlocked = unlockedChapters.includes(ch.id);
                   const isCurrent = idx === activeChapterIndex;
 
                   return (
                     <button
                       key={ch.id}
-                      onClick={() => selectChapter(idx)}
+                      onClick={() => isUnlocked && selectChapter(idx)}
+                      disabled={!isUnlocked}
                       className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
                         isCurrent
                           ? "bg-[#2c2824] border-[#81b64c] ring-2 ring-[#81b64c]/40 text-white shadow-lg"
                           : isDone
-                          ? "bg-[#1c1a18] border-emerald-500/40 text-neutral-300 hover:border-emerald-500"
-                          : "bg-[#181715] border-[#36322d] text-neutral-400 hover:border-neutral-500"
+                          ? "bg-[#1c1a18] border-emerald-500/40 text-neutral-300 hover:border-emerald-500 cursor-pointer"
+                          : isUnlocked
+                          ? "bg-[#1f1d1a] border-[#3d3a37] text-white hover:border-[#81b64c] cursor-pointer"
+                          : "bg-[#151412] border-[#292623] text-neutral-600 opacity-60 cursor-not-allowed"
                       }`}
                     >
                       <div className="flex items-center justify-between w-full">
                         <span className="font-mono text-xs font-bold text-white">Bab {ch.id}</span>
                         {isDone ? (
                           <span className="text-[10px] font-bold text-emerald-400">✓ Tuntas</span>
-                        ) : (
+                        ) : isUnlocked ? (
                           <span className="text-[10px] font-bold text-amber-400">+{ch.xp} XP</span>
+                        ) : (
+                          <IconLock3D size={14} />
                         )}
                       </div>
                       <div className="text-[11px] font-bold text-neutral-200 line-clamp-2 leading-tight">
