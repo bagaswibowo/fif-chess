@@ -179,11 +179,15 @@ export function LearningHub({ lang = "id" }: Props) {
 
       if (savedCompleted) {
         const parsed = JSON.parse(savedCompleted);
-        if (Array.isArray(parsed)) setCompletedChapters(parsed);
+        if (Array.isArray(parsed)) {
+          setCompletedChapters(parsed.filter((item): item is number => typeof item === "number"));
+        }
       }
       if (savedUnlocked) {
         const parsed = JSON.parse(savedUnlocked);
-        if (Array.isArray(parsed)) setUnlockedChapters(parsed);
+        if (Array.isArray(parsed)) {
+          setUnlockedChapters(parsed.filter((item): item is number => typeof item === "number"));
+        }
       }
       if (savedXp) {
         const num = parseInt(savedXp, 10);
@@ -549,7 +553,9 @@ export function LearningHub({ lang = "id" }: Props) {
                         )}
                       </div>
                       <div className="text-[11px] font-bold text-neutral-200 line-clamp-2 leading-tight">
-                        {lang === "id" ? ch.titleId.split(": ")[1] : ch.titleEn.split(": ")[1]}
+                        {lang === "id"
+                          ? (ch.titleId.split(": ")[1] ?? ch.titleId)
+                          : (ch.titleEn.split(": ")[1] ?? ch.titleEn)}
                       </div>
                     </button>
                   );
