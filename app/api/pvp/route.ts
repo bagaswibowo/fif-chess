@@ -24,9 +24,18 @@ const rooms = new Map<string, PvpRoom>();
 // IP Rate Limiting (60 requests per minute max)
 const ipRequestCounts = new Map<string, { count: number; resetTime: number }>();
 
+function isLoopback(ip: string): boolean {
+  return (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip === "::ffff:127.0.0.1" ||
+    ip === "localhost"
+  );
+}
+
 function checkRateLimit(ip: string): boolean {
-  // Allow unbounded access for internal localhost loopback in development/healthchecks
-  if (ip === "127.0.0.1" && process.env.NODE_ENV !== "production") {
+  // Always permit loopback traffic for Docker healthchecks and container testing
+  if (isLoopback(ip)) {
     return true;
   }
   const now = Date.now();
@@ -59,16 +68,16 @@ function maybePruneStaleRooms() {
   }
 }
 
-// Trusted IP resolution: strictly enforce Cloudflare connecting IP in production to prevent spoofing
+// Normalized IP resolution: prioritize Cloudflare header, fallback to proxy headers or loopback
 function getClientIp(req: Request): string {
   const cfIp = req.headers.get("cf-connecting-ip");
   if (cfIp) return cfIp.trim();
 
-  // Fallback for non-production environments
-  if (process.env.NODE_ENV !== "production") {
-    const forwarded = req.headers.get("x-forwarded-for");
-    if (forwarded) return forwarded.split(",")[0].trim();
-  }
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
 
   return "127.0.0.1";
 }
