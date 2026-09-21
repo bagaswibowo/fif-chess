@@ -32,7 +32,7 @@ type Achievement = {
 };
 
 // Static dictionaries outside component to avoid runtime re-allocation
-const CONTENT = {
+export const CONTENT = {
   id: {
     chapters: [
       {
@@ -165,7 +165,8 @@ const CONTENT = {
   },
 };
 
-type LangType = keyof typeof CONTENT;
+export type LangType = keyof typeof CONTENT;
+
 type Props = {
   lang?: LangType;
 };
