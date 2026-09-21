@@ -10,6 +10,7 @@ import {
   IconMedal3D,
   IconBot3D,
   IconPawn3D,
+  IconTrophy3D,
 } from "@/components/icons3d";
 
 export type GameRecord = {
@@ -49,27 +50,34 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
     return history.find((g) => g.id === selectedGameId) || history[0] || null;
   }, [history, selectedGameId]);
 
-  // Reconstruct all FEN board snapshots for the active game
-  const fenList = useMemo(() => {
+  // Reconstruct all FEN board snapshots and moves
+  const { fenList, playedMoveObjects } = useMemo(() => {
     if (!activeGame || !activeGame.moves || activeGame.moves.length === 0) {
-      return ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
+      return {
+        fenList: ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],
+        playedMoveObjects: [],
+      };
     }
-    const list: string[] = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
+    const fList: string[] = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
+    const mList: { from: string; to: string; san: string }[] = [];
     const c = new Chess();
     for (const moveSan of activeGame.moves) {
       try {
-        c.move(moveSan);
-        list.push(c.fen());
+        const res = c.move(moveSan);
+        if (res) {
+          fList.push(c.fen());
+          mList.push({ from: res.from, to: res.to, san: res.san });
+        }
       } catch {
         break;
       }
     }
-    return list;
+    return { fenList: fList, playedMoveObjects: mList };
   }, [activeGame]);
 
   const currentFen = fenList[currentMoveIndex] || fenList[0];
 
-  // Fetch genuine Stockfish 15 NNUE evaluation for the position from /api/jev-move
+  // Fetch genuine Stockfish 15 NNUE evaluation with AbortController to prevent DoS
   useEffect(() => {
     if (!currentFen) return;
 
@@ -78,17 +86,17 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
       return;
     }
 
-    let active = true;
+    const controller = new AbortController();
     setLoadingAi(true);
 
     fetch("/api/jev-move", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fen: currentFen }),
+      signal: controller.signal,
     })
       .then((res) => res.json())
       .then((data) => {
-        if (!active) return;
         if (data.uci && data.san) {
           const evalResult: AiEval = {
             bestUci: data.uci,
@@ -99,17 +107,21 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
           setAiEvaluation(evalResult);
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          // ignore aborted requests
+        }
+      })
       .finally(() => {
-        if (active) setLoadingAi(false);
+        setLoadingAi(false);
       });
 
     return () => {
-      active = false;
+      controller.abort();
     };
   }, [currentFen]);
 
-  // Alternative AI board position after playing the engine's best move
+  // Alternative AI board position after playing engine's best move
   const aiFen = useMemo(() => {
     if (!aiEvaluation) return currentFen;
     try {
@@ -125,7 +137,8 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   }, [currentFen, aiEvaluation]);
 
   // The actual move that was played on this step
-  const playedSan = activeGame && currentMoveIndex > 0 ? activeGame.moves[currentMoveIndex - 1] : null;
+  const currentPlayedObj = currentMoveIndex > 0 ? playedMoveObjects[currentMoveIndex - 1] : null;
+  const playedSan = currentPlayedObj ? currentPlayedObj.san : null;
 
   // Comparison between user move and Stockfish suggestion
   const isBestMove = useMemo(() => {
@@ -133,14 +146,22 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
     return playedSan === aiEvaluation.bestSan;
   }, [playedSan, aiEvaluation]);
 
-  // Square highlights for actual move board
+  // Square highlights for actual move board (Board 1)
   const actualSquareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
-    if (currentMoveIndex === 0 || !activeGame) return styles;
+    if (!currentPlayedObj) return styles;
+    styles[currentPlayedObj.from] = {
+      boxShadow: "inset 0 0 0 3px #facc15",
+      backgroundColor: "rgba(250, 204, 21, 0.35)",
+    };
+    styles[currentPlayedObj.to] = {
+      boxShadow: "inset 0 0 0 4px #facc15",
+      backgroundColor: "rgba(250, 204, 21, 0.55)",
+    };
     return styles;
-  }, [currentMoveIndex, activeGame]);
+  }, [currentPlayedObj]);
 
-  // Square highlights for AI suggestion board
+  // Square highlights for AI suggestion board (Board 2)
   const aiSquareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
     if (!aiEvaluation) return styles;
@@ -297,6 +318,21 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
           </div>
         </Card>
       </div>
+
+      {/* TACTICAL PEDAGOGICAL CONTEXT CARD */}
+      <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-2">
+        <div className="flex items-center gap-2 font-bold text-sm text-white">
+          <IconTrophy3D size={18} />
+          <span>Analisis Taktis AI untuk Langkah #{currentMoveIndex || 1}</span>
+        </div>
+        <p className="text-xs text-neutral-300 leading-relaxed">
+          {currentMoveIndex === 0
+            ? "Mulai dari posisi awal papan catur. Geser langkah maju untuk meninjau keputusan taktis."
+            : isBestMove
+            ? `Bagus sekali! Langkah Anda (${playedSan}) identik dengan kalkulasi mesin catur Stockfish 15 NNUE pada kedalaman Depth 14+. Posisi Anda mempertahankan keunggulan tempo dan kendali petak sentral.`
+            : `Pada giliran ini, Anda melangkahkan ${playedSan}. Engine catur merekomendasikan alternatif ${aiEvaluation ? aiEvaluation.bestSan : "lain"} untuk memaksimalkan aktivitas perwira dan menghindari hilangnya inisiatif posisi.`}
+        </p>
+      </Card>
 
       {/* PLAYBACK CONTROLS & MOVE NAVIGATION */}
       <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-3">

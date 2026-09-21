@@ -38,8 +38,9 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-// TTL cleanup: delete rooms older than 30 minutes
-function pruneStaleRooms() {
+// Stochastic TTL cleanup (runs ~5% of requests to avoid hot-path latency)
+function maybePruneStaleRooms() {
+  if (Math.random() > 0.05) return;
   const now = Date.now();
   const maxAge = 30 * 60 * 1000;
   for (const [code, r] of rooms.entries()) {
@@ -47,7 +48,6 @@ function pruneStaleRooms() {
       rooms.delete(code);
     }
   }
-  // Prune IP rate limit entries
   for (const [ip, entry] of ipRequestCounts.entries()) {
     if (now > entry.resetTime) {
       ipRequestCounts.delete(ip);
@@ -55,11 +55,10 @@ function pruneStaleRooms() {
   }
 }
 
+// Trusted IP extraction prioritizing Cloudflare connecting IP
 function getClientIp(req: Request): string {
   const cfIp = req.headers.get("cf-connecting-ip");
   if (cfIp) return cfIp.trim();
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
   return "127.0.0.1";
 }
 
@@ -69,7 +68,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  pruneStaleRooms();
+  maybePruneStaleRooms();
   const url = new URL(req.url);
   const code = url.searchParams.get("room")?.toUpperCase();
 
@@ -101,7 +100,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  pruneStaleRooms();
+  maybePruneStaleRooms();
 
   try {
     const body = await req.json();
@@ -110,7 +109,6 @@ export async function POST(req: Request) {
     // 1. CREATE ROOM
     if (action === "create") {
       const username = String(body.username || "Pemain 1").slice(0, 30);
-      // Cryptographically secure 6-character room code (e.g. FIF-9A2F4B) -> 16.7M entropy
       const hexCode = randomBytes(3).toString("hex").toUpperCase();
       const code = `FIF-${hexCode}`;
       const whiteToken = randomUUID();
@@ -245,6 +243,56 @@ export async function POST(req: Request) {
           room.outcomeKind = "draw";
         }
       }
+
+      return NextResponse.json({
+        success: true,
+        room: {
+          code: room.code,
+          createdAt: room.createdAt,
+          lastActive: room.lastActive,
+          whiteUser: room.whiteUser,
+          blackUser: room.blackUser,
+          fen: room.fen,
+          moves: room.moves,
+          turn: room.turn,
+          status: room.status,
+          winner: room.winner,
+          outcomeKind: room.outcomeKind,
+        },
+      });
+    }
+
+    // 4. RESIGN MATCH
+    if (action === "resign") {
+      const code = String(body.code || "").toUpperCase().trim();
+      const { side, playerToken } = body;
+
+      const room = rooms.get(code);
+      if (!room) {
+        return NextResponse.json({ error: "Kamar tidak ditemukan" }, { status: 404 });
+      }
+
+      if (room.status !== "active") {
+        return NextResponse.json({ error: "Pertandingan belum aktif atau sudah selesai" }, { status: 400 });
+      }
+
+      if (side === "white") {
+        if (!playerToken || playerToken !== room.whiteToken) {
+          return NextResponse.json({ error: "Akses ditolak: Token pemain tidak valid" }, { status: 403 });
+        }
+        room.winner = "black";
+      } else if (side === "black") {
+        if (!playerToken || playerToken !== room.blackToken) {
+          return NextResponse.json({ error: "Akses ditolak: Token pemain tidak valid" }, { status: 403 });
+        }
+        room.winner = "white";
+      } else {
+        return NextResponse.json({ error: "Sisi tidak valid" }, { status: 400 });
+      }
+
+      room.status = "finished";
+      room.outcomeKind = "resigned";
+      room.lastActive = Date.now();
 
       return NextResponse.json({
         success: true,
