@@ -46,20 +46,6 @@ function classifyMove(cpLoss: number | null, isBest: boolean): { quality: string
   return { quality: "??", color: "text-red-400" };
 }
 
-  async function getScoreCpForFen(fen: string): Promise<number | null> {
-    try {
-      const res = await fetch(/api/jev-move, {
-        method: POST,
-        headers: { Content-Type: application/json },
-        body: JSON.stringify({ fen }),
-      });
-      const d = await res.json();
-      return typeof d.scoreCp === number ? d.scoreCp : null;
-    } catch {
-      return null;
-    }
-  }
-
 export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   const [selectedGameId, setSelectedGameId] = useState<string>(
     history.length > 0 ? history[0].id : ""
