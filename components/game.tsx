@@ -15,6 +15,7 @@ import { PuzzleView, type Puzzle } from "@/components/puzzle-view";
 import { ScanView } from "@/components/scan-view";
 import { CommunityView } from "@/components/community-view";
 import { GameReview, type GameRecord } from "@/components/game-review";
+import { CoachModeView } from "@/components/coach-mode-view";
 import { GameOverModal } from "@/components/game-over-modal";
 import { useChessClock } from "@/lib/use-chess-clock";
 import { getStoredUser, saveStoredUser, registerUser, type UserProfile } from "@/lib/user-auth";
@@ -47,7 +48,7 @@ import type { JevAnalysis, JevError, PlayedMove } from "@/lib/types";
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 type PendingPromotion = { from: string; to: string };
-type NavTab = "play" | "puzzle" | "vision" | "scan" | "community" | "review";
+type NavTab = "play" | "puzzle" | "vision" | "scan" | "community" | "review" | "coach";
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
 
@@ -558,6 +559,18 @@ export function Game() {
             >
               <IconMedal3D size={22} />
               <span>{lang === "id" ? "Review Blunder" : "Game Review"}</span>
+            </button>
+
+            <button
+              onClick={() => setNavTab("coach")}
+              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
+                navTab === "coach"
+                  ? "bg-[#3d3a37] text-white border-l-4 border-[#81b64c] shadow-sm"
+                  : "text-neutral-300 hover:bg-[#2c2925] hover:text-white"
+              }`}
+            >
+              <IconBot3D size={22} />
+              <span>{lang === "id" ? "AI Coach & Latih" : "AI Coach & Train"}</span>
             </button>
 
             <button
