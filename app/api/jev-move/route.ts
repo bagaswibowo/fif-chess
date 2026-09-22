@@ -29,10 +29,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const fen =
-    body && typeof body === "object" && "fen" in body
-      ? (body as { fen?: unknown }).fen
-      : undefined;
+  const bodyObj = body && typeof body === "object" ? body as Record<string, unknown> : {};
+  const fen = bodyObj.fen;
+  const rawDepth = typeof bodyObj.depth === "number" ? bodyObj.depth : 14;
+  const depth = Math.max(1, Math.min(16, Math.round(rawDepth)));
 
   if (typeof fen !== "string") {
     return NextResponse.json(
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
   // Stockfish 15 NNUE (Invincible mode, Elo 3500+)
   try {
-    const result = await playStockfishMove(fen);
+    const result = await playStockfishMove(fen, depth);
     return NextResponse.json({
       uci: result.uci,
       san: result.san,

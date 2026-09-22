@@ -32,8 +32,19 @@ type Props = {
 type AiEval = {
   bestUci: string;
   bestSan: string;
+  scoreCp: number | null;
   depth?: number;
 };
+
+type BlunderMap = Record<number, { quality: string; color: string; cpLoss: number }>;
+
+function classifyMove(cpLoss: number | null, isBest: boolean): { quality: string; color: string } {
+  if (isBest || cpLoss === null || cpLoss < 10) return { quality: "✓", color: "text-emerald-400" };
+  if (cpLoss < 25) return { quality: "?", color: "text-green-300" };
+  if (cpLoss < 50) return { quality: "?!", color: "text-yellow-400" };
+  if (cpLoss < 150) return { quality: "?", color: "text-orange-400" };
+  return { quality: "??", color: "text-red-400" };
+}
 
 export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   const [selectedGameId, setSelectedGameId] = useState<string>(
@@ -41,6 +52,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   );
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number>(0);
   const [aiEvaluation, setAiEvaluation] = useState<AiEval | null>(null);
+  const [blunderMap, setBlunderMap] = useState<BlunderMap>({});
   const [loadingAi, setLoadingAi] = useState(false);
 
   // In-memory evaluation cache to avoid duplicate network calls
@@ -101,6 +113,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
           const evalResult: AiEval = {
             bestUci: data.uci,
             bestSan: data.san,
+            scoreCp: data.scoreCp ?? null,
             depth: 14,
           };
           evalCache.current.set(currentFen, evalResult);
@@ -392,13 +405,18 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
               <button
                 key={idx}
                 onClick={() => setCurrentMoveIndex(idx + 1)}
-                className={`px-2 py-1 rounded-md text-xs font-mono transition-all ${
+                className={`px-2 py-1 rounded-md text-xs font-mono transition-all flex items-center gap-0.5 ${
                   currentMoveIndex === idx + 1
                     ? "bg-[#81b64c] text-white font-bold"
+                    : blunderMap[idx]
+                    ? "bg-[#191816] border border-orange-500/40 text-neutral-300 hover:text-white"
                     : "bg-[#191816] text-neutral-400 hover:text-white border border-[#36322d]"
                 }`}
               >
-                {isWhite ? `${moveNum}. ${m}` : m}
+                {isWhite ? `${moveNum}. ` : ""}{m}
+                {blunderMap[idx] && currentMoveIndex !== idx + 1 && (
+                  <span className={blunderMap[idx].color + " text-[9px]"}>{blunderMap[idx].quality}</span>
+                )}
               </button>
             );
           })}

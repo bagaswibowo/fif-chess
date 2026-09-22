@@ -5,19 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { IconCommunity3D, IconTrophy3D } from "@/components/icons3d";
 
 export function CommunityView({ lang = "id" }: { lang?: "id" | "en" }) {
-  const members = [
-    { rank: 1, name: "Bagas Wibowo", role: "Dosen / Pembina", rating: 1850, badge: "Master FIF" },
-    { rank: 2, name: "Farhan Maulana", role: "Mahasiswa IF", rating: 1720, badge: "Juara Tel-U 2025" },
-    { rank: 3, name: "Alif Pratama", role: "Mahasiswa SE", rating: 1640, badge: "Captain Blitz" },
-    { rank: 4, name: "Naufal Hadi", role: "Mahasiswa DS", rating: 1580, badge: "Taktikus" },
-    { rank: 5, name: "Rizky Ramadhan", role: "Mahasiswa IF", rating: 1510, badge: "Pion Tangguh" },
-  ];
-
   return (
     <div className="max-w-4xl mx-auto space-y-6 w-full">
       <Card className="bg-[#262421] border-[#3d3a37]">
         <CardHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <IconCommunity3D size={28} />
             <Badge className="bg-emerald-600 text-white">Komunitas Resmi</Badge>
             <Badge variant="outline" className="border-amber-500/40 text-amber-300">Telkom University</Badge>
@@ -32,51 +24,85 @@ export function CommunityView({ lang = "id" }: { lang?: "id" | "en" }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] text-center">
-              <div className="text-neutral-400 text-xs uppercase font-semibold">{lang === "id" ? "Anggota Aktif" : "Active Members"}</div>
-              <div className="text-3xl font-bold font-mono text-emerald-400 mt-1">48</div>
-            </div>
-            <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] text-center">
-              <div className="text-neutral-400 text-xs uppercase font-semibold">{lang === "id" ? "Game Dimainkan" : "Games Played"}</div>
-              <div className="text-3xl font-bold font-mono text-amber-400 mt-1">1,240</div>
-            </div>
-            <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] text-center">
-              <div className="text-neutral-400 text-xs uppercase font-semibold">{lang === "id" ? "Latihan Minggu Ini" : "Weekly Training"}</div>
-              <div className="text-3xl font-bold font-mono text-blue-400 mt-1">Jumat 16:00</div>
-            </div>
-          </div>
 
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <IconTrophy3D size={20} />
-              <h3 className="text-sm font-semibold text-neutral-300 uppercase tracking-wider">
-                {lang === "id" ? "Peringkat Anggota Komunitas" : "Community Leaderboard"}
-              </h3>
-            </div>
-            <div className="space-y-2">
-              {members.map((m) => (
-                <div
-                  key={m.rank}
-                  className="flex items-center justify-between p-3 rounded-lg bg-[#1f1d1a] border border-[#36322d] hover:border-[#4a4744] transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono font-bold text-neutral-400 text-sm w-5">{m.rank}.</span>
-                    <div>
-                      <div className="font-semibold text-white text-sm flex items-center gap-2">
-                        {m.name}
-                        <span className="text-[10px] text-emerald-400 font-normal">({m.badge})</span>
-                      </div>
-                      <div className="text-xs text-neutral-400">{m.role}</div>
-                    </div>
-                  </div>
-                  <div className="font-mono font-bold text-amber-400 text-sm">
-                    {m.rating} <span className="text-[10px] text-neutral-500 font-normal">ELO</span>
+          {/* Jadwal latihan nyata */}
+          <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] space-y-3">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              {lang === "id" ? "Jadwal Latihan Rutin" : "Regular Training Schedule"}
+            </h3>
+            <div className="space-y-2 text-sm">
+              {[
+                { day: lang === "id" ? "Jumat" : "Friday", time: "16:00–18:00 WIB", desc: lang === "id" ? "Latihan mingguan & blitz session" : "Weekly training & blitz session" },
+                { day: lang === "id" ? "Sabtu (insidentil)" : "Saturday (occasional)", time: "09:00–12:00 WIB", desc: lang === "id" ? "Turnamen internal & analisis game" : "Internal tournament & game analysis" },
+              ].map((s, i) => (
+                <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-[#262421] border border-[#36322d]">
+                  <div className="w-2 h-2 rounded-full bg-[#81b64c] mt-1.5 shrink-0" />
+                  <div>
+                    <div className="font-bold text-white">{s.day} — {s.time}</div>
+                    <div className="text-neutral-400 text-xs">{s.desc}</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Pembina */}
+          <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d]">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">
+              {lang === "id" ? "Pembina & Koordinator" : "Advisor & Coordinator"}
+            </h3>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#81b64c]/20 border-2 border-[#81b64c]/50 flex items-center justify-center font-black text-[#81b64c] text-sm">BW</div>
+              <div>
+                <div className="font-bold text-white text-sm">Bagas Wibowo, S.Kom., M.Kom.</div>
+                <div className="text-neutral-400 text-xs">{lang === "id" ? "Dosen Teknik Informatika — KK SEAL, Telkom University" : "Lecturer, Informatics Engineering — KK SEAL, Telkom University"}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Leaderboard placeholder — jujur bahwa data belum real-time */}
+          <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <IconTrophy3D size={18} />
+                {lang === "id" ? "Peringkat (Sesi Ini)" : "Rankings (This Session)"}
+              </h3>
+              <Badge variant="outline" className="border-neutral-600 text-neutral-500 text-[10px]">
+                {lang === "id" ? "Berdasarkan game lokal" : "Based on local games"}
+              </Badge>
+            </div>
+            <div className="p-3 rounded-lg bg-[#262421] border border-[#36322d] text-xs text-neutral-400 text-center">
+              {lang === "id"
+                ? "Peringkat komunitas real-time akan tersedia setelah fitur akun multi-user diaktifkan. Saat ini skor hanya tersimpan di perangkat masing-masing pemain."
+                : "Real-time community rankings will be available after multi-user accounts are enabled. Currently scores are stored locally per device."}
+            </div>
+          </div>
+
+          {/* Kontak / Gabung */}
+          <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] space-y-3">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              {lang === "id" ? "Bergabung & Kontak" : "Join & Contact"}
+            </h3>
+            <div className="space-y-2 text-sm text-neutral-300">
+              <div className="flex items-center gap-2">
+                <span className="text-base">💬</span>
+                <span>
+                  {lang === "id"
+                    ? "Hubungi Pak Bagas atau pengurus FIF Chess untuk bergabung ke grup WhatsApp/Discord resmi."
+                    : "Contact Pak Bagas or FIF Chess board to join the official WhatsApp/Discord group."}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-base">🏛</span>
+                <span>
+                  {lang === "id"
+                    ? "Sekretariat FIF — Gedung Informatika, Telkom University, Bandung."
+                    : "FIF Secretariat — Informatics Building, Telkom University, Bandung."}
+                </span>
+              </div>
+            </div>
+          </div>
+
         </CardContent>
       </Card>
     </div>

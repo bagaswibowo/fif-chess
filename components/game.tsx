@@ -16,6 +16,8 @@ import { ScanView } from "@/components/scan-view";
 import { CommunityView } from "@/components/community-view";
 import { GameReview, type GameRecord } from "@/components/game-review";
 import { CoachModeView } from "@/components/coach-mode-view";
+import { SpectatorView } from "@/components/spectator-view";
+import { GuidedPlayView } from "@/components/guided-play-view";
 import { GameOverModal } from "@/components/game-over-modal";
 import { useChessClock } from "@/lib/use-chess-clock";
 import { getStoredUser, saveStoredUser, registerUser, type UserProfile } from "@/lib/user-auth";
@@ -51,6 +53,7 @@ type PendingPromotion = { from: string; to: string };
 type NavTab = "play" | "puzzle" | "vision" | "scan" | "community" | "review" | "coach";
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
+type CoachSubTab = "coach" | "spectator" | "guided";
 
 export function Game() {
   const [fen, setFen] = useState(START_FEN);
@@ -62,6 +65,10 @@ export function Game() {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
   const [navTab, setNavTab] = useState<NavTab>("play");
+  const [coachSubTab, setCoachSubTab] = useState<CoachSubTab>("coach");
+  const [guidedStartFen, setGuidedStartFen] = useState<string | undefined>(undefined);
+  const [guidedStartMoves, setGuidedStartMoves] = useState<string[] | undefined>(undefined);
+  const [aiDepth, setAiDepth] = useState(14);
   const [rightTab, setRightTab] = useState<RightTab>("game-setup");
   const [lang, setLang] = useState<"id" | "en">("id");
   const [timeMode, setTimeMode] = useState<string>("5m");
@@ -167,7 +174,7 @@ export function Game() {
         const response = await fetch("/api/jev-move", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fen: position }),
+          body: JSON.stringify({ fen: position, depth: aiDepth }),
         });
         const payload = (await response.json()) as {
           error?: string;
@@ -594,7 +601,7 @@ export function Game() {
               }`}
             >
               <IconScan3D size={22} />
-              <span>Scan OTB</span>
+              <span>{lang === "id" ? "Import Posisi" : "Import Position"}</span>
             </button>
 
             <button
@@ -646,7 +653,40 @@ export function Game() {
 
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col p-2.5 md:p-6 pb-24 md:pb-6 overflow-y-auto max-w-7xl mx-auto w-full">
-        {navTab === "coach" && <CoachModeView lang={lang} />}
+        {navTab === "coach" && (
+          <div className="space-y-4">
+            {/* Coach sub-tab switcher */}
+            <div className="flex bg-[#262421] p-1.5 rounded-2xl border border-[#36322d] w-full max-w-lg mx-auto shadow-lg">
+              {([
+                { id: "coach", labelId: "AI Coach", labelEn: "AI Coach" },
+                { id: "spectator", labelId: "Jev vs Stockfish", labelEn: "Jev vs Stockfish" },
+                { id: "guided", labelId: "Latihan Dipandu", labelEn: "Guided Practice" },
+              ] as { id: CoachSubTab; labelId: string; labelEn: string }[]).map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setCoachSubTab(tab.id)}
+                  className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all ${coachSubTab === tab.id ? "bg-[#81b64c] text-white shadow-md" : "text-neutral-400 hover:text-white"}`}
+                >
+                  {lang === "id" ? tab.labelId : tab.labelEn}
+                </button>
+              ))}
+            </div>
+            {coachSubTab === "coach" && <CoachModeView lang={lang} />}
+            {coachSubTab === "spectator" && (
+              <SpectatorView
+                lang={lang}
+                onTryPosition={(fen, moves) => {
+                  setGuidedStartFen(fen);
+                  setGuidedStartMoves(moves);
+                  setCoachSubTab("guided");
+                }}
+              />
+            )}
+            {coachSubTab === "guided" && (
+              <GuidedPlayView lang={lang} startFen={guidedStartFen} startMoves={guidedStartMoves} />
+            )}
+          </div>
+        )}
         {navTab === "vision" && <LearningHub lang={lang} />}
         {navTab === "puzzle" && <PuzzleView lang={lang} />}
         {navTab === "review" && (
@@ -881,7 +921,26 @@ export function Game() {
                       {playMode === "ai" && (
                         <div>
                           <label className="text-[11px] md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
-                            {lang === "id" ? "Kontrol Waktu Permainan:" : "Time Control:"}
+                            {lang === "id" ? "Tingkat Kesulitan AI:" : "AI Difficulty:"}
+                        </label>
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {[
+                            { depth: 3, label: lang === "id" ? "Mudah" : "Easy", elo: "~800" },
+                            { depth: 8, label: lang === "id" ? "Sedang" : "Medium", elo: "~1600" },
+                            { depth: 14, label: lang === "id" ? "Expert" : "Expert", elo: "3550+" },
+                          ].map(lvl => (
+                            <button
+                              key={lvl.depth}
+                              onClick={() => setAiDepth(lvl.depth)}
+                              className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center ${aiDepth === lvl.depth ? "bg-[#3d3a37] border-[#81b64c] text-white shadow-sm" : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"}`}
+                            >
+                              <div>{lvl.label}</div>
+                              <div className="text-[10px] font-mono text-neutral-500">{lvl.elo}</div>
+                            </button>
+                          ))}
+                        </div>
+                        <label className="text-[11px] md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
+                          {lang === "id" ? "Kontrol Waktu Permainan:" : "Time Control:"}
                           </label>
                           <div className="grid grid-cols-2 gap-2">
                             {[
