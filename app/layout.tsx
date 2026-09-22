@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     "Play chess against TypeSafe Jev. Chess.js owns the rules; Jev only picks from legal UCI moves.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
