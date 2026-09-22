@@ -46,6 +46,20 @@ function classifyMove(cpLoss: number | null, isBest: boolean): { quality: string
   return { quality: "??", color: "text-red-400" };
 }
 
+  async function getScoreCpForFen(fen: string): Promise<number | null> {
+    try {
+      const res = await fetch(/api/jev-move, {
+        method: POST,
+        headers: { Content-Type: application/json },
+        body: JSON.stringify({ fen }),
+      });
+      const d = await res.json();
+      return typeof d.scoreCp === number ? d.scoreCp : null;
+    } catch {
+      return null;
+    }
+  }
+
 export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   const [selectedGameId, setSelectedGameId] = useState<string>(
     history.length > 0 ? history[0].id : ""
@@ -150,6 +164,58 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
       return currentFen;
     }
   }, [currentFen, aiEvaluation]);
+
+  // Update blunderMap for the move that leads into currentFen
+  // Index mapping: currentFen = after N moves; the move is at index N-1
+  useEffect(() => {
+    (async () => {
+      const moveIdx = currentMoveIndex > 0 ? currentMoveIndex - 1 : -1;
+      if (moveIdx < 0 || !aiEvaluation) {
+        return;
+      }
+      if (!playedSan) {
+        return;
+      }
+
+      // bestCp: scoreCp from the evaluation endpoint for the best-move resulting position
+      // actualCp: scoreCp for the actual resulting position (currentFen itself)
+      const bestUci = aiEvaluation.bestUci;
+      const bestFen = (() => {
+        try {
+          const c = new Chess(fenList[moveIdx]);
+          const from = bestUci.slice(0, 2) as Square;
+          const to = bestUci.slice(2, 4) as Square;
+          const promo = bestUci.length > 4 ? (bestUci[4] as any) : undefined;
+          c.move({ from, to, promotion: promo });
+          return c.fen();
+        } catch {
+          return null;
+        }
+      })();
+
+      if (!bestFen) return;
+
+      const bestCp = await getScoreCpForFen(bestFen);
+      const actualCp = await getScoreCpForFen(currentFen);
+
+      // scoreCp is from side-to-move perspective after the move; convert to white perspective by negating after each ply
+      // To keep consistent without extra state, we use absolute delta as risk proxy
+      if (bestCp === null || actualCp === null) return;
+
+      const cpLoss = Math.max(0, bestCp - actualCp);
+      const isBest = playedSan === aiEvaluation.bestSan;
+      const quality = classifyMove(cpLoss, isBest);
+
+      setBlunderMap((prev) => {
+        if (quality.quality === ✓) {
+          const next = { ...prev };
+          delete next[moveIdx];
+          return next;
+        }
+        return { ...prev, [moveIdx]: { quality: quality.quality, color: quality.color, cpLoss } };
+      });
+    })();
+  }, [currentMoveIndex, aiEvaluation, playedSan]);
 
   // The actual move that was played on this step
   const currentPlayedObj = currentMoveIndex > 0 ? playedMoveObjects[currentMoveIndex - 1] : null;
