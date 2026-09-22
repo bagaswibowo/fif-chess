@@ -193,7 +193,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
       const quality = classifyMove(cpLoss, isBest);
 
       setBlunderMap((prev) => {
-        if (quality.quality === ✓) {
+        if (quality.quality === "✓") {
           const next = { ...prev };
           delete next[moveIdx];
           return next;
