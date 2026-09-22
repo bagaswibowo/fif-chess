@@ -646,6 +646,7 @@ export function Game() {
 
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col p-2.5 md:p-6 pb-24 md:pb-6 overflow-y-auto max-w-7xl mx-auto w-full">
+        {navTab === "coach" && <CoachModeView lang={lang} />}
         {navTab === "vision" && <LearningHub lang={lang} />}
         {navTab === "puzzle" && <PuzzleView lang={lang} />}
         {navTab === "review" && (
