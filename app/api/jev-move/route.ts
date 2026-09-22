@@ -60,6 +60,7 @@ export async function POST(request: Request) {
       confidence: result.confidence,
       droppedMoveCount: result.droppedMoveCount,
       outcome: result.outcome,
+      scoreCp: (result as any).scoreCp ?? null,
     });
   } catch (stockfishErr) {
     console.warn("Stockfish error, falling back to Jev:", stockfishErr);
@@ -87,6 +88,7 @@ export async function POST(request: Request) {
       confidence: result.confidence,
       droppedMoveCount: result.droppedMoveCount,
       outcome: result.outcome,
+      scoreCp: (result as any).scoreCp ?? null,
     });
   } catch (error) {
     if (error instanceof JevRequestError) {
