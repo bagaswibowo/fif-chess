@@ -6,7 +6,6 @@ import {
   parseFen,
   selectMovesForChoice,
   sideToMove,
-  type Side,
   type GameOutcome,
 } from "@/lib/chess";
 
@@ -15,13 +14,7 @@ export const JEV_MODEL = "jev-latest";
 export const MOVE_QUESTION_ID = "move";
 
 export const MOVE_INSTRUCTIONS =
-  "Select the single best legal chess move for the side to move. " +
-  "Priority order: (1) deliver checkmate if available; (2) escape check — king safety is paramount, NEVER move the king into danger or sacrifice it for any piece; " +
-  "(3) capture the highest-value undefended opponent piece; (4) execute the listed tactical motif (checkmate > check > fork > skewer > removal-of-defender > discovered-attack > capture); " +
-  "(5) avoid moving to squares attacked by opponent pawns or pieces; " +
-  "(6) castle to improve king safety when available. " +
-  "Each option includes SAN, flags (capture/promotion/motif), and material delta Δ (positive = you gain material). " +
-  "Never trade your king for any piece. Prefer Δ>0 captures. Avoid moves that leave your king exposed.";
+  "Pick the best legal chess move for the side to move. Option keys are UCI; descriptions are the same move in SAN.";
 
 export type JevState = {
   fen: string;
@@ -55,7 +48,7 @@ export type BuiltJevRequest = {
   droppedUcis: string[];
 };
 
-export function buildJevRequest(fen: string): BuiltJevRequest {
+export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
   const chess = parseFen(fen);
   if (chess.isGameOver()) {
     throw new Error("The game is already over; there is no move to pick.");
@@ -63,38 +56,15 @@ export function buildJevRequest(fen: string): BuiltJevRequest {
 
   const { selected, dropped } = selectMovesForChoice(getLegalMoves(chess));
   const criteria: Record<string, string> = {};
-  // Enrich each option with tactical motif, capture/promotion flags, and material delta.
   for (const move of selected) {
-    // Clone board and apply the move to assess material impact.
-    const after = new Chess(chess.fen());
-    after.move({ from: move.from, to: move.to, promotion: move.promotion as any });
-    const materialDelta = computeMaterialDelta(chess, after, sideToMove(chess));
-    const notes: string[] = [];
-    if (move.isCapture) notes.push('capture');
-    if (move.isPromotion) notes.push(`prom=${move.promotion}`);
-    if (move.motif && move.motif !== 'none') notes.push(`motif=${move.motif}`);
-    notes.push(`Δ${materialDelta}`);
-    criteria[move.uci] = `${move.san} (${notes.join(', ')})`;
-  }
-
-  // Simple material evaluation: sum of piece values for a side.
-  function computeMaterialDelta(before: Chess, after: Chess, side: Side): number {
-    const colorChar = side === "white" ? "w" : "b";
-    const score = (c: Chess) => {
-      const board = c.board();
-      const values: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
-      let total = 0;
-      for (let r = 0; r < 8; r++) {
-        for (let f = 0; f < 8; f++) {
-          const p = board[r]?.[f];
-          if (p && p.color === colorChar) {
-            total += values[p.type] ?? 0;
-          }
-        }
-      }
-      return total;
-    };
-    return score(after) - score(before);
+    let desc = move.san
+    if (move.isCheckmate) desc += ' - checkmate'
+    else if (move.isCheck) desc += ' - check, king at risk'
+    else if (move.isCapture) desc += ' - captures piece, verify king safety'
+    else if (move.isCastle) desc += ' - king safe, rook active'
+    else if (move.isPromotion) desc += ' - promote, big gain'
+    else desc += ' - standard move'
+    criteria[move.uci] = desc
   }
 
   return {
@@ -107,7 +77,11 @@ export function buildJevRequest(fen: string): BuiltJevRequest {
       questions: {
         move: {
           type: "choice",
-          instructions: MOVE_INSTRUCTIONS,
+          instructions: `${MOVE_INSTRUCTIONS} STRICTLY: King safety overrides all material. NEVER sacrifice king defense for pawn or positional advantage. If capture opens diagonal toward own king, AVOID regardless of material. Choose safest strong move, not greediest.${
+            seed !== undefined
+              ? ` For tie-breaking, prefer option ending with digit ${seed % 10}.`
+              : ""
+          }`,
           criteria,
         },
       },
@@ -188,13 +162,15 @@ export type JevPlaySuccess = {
 type PlayDeps = {
   apiKey: string;
   fetchImpl?: typeof fetch;
+  /** Seed to break ties — different value = different move */
+  seed?: number;
 };
 
 export async function playJevMove(
   fen: string,
-  { apiKey, fetchImpl = fetch }: PlayDeps,
+  { apiKey, fetchImpl = fetch, seed }: PlayDeps,
 ): Promise<JevPlaySuccess> {
-  const built = buildJevRequest(fen);
+  const built = buildJevRequest(fen, seed);
   const legalSet = new Set(built.legalUcis);
 
   const response = await fetchImpl(TYPESAFE_ENDPOINT, {
