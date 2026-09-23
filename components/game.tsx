@@ -171,10 +171,10 @@ export function Game() {
       setThinking(true);
       setError(null);
       try {
-        const response = await fetch("/api/jev-move", {
+        const response = await fetch("/api/engine-move", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fen: position, depth: aiDepth }),
+          body: JSON.stringify({ fen: position, depth: aiDepth, engine: "stockfish" }),
         });
         const payload = (await response.json()) as {
           error?: string;
@@ -500,14 +500,14 @@ export function Game() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setLang((l) => (l === "id" ? "en" : "id"))}
-            className="flex items-center gap-1 text-[11px] font-bold text-neutral-300 bg-[#1f1d1a] border border-[#36322d] px-2 py-1 rounded-md"
+            className="flex items-center gap-1 text-xs font-bold text-neutral-300 bg-[#1f1d1a] border border-[#36322d] px-2 py-1 rounded-md"
           >
             <IconGlobe3D size={13} />
             <span>{lang.toUpperCase()}</span>
           </button>
           <div
             onClick={() => setShowAuthModal(true)}
-            className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-[10px] text-white shadow cursor-pointer"
+            className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow cursor-pointer"
           >
             {currentUser.username.slice(0, 2).toUpperCase()}
           </div>
@@ -526,7 +526,7 @@ export function Game() {
               <div className="font-black tracking-wider text-base uppercase leading-tight text-white flex items-center gap-1.5">
                 FIF <span className="text-[#81b64c]">CHESS</span>
               </div>
-              <div className="text-[10px] text-neutral-400 font-semibold tracking-wide">ARENA CATUR TEL-U</div>
+              <div className="text-xs text-neutral-400 font-semibold tracking-wide">ARENA CATUR TEL-U</div>
             </div>
           </div>
 
@@ -628,7 +628,7 @@ export function Game() {
               <IconGlobe3D size={16} />
               <span>{lang.toUpperCase()}</span>
             </button>
-            <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/30">
+            <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-500/30">
               Stockfish 15 NNUE
             </Badge>
           </div>
@@ -642,7 +642,7 @@ export function Game() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-bold truncate text-white">{currentUser.fullName}</div>
-              <div className="text-[10px] text-neutral-400 flex items-center gap-1.5 font-medium">
+              <div className="text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow-sm"></span>
                 <span>{currentUser.role} ({currentUser.elo})</span>
               </div>
@@ -702,7 +702,7 @@ export function Game() {
         {navTab === "play" && (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 md:gap-6 items-start w-full">
             {/* CENTER CHESSBOARD */}
-            <div className="flex flex-col items-center max-w-[520px] w-full mx-auto space-y-2">
+            <div className="flex flex-col items-center max-w-[640px] w-full mx-auto space-y-2">
               {/* Opponent Card (Top) with 3D Bot Icon / Player Icon */}
               <div className="w-full flex items-center justify-between px-3 py-2 bg-[#262421] rounded-xl border border-[#36322d] shadow-sm">
                 <div className="flex items-center gap-2.5">
@@ -710,11 +710,11 @@ export function Game() {
                   <div>
                     <div className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5">
                       <span>{playMode === "ai" ? "Stockfish 15 NNUE" : pvpOpponentName}</span>
-                      <span className="text-[11px] font-normal text-neutral-400">
+                      <span className="text-xs font-normal text-neutral-400">
                         ({playMode === "ai" ? "3550" : "PvP Online"})
                       </span>
                     </div>
-                    <div className="text-[10px] md:text-[11px] text-neutral-400 font-medium">
+                    <div className="text-xs md:text-xs text-neutral-400 font-medium">
                       {thinking
                         ? (lang === "id" ? "Sedang menghitung..." : "Thinking...")
                         : (lang === "id" ? "Siap melangkah" : "Ready")}
@@ -764,15 +764,15 @@ export function Game() {
               {/* Player Card (Bottom) */}
               <div className="w-full flex items-center justify-between px-3 py-2 bg-[#262421] rounded-xl border border-[#36322d] shadow-sm">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-[11px] text-white shadow">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow">
                     {currentUser.username.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <div className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5">
                       <span>{currentUser.fullName}</span>
-                      <span className="text-[11px] font-normal text-neutral-400">({currentUser.elo})</span>
+                      <span className="text-xs font-normal text-neutral-400">({currentUser.elo})</span>
                     </div>
-                    <div className="text-[10px] md:text-[11px] text-neutral-400 flex items-center gap-1.5 font-medium">
+                    <div className="text-xs md:text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
                       <span>{humanSide === "white" ? (lang === "id" ? "Bidak Putih" : "White") : (lang === "id" ? "Bidak Hitam" : "Black")}</span>
                     </div>
@@ -838,7 +838,7 @@ export function Game() {
                     <div className="space-y-3 md:space-y-4">
                       {/* MODE SWITCHER: LAWAN AI VS LAWAN PEMAIN NYATA */}
                       <div>
-                        <label className="text-[11px] md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
+                        <label className="text-xs md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
                           {lang === "id" ? "Mode Pertandingan:" : "Match Mode:"}
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -876,7 +876,7 @@ export function Game() {
                           <div className="text-xs font-bold text-white flex items-center justify-between">
                             <span>Tanding Daring (Online PvP Room)</span>
                             {pvpRoomCode && (
-                              <Badge className="bg-emerald-600 text-white font-mono text-[10px]">
+                              <Badge className="bg-emerald-600 text-white font-mono text-xs">
                                 Room: {pvpRoomCode}
                               </Badge>
                             )}
@@ -911,7 +911,7 @@ export function Game() {
                           ) : (
                             <div className="text-xs text-neutral-300 space-y-1">
                               <div>Status: <span className="font-bold text-amber-400">{pvpStatus === "waiting" ? "Menunggu Lawan Bergabung..." : "Bertanding Aktif!"}</span></div>
-                              <div className="text-[11px] text-neutral-400">Bagikan kode <span className="font-mono font-bold text-white">{pvpRoomCode}</span> ke rekan catur Anda.</div>
+                              <div className="text-xs text-neutral-400">Bagikan kode <span className="font-mono font-bold text-white">{pvpRoomCode}</span> ke rekan catur Anda.</div>
                             </div>
                           )}
                         </div>
@@ -920,7 +920,7 @@ export function Game() {
                       {/* TIME CONTROL */}
                       {playMode === "ai" && (
                         <div>
-                          <label className="text-[11px] md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
+                          <label className="text-xs md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
                             {lang === "id" ? "Tingkat Kesulitan AI:" : "AI Difficulty:"}
                         </label>
                         <div className="grid grid-cols-3 gap-2 mb-3">
@@ -935,11 +935,11 @@ export function Game() {
                               className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center ${aiDepth === lvl.depth ? "bg-[#3d3a37] border-[#81b64c] text-white shadow-sm" : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"}`}
                             >
                               <div>{lvl.label}</div>
-                              <div className="text-[10px] font-mono text-neutral-500">{lvl.elo}</div>
+                              <div className="text-xs font-mono text-neutral-500">{lvl.elo}</div>
                             </button>
                           ))}
                         </div>
-                        <label className="text-[11px] md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
+                        <label className="text-xs md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
                           {lang === "id" ? "Kontrol Waktu Permainan:" : "Time Control:"}
                           </label>
                           <div className="grid grid-cols-2 gap-2">
@@ -1055,7 +1055,7 @@ export function Game() {
           <div className={`p-1 rounded-lg ${navTab === "play" ? "bg-[#3d3a37] text-white" : ""}`}>
             <IconPlay3D size={20} />
           </div>
-          <span className="text-[10px] leading-none">{lang === "id" ? "Bermain" : "Play"}</span>
+          <span className="text-xs leading-none">{lang === "id" ? "Bermain" : "Play"}</span>
         </button>
 
         <button
@@ -1067,7 +1067,7 @@ export function Game() {
           <div className={`p-1 rounded-lg ${navTab === "puzzle" ? "bg-[#3d3a37] text-white" : ""}`}>
             <IconPuzzle3D size={20} />
           </div>
-          <span className="text-[10px] leading-none">{lang === "id" ? "Teka-Teki" : "Puzzles"}</span>
+          <span className="text-xs leading-none">{lang === "id" ? "Teka-Teki" : "Puzzles"}</span>
         </button>
 
         <button
@@ -1079,7 +1079,7 @@ export function Game() {
           <div className={`p-1 rounded-lg ${navTab === "review" ? "bg-[#3d3a37] text-white" : ""}`}>
             <IconMedal3D size={20} />
           </div>
-          <span className="text-[10px] leading-none">{lang === "id" ? "Review" : "Review"}</span>
+          <span className="text-xs leading-none">{lang === "id" ? "Review" : "Review"}</span>
         </button>
 
         <button
@@ -1091,7 +1091,7 @@ export function Game() {
           <div className={`p-1 rounded-lg ${navTab === "vision" ? "bg-[#3d3a37] text-white" : ""}`}>
             <IconVision3D size={20} />
           </div>
-          <span className="text-[10px] leading-none">{lang === "id" ? "Belajar" : "Learn"}</span>
+          <span className="text-xs leading-none">{lang === "id" ? "Belajar" : "Learn"}</span>
         </button>
 
         <button
@@ -1103,7 +1103,7 @@ export function Game() {
           <div className={`p-1 rounded-lg ${navTab === "community" ? "bg-[#3d3a37] text-white" : ""}`}>
             <IconCommunity3D size={20} />
           </div>
-          <span className="text-[10px] leading-none">{lang === "id" ? "Klub" : "Club"}</span>
+          <span className="text-xs leading-none">{lang === "id" ? "Klub" : "Club"}</span>
         </button>
       </nav>
 

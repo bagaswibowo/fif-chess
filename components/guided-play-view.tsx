@@ -140,6 +140,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
   const [bestArrow, setBestArrow] = useState<[string, string] | null>(null);
   const [evalCp, setEvalCp] = useState<number | null>(null);
   const thinkingRef = useRef(false);
+  const [strategyMode, setStrategyMode] = useState<"attack" | "defense" | "balanced">("balanced");
 
   // Re-init when startFen changes (from spectator "Try Position")
   useEffect(() => {
@@ -205,10 +206,27 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
       const out = describeOutcome(c);
       setOutcome(out);
 
+      const strategyNote = playerSide === "black"
+        ? strategyMode === "attack"
+          ? lang === "id"
+            ? "Lawan (Putih) baru bergerak. Evaluasi serangan: buka garis, tekan raja, hitung material."
+            : "White just moved. Evaluate attack: open lines, pressure king, calculate material."
+          : strategyMode === "defense"
+          ? lang === "id"
+            ? "Lawan (Putih) baru bergerak. Evaluasi pertahanan: kunci struktur, amankan raja, tunggu celah."
+            : "White just moved. Evaluate defense: lock structure, king safety, wait for gaps."
+          : lang === "id"
+            ? "Lawan (Putih) baru bergerak. Analisis: cari keseimbangan material dan posisi."
+            : "White just moved. Analyze: look for material and positional balance."
+        : lang === "id"
+        ? "Analisis posisi dan cari respons terbaikmu."
+        : "Analyze the position and find your best response.";
       setFeedback({
         quality: "good",
-        headline: lang === "id" ? `Stockfish menjawab: ${data.san}` : `Stockfish replies: ${data.san}`,
-        reason: lang === "id" ? "Analisis posisi dan find your best response." : "Analyze the position and find your best response.",
+        headline: playerSide === "black"
+          ? (lang === "id" ? `Lawan (Putih) bergerak: ${data.san}` : `Opponent (White) plays: ${data.san}`)
+          : (lang === "id" ? `Lawan (Hitam) bergerak: ${data.san}` : `Opponent (Black) plays: ${data.san}`),
+        reason: strategyNote,
         cpLoss: null,
       });
 
@@ -354,7 +372,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
             <h2 className="text-lg font-black text-white">
               {lang === "id" ? "Latihan Dipandu Jev" : "Jev Guided Practice"}
             </h2>
-            <p className="text-xs text-neutral-400">
+            <p className="text-xs text-neutral-300">
               {lang === "id"
                 ? "Jev memandu tiap langkahmu + memberi peringatan ancaman sebelum kamu bergerak"
                 : "Jev coaches every move + warns you of threats before you play"}
@@ -371,6 +389,38 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
         </div>
       </div>
 
+      {/* Strategy selector — visible when player is black */}
+      {playerSide === "black" && !outcome.over && (
+        <div className="bg-[#1c1a18] px-4 py-2.5 rounded-xl border border-[#36322d] flex flex-wrap items-center gap-3">
+          <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
+            {lang === "id" ? "Strategi vs Lawan:" : "Strategy vs Opponent:"}
+          </span>
+          <div className="flex gap-1.5">
+            <button onClick={() => setStrategyMode("attack")}
+              className={"px-2.5 py-1 rounded-lg text-xs font-bold border transition-all " + (strategyMode === "attack" ? "bg-red-900/60 border-red-500 text-red-300" : "bg-[#1a1816] border-[#36322d] text-neutral-400 hover:text-white")}>
+              {(lang === "id" ? "Serang" : "Attack")}
+            </button>
+            <button onClick={() => setStrategyMode("defense")}
+              className={"px-2.5 py-1 rounded-lg text-xs font-bold border transition-all " + (strategyMode === "defense" ? "bg-sky-900/60 border-sky-500 text-sky-300" : "bg-[#1a1816] border-[#36322d] text-neutral-400 hover:text-white")}>
+              {(lang === "id" ? "Bertahan" : "Defend")}
+            </button>
+            <button onClick={() => setStrategyMode("balanced")}
+              className={"px-2.5 py-1 rounded-lg text-xs font-bold border transition-all " + (strategyMode === "balanced" ? "bg-[#3d3a37] border-[#81b64c] text-white" : "bg-[#1a1816] border-[#36322d] text-neutral-400 hover:text-white")}>
+              {(lang === "id" ? "Seimbang" : "Balanced")}
+            </button>
+          </div>
+          <span className="text-xs text-neutral-400 ml-auto">
+            {lang === "id"
+              ? strategyMode === "attack" ? "Fokus: buka garis, serang raja, hitung material."
+              : strategyMode === "defense" ? "Fokus: kunci struktur, amankan raja, tunggu celah."
+              : "Fokus: keseimbangan material dan posisi."
+              : strategyMode === "attack" ? "Focus: open lines, attack the king."
+              : strategyMode === "defense" ? "Focus: lock structure, king safety."
+              : "Focus: balance material and position."}
+          </span>
+        </div>
+      )}
+
       {/* Threat warning banner — appears above board when threat detected */}
       {threat?.hasThreat && threat.probability > 0.55 && !thinking && !outcome.over && (
         <div className="p-3.5 rounded-xl bg-orange-950/70 border border-orange-500/60 text-orange-200 text-sm font-semibold flex items-start gap-2.5 animate-pulse">
@@ -384,12 +434,12 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-[420px_1fr] gap-5 items-start">
+      <div className="grid lg:grid-cols-[minmax(300px,1fr)_380px] gap-5 items-start">
         {/* Board */}
         <div className="space-y-3">
           {/* Eval bar */}
           <div className="bg-[#1c1a18] rounded-xl border border-[#36322d] p-2.5 flex items-center gap-3">
-            <span className="text-[10px] text-neutral-500 font-mono w-10 text-right">
+            <span className="text-xs text-neutral-300 font-mono w-10 text-right">
               {evalCp !== null ? (evalCp > 0 ? `+${(evalCp/100).toFixed(1)}` : (evalCp/100).toFixed(1)) : "="}
             </span>
             <div className="flex-1 h-3 bg-[#1a1a1a] rounded-full overflow-hidden">
@@ -400,12 +450,12 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
                 }}
               />
             </div>
-            <span className="text-[10px] font-mono text-neutral-400 w-12">
+            <span className="text-xs font-mono text-neutral-300 w-12">
               {evalBarPct > 50 ? `W ${evalBarPct}%` : `B ${100-evalBarPct}%`}
             </span>
           </div>
 
-          <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl">
+          <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full min-w-[320px]">
             <Chessboard
               options={{
                 id: "guided-board",
@@ -436,7 +486,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
             </Button>
             {bestArrow && (
               <Button onClick={() => setShowBestArrow(v => !v)} variant="outline"
-                className={`flex-1 text-xs font-bold border-[#38bdf8]/40 ${showBestArrow ? "bg-[#0f2231] text-sky-300" : "bg-[#1c1a18] text-neutral-400"}`}>
+                className={`flex-1 text-xs font-bold border-[#38bdf8]/40 ${showBestArrow ? "bg-[#0f2231] text-sky-300" : "bg-[#1c1a18] text-neutral-300"}`}>
                 {showBestArrow ? (lang === "id" ? "Sembunyikan" : "Hide") : (lang === "id" ? "Tampilkan Terbaik" : "Show Best")}
               </Button>
             )}
@@ -463,7 +513,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
                 <>
                   <div className={`text-2xl font-black ${qColor}`}>{feedback.headline}</div>
                   {feedback.cpLoss !== null && feedback.cpLoss > 0 && (
-                    <div className="text-xs text-neutral-500 font-mono">-{feedback.cpLoss} cp</div>
+                    <div className="text-xs text-neutral-300 font-mono">-{feedback.cpLoss} cp</div>
                   )}
                   {feedback.reason && (
                     <div className="p-3 rounded-xl bg-[#312e2b] text-sm text-neutral-200 leading-relaxed">{feedback.reason}</div>
@@ -476,7 +526,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
                   )}
                 </>
               ) : (
-                <div className="text-sm text-neutral-400 py-4 text-center">
+                <div className="text-sm text-neutral-300 py-4 text-center">
                   {lang === "id" ? "Buat langkah pertama untuk memulai." : "Make your first move to begin."}
                 </div>
               )}
@@ -487,17 +537,17 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
           {history.length > 0 && (
             <Card className="bg-[#262421] border-[#36322d] text-white">
               <CardHeader className="py-3 px-4 border-b border-[#36322d]">
-                <CardTitle className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                <CardTitle className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
                   {lang === "id" ? "Riwayat Langkah" : "Move History"}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="flex flex-wrap gap-1.5 font-mono text-xs">
+                <div className="flex flex-wrap gap-1.5 font-mono text-xs h-[120px] overflow-y-auto">
                   {history.map((san, idx) => (
                     <span key={idx} className={`px-2 py-0.5 rounded ${
-                      idx % 2 === 0 ? "bg-[#312e2b] text-neutral-200" : "bg-[#1c1a18] text-neutral-400"
+                      idx % 2 === 0 ? "bg-[#312e2b] text-neutral-200" : "bg-[#1c1a18] text-neutral-300"
                     } ${idx === history.length - 1 ? "ring-1 ring-[#81b64c]" : ""}`}>
-                      {idx % 2 === 0 && <span className="text-neutral-500 mr-1">{Math.floor(idx/2)+1}.</span>}
+                      {idx % 2 === 0 && <span className="text-neutral-300 mr-1">{Math.floor(idx/2)+1}.</span>}
                       {san}
                     </span>
                   ))}
@@ -507,7 +557,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
           )}
 
           {/* How threat detection works */}
-          <div className="p-3.5 rounded-xl bg-[#1c1a18] border border-[#36322d] text-xs text-neutral-400 leading-relaxed space-y-1">
+          <div className="p-3.5 rounded-xl bg-[#1c1a18] border border-[#36322d] text-xs text-neutral-300 leading-relaxed space-y-1">
             <div className="font-bold text-neutral-300">{lang === "id" ? "Cara Kerja Peringatan Ancaman" : "How Threat Warnings Work"}</div>
             <div>
               {lang === "id"

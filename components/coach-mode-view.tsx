@@ -148,9 +148,18 @@ export function CoachModeView({ lang = "id" }: Props) {
       setFeedback({
         quality: "good",
         headline: lang === "id" ? `Stockfish menjawab: ${data.san}` : `Stockfish plays: ${data.san}`,
-        reason: lang === "id" ? "Giliran Anda. Perhatikan posisi — Jev sudah menyiapkan rekomendasi di atas." : "Your turn. Check the recommendation above and find your best response.",
+        reason: lang === "id" ? "Giliran Anda. Perhatikan rekomendasi — Jev sudah menyiapkan rekomendasi di atas sebelum bergerak." : "Your turn. Check the recommendation above and find your best response.",
         tactic: "", cpLoss: null,
       });
+      // Pre-move: compute hint + threat for the upcoming player turn
+      if (!out.over) {
+        const [hintData, threatData] = await Promise.all([
+          engineBest(c.fen(), "stockfish", 12),
+          probeThreat(c.fen()),
+        ]);
+        setHint(hintData ? { san: hintData.san, uci: hintData.uci } : null);
+        setThreat(threatData);
+      }
     } finally { setThinking(false); thinkingRef.current = false; }
   }
 
@@ -247,7 +256,7 @@ export function CoachModeView({ lang = "id" }: Props) {
           <IconBot3D size={26} />
           <div>
             <h2 className="text-base font-black text-white">{lang === "id" ? "AI Coach — Main Dipandu" : "AI Coach — Guided Play"}</h2>
-            <p className="text-sm text-neutral-400">{lang === "id" ? "Jev membimbing tiap langkah + peringatan ancaman sebelum kamu bergerak" : "Jev guides every move + warns you of threats before you play"}</p>
+            <p className="text-sm text-neutral-300">{lang === "id" ? "Jev membimbing tiap langkah + peringatan ancaman sebelum kamu bergerak" : "Jev guides every move + warns you of threats before you play"}</p>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -267,27 +276,29 @@ export function CoachModeView({ lang = "id" }: Props) {
         </div>
       )}
 
-      {/* Best move hint */}
+      {/* Best move hint — appears BEFORE you move, like a coach guiding you */}
       {hint && !thinking && !outcome.over && isPlayerTurn && (
-        <div className="px-4 py-3 rounded-xl bg-[#1e2a14] border border-[#81b64c]/40 text-[#81b64c] flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <IconLightning3D size={18} className="shrink-0" />
+        <div className="px-4 py-3 rounded-xl bg-[#1e2a14] border border-[#81b64c]/60 text-[#81b64c] flex items-center justify-between gap-3 shadow-lg shadow-[#81b64c]/10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-[#81b64c]/20 flex items-center justify-center shrink-0">
+              <IconLightning3D size={18} />
+            </div>
             <div>
-              <div className="text-sm font-bold uppercase tracking-wide text-[#81b64c]/80 mb-0.5">{lang === "id" ? "Rekomendasi Jev" : "Jev Suggestion"}</div>
-              <span className="text-base font-black text-[#81b64c]">{lang === "id" ? `Langkah terbaik: ${hint.san}` : `Best move: ${hint.san}`}</span>
-              {principle && <span className="text-xs text-[#81b64c]/60 ml-3 hidden md:inline">{principle}</span>}
+              <div className="text-xs font-black uppercase tracking-widest text-[#81b64c]/70 mb-1">{lang === "id" ? "Jev menyuruhmu:" : "Jev tells you:"}</div>
+              <span className="text-lg font-black text-[#81b64c] leading-tight">{lang === "id" ? `Gerakkan: ${hint.san}` : `Play: ${hint.san}`}</span>
+              {principle && <div className="text-xs text-[#81b64c]/60 mt-1">{principle}</div>}
             </div>
           </div>
           <Button onClick={() => setShowHintArrow(v => !v)} size="sm" variant="outline"
-            className={`text-sm font-bold border-[#81b64c]/40 shrink-0 ${showHintArrow ? "bg-[#1e2a14] text-[#81b64c]" : "bg-transparent text-neutral-400"}`}>
-            {showHintArrow ? (lang === "id" ? "Sembunyikan" : "Hide") : (lang === "id" ? "Tampilkan di Papan" : "Show on Board")}
+            className={`text-sm font-bold border-[#81b64c]/40 shrink-0 ${showHintArrow ? "bg-[#81b64c] text-white" : "bg-transparent text-[#81b64c]"}`}>
+            {showHintArrow ? "✕" : "→ Papan"}
           </Button>
         </div>
       )}
 
       {/* Thinking */}
       {thinking && (
-        <div className="px-4 py-3 rounded-xl bg-[#1a1816] border border-[#36322d] text-neutral-400 text-sm animate-pulse">
+        <div className="px-4 py-3 rounded-xl bg-[#1a1816] border border-[#36322d] text-neutral-300 text-sm animate-pulse">
           {lang === "id" ? "Stockfish sedang berpikir…" : "Stockfish is thinking…"}
         </div>
       )}
@@ -296,14 +307,14 @@ export function CoachModeView({ lang = "id" }: Props) {
         <div className="space-y-3">
           {/* Eval bar */}
           <div className="bg-[#1c1a18] rounded-xl border border-[#36322d] px-3 py-2 flex items-center gap-3">
-            <span className="text-sm text-neutral-500 font-mono w-14 text-right shrink-0">
+            <span className="text-sm text-neutral-300 font-mono w-14 text-right shrink-0">
               {evalCp !== null ? (evalCp > 0 ? `+${(evalCp/100).toFixed(1)}` : (evalCp/100).toFixed(1)) : "="}
             </span>
             <div className="flex-1 h-4 bg-[#1a1a1a] rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-500"
                 style={{ width: `${whitePct}%`, background: whitePct > 55 ? "linear-gradient(90deg,#ccc,#fff)" : whitePct < 45 ? "linear-gradient(90deg,#222,#444)" : "linear-gradient(90deg,#888,#bbb)" }} />
             </div>
-            <span className="text-sm font-mono text-neutral-400 w-16 shrink-0">{whitePct > 50 ? `Putih ${whitePct}%` : `Hitam ${100-whitePct}%`}</span>
+            <span className="text-sm font-mono text-neutral-300 w-16 shrink-0">{whitePct > 50 ? `Putih ${whitePct}%` : `Hitam ${100-whitePct}%`}</span>
           </div>
 
           {/* Board */}
@@ -342,7 +353,7 @@ export function CoachModeView({ lang = "id" }: Props) {
                 <>
                   <div className={`text-2xl font-black ${qColor}`}>{feedback.headline}</div>
                   {feedback.cpLoss !== null && feedback.cpLoss > 0 && (
-                    <div className="text-sm text-neutral-500 font-mono">-{feedback.cpLoss} centipawn</div>
+                    <div className="text-sm text-neutral-300 font-mono">-{feedback.cpLoss} centipawn</div>
                   )}
                   {feedback.reason && (
                     <div className="p-3 rounded-xl bg-[#312e2b] text-sm text-neutral-200 leading-relaxed">{feedback.reason}</div>
@@ -352,14 +363,20 @@ export function CoachModeView({ lang = "id" }: Props) {
                   )}
                   {feedback.bestSan && (
                     <div className="p-3 rounded-xl bg-[#0f2231] border border-[#38bdf8]/30 space-y-1">
-                      <div className="text-sm font-bold text-sky-300">{lang === "id" ? "Langkah Terbaik Engine:" : "Engine Best Move:"}</div>
+                      <div className="text-sm font-bold text-sky-300">{lang === "id" ? "Seharusnya Kamu Main:" : "You Should Have Played:"}</div>
                       <div className="font-mono text-lg font-black text-sky-200">{feedback.bestSan}</div>
+                    </div>
+                  )}
+                  {/* Next step: what to do now */}
+                  {!outcome.over && isPlayerTurn && hint && (
+                    <div className="mt-2 p-3 rounded-xl bg-[#1e2a14] border border-[#81b64c]/30 text-sm text-[#81b64c] font-bold">
+                      {lang === "id" ? `Sekarang gerakkan: ${hint.san}` : `Now play: ${hint.san}`}
                     </div>
                   )}
                 </>
               ) : (
-                <div className="text-sm text-neutral-500 py-4 text-center">
-                  {lang === "id" ? "Rekomendasi & analisis muncul setelah Anda bergerak." : "Analysis appears after each of your moves."}
+                <div className="text-sm text-neutral-300 py-4 text-center">
+                  {lang === "id" ? "Jev akan merekomendasikan langkahmu sebelum kamu bergerak." : "Jev will recommend your move before you play."}
                 </div>
               )}
             </CardContent>
@@ -368,13 +385,13 @@ export function CoachModeView({ lang = "id" }: Props) {
           {history.length > 0 && (
             <Card className="bg-[#262421] border-[#36322d] text-white">
               <CardHeader className="py-3 px-4 border-b border-[#36322d]">
-                <CardTitle className="text-sm font-bold text-neutral-400 uppercase tracking-wider">{lang === "id" ? "Riwayat Langkah" : "Move History"}</CardTitle>
+                <CardTitle className="text-sm font-bold text-neutral-300 uppercase tracking-wider">{lang === "id" ? "Riwayat Langkah" : "Move History"}</CardTitle>
               </CardHeader>
               <CardContent className="p-3">
-                <div className="flex flex-wrap gap-1.5 font-mono text-sm">
+                <div className="flex flex-wrap gap-1.5 font-mono text-sm h-[120px] overflow-y-auto">
                   {history.map((san, idx) => (
-                    <span key={idx} className={`px-2 py-0.5 rounded text-sm ${idx % 2 === 0 ? "bg-[#312e2b] text-neutral-200" : "bg-[#1c1a18] text-neutral-400"} ${idx === history.length - 1 ? "ring-1 ring-[#81b64c]" : ""}`}>
-                      {idx % 2 === 0 && <span className="text-neutral-500 mr-1">{Math.floor(idx/2)+1}.</span>}{san}
+                    <span key={idx} className={`px-2 py-0.5 rounded text-sm ${idx % 2 === 0 ? "bg-[#312e2b] text-neutral-200" : "bg-[#1c1a18] text-neutral-300"} ${idx === history.length - 1 ? "ring-1 ring-[#81b64c]" : ""}`}>
+                      {idx % 2 === 0 && <span className="text-neutral-300 mr-1">{Math.floor(idx/2)+1}.</span>}{san}
                     </span>
                   ))}
                 </div>
@@ -384,7 +401,7 @@ export function CoachModeView({ lang = "id" }: Props) {
 
           <Card className="bg-[#262421] border-[#36322d] text-white">
             <CardHeader className="py-3 px-4 border-b border-[#36322d]">
-              <CardTitle className="text-sm font-bold text-neutral-400 uppercase tracking-wider">{lang === "id" ? "8 Trik Taktis" : "8 Tactical Tricks"}</CardTitle>
+              <CardTitle className="text-sm font-bold text-neutral-300 uppercase tracking-wider">{lang === "id" ? "8 Trik Taktis" : "8 Tactical Tricks"}</CardTitle>
             </CardHeader>
             <CardContent className="p-3">
               <div className="grid grid-cols-2 gap-1.5">
@@ -402,7 +419,7 @@ export function CoachModeView({ lang = "id" }: Props) {
                     <span className="text-base shrink-0">{t.icon}</span>
                     <div>
                       <div className="font-bold text-white text-sm">{t.name}</div>
-                      <div className="text-neutral-500 text-xs leading-tight">{t.desc}</div>
+                      <div className="text-neutral-300 text-xs leading-tight">{t.desc}</div>
                     </div>
                   </div>
                 ))}

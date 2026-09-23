@@ -48,7 +48,7 @@ export type BuiltJevRequest = {
   droppedUcis: string[];
 };
 
-export function buildJevRequest(fen: string): BuiltJevRequest {
+export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
   const chess = parseFen(fen);
   if (chess.isGameOver()) {
     throw new Error("The game is already over; there is no move to pick.");
@@ -70,7 +70,9 @@ export function buildJevRequest(fen: string): BuiltJevRequest {
       questions: {
         move: {
           type: "choice",
-          instructions: MOVE_INSTRUCTIONS,
+          instructions: seed !== undefined
+            ? `${MOVE_INSTRUCTIONS} For tie-breaking, prefer the option whose key ends with the digit ${seed % 10}.`
+            : MOVE_INSTRUCTIONS,
           criteria,
         },
       },
@@ -151,13 +153,15 @@ export type JevPlaySuccess = {
 type PlayDeps = {
   apiKey: string;
   fetchImpl?: typeof fetch;
+  /** Seed to break ties — different value = different move */
+  seed?: number;
 };
 
 export async function playJevMove(
   fen: string,
-  { apiKey, fetchImpl = fetch }: PlayDeps,
+  { apiKey, fetchImpl = fetch, seed }: PlayDeps,
 ): Promise<JevPlaySuccess> {
-  const built = buildJevRequest(fen);
+  const built = buildJevRequest(fen, seed);
   const legalSet = new Set(built.legalUcis);
 
   const response = await fetchImpl(TYPESAFE_ENDPOINT, {

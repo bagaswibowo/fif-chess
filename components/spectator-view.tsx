@@ -41,12 +41,17 @@ async function fetchMove(
   fen: string,
   depth: number,
   engine: "stockfish" | "jev",
+  seed?: number,
 ): Promise<{ uci: string; san: string; scoreCp: number | null } | null> {
   try {
+    const body: Record<string, unknown> = { fen, depth, engine };
+    if (engine === "jev" && seed !== undefined) {
+      body.seed = seed;
+    }
     const res = await fetch("/api/engine-move", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fen, depth, engine }),
+      body: JSON.stringify(body),
     });
     const d = await res.json();
     if (d.uci && d.san) return { uci: d.uci, san: d.san, scoreCp: d.scoreCp ?? null };
@@ -65,7 +70,7 @@ function cpToAdvantage(cp: number | null, turn: "w" | "b"): string {
 }
 
 function qualityLabel(cpLoss: number | null): { label: string; color: string } {
-  if (cpLoss === null) return { label: "—", color: "text-neutral-400" };
+  if (cpLoss === null) return { label: "—", color: "text-neutral-300" };
   if (cpLoss < 10) return { label: "Terbaik ★", color: "text-emerald-400" };
   if (cpLoss < 30) return { label: "Bagus", color: "text-green-300" };
   if (cpLoss < 80) return { label: "Kurang Akurat", color: "text-yellow-400" };
@@ -81,10 +86,11 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
   const [currentFen, setCurrentFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
   const [outcome, setOutcome] = useState<GameOutcome | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
-  // jev plays white, stockfish plays black (inverted depth so jev has a chance)
-  const [jevSide] = useState<"white" | "black">("white");
-  const [jevDepth] = useState(3);   // Jev via Stockfish fallback — shallow = weaker
-  const [sfDepth] = useState(12);   // Stockfish normal
+  // Jev side selectable; both engines use same depth for a fair fight
+  const [jevSide, setJevSide] = useState<"white" | "black">("white");
+  const [jevDepth, setJevDepth] = useState(10);
+  const [sfDepth, setSfDepth] = useState(10);
+  const [seed, setSeed] = useState(0);
 
   const abortRef = useRef(false);
   const moveListRef = useRef<HTMLDivElement>(null);
@@ -114,7 +120,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
       const depth = isJevTurn ? jevDepth : sfDepth;
       const actor: "jev" | "stockfish" = isJevTurn ? "jev" : "stockfish";
 
-      const data = await fetchMove(chess.fen(), depth, actor);
+      const data = await fetchMove(chess.fen(), depth, actor, seed + moves.length);
       if (abortRef.current) break;
       if (!data) break;
 
@@ -169,7 +175,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
     if (!abortRef.current) {
       setStatus("finished");
     }
-  }, [jevSide, jevDepth, sfDepth]);
+  }, [jevSide, jevDepth, sfDepth, seed]);
 
   const stopMatch = () => {
     abortRef.current = true;
@@ -183,6 +189,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
     setCurrentFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     setOutcome(null);
     setShowConfetti(false);
+    setSeed((s) => s + 1);
   };
 
   const lastMove = moves[moves.length - 1] ?? null;
@@ -210,7 +217,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
               <IconLightning3D size={22} />
               {lang === "id" ? "Jev AI vs Stockfish — Live Match" : "Jev AI vs Stockfish — Live Match"}
             </h2>
-            <p className="text-xs text-neutral-400 mt-0.5">
+            <p className="text-xs text-neutral-300 mt-0.5">
               {lang === "id"
                 ? "Nonton pertarungan langsung Jev (Putih, depth 3) vs Stockfish (Hitam, depth 12). Jev sedikit diperlemah agar pertandingan seru."
                 : "Watch Jev (White, depth 3) battle Stockfish (Black, depth 12) live. Jev plays weaker for an interesting match."}
@@ -249,6 +256,44 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
             )}
           </div>
         </div>
+
+        {/* Side & Depth Controls */}
+        <div className="flex flex-wrap gap-3 items-center border-t border-[#36322d] pt-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
+              {lang === "id" ? "Jev main:" : "Jev plays:"}
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => { setJevSide("white"); setSeed((s) => s + 1); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${jevSide === "white" ? "bg-[#81b64c] text-white border-[#81b64c]" : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"}`}
+              >♔ {lang === "id" ? "Putih" : "White"}</button>
+              <button
+                onClick={() => { setJevSide("black"); setSeed((s) => s + 1); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${jevSide === "black" ? "bg-[#81b64c] text-white border-[#81b64c]" : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"}`}
+              >♚ {lang === "id" ? "Hitam" : "Black"}</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
+              {lang === "id" ? "Kedalaman:" : "Depth:"}
+            </span>
+            <div className="flex gap-1">
+              {[6, 10, 14].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => { setJevDepth(d); setSfDepth(d); }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${d === jevDepth ? "bg-[#3d3a37] border-[#81b64c] text-white" : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"}`}
+                >{d}</button>
+              ))}
+            </div>
+          </div>
+          <div className="text-xs text-neutral-300 ml-auto">
+            {lang === "id"
+              ? "Kedalaman sama — pertandingan adil. Jev bervariasi tiap reset."
+              : "Equal depth — fair fight. Jev varies each reset."}
+          </div>
+        </div>
       </div>
 
       {/* Player cards */}
@@ -271,7 +316,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
                 <div className="font-bold text-white text-sm">
                   {isJev ? "Jev AI (TypeSafe)" : "Stockfish 15 NNUE"}
                 </div>
-                <div className="text-[11px] text-neutral-400">
+                <div className="text-xs text-neutral-300">
                   {isJev
                     ? (lang === "id" ? `Depth ${jevDepth} — Sisi ${side === "white" ? "Putih" : "Hitam"}` : `Depth ${jevDepth} — ${side}`)
                     : (lang === "id" ? `Depth ${sfDepth} — Sisi ${side === "white" ? "Putih" : "Hitam"}` : `Depth ${sfDepth} — ${side}`)}
@@ -287,12 +332,12 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
         })}
       </div>
 
-      <div className="grid lg:grid-cols-[420px_1fr] gap-5 items-start">
+      <div className="grid lg:grid-cols-[minmax(300px,1fr)_380px] gap-5 items-start">
         {/* Board + eval bar */}
         <div className="space-y-3">
           {/* Eval bar */}
           <div className="bg-[#1c1a18] rounded-xl border border-[#36322d] p-2.5 flex items-center gap-3">
-            <span className="text-[10px] text-neutral-500 font-mono w-10 text-right">
+            <span className="text-xs text-neutral-300 font-mono w-10 text-right">
               {whiteCp !== null ? (whiteCp > 0 ? `+${(whiteCp/100).toFixed(1)}` : (whiteCp/100).toFixed(1)) : "="}
             </span>
             <div className="flex-1 h-3 bg-[#1a1a1a] rounded-full overflow-hidden">
@@ -304,7 +349,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
                 }}
               />
             </div>
-            <span className="text-[10px] font-mono text-neutral-400 w-12">
+            <span className="text-xs font-mono text-neutral-300 w-12">
               {barPct > 50 ? `W ${barPct}%` : `B ${100-barPct}%`}
             </span>
           </div>
@@ -328,19 +373,19 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
             <div className="p-4 rounded-xl bg-[#262421] border border-[#81b64c] text-center space-y-1">
               <IconTrophy3D size={28} className="mx-auto" />
               <div className="font-black text-white text-lg">{outcome.label}</div>
-              <div className="text-sm text-neutral-400">
+              <div className="text-sm text-neutral-300">
                 {outcome.winner === (jevSide === "white" ? "white" : "black")
                   ? (lang === "id" ? "🎉 Jev AI menang!" : "🎉 Jev AI wins!")
                   : outcome.winner === null
                   ? (lang === "id" ? "Remis!" : "Draw!")
                   : (lang === "id" ? "Stockfish menang." : "Stockfish wins.")}
               </div>
-              <div className="text-xs text-neutral-500">{moves.length} {lang === "id" ? "langkah total" : "total moves"}</div>
+              <div className="text-xs text-neutral-300">{moves.length} {lang === "id" ? "langkah total" : "total moves"}</div>
             </div>
           )}
 
           {status === "idle" && (
-            <div className="p-4 rounded-xl bg-[#1c1a18] border border-[#36322d] text-center text-neutral-400 text-sm">
+            <div className="p-4 rounded-xl bg-[#1c1a18] border border-[#36322d] text-center text-neutral-300 text-sm">
               {lang === "id"
                 ? "Tekan \"Mulai Pertandingan\" untuk menonton Jev melawan Stockfish secara live."
                 : "Press \"Start Match\" to watch Jev battle Stockfish live."}
@@ -351,9 +396,9 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
         {/* Move log */}
         <Card className="bg-[#262421] border-[#36322d] text-white">
           <CardHeader className="py-3 px-4 border-b border-[#36322d]">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-neutral-400 flex items-center justify-between">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-neutral-300 flex items-center justify-between">
               <span>{lang === "id" ? "Riwayat Langkah Live" : "Live Move Log"}</span>
-              <Badge className={`text-[10px] ${status === "running" ? "bg-emerald-600 animate-pulse" : status === "finished" ? "bg-neutral-600" : "bg-neutral-700"}`}>
+              <Badge className={`text-xs ${status === "running" ? "bg-emerald-600 animate-pulse" : status === "finished" ? "bg-neutral-600" : "bg-neutral-700"}`}>
                 {status === "running" ? (lang === "id" ? "● LIVE" : "● LIVE")
                   : status === "finished" ? (lang === "id" ? "Selesai" : "Finished")
                   : status === "paused" ? (lang === "id" ? "Dijeda" : "Paused")
@@ -363,11 +408,11 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
           </CardHeader>
           <CardContent className="p-0">
             {moves.length === 0 ? (
-              <div className="p-6 text-center text-neutral-500 text-sm">
+              <div className="p-6 text-center text-neutral-300 text-sm">
                 {lang === "id" ? "Belum ada langkah." : "No moves yet."}
               </div>
             ) : (
-              <div ref={moveListRef} className="max-h-[440px] overflow-y-auto p-3 space-y-1">
+              <div ref={moveListRef} className="h-[440px] overflow-y-auto p-3 space-y-1">
                 {moves.map((m, i) => {
                   const moveNum = Math.floor(i / 2) + 1;
                   const isWhite = i % 2 === 0;
@@ -382,7 +427,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
                       }`}
                     >
                       {isWhite && (
-                        <span className="text-neutral-500 font-mono w-7 shrink-0">{moveNum}.</span>
+                        <span className="text-neutral-300 font-mono w-7 shrink-0">{moveNum}.</span>
                       )}
                       {!isWhite && <span className="w-7 shrink-0" />}
                       <span className={`font-mono font-bold ${isJevMove ? "text-sky-300" : "text-amber-300"}`}>
@@ -392,7 +437,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
                         {isJevMove ? "Jev" : "SF"}
                       </Badge>
                       {m.scoreCp !== null && (
-                        <span className="ml-auto font-mono text-[10px] text-neutral-400">
+                        <span className="ml-auto font-mono text-xs text-neutral-300">
                           {cpToAdvantage(m.scoreCp, isWhite ? "b" : "w")}
                         </span>
                       )}

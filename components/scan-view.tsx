@@ -59,7 +59,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 items-start max-w-5xl mx-auto w-full">
-      <div className="w-full max-w-[480px] mx-auto aspect-square">
+      <div className="w-full max-w-[640px] mx-auto aspect-square">
         {previewFen ? (
           <Chessboard
             options={{

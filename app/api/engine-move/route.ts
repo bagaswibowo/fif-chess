@@ -56,6 +56,8 @@ export async function POST(request: Request) {
   }
 
   const engine = parseEngine(bodyObj);
+  // Seed is used to bias Jev's move selection so each reset produces different play
+  const seed = typeof bodyObj.seed === "number" ? bodyObj.seed : 0;
 
   if (engine === 'stockfish') {
     const result = await playStockfishMove(fen, depth);
@@ -80,7 +82,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await playJevMove(fen, { apiKey: key });
+    // Pass seed to make Jev break ties differently each time
+    const result = await playJevMove(fen, { apiKey: key, seed });
     return NextResponse.json({
       uci: result.uci,
       san: result.san,

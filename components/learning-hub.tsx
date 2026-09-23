@@ -159,6 +159,7 @@ type Props = {
 export function LearningHub({ lang = "id" }: Props) {
   const [activeSubTab, setActiveSubTab] = useState<"quest" | "vision">("quest");
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+  const [playAsBlack, setPlayAsBlack] = useState(false); // user plays black, stockfish plays white
   const [unlockedChapters, setUnlockedChapters] = useState<number[]>([1]);
   const [completedChapters, setCompletedChapters] = useState<number[]>([]);
   const [currentFen, setCurrentFen] = useState(QUEST_CHAPTERS[0].fen);
@@ -249,10 +250,12 @@ export function LearningHub({ lang = "id" }: Props) {
 
     const clickedSq = square.toLowerCase() as Square;
 
+    const myColor = playAsBlack ? "b" : "w";
+
     // 1. If no square currently selected:
     if (!selectedSquare) {
       const pieceOnSquare = game.get(clickedSq);
-      if (pieceOnSquare && pieceOnSquare.color === chapter.turn) {
+      if (pieceOnSquare && pieceOnSquare.color === myColor) {
         setSelectedSquare(clickedSq);
       }
       return;
@@ -266,7 +269,7 @@ export function LearningHub({ lang = "id" }: Props) {
 
     // 3. If clicking another piece of our own color, switch selection
     const targetPiece = game.get(clickedSq);
-    if (targetPiece && targetPiece.color === chapter.turn) {
+    if (targetPiece && targetPiece.color === myColor) {
       setSelectedSquare(clickedSq);
       return;
     }
@@ -456,7 +459,7 @@ export function LearningHub({ lang = "id" }: Props) {
                   <IconFire3D size={22} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[9px] md:text-xs text-neutral-400 font-bold uppercase tracking-wider truncate">
+                  <div className="text-[9px] md:text-xs text-neutral-300 font-bold uppercase tracking-wider truncate">
                     {lang === "id" ? "Streak Aktif" : "Day Streak"}
                   </div>
                   <div className="text-base md:text-2xl font-black text-amber-400 font-mono">
@@ -472,7 +475,7 @@ export function LearningHub({ lang = "id" }: Props) {
                   <IconStar3D size={22} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[9px] md:text-xs text-neutral-400 font-bold uppercase tracking-wider truncate">
+                  <div className="text-[9px] md:text-xs text-neutral-300 font-bold uppercase tracking-wider truncate">
                     {lang === "id" ? "Poin XP" : "Total XP"}
                   </div>
                   <div className="text-base md:text-2xl font-black text-emerald-400 font-mono">
@@ -488,7 +491,7 @@ export function LearningHub({ lang = "id" }: Props) {
                   <IconTrophy3D size={22} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[9px] md:text-xs text-neutral-400 font-bold uppercase tracking-wider truncate">
+                  <div className="text-[9px] md:text-xs text-neutral-300 font-bold uppercase tracking-wider truncate">
                     {lang === "id" ? "Bab Tuntas" : "Solved"}
                   </div>
                   <div className="text-base md:text-2xl font-black text-white font-mono">
@@ -508,7 +511,7 @@ export function LearningHub({ lang = "id" }: Props) {
                     <IconMedal3D size={22} />
                     <span>{lang === "id" ? "Pilih Bab Progresi Latihan" : "Select Progression Chapter"}</span>
                   </CardTitle>
-                  <CardDescription className="text-xs text-neutral-400">
+                  <CardDescription className="text-xs text-neutral-300">
                     {lang === "id"
                       ? "Setiap bab melatih insting langkah nyata pada papan catur interaktif (Click-to-Move)."
                       : "Each chapter trains real chess intuition on the interactive board."}
@@ -567,12 +570,12 @@ export function LearningHub({ lang = "id" }: Props) {
           {/* INTERACTIVE REAL CHESSBOARD CLICK-TO-MOVE DRILL */}
           <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
             {/* BOARD AREA */}
-            <div className="w-full max-w-[480px] mx-auto aspect-square shrink-0 rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl bg-[#1c1a18]">
+            <div className="w-full max-w-[640px] mx-auto aspect-square shrink-0 rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl bg-[#1c1a18]">
               <Chessboard
                 options={{
                   id: `quest-board-${chapter.id}`,
                   position: currentFen,
-                  boardOrientation: chapter.turn === "w" ? "white" : "black",
+                  boardOrientation: playAsBlack ? "black" : "white",
                   allowDragging: false, // CLICK-TO-MOVE ONLY
                   boardStyle: {
                     borderRadius: "14px",
@@ -594,15 +597,28 @@ export function LearningHub({ lang = "id" }: Props) {
                       <IconPuzzle3D size={20} />
                       <span>{lang === "id" ? chapter.titleId : chapter.titleEn}</span>
                     </h3>
-                    <p className="text-xs text-neutral-400 mt-0.5">
+                    <p className="text-xs text-neutral-300 mt-0.5">
                       {lang === "id"
-                        ? "Giliran Putih melangkah. Klik bidak, lalu klik petak tujuan."
-                        : "White to move. Click piece, then click destination."}
+                        ? (playAsBlack
+                            ? "Giliran Hitam (Anda). Klik bidak Hitam lalu petak tujuan — Stockfish main Putih."
+                            : "Giliran Putih (Anda). Klik bidak Putih lalu petak tujuan — Stockfish main Hitam.")
+                        : (playAsBlack
+                            ? "Black to move (you). Click a black piece, then destination — Stockfish plays White."
+                            : "White to move (you). Click a white piece, then destination — Stockfish plays Black.")}
                     </p>
                   </div>
-                  <Badge variant="outline" className="border-amber-500/40 text-amber-300 font-bold text-xs">
-                    +{chapter.xp} XP
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPlayAsBlack((v) => !v)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${playAsBlack ? "bg-[#3d3a37] border-[#81b64c] text-white" : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"}`}
+                      title={lang === "id" ? "Ganti sisi bermain" : "Switch playing side"}
+                    >
+                      {playAsBlack ? (lang === "id" ? "♚ Main Hitam" : "♚ Play Black") : (lang === "id" ? "♔ Main Putih" : "♔ Play White")}
+                    </button>
+                    <Badge variant="outline" className="border-amber-500/40 text-amber-300 font-bold text-xs">
+                      +{chapter.xp} XP
+                    </Badge>
+                  </div>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-[#191816] border border-[#36322d] mb-4">

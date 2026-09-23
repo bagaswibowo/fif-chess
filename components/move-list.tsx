@@ -48,7 +48,7 @@ function MoveCell({ move }: { move?: PlayedMove }) {
   return (
     <span className={move.by === "jev" ? "text-amber-200" : "text-foreground"}>
       {move.san}
-      <span className="ml-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+      <span className="ml-1 text-xs uppercase tracking-wide text-muted-foreground">
         {move.by === "jev" ? "jev" : "you"}
       </span>
     </span>

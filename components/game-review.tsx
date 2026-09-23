@@ -277,7 +277,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
             )}
           </div>
 
-          <div className="w-full max-w-[420px] mx-auto aspect-square rounded-xl overflow-hidden border border-[#3d3a37] shadow-lg">
+          <div className="w-full max-w-[640px] mx-auto aspect-square rounded-xl overflow-hidden border border-[#3d3a37] shadow-lg">
             <Chessboard
               options={{
                 id: "review-actual-board",
@@ -311,7 +311,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
             </Badge>
           </div>
 
-          <div className="w-full max-w-[420px] mx-auto aspect-square rounded-xl overflow-hidden border border-[#3d3a37] shadow-lg">
+          <div className="w-full max-w-[640px] mx-auto aspect-square rounded-xl overflow-hidden border border-[#3d3a37] shadow-lg">
             <Chessboard
               options={{
                 id: "review-ai-board",

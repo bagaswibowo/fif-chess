@@ -132,3 +132,6 @@
   animation: tumbleKing 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
   filter: drop-shadow(0 0 14px rgba(239, 68, 68, 0.95)) !important;
 }
+
+/* ── Global readability floor: 12px minimum ─────────────────────────────── */
+[class*="text-[8px]"], [class*="text-[9px]"], [class*="text-[10px]"], [class*="text-[11px]"], .text-xs { font-size: 12px !important; }

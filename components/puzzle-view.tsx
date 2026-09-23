@@ -455,7 +455,7 @@ export function PuzzleView({ lang = "id" }: Props) {
       {/* CHESSBOARD & CONTROLS */}
       <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
         {/* BOARD CONTAINER */}
-        <div className="w-full max-w-[480px] mx-auto aspect-square shrink-0 rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl bg-[#1c1a18]">
+        <div className="w-full max-w-[640px] mx-auto aspect-square shrink-0 rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl bg-[#1c1a18]">
           <Chessboard
             options={{
               id: `puzzle-board-${puzzle.id}`,
