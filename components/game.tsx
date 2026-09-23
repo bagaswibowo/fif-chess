@@ -33,6 +33,7 @@ import {
   IconSwap3D,
   IconGlobe3D,
   IconMedal3D,
+  IconCoach3D,
 } from "@/components/icons3d";
 import {
   applyUci,
@@ -1045,66 +1046,30 @@ export function Game() {
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#262421]/95 backdrop-blur-md border-t border-[#36322d] justify-around items-center py-2 px-1 shadow-2xl">
-        <button
-          onClick={() => setNavTab("play")}
-          className={`flex flex-col items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
-            navTab === "play" ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
-          }`}
-        >
-          <div className={`p-1 rounded-lg ${navTab === "play" ? "bg-[#3d3a37] text-white" : ""}`}>
-            <IconPlay3D size={20} />
-          </div>
-          <span className="text-xs leading-none">{lang === "id" ? "Bermain" : "Play"}</span>
-        </button>
-
-        <button
-          onClick={() => setNavTab("puzzle")}
-          className={`flex flex-col items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
-            navTab === "puzzle" ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
-          }`}
-        >
-          <div className={`p-1 rounded-lg ${navTab === "puzzle" ? "bg-[#3d3a37] text-white" : ""}`}>
-            <IconPuzzle3D size={20} />
-          </div>
-          <span className="text-xs leading-none">{lang === "id" ? "Teka-Teki" : "Puzzles"}</span>
-        </button>
-
-        <button
-          onClick={() => setNavTab("review")}
-          className={`flex flex-col items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
-            navTab === "review" ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
-          }`}
-        >
-          <div className={`p-1 rounded-lg ${navTab === "review" ? "bg-[#3d3a37] text-white" : ""}`}>
-            <IconMedal3D size={20} />
-          </div>
-          <span className="text-xs leading-none">{lang === "id" ? "Review" : "Review"}</span>
-        </button>
-
-        <button
-          onClick={() => setNavTab("vision")}
-          className={`flex flex-col items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
-            navTab === "vision" ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
-          }`}
-        >
-          <div className={`p-1 rounded-lg ${navTab === "vision" ? "bg-[#3d3a37] text-white" : ""}`}>
-            <IconVision3D size={20} />
-          </div>
-          <span className="text-xs leading-none">{lang === "id" ? "Belajar" : "Learn"}</span>
-        </button>
-
-        <button
-          onClick={() => setNavTab("community")}
-          className={`flex flex-col items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
-            navTab === "community" ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
-          }`}
-        >
-          <div className={`p-1 rounded-lg ${navTab === "community" ? "bg-[#3d3a37] text-white" : ""}`}>
-            <IconCommunity3D size={20} />
-          </div>
-          <span className="text-xs leading-none">{lang === "id" ? "Klub" : "Club"}</span>
-        </button>
+      <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#262421]/95 backdrop-blur-md border-t border-[#36322d] shadow-2xl overflow-x-auto">
+        <div className="flex justify-around items-center py-2 px-1 gap-1 min-w-full">
+          {[
+            { id: "play", icon: IconPlay3D, labelId: "Bermain", labelEn: "Play" },
+            { id: "coach", icon: IconCoach3D, labelId: "Latih", labelEn: "Train" },
+            { id: "puzzle", icon: IconPuzzle3D, labelId: "Teka", labelEn: "Puzzle" },
+            { id: "vision", icon: IconVision3D, labelId: "Belajar", labelEn: "Learn" },
+            { id: "review", icon: IconMedal3D, labelId: "Review", labelEn: "Review" },
+            { id: "community", icon: IconCommunity3D, labelId: "Klub", labelEn: "Club" },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setNavTab(tab.id as NavTab)}
+              className={`flex flex-col items-center gap-1 px-2 py-1 rounded-lg transition-all min-w-[56px] ${
+                navTab === tab.id ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
+              }`}
+            >
+              <div className={`p-1 rounded-lg ${navTab === tab.id ? "bg-[#3d3a37] text-white" : ""}`}>
+                <tab.icon size={20} />
+              </div>
+              <span className="text-[10px] leading-none">{lang === "id" ? tab.labelId : tab.labelEn}</span>
+            </button>
+          ))}
+        </div>
       </nav>
 
       {/* MODAL USER PROFILE / LOGIN / DAFTAR */}

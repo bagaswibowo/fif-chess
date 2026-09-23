@@ -493,3 +493,21 @@ export function IconFlag3D({ size = 48, className = "" }: IconProps) {
     </svg>
   );
 }
+
+export function IconCoach3D({ size = 24, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <circle cx="32" cy="20" r="12" fill="#1c1a18" stroke="#81b64c" strokeWidth="2.5" />
+      <circle cx="32" cy="18" r="8" fill="#0a0c0a" />
+      <ellipse cx="27" cy="17" rx="2" ry="2.5" fill="#81b64c" />
+      <ellipse cx="37" cy="17" rx="2" ry="2.5" fill="#81b64c" />
+      <path d="M28 22 Q32 26 36 22" stroke="#81b64c" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <rect x="14" y="32" width="36" height="22" rx="6" fill="#1c1a18" stroke="#36322d" strokeWidth="2" />
+      <rect x="20" y="38" width="24" height="10" rx="3" fill="#0a0c0a" />
+      <circle cx="26" cy="43" r="3" fill="#81b64c" opacity="0.7" />
+      <circle cx="32" cy="43" r="3" fill="#38bdf8" opacity="0.6" />
+      <circle cx="38" cy="43" r="3" fill="#f97316" opacity="0.6" />
+      <path d="M32 32 L32 40" stroke="#36322d" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}

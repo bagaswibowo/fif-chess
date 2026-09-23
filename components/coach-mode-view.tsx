@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -7,20 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confetti } from "@/components/confetti";
 import { IconBot3D, IconLightning3D } from "@/components/icons3d";
-import {
-  describeOutcome, findLegalMove, getLegalMoves, type GameOutcome,
-} from "@/lib/chess";
+import { describeOutcome, findLegalMove, getLegalMoves, type GameOutcome } from "@/lib/chess";
 
-type MoveQuality = "brilliant" | "best" | "good" | "inaccuracy" | "mistake" | "blunder";
 type Props = { lang?: "id" | "en" };
 
-const QUALITY: Record<MoveQuality, { id: string; en: string; color: string }> = {
-  brilliant:  { id: "Brilian! ⭐", en: "Brilliant! ⭐",  color: "text-cyan-300"   },
+function classifyLoss(cpLoss: number | null, isBest: boolean): "brilliant" | "best" | "good" | "inaccuracy" | "mistake" | "blunder" {
+  if (isBest || cpLoss === null || cpLoss < 10) return "best";
+  if (cpLoss < 25) return "good";
+  if (cpLoss < 50) return "inaccuracy";
+  if (cpLoss < 150) return "mistake";
+  return "blunder";
+}
+
+const QUALITY: Record<"brilliant" | "best" | "good" | "inaccuracy" | "mistake" | "blunder", { id: string; en: string; color: string }> = {
+  brilliant:  { id: "Brilian! ⭐", en: "Brilliant! ⭐",  color: "text-cyan-300" },
   best:       { id: "Terbaik!",   en: "Best Move!",      color: "text-emerald-400" },
-  good:       { id: "Bagus.",     en: "Good.",            color: "text-green-300"  },
+  good:       { id: "Bagus.",     en: "Good.",            color: "text-green-300" },
   inaccuracy: { id: "Kurang Akurat", en: "Inaccuracy",   color: "text-yellow-400" },
   mistake:    { id: "Kesalahan",  en: "Mistake",          color: "text-orange-400" },
-  blunder:    { id: "Blunder! ✗", en: "Blunder! ✗",     color: "text-red-400"    },
+  blunder:    { id: "Blunder! ✗", en: "Blunder! ✗",     color: "text-red-400" },
 };
 
 const PRINCIPLES = [
@@ -31,52 +34,6 @@ const PRINCIPLES = [
   { id: "Hubungkan kedua Benteng dengan mengosongkan baris di antaranya.", en: "Connect Rooks by clearing pieces between them." },
   { id: "Jangan keluarkan Menteri terlalu awal — mudah diusir, buang tempo.", en: "Avoid early Queen development — it gets chased and wastes tempo." },
 ];
-
-function classifyLoss(cpLoss: number | null, isBest: boolean): MoveQuality {
-  if (isBest || cpLoss === null || cpLoss < 10) return "best";
-  if (cpLoss < 25) return "good";
-  if (cpLoss < 50) return "inaccuracy";
-  if (cpLoss < 150) return "mistake";
-  return "blunder";
-}
-
-function barPct(whiteCp: number | null): number {
-  if (whiteCp === null) return 50;
-  return Math.round((Math.tanh(whiteCp / 400) + 1) / 2 * 100);
-}
-
-async function engineBest(fen: string, engine: "stockfish" | "jev" = "stockfish", depth = 14) {
-  try {
-    const r = await fetch("/api/engine-move", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fen, depth, engine }),
-    });
-    const d = await r.json();
-    if (d.uci && d.san) return { uci: d.uci as string, san: d.san as string, scoreCp: (d.scoreCp as number | null) ?? null };
-  } catch {}
-  return null;
-}
-
-async function probeThreat(fen: string): Promise<{ hasThreat: boolean; msg: string; square: string | null }> {
-  try {
-    const chess = new Chess(fen);
-    if (chess.isGameOver()) return { hasThreat: false, msg: "", square: null };
-    const data = await engineBest(fen, "stockfish", 3);
-    if (!data) return { hasThreat: false, msg: "", square: null };
-    const isThreat = data.san.includes("+") || data.san.includes("x") || data.san.includes("#");
-    if (!isThreat) return { hasThreat: false, msg: "", square: null };
-    const sq = data.uci.slice(2, 4);
-    const msg = data.san.includes("#")
-      ? `Ancaman skakmat lewat ${data.san} — petak ${sq} dalam bahaya!`
-      : data.san.includes("+")
-      ? `Lawan bisa skak lewat ${data.san} — lindungi Raja!`
-      : `Lawan bisa ambil bidak di ${sq} lewat ${data.san} — waspadai!`;
-    return { hasThreat: true, msg, square: sq };
-  } catch {
-    return { hasThreat: false, msg: "", square: null };
-  }
-}
 
 export function CoachModeView({ lang = "id" }: Props) {
   const [chess, setChess] = useState<Chess>(() => new Chess());
@@ -91,7 +48,7 @@ export function CoachModeView({ lang = "id" }: Props) {
   const [hint, setHint] = useState<{ san: string; uci: string } | null>(null);
   const [threat, setThreat] = useState<{ hasThreat: boolean; msg: string; square: string | null } | null>(null);
   const [showHintArrow, setShowHintArrow] = useState(false);
-  const [feedback, setFeedback] = useState<{ quality: MoveQuality; headline: string; reason: string; tactic: string; bestSan?: string; cpLoss: number | null } | null>(null);
+  const [feedback, setFeedback] = useState<{ quality: "brilliant" | "best" | "good" | "inaccuracy" | "mistake" | "blunder"; headline: string; reason: string; tactic: string; bestSan?: string; cpLoss: number | null } | null>(null);
   const thinkingRef = useRef(false);
 
   const principle = useMemo(() => {
@@ -103,20 +60,63 @@ export function CoachModeView({ lang = "id" }: Props) {
 
   const isPlayerTurn = chess.turn() === (playerSide === "white" ? "w" : "b");
 
+  const engineBest = async (fen: string, engine: "stockfish" | "jev" = "stockfish", depth = 14) => {
+    try {
+      const r = await fetch("/api/engine-move", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fen, depth, engine }) });
+      const d = await r.json();
+      if (d.uci && d.san) return { uci: d.uci as string, san: d.san as string, scoreCp: (d.scoreCp as number | null) ?? null };
+    } catch {}
+    return null;
+  };
+
+  const probeThreat = async (fen: string): Promise<{ hasThreat: boolean; msg: string; square: string | null }> => {
+    try {
+      const c = new Chess(fen);
+      if (c.isGameOver()) return { hasThreat: false, msg: "", square: null };
+      const data = await engineBest(fen, "stockfish", 3);
+      if (!data) return { hasThreat: false, msg: "", square: null };
+      const isThreat = data.san.includes("+") || data.san.includes("x") || data.san.includes("#");
+      if (!isThreat) return { hasThreat: false, msg: "", square: null };
+      const sq = data.uci.slice(2, 4);
+      const msg = data.san.includes("#") ? `Ancaman skakmat lewat ${data.san} — petak ${sq} dalam bahaya!` : data.san.includes("+") ? `Lawan bisa skak lewat ${data.san} — lindungi Raja!` : `Lawan bisa ambil bidak di ${sq} lewat ${data.san} — waspadai!`;
+      return { hasThreat: true, msg, square: sq };
+    } catch {
+      return { hasThreat: false, msg: "", square: null };
+    }
+  };
+
   useEffect(() => {
-    if (!isPlayerTurn || outcome.over || thinkingRef.current) return;
+    if (outcome.over || thinkingRef.current || !isPlayerTurn) return;
     let cancelled = false;
     (async () => {
-      const [bestData, threatData] = await Promise.all([
-        engineBest(fen, "stockfish", 12),
-        probeThreat(fen),
+      // Stockfish plays opposite side → computer moves first
+      const data = await engineBest(fen, "stockfish", 14);
+      if (cancelled || !data) return;
+      const c = new Chess(fen);
+      const move = findLegalMove(c, data.uci.slice(0, 2) as Square, data.uci.slice(2, 4) as Square, data.uci.length > 4 ? (data.uci[4] as "q") : undefined);
+      if (!move || !c.move(move)) return;
+
+      setChess(c); setFen(c.fen()); setHistory(h => [...h, data.san]);
+      setEvalCp(data.scoreCp !== null ? -data.scoreCp : null);
+      const out = describeOutcome(c); setOutcome(out);
+
+      if (out.over) {
+        if (out.winner !== playerSide) setShowConfetti(false);
+        setFeedback({ quality: "good", headline: lang === "id" ? "Partai selesai!" : "Game over!", reason: "", tactic: "", cpLoss: null });
+        return;
+      }
+
+      // Pre-move: compute hint + threat for upcoming player turn
+      const [hintData, threatData] = await Promise.all([
+        engineBest(c.fen(), "stockfish", 12),
+        probeThreat(c.fen()),
       ]);
       if (cancelled) return;
-      setHint(bestData ? { san: bestData.san, uci: bestData.uci } : null);
+      setHint(hintData ? { san: hintData.san, uci: hintData.uci } : null);
       setThreat(threatData);
     })();
     return () => { cancelled = true; };
-  }, [fen, isPlayerTurn, outcome.over]);
+  }, [fen, isPlayerTurn, outcome.over, playerSide, lang]);
 
   const clearPreMoveState = () => { setHint(null); setThreat(null); setShowHintArrow(false); };
 
@@ -127,41 +127,7 @@ export function CoachModeView({ lang = "id" }: Props) {
     setShowConfetti(false); setSelected(null); clearPreMoveState();
     setFeedback(null); setEvalCp(null);
     thinkingRef.current = false; setThinking(false);
-    if (side === "black") void triggerOpponent(c.fen());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function triggerOpponent(currentFen: string) {
-    setThinking(true); thinkingRef.current = true; clearPreMoveState();
-    try {
-      const data = await engineBest(currentFen, "stockfish", 14);
-      if (!data) return;
-      const c = new Chess(currentFen);
-      const move = findLegalMove(c, data.uci.slice(0, 2) as Square, data.uci.slice(2, 4) as Square,
-        data.uci.length > 4 ? (data.uci[4] as "q") : undefined);
-      if (!move) return;
-      c.move(move);
-      setChess(c); setFen(c.fen()); setHistory(h => [...h, data.san]);
-      setEvalCp(data.scoreCp !== null ? -data.scoreCp : null);
-      const out = describeOutcome(c); setOutcome(out);
-      if (out.over && out.winner !== playerSide) setShowConfetti(false);
-      setFeedback({
-        quality: "good",
-        headline: lang === "id" ? `Stockfish menjawab: ${data.san}` : `Stockfish plays: ${data.san}`,
-        reason: lang === "id" ? "Giliran Anda. Perhatikan rekomendasi — Jev sudah menyiapkan rekomendasi di atas sebelum bergerak." : "Your turn. Check the recommendation above and find your best response.",
-        tactic: "", cpLoss: null,
-      });
-      // Pre-move: compute hint + threat for the upcoming player turn
-      if (!out.over) {
-        const [hintData, threatData] = await Promise.all([
-          engineBest(c.fen(), "stockfish", 12),
-          probeThreat(c.fen()),
-        ]);
-        setHint(hintData ? { san: hintData.san, uci: hintData.uci } : null);
-        setThreat(threatData);
-      }
-    } finally { setThinking(false); thinkingRef.current = false; }
-  }
 
   const tryMove = async (from: string, to: string) => {
     if (outcome.over || thinkingRef.current || !isPlayerTurn) return;
@@ -173,8 +139,7 @@ export function CoachModeView({ lang = "id" }: Props) {
     setThinking(true); thinkingRef.current = true; clearPreMoveState();
 
     const preBest = await engineBest(chess.fen(), "stockfish", 14);
-    const bestUci = preBest?.uci ?? "";
-    const bestSan = preBest?.san ?? "";
+    const bestUci = preBest?.uci ?? ""; const bestSan = preBest?.san ?? "";
     const evalBefore = preBest?.scoreCp ?? null;
 
     c.move(move);
@@ -183,13 +148,6 @@ export function CoachModeView({ lang = "id" }: Props) {
     const evalAfter = postData?.scoreCp != null ? -postData.scoreCp : null;
     const cpLoss = evalBefore !== null && evalAfter !== null ? Math.max(0, evalBefore - evalAfter) : null;
     const isBest = !bestUci || userUci === bestUci || move.san === bestSan;
-    const quality = classifyLoss(cpLoss, isBest);
-
-    let tactic = "";
-    if (move.san.includes("#")) tactic = "♚ Skakmat!";
-    else if (move.san.includes("+")) tactic = "♟ Skak langsung — Raja lawan terancam.";
-    else if (move.isCapture) tactic = `✂ Pertukaran: ambil bidak di ${move.to}.`;
-    else if (move.isCastle) tactic = "🏰 Rokade — Raja aman, Benteng aktif.";
 
     setChess(c); setFen(c.fen()); setHistory(h => [...h, move.san]);
     setEvalCp(evalAfter);
@@ -198,21 +156,49 @@ export function CoachModeView({ lang = "id" }: Props) {
     if (out.over) {
       setThinking(false); thinkingRef.current = false;
       setShowConfetti(out.winner === playerSide);
-      setFeedback({ quality: out.winner === playerSide ? "brilliant" : "good", headline: lang === "id" ? "Partai selesai!" : "Game over!", reason: "", tactic, cpLoss: null });
+      setFeedback({ quality: out.winner === playerSide ? "brilliant" : "good", headline: lang === "id" ? "Partai selesai!" : "Game over!", reason: "", tactic: "", cpLoss: null });
       return;
     }
 
-    const ql = QUALITY[quality];
+    const quality = classifyLoss(cpLoss, isBest);
+    let tactic = "";
+    if (move.san.includes("#")) tactic = "♚ Skakmat!";
+    else if (move.san.includes("+")) tactic = "♟ Skak langsung — Raja lawan terancam.";
+    else if (move.isCapture) tactic = `✂ Pertukaran: ambil bidak di ${move.to}.`;
+    else if (move.isCastle) tactic = "🏰 Rokade — Raja aman, Benteng aktif.";
+
     setFeedback({
-      quality, headline: lang === "id" ? ql.id : ql.en,
+      quality, headline: lang === "id" ? QUALITY[quality].id : QUALITY[quality].en,
       reason: lang === "id"
-        ? isBest ? `${move.san} adalah langkah terbaik di posisi ini!` : `Kurang optimal — Stockfish menyarankan ${bestSan} (kehilangan ~${cpLoss ?? "?"} cp).`
-        : isBest ? `${move.san} is the top engine move!` : `Suboptimal — engine suggests ${bestSan} (~${cpLoss ?? "?"} cp loss).`,
-      tactic,
-      bestSan: isBest ? undefined : bestSan,
-      cpLoss,
+        ? (isBest ? `${move.san} adalah langkah terbaik di posisi ini!` : `Kurang optimal — Stockfish menyarankan ${bestSan} (kehilangan ~${cpLoss ?? "?"} cp).`)
+        : (isBest ? `${move.san} is the top engine move!` : `Suboptimal — engine suggests ${bestSan} (~${cpLoss ?? "?"} cp loss).`),
+      tactic, bestSan: isBest ? undefined : bestSan, cpLoss,
     });
-    setTimeout(() => { void triggerOpponent(c.fen()); }, 600);
+
+    setTimeout(() => {
+      thinkingRef.current = false; setThinking(false);
+      (async () => {
+        const nextData = await engineBest(c.fen(), "stockfish", 14);
+        if (!nextData) return;
+        const nextC = new Chess(c.fen());
+        const nextMove = findLegalMove(nextC, nextData.uci.slice(0, 2) as Square, nextData.uci.slice(2, 4) as Square, nextData.uci.length > 4 ? (nextData.uci[4] as "q") : undefined);
+        if (!nextMove || !nextC.move(nextMove)) return;
+        setChess(nextC); setFen(nextC.fen()); setHistory(h => [...h, nextData.san]);
+        setEvalCp(nextData.scoreCp !== null ? -nextData.scoreCp : null);
+        const nextOut = describeOutcome(nextC); setOutcome(nextOut);
+        if (nextOut.over) {
+          if (nextOut.winner !== playerSide) setShowConfetti(false);
+          setFeedback({ quality: "good", headline: lang === "id" ? "Partai selesai!" : "Game over!", reason: "", tactic: "", cpLoss: null });
+        } else {
+          const [hintData, threatData] = await Promise.all([
+            engineBest(nextC.fen(), "stockfish", 12),
+            probeThreat(nextC.fen()),
+          ]);
+          setHint(hintData ? { san: hintData.san, uci: hintData.uci } : null);
+          setThreat(threatData);
+        }
+      })();
+    }, 600);
   };
 
   const handleUndo = () => {
@@ -221,8 +207,7 @@ export function CoachModeView({ lang = "id" }: Props) {
     const rebuild = new Chess();
     for (const m of newH) { if (!rebuild.move(m)) break; }
     setChess(rebuild); setFen(rebuild.fen()); setHistory(newH);
-    setOutcome(describeOutcome(rebuild)); setFeedback(null);
-    clearPreMoveState(); setShowConfetti(false);
+    setOutcome(describeOutcome(rebuild)); setFeedback(null); clearPreMoveState(); setShowConfetti(false);
   };
 
   const squareStyles = useMemo(() => {
@@ -243,7 +228,7 @@ export function CoachModeView({ lang = "id" }: Props) {
     return [{ startSquare: hint.uci.slice(0, 2), endSquare: hint.uci.slice(2, 4), color: "#38bdf8" }];
   }, [showHintArrow, hint]);
 
-  const whitePct = barPct(evalCp);
+  const whitePct = (() => { if (evalCp === null) return 50; return Math.round((Math.tanh(evalCp / 400) + 1) / 2 * 100); })();
   const qColor = feedback ? QUALITY[feedback.quality].color : "";
 
   return (
@@ -276,156 +261,79 @@ export function CoachModeView({ lang = "id" }: Props) {
         </div>
       )}
 
-      {/* Best move hint — appears BEFORE you move, like a coach guiding you */}
+      {/* Best move hint — appears BEFORE you move */}
       {hint && !thinking && !outcome.over && isPlayerTurn && (
         <div className="px-4 py-3 rounded-xl bg-[#1e2a14] border border-[#81b64c]/60 text-[#81b64c] flex items-center justify-between gap-3 shadow-lg shadow-[#81b64c]/10">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#81b64c]/20 flex items-center justify-center shrink-0">
-              <IconLightning3D size={18} />
-            </div>
+            <div className="w-8 h-8 rounded-full bg-[#81b64c]/20 flex items-center justify-center shrink-0"><IconLightning3D size={18} /></div>
             <div>
               <div className="text-xs font-black uppercase tracking-widest text-[#81b64c]/70 mb-1">{lang === "id" ? "Jev menyuruhmu:" : "Jev tells you:"}</div>
               <span className="text-lg font-black text-[#81b64c] leading-tight">{lang === "id" ? `Gerakkan: ${hint.san}` : `Play: ${hint.san}`}</span>
               {principle && <div className="text-xs text-[#81b64c]/60 mt-1">{principle}</div>}
             </div>
           </div>
-          <Button onClick={() => setShowHintArrow(v => !v)} size="sm" variant="outline"
-            className={`text-sm font-bold border-[#81b64c]/40 shrink-0 ${showHintArrow ? "bg-[#81b64c] text-white" : "bg-transparent text-[#81b64c]"}`}>
-            {showHintArrow ? "✕" : "→ Papan"}
-          </Button>
+          <Button onClick={() => setShowHintArrow(v => !v)} size="sm" variant="outline" className={`text-sm font-bold border-[#81b64c]/40 shrink-0 ${showHintArrow ? "bg-[#81b64c] text-white" : "bg-transparent text-[#81b64c]"}`}>{showHintArrow ? "✕" : "→ Papan"}</Button>
         </div>
       )}
 
       {/* Thinking */}
-      {thinking && (
-        <div className="px-4 py-3 rounded-xl bg-[#1a1816] border border-[#36322d] text-neutral-300 text-sm animate-pulse">
-          {lang === "id" ? "Stockfish sedang berpikir…" : "Stockfish is thinking…"}
-        </div>
-      )}
+      {thinking && (<div className="px-4 py-3 rounded-xl bg-[#1a1816] border border-[#36322d] text-neutral-300 text-sm animate-pulse">{lang === "id" ? "Stockfish sedang berpikir…" : "Stockfish is thinking…"}</div>)}
 
       <div className="grid lg:grid-cols-[1fr_360px] gap-4 items-start">
         <div className="space-y-3">
           {/* Eval bar */}
           <div className="bg-[#1c1a18] rounded-xl border border-[#36322d] px-3 py-2 flex items-center gap-3">
-            <span className="text-sm text-neutral-300 font-mono w-14 text-right shrink-0">
-              {evalCp !== null ? (evalCp > 0 ? `+${(evalCp/100).toFixed(1)}` : (evalCp/100).toFixed(1)) : "="}
-            </span>
+            <span className="text-sm text-neutral-300 font-mono w-14 text-right shrink-0">{evalCp !== null ? (evalCp > 0 ? `+${(evalCp / 100).toFixed(1)}` : (evalCp / 100).toFixed(1)) : "="}</span>
             <div className="flex-1 h-4 bg-[#1a1a1a] rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${whitePct}%`, background: whitePct > 55 ? "linear-gradient(90deg,#ccc,#fff)" : whitePct < 45 ? "linear-gradient(90deg,#222,#444)" : "linear-gradient(90deg,#888,#bbb)" }} />
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${whitePct}%`, background: whitePct > 55 ? "linear-gradient(90deg,#ccc,#fff)" : whitePct < 45 ? "linear-gradient(90deg,#222,#444)" : "linear-gradient(90deg,#888,#bbb)" }} />
             </div>
-            <span className="text-sm font-mono text-neutral-300 w-16 shrink-0">{whitePct > 50 ? `Putih ${whitePct}%` : `Hitam ${100-whitePct}%`}</span>
+            <span className="text-sm font-mono text-neutral-300 w-16 shrink-0">{whitePct > 50 ? `Putih ${whitePct}%` : `Hitam ${100 - whitePct}%`}</span>
           </div>
 
           {/* Board */}
           <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full">
-            <Chessboard
-              options={{
-                id: "coach-board",
-                position: fen,
-                boardOrientation: playerSide,
-                allowDragging: false,
-                onSquareClick: ({ square }) => {
-                  if (selected) { void tryMove(selected, square); setSelected(null); }
-                  else setSelected(square);
-                },
-                squareStyles, arrows,
-                darkSquareStyle: { backgroundColor: "#b58863" },
-                lightSquareStyle: { backgroundColor: "#f0d9b5" },
-              }}
-            />
+            <Chessboard options={{ id: "coach-board", position: fen, boardOrientation: playerSide, allowDragging: false, onSquareClick: ({ square }) => { if (selected) { void tryMove(selected, square); setSelected(null); } else setSelected(square); }, squareStyles, arrows, darkSquareStyle: { backgroundColor: "#b58863" }, lightSquareStyle: { backgroundColor: "#f0d9b5" } }} />
           </div>
-
-          <div className="flex gap-2">
-            <Button onClick={handleUndo} variant="outline" size="sm" className="flex-1 border-[#36322d] text-neutral-300 text-sm font-bold bg-[#1c1a18]" disabled={history.length < 2 || thinkingRef.current}>
-              ← {lang === "id" ? "Undo Langkah Saya" : "Undo My Move"}
-            </Button>
-          </div>
+          <Button onClick={handleUndo} variant="outline" size="sm" className="flex-1 border-[#36322d] text-neutral-300 text-sm font-bold bg-[#1c1a18]" disabled={history.length < 2 || thinkingRef.current}>← {lang === "id" ? "Undo Langkah Saya" : "Undo My Move"}</Button>
         </div>
 
         <div className="space-y-3">
           <Card className="bg-[#262421] border-[#36322d] text-white">
-            <CardHeader className="py-3 px-4 border-b border-[#36322d]">
-              <CardTitle className="text-sm font-bold">{lang === "id" ? "Analisis Langkah" : "Move Analysis"}</CardTitle>
-            </CardHeader>
+            <CardHeader className="py-3 px-4 border-b border-[#36322d]"><CardTitle className="text-sm font-bold">{lang === "id" ? "Analisis Langkah" : "Move Analysis"}</CardTitle></CardHeader>
             <CardContent className="pt-3 space-y-3">
               {feedback ? (
                 <>
                   <div className={`text-2xl font-black ${qColor}`}>{feedback.headline}</div>
-                  {feedback.cpLoss !== null && feedback.cpLoss > 0 && (
-                    <div className="text-sm text-neutral-300 font-mono">-{feedback.cpLoss} centipawn</div>
-                  )}
-                  {feedback.reason && (
-                    <div className="p-3 rounded-xl bg-[#312e2b] text-sm text-neutral-200 leading-relaxed">{feedback.reason}</div>
-                  )}
-                  {feedback.tactic && (
-                    <div className="p-3 rounded-xl bg-[#1a1a14] border border-[#3d3a20] text-sm text-amber-300 font-semibold">{feedback.tactic}</div>
-                  )}
+                  {feedback.cpLoss !== null && feedback.cpLoss > 0 && <div className="text-sm text-neutral-300 font-mono">-{feedback.cpLoss} centipawn</div>}
+                  {feedback.reason && <div className="p-3 rounded-xl bg-[#312e2b] text-sm text-neutral-200 leading-relaxed">{feedback.reason}</div>}
+                  {feedback.tactic && <div className="p-3 rounded-xl bg-[#1a1a14] border border-[#3d3a20] text-sm text-amber-300 font-semibold">{feedback.tactic}</div>}
                   {feedback.bestSan && (
                     <div className="p-3 rounded-xl bg-[#0f2231] border border-[#38bdf8]/30 space-y-1">
                       <div className="text-sm font-bold text-sky-300">{lang === "id" ? "Seharusnya Kamu Main:" : "You Should Have Played:"}</div>
                       <div className="font-mono text-lg font-black text-sky-200">{feedback.bestSan}</div>
                     </div>
                   )}
-                  {/* Next step: what to do now */}
-                  {!outcome.over && isPlayerTurn && hint && (
-                    <div className="mt-2 p-3 rounded-xl bg-[#1e2a14] border border-[#81b64c]/30 text-sm text-[#81b64c] font-bold">
-                      {lang === "id" ? `Sekarang gerakkan: ${hint.san}` : `Now play: ${hint.san}`}
-                    </div>
-                  )}
+                  {!outcome.over && isPlayerTurn && hint && <div className="mt-2 p-3 rounded-xl bg-[#1e2a14] border border-[#81b64c]/30 text-sm text-[#81b64c] font-bold">{lang === "id" ? `Sekarang gerakkan: ${hint.san}` : `Now play: ${hint.san}`}</div>}
                 </>
               ) : (
-                <div className="text-sm text-neutral-300 py-4 text-center">
-                  {lang === "id" ? "Jev akan merekomendasikan langkahmu sebelum kamu bergerak." : "Jev will recommend your move before you play."}
-                </div>
+                <div className="text-sm text-neutral-300 py-4 text-center">{lang === "id" ? "Jev akan merekomendasikan langkahmu sebelum kamu bergerak." : "Jev will recommend your move before you play."}</div>
               )}
             </CardContent>
           </Card>
-
           {history.length > 0 && (
             <Card className="bg-[#262421] border-[#36322d] text-white">
-              <CardHeader className="py-3 px-4 border-b border-[#36322d]">
-                <CardTitle className="text-sm font-bold text-neutral-300 uppercase tracking-wider">{lang === "id" ? "Riwayat Langkah" : "Move History"}</CardTitle>
-              </CardHeader>
+              <CardHeader className="py-3 px-4 border-b border-[#36322d]"><CardTitle className="text-sm font-bold text-neutral-300 uppercase tracking-wider">{lang === "id" ? "Riwayat Langkah" : "Move History"}</CardTitle></CardHeader>
               <CardContent className="p-3">
                 <div className="flex flex-wrap gap-1.5 font-mono text-sm h-[120px] overflow-y-auto">
                   {history.map((san, idx) => (
                     <span key={idx} className={`px-2 py-0.5 rounded text-sm ${idx % 2 === 0 ? "bg-[#312e2b] text-neutral-200" : "bg-[#1c1a18] text-neutral-300"} ${idx === history.length - 1 ? "ring-1 ring-[#81b64c]" : ""}`}>
-                      {idx % 2 === 0 && <span className="text-neutral-300 mr-1">{Math.floor(idx/2)+1}.</span>}{san}
+                      {idx % 2 === 0 && <span className="text-neutral-300 mr-1">{Math.floor(idx / 2) + 1}.</span>}{san}
                     </span>
                   ))}
                 </div>
               </CardContent>
             </Card>
           )}
-
-          <Card className="bg-[#262421] border-[#36322d] text-white">
-            <CardHeader className="py-3 px-4 border-b border-[#36322d]">
-              <CardTitle className="text-sm font-bold text-neutral-300 uppercase tracking-wider">{lang === "id" ? "8 Trik Taktis" : "8 Tactical Tricks"}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-3">
-              <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { icon: "🍴", name: "Fork",            desc: lang === "id" ? "Serang 2 bidak sekaligus"      : "Attack 2 pieces at once"    },
-                  { icon: "📌", name: "Pin",             desc: lang === "id" ? "Tahan bidak agar tak bisa pindah" : "Freeze a piece in place" },
-                  { icon: "🪤", name: "Skewer",          desc: lang === "id" ? "Paksa bidak besar menyingkir"   : "Force valuable piece to move" },
-                  { icon: "💥", name: "Discovered Atk",  desc: lang === "id" ? "Pindah bidak, buka serangan lain" : "Move one, expose another" },
-                  { icon: "🏰", name: "Back Rank Mate",  desc: lang === "id" ? "Skakmat di baris belakang"      : "Checkmate on back rank"     },
-                  { icon: "🎯", name: "Zwischenzug",     desc: lang === "id" ? "Langkah kejutan sebelum merespons" : "Intermezzo before responding" },
-                  { icon: "⚡", name: "Tempo Gain",      desc: lang === "id" ? "Serang sambil berkembang"        : "Develop while threatening"  },
-                  { icon: "♟", name: "Passed Pawn",     desc: lang === "id" ? "Dorong pion ke promosi"          : "Push pawn to promotion"     },
-                ].map(t => (
-                  <div key={t.name} className="flex gap-1.5 p-2 rounded-lg bg-[#1a1816] border border-[#2e2c29]">
-                    <span className="text-base shrink-0">{t.icon}</span>
-                    <div>
-                      <div className="font-bold text-white text-sm">{t.name}</div>
-                      <div className="text-neutral-300 text-xs leading-tight">{t.desc}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
