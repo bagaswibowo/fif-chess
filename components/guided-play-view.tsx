@@ -65,12 +65,12 @@ function classifyCpLoss(cpLoss: number | null, isBest: boolean): MoveQuality {
   return "blunder";
 }
 
-async function fetchBest(fen: string, depth = 14): Promise<{ uci: string; san: string; scoreCp: number | null } | null> {
+async function fetchBest(fen: string, depth = 14, engine: "stockfish" | "jev" = "stockfish"): Promise<{ uci: string; san: string; scoreCp: number | null } | null> {
   try {
     const r = await fetch("/api/engine-move", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fen, depth }),
+      body: JSON.stringify({ fen, depth, engine }),
     });
     const d = await r.json();
     if (d.uci && d.san) return { uci: d.uci, san: d.san, scoreCp: d.scoreCp ?? null };
@@ -186,7 +186,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
     setThinking(true);
     thinkingRef.current = true;
     try {
-      const data = await fetchBest(currentFen, 14);
+      const data = await fetchBest(currentFen, 14, "jev");
       if (!data) throw new Error("no data");
 
       const c = new Chess(currentFen);
@@ -362,10 +362,10 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => resetGame("white")} variant="outline" className="border-[#36322d] text-white text-xs font-bold bg-[#1c1a18]" disabled={thinking}>
+          <Button onClick={() => resetGame("white")} variant="outline" className="border-[#36322d] text-white text-sm font-bold bg-[#1c1a18]" disabled={thinking}>
             ♟ {lang === "id" ? "Main Putih" : "Play White"}
           </Button>
-          <Button onClick={() => resetGame("black")} variant="outline" className="border-[#36322d] text-white text-xs font-bold bg-[#1c1a18]" disabled={thinking}>
+          <Button onClick={() => resetGame("black")} variant="outline" className="border-[#36322d] text-white text-sm font-bold bg-[#1c1a18]" disabled={thinking}>
             ♟ {lang === "id" ? "Main Hitam" : "Play Black"}
           </Button>
         </div>
@@ -430,7 +430,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
 
           <div className="flex gap-2">
             <Button onClick={handleUndo} variant="outline"
-              className="flex-1 border-[#36322d] text-neutral-300 text-xs font-bold bg-[#1c1a18]"
+              className="flex-1 border-[#36322d] text-neutral-300 text-sm font-bold bg-[#1c1a18]"
               disabled={history.length < 2 || thinkingRef.current}>
               ← {lang === "id" ? "Undo" : "Undo"}
             </Button>
