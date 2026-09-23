@@ -219,8 +219,8 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
             </h2>
             <p className="text-xs text-neutral-300 mt-0.5">
               {lang === "id"
-                ? "Nonton pertarungan langsung Jev (Putih, depth 3) vs Stockfish (Hitam, depth 12). Jev sedikit diperlemah agar pertandingan seru."
-                : "Watch Jev (White, depth 3) battle Stockfish (Black, depth 12) live. Jev plays weaker for an interesting match."}
+                ? "Nonton pertarungan langsung Jev (Putih, depth 10) vs Stockfish (Hitam, depth 10). Kedua mesin sama-sama depth 10 — adil."
+                : "Watch Jev (White, depth 10) battle Stockfish (Black, depth 10) live. Equal depth — fair fight."}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -291,7 +291,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
           <div className="text-xs text-neutral-300 ml-auto">
             {lang === "id"
               ? "Kedalaman sama — pertandingan adil. Jev bervariasi tiap reset."
-              : "Equal depth — fair fight. Jev varies each reset."}
+              : "Equal depth (10) — fair fight. Jev varies each reset."}
           </div>
         </div>
       </div>

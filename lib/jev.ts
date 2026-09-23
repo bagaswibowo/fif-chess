@@ -58,11 +58,12 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
   const criteria: Record<string, string> = {};
   for (const move of selected) {
     let desc = move.san
-    if (move.isCheckmate) desc += ' - delivers checkmate'
-    else if (move.isCheck) desc += ' - gives check'
-    else if (move.isCapture) desc += ' - captures piece'
-    else if (move.isCastle) desc += ' - castles for safety'
-    else if (move.isPromotion) desc += ' - promotes pawn'
+    if (move.isCheckmate) desc += ' - checkmate'
+    else if (move.isCheck) desc += ' - check, king at risk'
+    else if (move.isCapture) desc += ' - captures piece, verify king safety'
+    else if (move.isCastle) desc += ' - king safe, rook active'
+    else if (move.isPromotion) desc += ' - promote, big gain'
+    else desc += ' - standard move'
     criteria[move.uci] = desc
   }
 
@@ -76,7 +77,7 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
       questions: {
         move: {
           type: "choice",
-          instructions: `${MOVE_INSTRUCTIONS} Evaluate by king safety, then material, then piece activity, then center control. Choose strongest.${
+          instructions: `${MOVE_INSTRUCTIONS} STRICTLY: King safety overrides all material. NEVER sacrifice king defense for pawn or positional advantage. If capture opens diagonal toward own king, AVOID regardless of material. Choose safest strong move, not greediest.${
             seed !== undefined
               ? ` For tie-breaking, prefer option ending with digit ${seed % 10}.`
               : ""
