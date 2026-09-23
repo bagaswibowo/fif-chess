@@ -57,7 +57,13 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
   const { selected, dropped } = selectMovesForChoice(getLegalMoves(chess));
   const criteria: Record<string, string> = {};
   for (const move of selected) {
-    criteria[move.uci] = move.san;
+    let desc = move.san
+    if (move.isCheckmate) desc += ' - delivers checkmate'
+    else if (move.isCheck) desc += ' - gives check'
+    else if (move.isCapture) desc += ' - captures piece'
+    else if (move.isCastle) desc += ' - castles for safety'
+    else if (move.isPromotion) desc += ' - promotes pawn'
+    criteria[move.uci] = desc
   }
 
   return {
@@ -70,9 +76,11 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
       questions: {
         move: {
           type: "choice",
-          instructions: seed !== undefined
-            ? `${MOVE_INSTRUCTIONS} For tie-breaking, prefer the option whose key ends with the digit ${seed % 10}.`
-            : MOVE_INSTRUCTIONS,
+          instructions: `${MOVE_INSTRUCTIONS} Evaluate by king safety, then material, then piece activity, then center control. Choose strongest.${
+            seed !== undefined
+              ? ` For tie-breaking, prefer option ending with digit ${seed % 10}.`
+              : ""
+          }`,
           criteria,
         },
       },
