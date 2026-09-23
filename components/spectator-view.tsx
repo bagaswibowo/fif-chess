@@ -31,17 +31,22 @@ type Props = {
 // Delay between moves (ms) — long enough to read, short enough to stay engaging
 const MOVE_DELAY_MS = 1400;
 
+// Jev should use TypeSafe engine (not Stockfish fallback)
+// Stockfish should use local Stockfish engine.
+
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function fetchMove(
   fen: string,
   depth: number,
+  engine: "stockfish" | "jev",
 ): Promise<{ uci: string; san: string; scoreCp: number | null } | null> {
   try {
-    const res = await fetch("/api/jev-move", {
+    const res = await fetch("/api/engine-move", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fen, depth }),
+      body: JSON.stringify({ fen, depth, engine }),
     });
     const d = await res.json();
     if (d.uci && d.san) return { uci: d.uci, san: d.san, scoreCp: d.scoreCp ?? null };
@@ -109,7 +114,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
       const depth = isJevTurn ? jevDepth : sfDepth;
       const actor: "jev" | "stockfish" = isJevTurn ? "jev" : "stockfish";
 
-      const data = await fetchMove(chess.fen(), depth);
+      const data = await fetchMove(chess.fen(), depth, actor);
       if (abortRef.current) break;
       if (!data) break;
 

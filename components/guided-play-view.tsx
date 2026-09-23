@@ -67,7 +67,7 @@ function classifyCpLoss(cpLoss: number | null, isBest: boolean): MoveQuality {
 
 async function fetchBest(fen: string, depth = 14): Promise<{ uci: string; san: string; scoreCp: number | null } | null> {
   try {
-    const r = await fetch("/api/jev-move", {
+    const r = await fetch("/api/engine-move", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fen, depth }),
@@ -82,7 +82,7 @@ async function fetchBest(fen: string, depth = 14): Promise<{ uci: string; san: s
  * Ask Jev whether a tactical threat exists.
  * Uses TypeSafe choice to pick the most "threatened" square from candidates,
  * combined with a probability threshold to decide if warning is shown.
- * We reuse /api/jev-move (Stockfish) for a shallow threat probe — simpler and no
+ * We reuse /api/engine-move (Stockfish) for a shallow threat probe — simpler and no
  * extra API endpoint needed. If bestmove is a capture/check at depth 1, there's a threat.
  */
 async function probeThreat(fen: string): Promise<ThreatInfo> {
