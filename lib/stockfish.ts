@@ -50,7 +50,7 @@ function getStockfishEval(fen: string, depth = 8, multipv = 5): Promise<Stockfis
     const timer = setTimeout(() => {
       cleanup();
       resolve(null);
-    }, 4000);
+    }, 8000);
 
     p.stdout.on("data", (data: Buffer) => {
       out += data.toString();
@@ -138,7 +138,7 @@ function evalSingleMove(fen: string, move: string, depth = 6): Promise<number | 
     const timer = setTimeout(() => {
       cleanup();
       resolve(null);
-    }, 2500);
+    }, 4000);
 
     p.stdout.on("data", (data: Buffer) => {
       out += data.toString();

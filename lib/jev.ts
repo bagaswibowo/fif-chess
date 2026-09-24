@@ -1,4 +1,4 @@
-import { Chess } from "chess.js";
+import { Chess, type Square } from "chess.js";
 import {
   applyUci,
   describeOutcome,
@@ -14,11 +14,24 @@ export const JEV_MODEL = "jev-latest";
 export const MOVE_QUESTION_ID = "move";
 
 export const MOVE_INSTRUCTIONS =
-  "Pick the best legal chess move for the side to move. Option keys are UCI; descriptions are the same move in SAN. Play sound, active chess: defend pieces under threat, recapture material when taken, control the center, and develop pieces actively. Avoid purposeless king moves unless under check or forced.";
+  "Select the best move for the side to move. Evaluate tactical dangers first: if pieces or King are threatened, defend them, capture the attacking piece, or counter-attack. Never play passive king or rook moves when valuable material is attacked. Seize tactical captures, give forcing checks, control the center, and deliver checkmate whenever possible.";
+
+const PIECE_NAMES: Record<string, string> = {
+  p: "pawn",
+  n: "knight",
+  b: "bishop",
+  r: "rook",
+  q: "queen",
+  k: "king",
+};
 
 export type JevState = {
   fen: string;
   side_to_move: "white" | "black";
+  in_check: boolean;
+  my_threatened_pieces: string[];
+  capturable_opponents: string[];
+  tactical_situation: string;
 };
 
 export type ChoiceQuestion = {
@@ -54,16 +67,62 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
     throw new Error("The game is already over; there is no move to pick.");
   }
 
+  const myColor = chess.turn();
+  const oppColor = myColor === "w" ? "b" : "w";
+  const board = chess.board();
+
+  // 1. Identify threatened own pieces and capturable opponent pieces
+  const threatenedPieces: string[] = [];
+  const capturableOpponents: string[] = [];
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r]?.[c];
+      if (!p) continue;
+      const sq = (String.fromCharCode(97 + c) + (8 - r)) as Square;
+      if (p.color === myColor && chess.isAttacked(sq, oppColor)) {
+        threatenedPieces.push(`${PIECE_NAMES[p.type] ?? p.type} on ${sq}`);
+      } else if (p.color === oppColor && chess.isAttacked(sq, myColor)) {
+        capturableOpponents.push(`${PIECE_NAMES[p.type] ?? p.type} on ${sq}`);
+      }
+    }
+  }
+
+  const tacticalSituation = chess.isCheck()
+    ? "ALERT: King is in CHECK! Must safely block, capture the checker, or move the king."
+    : threatenedPieces.length > 0
+    ? `TACTICAL ALERT: ${threatenedPieces.length} piece(s) under direct attack: ${threatenedPieces.join(", ")}. Defend, rescue, or counter-attack immediately!`
+    : capturableOpponents.length > 0
+    ? `OPPORTUNITY: Opponent has vulnerable piece(s) to capture: ${capturableOpponents.join(", ")}.`
+    : "Position is calm. Develop pieces, fight for center, or prepare attacking breakthrough.";
+
+  // 2. Build semantic descriptions for all legal moves
   const { selected, dropped } = selectMovesForChoice(getLegalMoves(chess));
+  const rawMoves = chess.moves({ verbose: true });
+  const rawMoveMap = new Map(rawMoves.map((m) => [m.lan, m]));
+
   const criteria: Record<string, string> = {};
   for (const move of selected) {
-    let desc = move.san;
-    if (move.isCheckmate) desc += " - delivers checkmate";
-    else if (move.isPromotion) desc += " - promote pawn";
-    else if (move.isCheck) desc += " - check";
-    else if (move.isCapture) desc += " - captures piece";
-    else if (move.isCastle) desc += " - castle king";
-    else desc += " - positional move";
+    const raw = rawMoveMap.get(move.uci);
+    let desc = `${move.san}: `;
+    const pName = raw ? (PIECE_NAMES[raw.piece] ?? raw.piece) : "piece";
+
+    if (move.isCheckmate) {
+      desc += "DELIVERS CHECKMATE and wins the game!";
+    } else if (move.isCapture) {
+      const capName = raw?.captured ? (PIECE_NAMES[raw.captured] ?? raw.captured) : "piece";
+      desc += `${pName} captures opponent ${capName} on ${move.to}`;
+      if (move.isPromotion) desc += " and promotes to Queen";
+    } else if (move.isCastle) {
+      desc += "castles king to safety and connects rooks";
+    } else if (raw && chess.isAttacked(raw.from, oppColor)) {
+      desc += `rescues threatened ${pName} from ${raw.from} to ${move.to}`;
+    } else if (move.isCheck) {
+      desc += `${pName} attacks opponent King with CHECK`;
+    } else {
+      desc += `moves ${pName} to ${move.to}`;
+    }
+
     criteria[move.uci] = desc;
   }
 
@@ -72,6 +131,10 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
       state: {
         fen: chess.fen(),
         side_to_move: sideToMove(chess),
+        in_check: chess.isCheck(),
+        my_threatened_pieces: threatenedPieces,
+        capturable_opponents: capturableOpponents,
+        tactical_situation: tacticalSituation,
       },
       model: JEV_MODEL,
       questions: {
