@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends stockfish && rm
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/models ./models
 
 EXPOSE 43173
 CMD ["node", "server.js"]

@@ -8,13 +8,14 @@ import {
   sideToMove,
   type GameOutcome,
 } from "@/lib/chess";
+import { evaluateWithFlyBrain, type FlyMoveScore } from "@/lib/flybrain/service";
 
 export const TYPESAFE_ENDPOINT = "https://api.typesafe.ai/v1/systemone";
 export const JEV_MODEL = "jev-latest";
 export const MOVE_QUESTION_ID = "move";
 
 export const MOVE_INSTRUCTIONS =
-  "Select the best legal chess move for the side to move. Evaluate tactical and strategic consequences strictly: 1. NEVER play moves tagged [FATAL BLUNDER] or [TEMPO LOSS]. 2. If your piece is attacked, move it to a SAFE square or defend it. 3. DO NOT move your Queen repeatedly back and forth while other pieces remain undeveloped. 4. Control the center, develop Knights and Bishops, and castle early. 5. Learn from previous errors: avoid premature attacks against Stockfish that lead to counter-attacks.";
+  "Select the best legal chess move for the side to move. Evaluate tactical and strategic consequences strictly: 1. NEVER play moves tagged [FATAL BLUNDER] or [TEMPO LOSS]. 2. If your piece is attacked, move it to a SAFE square or defend it. 3. DO NOT move your Queen repeatedly back and forth while other pieces remain undeveloped. 4. Control the center, develop Knights and Bishops, and castle early. 5. Consider [FLY BRAIN RECOMMENDED] biological intuition moves for natural development.";
 
 export const PIECE_VALUES: Record<string, number> = {
   p: 1,
@@ -41,6 +42,7 @@ export type JevState = {
   in_check: boolean;
   my_threatened_pieces: string[];
   capturable_opponents: string[];
+  fly_brain_top_moves: string[];
   strategic_guidance: string;
   tactical_situation: string;
 };
@@ -70,6 +72,7 @@ export type BuiltJevRequest = {
   request: SystemOneRequest;
   legalUcis: string[];
   droppedUcis: string[];
+  flyMoves: FlyMoveScore[];
 };
 
 export function buildJevRequest(fen: string, seed?: number, history: string[] = []): BuiltJevRequest {
@@ -83,7 +86,13 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
   const board = chess.board();
   const ply = history.length;
 
-  // 1. Identify threatened own pieces and capturable opponent pieces
+  // 1. Biological Fly Brain Sensory Forward Pass (134k Drosophila neurons)
+  const flyResult = evaluateWithFlyBrain(fen);
+  const flyMoves = flyResult?.moves ?? [];
+  const flyTop3 = flyMoves.slice(0, 3);
+  const flyTopUcis = new Set(flyTop3.map((m) => m.uci));
+
+  // 2. Identify threatened own pieces and capturable opponent pieces
   const threatenedPieces: string[] = [];
   const capturableOpponents: string[] = [];
 
@@ -110,9 +119,9 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
   if (ply < 24 && queenMovesCount >= 2) {
     strategicGuidance = "CRITICAL LESSON: Queen has already moved repeatedly. Do NOT shuffle Queen again. Develop minor pieces (Knights/Bishops) or activate Rooks!";
   } else if (ply < 16) {
-    strategicGuidance = "Opening Principle: Control the center (e4/d4/e5/d5), develop Knights and Bishops to active squares, and castle King to safety.";
+    strategicGuidance = "Opening Principle: Control center (e4/d4/e5/d5), develop Knights and Bishops actively, and castle King to safety.";
   } else {
-    strategicGuidance = "Middlegame Strategy: Coordinate Rooks on open files, create pawn breaks, and watch out for opponent Knight/Rook infiltrations.";
+    strategicGuidance = "Middlegame Strategy: Coordinate Rooks on open files, create pawn breaks, and watch out for opponent Knight infiltrations.";
   }
 
   const tacticalSituation = chess.isCheck()
@@ -123,7 +132,7 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
     ? `OPPORTUNITY: Opponent has vulnerable piece(s) to capture: ${capturableOpponents.join(", ")}.`
     : "Position is calm. Proceed with sound development and king safety.";
 
-  // 2. Build semantic descriptions with Static Exchange Evaluation & danger tags
+  // 3. Build semantic descriptions with Static Exchange Evaluation & Fly Brain tags
   const { selected, dropped } = selectMovesForChoice(getLegalMoves(chess));
   const rawMoves = chess.moves({ verbose: true });
   const rawMoveMap = new Map(rawMoves.map((m) => [m.lan, m]));
@@ -135,6 +144,7 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
     const pName = raw ? (PIECE_NAMES[raw.piece] ?? raw.piece) : "piece";
     const pVal = raw ? (PIECE_VALUES[raw.piece] ?? 1) : 1;
     const destAttacked = raw ? chess.isAttacked(raw.to, oppColor) : false;
+    const isFlyTop = flyTopUcis.has(move.uci);
 
     if (move.isCheckmate) {
       desc += "[BEST] DELIVERS CHECKMATE and wins the game!";
@@ -160,6 +170,8 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
       desc += `[RESCUE] Safely rescues threatened ${pName} from ${raw.from} to safe square ${move.to}`;
     } else if (move.isCheck) {
       desc += `[ACTIVE] ${pName} attacks opponent King with CHECK`;
+    } else if (isFlyTop) {
+      desc += `[FLY BRAIN RECOMMENDED] Biological connectome prioritizes this development move to ${move.to}`;
     } else if (raw && (raw.piece === "n" || raw.piece === "b" || raw.piece === "r")) {
       desc += `[DEVELOPMENT] Develops and activates ${pName} to ${move.to}`;
     } else {
@@ -178,6 +190,7 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
         in_check: chess.isCheck(),
         my_threatened_pieces: threatenedPieces,
         capturable_opponents: capturableOpponents,
+        fly_brain_top_moves: flyTop3.map((m) => `${m.san} (${(m.prob * 100).toFixed(0)}%)`),
         strategic_guidance: strategicGuidance,
         tactical_situation: tacticalSituation,
       },
@@ -196,6 +209,7 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
     },
     legalUcis: selected.map((move) => move.uci),
     droppedUcis: dropped.map((move) => move.uci),
+    flyMoves,
   };
 }
 
@@ -317,24 +331,39 @@ export async function playJevMove(
     throw new JevRequestError(resolved.error, 422, true);
   }
 
+  // 4. Neuro-Symbolic Blend: Jev (Semantic) + FlyBrain (Biological Connectome)
+  const flyMap: Record<string, number> = {};
+  for (const fm of built.flyMoves) {
+    flyMap[fm.uci] = fm.prob;
+  }
+
+  const blendedProbs: Record<string, number> = {};
+  for (const uci of built.legalUcis) {
+    const pJev = resolved.probabilities[uci] ?? 0;
+    const pFly = flyMap[uci] ?? 0;
+    // 50% Jev Semantic Reasoning + 50% Fly Connectome Biological Instinct
+    blendedProbs[uci] = Number((0.5 * pJev + 0.5 * pFly).toFixed(4));
+  }
+
+  const sortedBlended = Object.entries(blendedProbs).sort((a, b) => b[1] - a[1]);
+  const bestBlendedUci = sortedBlended.length > 0 ? sortedBlended[0][0] : resolved.uci;
+
   const chess = new Chess(fen);
   let applied;
+  let finalUci = bestBlendedUci;
   try {
-    applied = applyUci(chess, resolved.uci);
+    applied = applyUci(chess, bestBlendedUci);
   } catch {
-    throw new JevRequestError(
-      `Jev returned "${resolved.uci}", but chess.js rejected it as illegal. No move was applied.`,
-      422,
-      true,
-    );
+    applied = applyUci(chess, resolved.uci);
+    finalUci = resolved.uci;
   }
 
   return {
-    uci: resolved.uci,
+    uci: finalUci,
     san: applied.san,
     fen: chess.fen(),
-    probabilities: resolved.probabilities,
-    confidence: resolved.confidence,
+    probabilities: blendedProbs,
+    confidence: blendedProbs[finalUci] ?? resolved.confidence,
     droppedMoveCount: built.droppedUcis.length,
     outcome: describeOutcome(chess),
     request: built.request,
