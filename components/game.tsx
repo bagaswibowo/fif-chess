@@ -1,5 +1,6 @@
 "use client";
 
+import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import type { PieceDropHandlerArgs, PieceHandlerArgs } from "react-chessboard";
@@ -537,8 +538,8 @@ export function Game() {
               onClick={() => setNavTab("play")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "play"
-                  ? "bg-[#3d3a37] text-white border-l-4 border-[#81b64c] shadow-sm"
-                  : "text-neutral-300 hover:bg-[#2c2925] hover:text-white"
+                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
+                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
               }`}
             >
               <IconPlay3D size={22} />
@@ -549,8 +550,8 @@ export function Game() {
               onClick={() => setNavTab("puzzle")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "puzzle"
-                  ? "bg-[#3d3a37] text-white border-l-4 border-[#81b64c] shadow-sm"
-                  : "text-neutral-300 hover:bg-[#2c2925] hover:text-white"
+                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
+                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
               }`}
             >
               <IconPuzzle3D size={22} />
@@ -561,8 +562,8 @@ export function Game() {
               onClick={() => setNavTab("review")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "review"
-                  ? "bg-[#3d3a37] text-white border-l-4 border-[#81b64c] shadow-sm"
-                  : "text-neutral-300 hover:bg-[#2c2925] hover:text-white"
+                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
+                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
               }`}
             >
               <IconMedal3D size={22} />
@@ -573,8 +574,8 @@ export function Game() {
               onClick={() => setNavTab("coach")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "coach"
-                  ? "bg-[#3d3a37] text-white border-l-4 border-[#81b64c] shadow-sm"
-                  : "text-neutral-300 hover:bg-[#2c2925] hover:text-white"
+                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
+                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
               }`}
             >
               <IconBot3D size={22} />
@@ -585,8 +586,8 @@ export function Game() {
               onClick={() => setNavTab("vision")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "vision"
-                  ? "bg-[#3d3a37] text-white border-l-4 border-[#81b64c] shadow-sm"
-                  : "text-neutral-300 hover:bg-[#2c2925] hover:text-white"
+                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
+                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
               }`}
             >
               <IconVision3D size={22} />
@@ -597,8 +598,8 @@ export function Game() {
               onClick={() => setNavTab("scan")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "scan"
-                  ? "bg-[#3d3a37] text-white border-l-4 border-[#81b64c] shadow-sm"
-                  : "text-neutral-300 hover:bg-[#2c2925] hover:text-white"
+                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
+                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
               }`}
             >
               <IconScan3D size={22} />
@@ -609,8 +610,8 @@ export function Game() {
               onClick={() => setNavTab("community")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "community"
-                  ? "bg-[#3d3a37] text-white border-l-4 border-[#81b64c] shadow-sm"
-                  : "text-neutral-300 hover:bg-[#2c2925] hover:text-white"
+                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
+                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
               }`}
             >
               <IconCommunity3D size={22} />
@@ -722,8 +723,11 @@ export function Game() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-[#1a1816] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[#36322d] shadow-inner">
-                  {humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
+                <div className="flex items-center gap-3">
+                  <CapturedPiecesBar fen={fen} side={humanSide === "white" ? "black" : "white"} />
+                  <div className="bg-[#1a1816] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[#36322d] shadow-inner">
+                    {humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
+                  </div>
                 </div>
               </div>
 
@@ -779,8 +783,11 @@ export function Game() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-[#1a1816] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[#36322d] shadow-inner">
-                  {humanSide === "white" ? formattedWhiteTime : formattedBlackTime}
+                <div className="flex items-center gap-3">
+                  <CapturedPiecesBar fen={fen} side={humanSide} />
+                  <div className="bg-[#1a1816] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[#36322d] shadow-inner">
+                    {humanSide === "white" ? formattedWhiteTime : formattedBlackTime}
+                  </div>
                 </div>
               </div>
 
@@ -795,7 +802,7 @@ export function Game() {
                         : "bg-[#262421] border-[#36322d] text-neutral-300 hover:text-white hover:border-[#81b64c]"
                     }`}
                   >
-                    <span>{opponentTacticSaved ? "✓ Trik Lawan Berhasil Disimpan ke Teka-Teki!" : "📌 Simpan Trik Lawan Ini Jadi Teka-Teki"}</span>
+                    <span>{opponentTacticSaved ? "✓ Trik Lawan Berhasil Disimpan ke Teka-Teki!" : "Simpan Trik Lawan Ini Jadi Teka-Teki"}</span>
                   </button>
                 </div>
               )}

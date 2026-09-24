@@ -1,5 +1,6 @@
 "use client";
 
+import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -416,6 +417,15 @@ export function CoachModeView({ lang = "id" }: Props) {
             </span>
           </div>
 
+          {/* Opponent Status Bar */}
+          <div className="flex items-center justify-between px-3 py-1.5 bg-[#1c1a18] rounded-xl border border-[#36322d]">
+            <div className="flex items-center gap-2">
+              <div className={`w-3.5 h-3.5 rounded-full border ${playerSide === "white" ? "bg-neutral-800 border-neutral-600" : "bg-white border-neutral-300"}`} />
+              <span className="text-xs font-bold text-white">Stockfish 15 NNUE</span>
+            </div>
+            <CapturedPiecesBar fen={fen} side={playerSide === "white" ? "black" : "white"} />
+          </div>
+
           {/* Chessboard: Fixed Aspect Square with key=playerSide to force board orientation rotation */}
           <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full bg-[#262421]">
             <Chessboard
@@ -440,6 +450,15 @@ export function CoachModeView({ lang = "id" }: Props) {
                 lightSquareStyle: { backgroundColor: "#f0d9b5" },
               }}
             />
+          </div>
+
+          {/* Player Status Bar */}
+          <div className="flex items-center justify-between px-3 py-1.5 bg-[#1c1a18] rounded-xl border border-[#36322d]">
+            <div className="flex items-center gap-2">
+              <div className={`w-3.5 h-3.5 rounded-full border ${playerSide === "white" ? "bg-white border-neutral-300" : "bg-neutral-800 border-neutral-600"}`} />
+              <span className="text-xs font-bold text-white">Anda (Player)</span>
+            </div>
+            <CapturedPiecesBar fen={fen} side={playerSide} />
           </div>
 
           {/* Controls Bar Below Board */}

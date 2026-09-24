@@ -1,5 +1,6 @@
 "use client";
 
+import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -249,7 +250,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
                 onClick={() => onTryPosition(currentFen, moves.map(m => m.san))}
                 className="bg-sky-700 hover:bg-sky-600 text-white font-bold text-sm"
               >
-                🎯 {lang === "id" ? "Coba Posisi Ini" : "Try This Position"}
+                {lang === "id" ? "Coba Posisi Ini" : "Try This Position"}
               </Button>
             )}
           </div>
@@ -266,9 +267,9 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
               onChange={(e) => setWhiteEngine(e.target.value as any)}
               className="bg-[#1f1d1a] border border-[#36322d] rounded-lg px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:border-[#81b64c]"
             >
-              <option value="jev">🧠 Jev (Hybrid System One + FlyWire)</option>
-              <option value="fly">🪰 Fruit Fly (Drosophila 134k)</option>
-              <option value="stockfish">🤖 Stockfish 15 NNUE</option>
+              <option value="jev">Jev (Hybrid System One + FlyWire)</option>
+              <option value="fly">Fruit Fly (Drosophila 134k)</option>
+              <option value="stockfish">Stockfish 15 NNUE</option>
             </select>
           </div>
           <div className="flex items-center gap-2">
@@ -280,9 +281,9 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
               onChange={(e) => setBlackEngine(e.target.value as any)}
               className="bg-[#1f1d1a] border border-[#36322d] rounded-lg px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:border-[#81b64c]"
             >
-              <option value="stockfish">🤖 Stockfish 15 NNUE</option>
-              <option value="jev">🧠 Jev (Hybrid System One + FlyWire)</option>
-              <option value="fly">🪰 Fruit Fly (Drosophila 134k)</option>
+              <option value="stockfish">Stockfish 15 NNUE</option>
+              <option value="jev">Jev (Hybrid System One + FlyWire)</option>
+              <option value="fly">Fruit Fly (Drosophila 134k)</option>
             </select>
           </div>
           <div className="flex items-center gap-2">
@@ -327,9 +328,12 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
               }`}
             >
               <div className={`w-8 h-8 rounded-full border-2 flex-shrink-0 ${side === "white" ? "bg-white border-neutral-300" : "bg-neutral-800 border-neutral-600"}`} />
-              <div className="min-w-0">
-                <div className="font-bold text-white text-sm truncate">
-                  {engineName}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-bold text-white text-sm truncate">
+                    {engineName}
+                  </div>
+                  <CapturedPiecesBar fen={currentFen} side={side} />
                 </div>
                 <div className="text-xs text-neutral-300">
                   {side === "white" ? "Sisi Putih (White)" : "Sisi Hitam (Black)"}
@@ -384,7 +388,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
                     : "bg-[#1f1d1a] border border-[#36322d] text-neutral-500 font-bold text-xs h-8 px-3 cursor-not-allowed"
                 }
               >
-                🔍 {lang === "id" ? "Review Permainan" : "Game Review"}
+                {lang === "id" ? "Review Permainan" : "Game Review"}
               </Button>
             </div>
           </div>
@@ -429,9 +433,9 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
               <div className="font-black text-white text-lg">{outcome.label}</div>
               <div className="text-sm text-neutral-300">
                 {outcome.winner === "white"
-                  ? `${whiteEngine === "jev" ? "🎉 Jev AI" : whiteEngine === "fly" ? "🪰 Fruit Fly" : "Stockfish"} menang!`
+                  ? `${whiteEngine === "jev" ? "Jev AI" : whiteEngine === "fly" ? "Fruit Fly" : "Stockfish"} menang!`
                   : outcome.winner === "black"
-                  ? `${blackEngine === "jev" ? "🎉 Jev AI" : blackEngine === "fly" ? "🪰 Fruit Fly" : "Stockfish"} menang!`
+                  ? `${blackEngine === "jev" ? "Jev AI" : blackEngine === "fly" ? "Fruit Fly" : "Stockfish"} menang!`
                   : "Remis!"}
               </div>
               <div className="text-xs text-neutral-300">{moves.length} {lang === "id" ? "langkah total" : "total moves"}</div>
@@ -506,7 +510,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
 
       {/* Info box */}
       <div className="p-3.5 rounded-xl bg-[#1e2a14] border border-[#81b64c]/30 text-[#81b64c] text-xs leading-relaxed">
-        <span className="font-bold">💡 Tips: </span>
+        <span className="font-bold">Tips: </span>
         {lang === "id"
           ? "Setelah pertandingan, tekan \"Coba Posisi Ini\" untuk membuka posisi akhir di tab \"Latihan Dipandu\" dan bermain dari sana dengan bimbingan Jev."
           : "After the match, press \"Try This Position\" to open the final position in \"Guided Practice\" and play from there with Jev's coaching."}
@@ -519,7 +523,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
             <div className="flex items-center justify-between border-b border-[#36322d] pb-3">
               <div>
                 <h3 className="text-lg font-black text-white flex items-center gap-2">
-                  🔍 {lang === "id" ? "Review Taktik Pertandingan" : "Match Tactical Review"}
+                  {lang === "id" ? "Review Taktik Pertandingan" : "Match Tactical Review"}
                 </h3>
                 <p className="text-xs text-neutral-400">
                   {lang === "id"
@@ -543,10 +547,10 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
                   {whiteEngine === "jev" ? "Jev AI (Hybrid FlyWire)" : whiteEngine === "fly" ? "Fruit Fly Brain" : "Stockfish"}
                 </div>
                 <div className="text-xs text-neutral-300 space-y-1.5 leading-relaxed">
-                  <p><strong>🎯 Strategi Utama:</strong> Pembukaan Inggris & Fianchetto Gajah ganda (Bg2/Bb2), kontrol petak tengah d4/e4.</p>
-                  <p><strong>⚔️ Arah Serangan:</strong> Menekan sayap raja lawan (f7/h7) dan mencari pertukaran perwira mayor.</p>
-                  <p><strong>🛡️ Apa yang Dijaga:</strong> Struktur pion sayap raja dan penguasaan lajur-e terbuka.</p>
-                  <p><strong>⚠️ Evaluasi Kritis:</strong> Sempat mengorbankan kualitas di langkah 27 (Rxe6) dan terlambat memblokade pion bebas sayap menteri (a-pawn) lawan di endgame.</p>
+                  <p><strong>Strategi Utama:</strong> Pembukaan Inggris & Fianchetto Gajah ganda (Bg2/Bb2), kontrol petak tengah d4/e4.</p>
+                  <p><strong>Arah Serangan:</strong> Menekan sayap raja lawan (f7/h7) dan mencari pertukaran perwira mayor.</p>
+                  <p><strong>Apa yang Dijaga:</strong> Struktur pion sayap raja dan penguasaan lajur-e terbuka.</p>
+                  <p><strong>Evaluasi Kritis:</strong> Sempat mengorbankan kualitas di langkah 27 (Rxe6) dan terlambat memblokade pion bebas sayap menteri (a-pawn) lawan di endgame.</p>
                 </div>
               </div>
 
@@ -557,10 +561,10 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
                   {blackEngine === "stockfish" ? "Stockfish 15 NNUE" : blackEngine === "fly" ? "Fruit Fly Brain" : "Jev AI"}
                 </div>
                 <div className="text-xs text-neutral-300 space-y-1.5 leading-relaxed">
-                  <p><strong>🎯 Strategi Utama:</strong> Penciptaan pion bebas sayap menteri (passed pawn lajur-a) dan sentralisasi Raja (Kxe6/Kf7/Kd7).</p>
-                  <p><strong>⚔️ Arah Serangan:</strong> Meluncurkan pion a5 → a4 → a3 menuju promosi Menteri dan manuver benteng Rd8/Rd7/Rd3.</p>
-                  <p><strong>🛡️ Apa yang Dijaga:</strong> Posisi Kuda sentral di b4/b5 dan keamanan Raja di endgame.</p>
-                  <p><strong>🏆 Taktik Kunci:</strong> Memanfaatkan keterlambatan lawan memblokade pion sayap menteri hingga pion a3 hampir promosi.</p>
+                  <p><strong>Strategi Utama:</strong> Penciptaan pion bebas sayap menteri (passed pawn lajur-a) dan sentralisasi Raja (Kxe6/Kf7/Kd7).</p>
+                  <p><strong>Arah Serangan:</strong> Meluncurkan pion a5 → a4 → a3 menuju promosi Menteri dan manuver benteng Rd8/Rd7/Rd3.</p>
+                  <p><strong>Apa yang Dijaga:</strong> Posisi Kuda sentral di b4/b5 dan keamanan Raja di endgame.</p>
+                  <p><strong>Taktik Kunci:</strong> Memanfaatkan keterlambatan lawan memblokade pion sayap menteri hingga pion a3 hampir promosi.</p>
                 </div>
               </div>
             </div>
@@ -568,7 +572,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
             {/* Tactical Takeaways */}
             <div className="bg-[#181614] p-4 rounded-xl border border-amber-500/30 space-y-2">
               <div className="font-bold text-amber-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                💡 Pelajaran Kunci untuk Engine
+                Pelajaran Kunci untuk Engine
               </div>
               <ul className="text-xs text-neutral-300 space-y-1 list-disc list-inside leading-relaxed">
                 <li><strong>Blokade Pion Bebas Musuh:</strong> Saat lawan mendorong pion bebas melewati baris 4 (a5 → a4 → a3), blokade adalah prioritas pertahanan nomor satu.</li>
