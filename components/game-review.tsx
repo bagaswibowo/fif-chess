@@ -38,14 +38,6 @@ type AiEval = {
 
 type BlunderMap = Record<number, { quality: string; color: string; cpLoss: number }>;
 
-function classifyMove(cpLoss: number | null, isBest: boolean): { quality: string; color: string } {
-  if (isBest || cpLoss === null || cpLoss < 10) return { quality: "✓", color: "text-emerald-400" };
-  if (cpLoss < 25) return { quality: "?", color: "text-green-300" };
-  if (cpLoss < 50) return { quality: "?!", color: "text-yellow-400" };
-  if (cpLoss < 150) return { quality: "?", color: "text-orange-400" };
-  return { quality: "??", color: "text-red-400" };
-}
-
 export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   const [selectedGameId, setSelectedGameId] = useState<string>(
     history.length > 0 ? history[0].id : ""
@@ -54,6 +46,8 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   const [aiEvaluation, setAiEvaluation] = useState<AiEval | null>(null);
   const [blunderMap, setBlunderMap] = useState<BlunderMap>({});
   const [loadingAi, setLoadingAi] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playSpeed, setPlaySpeed] = useState<number>(1500); // ms per move
 
   // In-memory evaluation cache to avoid duplicate network calls
   const evalCache = useRef<Map<string, AiEval>>(new Map());
@@ -89,7 +83,29 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
 
   const currentFen = fenList[currentMoveIndex] || fenList[0];
 
-  // Fetch genuine Stockfish 15 NNUE evaluation with AbortController to prevent DoS
+  // Auto-play effect loop
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    if (currentMoveIndex >= fenList.length - 1) {
+      setIsPlaying(false);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setCurrentMoveIndex((prev) => {
+        if (prev >= fenList.length - 1) {
+          setIsPlaying(false);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, playSpeed);
+
+    return () => clearInterval(timer);
+  }, [isPlaying, currentMoveIndex, fenList.length, playSpeed]);
+
+  // Fetch Stockfish 15 NNUE evaluation
   useEffect(() => {
     if (!currentFen) return;
 
@@ -150,8 +166,6 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
       return currentFen;
     }
   }, [currentFen, aiEvaluation]);
-
-
 
   // The actual move that was played on this step
   const currentPlayedObj = currentMoveIndex > 0 ? playedMoveObjects[currentMoveIndex - 1] : null;
@@ -215,13 +229,13 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto w-full pb-14">
-      {/* HEADER & GAME SELECTOR */}
-      <div className="bg-[#262421] p-4 rounded-2xl border border-[#36322d] shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+    <div className="space-y-4 max-w-6xl mx-auto w-full pb-14 px-2 md:px-0">
+      {/* 1. HEADER & GAME SELECTOR */}
+      <div className="bg-[#262421] p-3.5 md:p-4 rounded-2xl border border-[#36322d] shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
           <h2 className="text-base md:text-xl font-black text-white flex items-center gap-2">
             <IconMedal3D size={24} />
-            <span>{lang === "id" ? "Review Permainan & Analisis Papan Ganda" : "Game Review & Dual-Board Analysis"}</span>
+            <span>{lang === "id" ? "Review Blunder & Analisis Papan" : "Blunder Review & Move Analysis"}</span>
           </h2>
           <p className="text-xs text-neutral-400 mt-0.5">
             {lang === "id"
@@ -236,8 +250,9 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
             onChange={(e) => {
               setSelectedGameId(e.target.value);
               setCurrentMoveIndex(0);
+              setIsPlaying(false);
             }}
-            className="bg-[#191816] text-white text-xs font-bold px-3 py-2 rounded-xl border border-[#36322d] focus:outline-none focus:border-[#81b64c]"
+            className="bg-[#191816] text-white text-xs font-bold px-3 py-2 rounded-xl border border-[#36322d] focus:outline-none focus:border-[#81b64c] flex-1 md:flex-initial"
           >
             {history.map((g, idx) => (
               <option key={g.id} value={g.id}>
@@ -248,168 +263,117 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
           <Button
             onClick={onBackToPlay}
             variant="outline"
-            className="border-[#36322d] text-xs font-bold"
+            className="border-[#36322d] text-xs font-bold shrink-0"
           >
-            {lang === "id" ? "Kembali Bermain" : "Back to Play"}
+            {lang === "id" ? "Bermain" : "Play"}
           </Button>
         </div>
       </div>
 
-      {/* DUAL CHESSBOARDS: BOARD 1 (ACTUAL) vs BOARD 2 (AI RECOMMENDATION) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        {/* BOARD 1: YOUR ACTUAL MOVE */}
-        <Card className="bg-[#262421] border-[#36322d] rounded-2xl overflow-hidden shadow-xl p-4 space-y-3">
-          <div className="flex justify-between items-center border-b border-[#36322d] pb-2">
-            <div className="flex items-center gap-2 font-bold text-sm text-white">
-              <IconPawn3D size={18} />
-              <span>{lang === "id" ? "Papan 1: Langkah Riwayat Anda" : "Board 1: Your Actual Move"}</span>
-            </div>
-            {playedSan && (
-              <Badge
-                className={`text-xs font-bold ${
-                  isBestMove
-                    ? "bg-emerald-600 text-white"
-                    : "bg-amber-600 text-white"
-                }`}
-              >
-                {isBestMove ? "🟢 Langkah Terbaik" : "🟡 Pilihan Pemain"}
-              </Badge>
-            )}
-          </div>
-
-          <div className="w-full max-w-[640px] mx-auto aspect-square rounded-xl overflow-hidden border border-[#3d3a37] shadow-lg">
-            <Chessboard
-              options={{
-                id: "review-actual-board",
-                position: currentFen,
-                boardOrientation: activeGame.humanSide,
-                allowDragging: false,
-                squareStyles: actualSquareStyles,
-                darkSquareStyle: { backgroundColor: "#b58863" },
-                lightSquareStyle: { backgroundColor: "#f0d9b5" },
-              }}
-            />
-          </div>
-
-          <div className="bg-[#191816] p-3 rounded-xl border border-[#36322d] text-xs text-neutral-300">
-            <span className="text-neutral-400 block mb-0.5">Langkah dimainkan:</span>
-            <span className="font-bold text-white text-sm">
-              {currentMoveIndex === 0 ? "Posisi Awal" : `${currentMoveIndex}. ${playedSan}`}
-            </span>
-          </div>
-        </Card>
-
-        {/* BOARD 2: STOCKFISH 15 NNUE RECOMMENDATION */}
-        <Card className="bg-[#262421] border-[#36322d] rounded-2xl overflow-hidden shadow-xl p-4 space-y-3">
-          <div className="flex justify-between items-center border-b border-[#36322d] pb-2">
-            <div className="flex items-center gap-2 font-bold text-sm text-emerald-400">
-              <IconBot3D size={18} />
-              <span>{lang === "id" ? "Papan 2: Saran Langkah AI" : "Board 2: AI Optimal Move"}</span>
-            </div>
-            <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/40">
-              Stockfish 15 NNUE
-            </Badge>
-          </div>
-
-          <div className="w-full max-w-[640px] mx-auto aspect-square rounded-xl overflow-hidden border border-[#3d3a37] shadow-lg">
-            <Chessboard
-              options={{
-                id: "review-ai-board",
-                position: aiFen,
-                boardOrientation: activeGame.humanSide,
-                allowDragging: false,
-                squareStyles: aiSquareStyles,
-                darkSquareStyle: { backgroundColor: "#81b64c" },
-                lightSquareStyle: { backgroundColor: "#ebecd0" },
-              }}
-            />
-          </div>
-
-          <div className="bg-[#191816] p-3 rounded-xl border border-[#36322d] text-xs text-neutral-300">
-            <span className="text-neutral-400 block mb-0.5">
-              {loadingAi ? "Menghitung langkah terbaik..." : "Rekomendasi Terbaik Engine:"}
-            </span>
-            <span className="font-bold text-emerald-400 text-sm">
-              {aiEvaluation ? `${aiEvaluation.bestSan} (${aiEvaluation.bestUci})` : "-"}
-            </span>
-          </div>
-        </Card>
-      </div>
-
-      {/* TACTICAL PEDAGOGICAL CONTEXT CARD */}
-      <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-2">
-        <div className="flex items-center gap-2 font-bold text-sm text-white">
-          <IconTrophy3D size={18} />
-          <span>Analisis Taktis AI untuk Langkah #{currentMoveIndex || 1}</span>
-        </div>
-        <p className="text-xs text-neutral-300 leading-relaxed">
-          {currentMoveIndex === 0
-            ? "Mulai dari posisi awal papan catur. Geser langkah maju untuk meninjau keputusan taktis."
-            : isBestMove
-            ? `Bagus sekali! Langkah Anda (${playedSan}) identik dengan kalkulasi mesin catur Stockfish 15 NNUE pada kedalaman Depth 14+. Posisi Anda mempertahankan keunggulan tempo dan kendali petak sentral.`
-            : `Pada giliran ini, Anda melangkahkan ${playedSan}. Engine catur merekomendasikan alternatif ${aiEvaluation ? aiEvaluation.bestSan : "lain"} untuk memaksimalkan aktivitas perwira dan menghindari hilangnya inisiatif posisi.`}
-        </p>
-      </Card>
-
-      {/* PLAYBACK CONTROLS & MOVE NAVIGATION */}
-      <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5">
+      {/* 2. PLAYBACK CONTROLS & MOVE NAVIGATION AT TOP (EASY ACCESS ON MOBILE) */}
+      <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-3 md:p-4 shadow-xl space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          {/* Main playback buttons */}
+          <div className="flex items-center flex-wrap gap-1.5">
             <Button
-              onClick={() => setCurrentMoveIndex(0)}
+              onClick={() => {
+                setIsPlaying(!isPlaying);
+                if (!isPlaying && currentMoveIndex >= fenList.length - 1) {
+                  setCurrentMoveIndex(0);
+                }
+              }}
+              className={`font-bold text-xs h-8 px-3 shadow-md ${
+                isPlaying
+                  ? "bg-amber-600 hover:bg-amber-500 text-white"
+                  : "bg-[#81b64c] hover:bg-[#72a342] text-white"
+              }`}
+            >
+              {isPlaying ? "⏸ Jeda" : "▶ Putar Otomatis"}
+            </Button>
+
+            <Button
+              onClick={() => {
+                setIsPlaying(false);
+                setCurrentMoveIndex(0);
+              }}
               disabled={currentMoveIndex === 0}
               variant="outline"
               size="sm"
-              className="border-[#36322d] text-xs font-bold"
+              className="border-[#36322d] text-xs font-bold h-8 px-2.5"
             >
-              |◀ Awal
+              |◀
             </Button>
             <Button
-              onClick={() => setCurrentMoveIndex((p) => Math.max(0, p - 1))}
+              onClick={() => {
+                setIsPlaying(false);
+                setCurrentMoveIndex((p) => Math.max(0, p - 1));
+              }}
               disabled={currentMoveIndex === 0}
               variant="outline"
               size="sm"
-              className="border-[#36322d] text-xs font-bold"
+              className="border-[#36322d] text-xs font-bold h-8 px-2.5"
             >
-              ◀ Mundur
+              ◀
             </Button>
             <Button
-              onClick={() => setCurrentMoveIndex((p) => Math.min(fenList.length - 1, p + 1))}
+              onClick={() => {
+                setIsPlaying(false);
+                setCurrentMoveIndex((p) => Math.min(fenList.length - 1, p + 1));
+              }}
               disabled={currentMoveIndex >= fenList.length - 1}
               variant="outline"
               size="sm"
-              className="border-[#36322d] text-xs font-bold"
+              className="border-[#36322d] text-xs font-bold h-8 px-2.5"
             >
-              Maju ▶
+              ▶
             </Button>
             <Button
-              onClick={() => setCurrentMoveIndex(fenList.length - 1)}
+              onClick={() => {
+                setIsPlaying(false);
+                setCurrentMoveIndex(fenList.length - 1);
+              }}
               disabled={currentMoveIndex >= fenList.length - 1}
               variant="outline"
               size="sm"
-              className="border-[#36322d] text-xs font-bold"
+              className="border-[#36322d] text-xs font-bold h-8 px-2.5"
             >
-              Akhir ▶|
+              ▶|
             </Button>
+
+            {/* Speed Selector */}
+            <select
+              value={playSpeed}
+              onChange={(e) => setPlaySpeed(Number(e.target.value))}
+              className="bg-[#191816] text-neutral-300 text-[11px] font-bold px-2 py-1 h-8 rounded-lg border border-[#36322d]"
+            >
+              <option value={2000}>0.5x (2s)</option>
+              <option value={1500}>1.0x (1.5s)</option>
+              <option value={800}>2.0x (0.8s)</option>
+            </select>
           </div>
 
-          <div className="text-xs font-bold text-neutral-300">
-            Langkah : {currentMoveIndex} / {activeGame.moves.length}
+          <div className="text-xs font-bold text-neutral-300 flex items-center gap-2">
+            <span className="bg-[#191816] px-2.5 py-1 rounded-lg border border-[#36322d]">
+              Langkah: <strong className="text-white">{currentMoveIndex}</strong> / {activeGame.moves.length}
+            </span>
           </div>
         </div>
 
-        {/* CLICKABLE MOVES LIST */}
-        <div className="pt-2 border-t border-[#36322d] flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+        {/* CLICKABLE MOVES LIST SCROLLER */}
+        <div className="pt-2 border-t border-[#36322d] flex flex-wrap gap-1.5 max-h-28 overflow-y-auto no-scrollbar">
           {activeGame.moves.map((m, idx) => {
             const isWhite = idx % 2 === 0;
             const moveNum = Math.floor(idx / 2) + 1;
             return (
               <button
                 key={idx}
-                onClick={() => setCurrentMoveIndex(idx + 1)}
+                onClick={() => {
+                  setIsPlaying(false);
+                  setCurrentMoveIndex(idx + 1);
+                }}
                 className={`px-2 py-1 rounded-md text-xs font-mono transition-all flex items-center gap-0.5 ${
                   currentMoveIndex === idx + 1
-                    ? "bg-[#81b64c] text-white font-bold"
+                    ? "bg-[#81b64c] text-white font-bold shadow-md"
                     : blunderMap[idx]
                     ? "bg-[#191816] border border-orange-500/40 text-neutral-300 hover:text-white"
                     : "bg-[#191816] text-neutral-400 hover:text-white border border-[#36322d]"
@@ -423,6 +387,102 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
             );
           })}
         </div>
+      </Card>
+
+      {/* 3. DUAL CHESSBOARDS: BOARD 1 (ACTUAL) vs BOARD 2 (AI RECOMMENDATION) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 w-full">
+        {/* BOARD 1: YOUR ACTUAL MOVE */}
+        <Card className="bg-[#262421] border-[#36322d] rounded-2xl overflow-hidden shadow-xl p-3 md:p-4 space-y-3">
+          <div className="flex justify-between items-center border-b border-[#36322d] pb-2">
+            <div className="flex items-center gap-2 font-bold text-sm text-white">
+              <IconPawn3D size={18} />
+              <span>{lang === "id" ? "Papan 1: Langkah Riwayat Anda" : "Board 1: Your Actual Move"}</span>
+            </div>
+            {playedSan && (
+              <Badge
+                className={`text-xs font-bold ${
+                  isBestMove
+                    ? "bg-emerald-600 text-white"
+                    : "bg-amber-600 text-white"
+                }`}
+              >
+                {isBestMove ? "Langkah Terbaik" : "Pilihan Pemain"}
+              </Badge>
+            )}
+          </div>
+
+          <div className="w-full max-w-[560px] mx-auto aspect-square rounded-xl overflow-hidden border border-[#3d3a37] shadow-lg">
+            <Chessboard
+              options={{
+                id: "review-actual-board",
+                position: currentFen,
+                boardOrientation: activeGame.humanSide,
+                allowDragging: false,
+                squareStyles: actualSquareStyles,
+                darkSquareStyle: { backgroundColor: "#b58863" },
+                lightSquareStyle: { backgroundColor: "#f0d9b5" },
+              }}
+            />
+          </div>
+
+          <div className="bg-[#191816] p-2.5 rounded-xl border border-[#36322d] text-xs text-neutral-300 flex items-center justify-between">
+            <span className="text-neutral-400">Langkah dimainkan:</span>
+            <span className="font-bold text-white text-sm">
+              {currentMoveIndex === 0 ? "Posisi Awal" : `${currentMoveIndex}. ${playedSan}`}
+            </span>
+          </div>
+        </Card>
+
+        {/* BOARD 2: STOCKFISH 15 NNUE RECOMMENDATION */}
+        <Card className="bg-[#262421] border-[#36322d] rounded-2xl overflow-hidden shadow-xl p-3 md:p-4 space-y-3">
+          <div className="flex justify-between items-center border-b border-[#36322d] pb-2">
+            <div className="flex items-center gap-2 font-bold text-sm text-emerald-400">
+              <IconBot3D size={18} />
+              <span>{lang === "id" ? "Papan 2: Saran Langkah AI" : "Board 2: AI Optimal Move"}</span>
+            </div>
+            <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/40">
+              Stockfish 15 NNUE
+            </Badge>
+          </div>
+
+          <div className="w-full max-w-[560px] mx-auto aspect-square rounded-xl overflow-hidden border border-[#3d3a37] shadow-lg">
+            <Chessboard
+              options={{
+                id: "review-ai-board",
+                position: aiFen,
+                boardOrientation: activeGame.humanSide,
+                allowDragging: false,
+                squareStyles: aiSquareStyles,
+                darkSquareStyle: { backgroundColor: "#81b64c" },
+                lightSquareStyle: { backgroundColor: "#ebecd0" },
+              }}
+            />
+          </div>
+
+          <div className="bg-[#191816] p-2.5 rounded-xl border border-[#36322d] text-xs text-neutral-300 flex items-center justify-between">
+            <span className="text-neutral-400">
+              {loadingAi ? "Menghitung..." : "Saran Engine:"}
+            </span>
+            <span className="font-bold text-emerald-400 text-sm">
+              {aiEvaluation ? `${aiEvaluation.bestSan} (${aiEvaluation.bestUci})` : "-"}
+            </span>
+          </div>
+        </Card>
+      </div>
+
+      {/* 4. TACTICAL PEDAGOGICAL CONTEXT CARD */}
+      <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-2">
+        <div className="flex items-center gap-2 font-bold text-sm text-white">
+          <IconTrophy3D size={18} />
+          <span>Analisis Taktis AI untuk Langkah #{currentMoveIndex || 1}</span>
+        </div>
+        <p className="text-xs text-neutral-300 leading-relaxed">
+          {currentMoveIndex === 0
+            ? "Mulai dari posisi awal papan catur. Geser langkah maju atau klik 'Putar Otomatis' untuk meninjau keputusan taktis."
+            : isBestMove
+            ? `Bagus sekali! Langkah Anda (${playedSan}) identik dengan kalkulasi mesin catur Stockfish 15 NNUE pada kedalaman Depth 14+. Posisi Anda mempertahankan keunggulan tempo dan kendali petak sentral.`
+            : `Pada giliran ini, Anda melangkahkan ${playedSan}. Engine catur merekomendasikan alternatif ${aiEvaluation ? aiEvaluation.bestSan : "lain"} untuk memaksimalkan aktivitas perwira dan menghindari hilangnya inisiatif posisi.`}
+        </p>
       </Card>
     </div>
   );

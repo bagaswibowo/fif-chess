@@ -538,8 +538,8 @@ export function Game() {
               onClick={() => setNavTab("play")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "play"
-                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
-                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
+                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
+                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
               }`}
             >
               <IconPlay3D size={22} />
@@ -550,8 +550,8 @@ export function Game() {
               onClick={() => setNavTab("puzzle")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "puzzle"
-                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
-                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
+                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
+                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
               }`}
             >
               <IconPuzzle3D size={22} />
@@ -562,8 +562,8 @@ export function Game() {
               onClick={() => setNavTab("review")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "review"
-                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
-                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
+                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
+                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
               }`}
             >
               <IconMedal3D size={22} />
@@ -574,8 +574,8 @@ export function Game() {
               onClick={() => setNavTab("coach")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "coach"
-                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
-                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
+                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
+                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
               }`}
             >
               <IconBot3D size={22} />
@@ -586,8 +586,8 @@ export function Game() {
               onClick={() => setNavTab("vision")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "vision"
-                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
-                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
+                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
+                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
               }`}
             >
               <IconVision3D size={22} />
@@ -598,8 +598,8 @@ export function Game() {
               onClick={() => setNavTab("scan")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "scan"
-                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
-                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
+                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
+                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
               }`}
             >
               <IconScan3D size={22} />
@@ -610,8 +610,8 @@ export function Game() {
               onClick={() => setNavTab("community")}
               className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
                 navTab === "community"
-                  ? "bg-gradient-to-b from-[#45423f] to-[#322f2c] text-white border-l-4 border-l-[#81b64c] border-t border-t-white/15 border-b-2 border-b-black/60 shadow-[0_3px_6px_rgba(0,0,0,0.4)]"
-                  : "bg-gradient-to-b from-[#262421] to-[#1c1a18] text-neutral-300 border-t border-t-white/5 border-b-2 border-b-black/40 hover:from-[#2e2b27] hover:to-[#22201d] hover:text-white shadow-sm active:translate-y-0.5 active:shadow-none"
+                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
+                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
               }`}
             >
               <IconCommunity3D size={22} />
