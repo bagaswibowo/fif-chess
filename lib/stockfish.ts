@@ -224,7 +224,7 @@ export async function guardJevMove(
 
   const bestScore = sf.bestScore;
   const delta = jevScore !== undefined ? bestScore - jevScore : 9999;
-  const isSafe = jevScore !== undefined && delta <= 60 && jevScore > -20000;
+  const isSafe = jevScore !== undefined && delta <= 25 && jevScore > -20000;
 
   if (isSafe) {
     return {
@@ -250,7 +250,7 @@ export async function guardJevMove(
     if (candScore === undefined) {
       candScore = (await evalSingleMove(fen, cand, Math.max(8, guardDepth - 2))) ?? undefined;
     }
-    if (candScore !== undefined && bestScore - candScore <= 60 && candScore > -20000) {
+    if (candScore !== undefined && bestScore - candScore <= 25 && candScore > -20000) {
       try {
         const applied = applyUci(chess, cand);
         return {
