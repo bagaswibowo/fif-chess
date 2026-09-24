@@ -14,9 +14,18 @@ export const JEV_MODEL = "jev-latest";
 export const MOVE_QUESTION_ID = "move";
 
 export const MOVE_INSTRUCTIONS =
-  "Select the best move for the side to move. Evaluate tactical dangers first: if pieces or King are threatened, defend them, capture the attacking piece, or counter-attack. Never play passive king or rook moves when valuable material is attacked. Seize tactical captures, give forcing checks, control the center, and deliver checkmate whenever possible.";
+  "Select the best legal chess move for the side to move. Evaluate tactical consequences strictly: 1. NEVER play moves tagged [FATAL] or [BLUNDER] that lose a piece or Queen for free. 2. If your piece is attacked, move it to a SAFE square not controlled by opponent pawns, or defend it. 3. Look for winning captures of unprotected opponent pieces. 4. Control center and develop actively.";
 
-const PIECE_NAMES: Record<string, string> = {
+export const PIECE_VALUES: Record<string, number> = {
+  p: 1,
+  n: 3,
+  b: 3,
+  r: 5,
+  q: 9,
+  k: 1000,
+};
+
+export const PIECE_NAMES: Record<string, string> = {
   p: "pawn",
   n: "knight",
   b: "bishop",
@@ -91,12 +100,12 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
   const tacticalSituation = chess.isCheck()
     ? "ALERT: King is in CHECK! Must safely block, capture the checker, or move the king."
     : threatenedPieces.length > 0
-    ? `TACTICAL ALERT: ${threatenedPieces.length} piece(s) under direct attack: ${threatenedPieces.join(", ")}. Defend, rescue, or counter-attack immediately!`
+    ? `TACTICAL ALERT: ${threatenedPieces.length} piece(s) under direct attack: ${threatenedPieces.join(", ")}. Defend or rescue safely!`
     : capturableOpponents.length > 0
     ? `OPPORTUNITY: Opponent has vulnerable piece(s) to capture: ${capturableOpponents.join(", ")}.`
     : "Position is calm. Develop pieces, fight for center, or prepare attacking breakthrough.";
 
-  // 2. Build semantic descriptions for all legal moves
+  // 2. Build semantic descriptions with Static Exchange Evaluation & danger tags
   const { selected, dropped } = selectMovesForChoice(getLegalMoves(chess));
   const rawMoves = chess.moves({ verbose: true });
   const rawMoveMap = new Map(rawMoves.map((m) => [m.lan, m]));
@@ -106,21 +115,33 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
     const raw = rawMoveMap.get(move.uci);
     let desc = `${move.san}: `;
     const pName = raw ? (PIECE_NAMES[raw.piece] ?? raw.piece) : "piece";
+    const pVal = raw ? (PIECE_VALUES[raw.piece] ?? 1) : 1;
+    const destAttacked = raw ? chess.isAttacked(raw.to, oppColor) : false;
 
     if (move.isCheckmate) {
-      desc += "DELIVERS CHECKMATE and wins the game!";
+      desc += "[BEST] DELIVERS CHECKMATE and wins the game!";
     } else if (move.isCapture) {
       const capName = raw?.captured ? (PIECE_NAMES[raw.captured] ?? raw.captured) : "piece";
-      desc += `${pName} captures opponent ${capName} on ${move.to}`;
+      const capVal = raw?.captured ? (PIECE_VALUES[raw.captured] ?? 1) : 1;
+
+      if (destAttacked && pVal > capVal) {
+        desc += `[FATAL BLUNDER] Sacrifices ${pName} for lower-value ${capName} on ${move.to} (DO NOT PLAY)`;
+      } else if (!destAttacked) {
+        desc += `[WINNING] Cleanly captures undefended opponent ${capName} on ${move.to}`;
+      } else {
+        desc += `Equal capture: ${pName} trades for opponent ${capName} on ${move.to}`;
+      }
       if (move.isPromotion) desc += " and promotes to Queen";
     } else if (move.isCastle) {
-      desc += "castles king to safety and connects rooks";
+      desc += "[SOLID] Castles king to safety and connects rooks";
+    } else if (raw && destAttacked) {
+      desc += `[DANGER] Moves ${pName} to ${move.to} which is under enemy attack!`;
     } else if (raw && chess.isAttacked(raw.from, oppColor)) {
-      desc += `rescues threatened ${pName} from ${raw.from} to ${move.to}`;
+      desc += `[RESCUE] Safely rescues threatened ${pName} from ${raw.from} to safe square ${move.to}`;
     } else if (move.isCheck) {
-      desc += `${pName} attacks opponent King with CHECK`;
+      desc += `[ACTIVE] ${pName} attacks opponent King with CHECK`;
     } else {
-      desc += `moves ${pName} to ${move.to}`;
+      desc += `Moves ${pName} to ${move.to}`;
     }
 
     criteria[move.uci] = desc;
