@@ -20,7 +20,7 @@ type StockfishEval = {
   candidateScores: Map<string, number>;
 };
 
-function getStockfishEval(fen: string, depth = 8, multipv = 5): Promise<StockfishEval | null> {
+function getStockfishEval(fen: string, depth = 12, multipv = 5): Promise<StockfishEval | null> {
   return new Promise((resolve) => {
     let p: ChildProcessWithoutNullStreams;
     try {
@@ -34,6 +34,7 @@ function getStockfishEval(fen: string, depth = 8, multipv = 5): Promise<Stockfis
     }
 
     let out = "";
+    let lastDepth = 0;
     const candidateScores = new Map<string, number>();
     let bestMove: string | null = null;
     let bestScore: number | null = null;
@@ -58,6 +59,15 @@ function getStockfishEval(fen: string, depth = 8, multipv = 5): Promise<Stockfis
       out = lines.pop() || "";
 
       for (const line of lines) {
+        const dMatch = line.match(/^info depth (\d+)/);
+        if (dMatch) {
+          const curDepth = parseInt(dMatch[1], 10);
+          if (curDepth > lastDepth) {
+            lastDepth = curDepth;
+            candidateScores.clear();
+          }
+        }
+
         const pvMatch = line.match(/^info\s+.*multipv\s+(\d+)\s+.*score\s+(cp|mate)\s+(-?\d+).*pv\s+([a-h][1-8][a-h][1-8][qrbn]?)/);
         if (pvMatch) {
           const type = pvMatch[2];
@@ -110,7 +120,7 @@ function getStockfishEval(fen: string, depth = 8, multipv = 5): Promise<Stockfis
   });
 }
 
-function evalSingleMove(fen: string, move: string, depth = 6): Promise<number | null> {
+function evalSingleMove(fen: string, move: string, depth = 10): Promise<number | null> {
   return new Promise((resolve) => {
     let p: ChildProcessWithoutNullStreams;
     try {
@@ -188,11 +198,12 @@ function evalSingleMove(fen: string, move: string, depth = 6): Promise<number | 
 export async function guardJevMove(
   fen: string,
   jevResult: JevPlaySuccess,
-  depth = 8,
+  depth = 12,
 ): Promise<StockfishResult> {
   // ponytail: fallback to unverified Jev move if Stockfish process fails
   const chess = new Chess(fen);
-  const sf = await getStockfishEval(fen, depth, 5);
+  const guardDepth = Math.max(12, depth);
+  const sf = await getStockfishEval(fen, guardDepth, 5);
   if (!sf) {
     return {
       uci: jevResult.uci,
@@ -208,7 +219,7 @@ export async function guardJevMove(
 
   let jevScore = sf.candidateScores.get(jevResult.uci);
   if (jevScore === undefined) {
-    jevScore = (await evalSingleMove(fen, jevResult.uci, Math.max(4, depth - 2))) ?? undefined;
+    jevScore = (await evalSingleMove(fen, jevResult.uci, Math.max(8, guardDepth - 2))) ?? undefined;
   }
 
   const bestScore = sf.bestScore;
@@ -235,7 +246,10 @@ export async function guardJevMove(
 
   for (const cand of sortedCandidates) {
     if (cand === jevResult.uci) continue;
-    const candScore = sf.candidateScores.get(cand);
+    let candScore = sf.candidateScores.get(cand);
+    if (candScore === undefined) {
+      candScore = (await evalSingleMove(fen, cand, Math.max(8, guardDepth - 2))) ?? undefined;
+    }
     if (candScore !== undefined && bestScore - candScore <= 60 && candScore > -20000) {
       try {
         const applied = applyUci(chess, cand);
