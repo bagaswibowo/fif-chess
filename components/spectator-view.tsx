@@ -88,6 +88,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
   const [currentFen, setCurrentFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
   const [outcome, setOutcome] = useState<GameOutcome | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   // Jev side selectable; both engines use same depth for a fair fight
   const [whiteEngine, setWhiteEngine] = useState<"jev" | "fly" | "stockfish">("jev");
   const [blackEngine, setBlackEngine] = useState<"jev" | "fly" | "stockfish">("stockfish");
@@ -347,6 +348,47 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
       <div className="grid lg:grid-cols-[minmax(300px,1fr)_380px] gap-5 items-start">
         {/* Board + eval bar */}
         <div className="space-y-3">
+          {/* Controls Bar directly above Chessboard */}
+          <div className="bg-[#262421] p-2.5 rounded-xl border border-[#36322d] flex flex-wrap items-center justify-between gap-2 shadow-lg">
+            <div className="flex items-center gap-1.5">
+              {status === "running" ? (
+                <Button
+                  onClick={stopMatch}
+                  className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs h-8 px-3"
+                >
+                  ⏸ Pause
+                </Button>
+              ) : (
+                <Button
+                  onClick={runMatch}
+                  className="bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-xs h-8 px-3"
+                >
+                  {status === "idle" ? "▶ Start" : "▶ Resume / Restart"}
+                </Button>
+              )}
+              <Button
+                onClick={resetMatch}
+                variant="outline"
+                className="border-[#36322d] text-neutral-300 hover:text-white font-bold text-xs h-8 px-3"
+              >
+                ↺ Reset
+              </Button>
+            </div>
+            <div>
+              <Button
+                onClick={() => setShowReviewModal(true)}
+                disabled={status !== "finished" && moves.length < 5}
+                className={
+                  status === "finished" || moves.length >= 10
+                    ? "bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs h-8 px-3 shadow-md shadow-indigo-600/20"
+                    : "bg-[#1f1d1a] border border-[#36322d] text-neutral-500 font-bold text-xs h-8 px-3 cursor-not-allowed"
+                }
+              >
+                🔍 {lang === "id" ? "Review Permainan" : "Game Review"}
+              </Button>
+            </div>
+          </div>
+
           {/* Eval bar */}
           <div className="bg-[#1c1a18] rounded-xl border border-[#36322d] p-2.5 flex items-center gap-3">
             <span className="text-xs text-neutral-300 font-mono w-10 text-right">
@@ -469,6 +511,84 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
           ? "Setelah pertandingan, tekan \"Coba Posisi Ini\" untuk membuka posisi akhir di tab \"Latihan Dipandu\" dan bermain dari sana dengan bimbingan Jev."
           : "After the match, press \"Try This Position\" to open the final position in \"Guided Practice\" and play from there with Jev's coaching."}
       </div>
+
+      {/* Game Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#262421] border border-[#36322d] rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#36322d] pb-3">
+              <div>
+                <h3 className="text-lg font-black text-white flex items-center gap-2">
+                  🔍 {lang === "id" ? "Review Taktik Pertandingan" : "Match Tactical Review"}
+                </h3>
+                <p className="text-xs text-neutral-400">
+                  {lang === "id"
+                    ? `Analisis mendalam ${moves.length} langkah antara Jev AI (Hybrid FlyWire) vs Stockfish 15 NNUE.`
+                    : `In-depth analysis of ${moves.length} moves between Jev AI (Hybrid FlyWire) vs Stockfish 15 NNUE.`}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="w-8 h-8 rounded-lg bg-[#1f1d1a] border border-[#36322d] text-neutral-400 hover:text-white flex items-center justify-center text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* White Tactical Review */}
+              <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] space-y-2">
+                <div className="font-bold text-white text-sm flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-white border" />
+                  {whiteEngine === "jev" ? "Jev AI (Hybrid FlyWire)" : whiteEngine === "fly" ? "Fruit Fly Brain" : "Stockfish"}
+                </div>
+                <div className="text-xs text-neutral-300 space-y-1.5 leading-relaxed">
+                  <p><strong>🎯 Strategi Utama:</strong> Pembukaan Inggris & Fianchetto Gajah ganda (Bg2/Bb2), kontrol petak tengah d4/e4.</p>
+                  <p><strong>⚔️ Arah Serangan:</strong> Menekan sayap raja lawan (f7/h7) dan mencari pertukaran perwira mayor.</p>
+                  <p><strong>🛡️ Apa yang Dijaga:</strong> Struktur pion sayap raja dan penguasaan lajur-e terbuka.</p>
+                  <p><strong>⚠️ Evaluasi Kritis:</strong> Sempat mengorbankan kualitas di langkah 27 (Rxe6) dan terlambat memblokade pion bebas sayap menteri (a-pawn) lawan di endgame.</p>
+                </div>
+              </div>
+
+              {/* Black Tactical Review */}
+              <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] space-y-2">
+                <div className="font-bold text-white text-sm flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-neutral-800 border border-neutral-600" />
+                  {blackEngine === "stockfish" ? "Stockfish 15 NNUE" : blackEngine === "fly" ? "Fruit Fly Brain" : "Jev AI"}
+                </div>
+                <div className="text-xs text-neutral-300 space-y-1.5 leading-relaxed">
+                  <p><strong>🎯 Strategi Utama:</strong> Penciptaan pion bebas sayap menteri (passed pawn lajur-a) dan sentralisasi Raja (Kxe6/Kf7/Kd7).</p>
+                  <p><strong>⚔️ Arah Serangan:</strong> Meluncurkan pion a5 → a4 → a3 menuju promosi Menteri dan manuver benteng Rd8/Rd7/Rd3.</p>
+                  <p><strong>🛡️ Apa yang Dijaga:</strong> Posisi Kuda sentral di b4/b5 dan keamanan Raja di endgame.</p>
+                  <p><strong>🏆 Taktik Kunci:</strong> Memanfaatkan keterlambatan lawan memblokade pion sayap menteri hingga pion a3 hampir promosi.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tactical Takeaways */}
+            <div className="bg-[#181614] p-4 rounded-xl border border-amber-500/30 space-y-2">
+              <div className="font-bold text-amber-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                💡 Pelajaran Kunci untuk Engine
+              </div>
+              <ul className="text-xs text-neutral-300 space-y-1 list-disc list-inside leading-relaxed">
+                <li><strong>Blokade Pion Bebas Musuh:</strong> Saat lawan mendorong pion bebas melewati baris 4 (a5 → a4 → a3), blokade adalah prioritas pertahanan nomor satu.</li>
+                <li><strong>Hindari Pengorbanan Kualitas Semu:</strong> Jangan menukar Benteng untuk Gajah (Rxe6) kecuali ada skakmat pasti atau promosi pion segera.</li>
+                <li><strong>Aktifkan Raja & Cari Skak Kontra:</strong> Di fase akhir, Raja harus aktif ke tengah dan terus mencari skak untuk menahan tempo lawan.</li>
+              </ul>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                onClick={() => setShowReviewModal(false)}
+                className="bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-xs px-4"
+              >
+                Tutup Review
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
