@@ -1,3 +1,4 @@
+import { describeOutcome } from "@/lib/chess";
 import fs from "node:fs";
 import path from "node:path";
 import { Chess } from "chess.js";
@@ -118,7 +119,6 @@ export function evaluateWithFlyBrain(fen: string): {
   }
 }
 
-import { describeOutcome } from "@/lib/chess";
 
 export function playFlyBrainMove(fen: string) {
   const result = evaluateWithFlyBrain(fen);

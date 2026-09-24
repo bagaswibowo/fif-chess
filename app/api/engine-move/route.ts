@@ -69,6 +69,7 @@ export async function POST(request: Request) {
     if (flyRes) {
       return NextResponse.json(flyRes);
     }
+    return NextResponse.json({ error: "FlyBrain could not compute move for position.", retryable: false }, { status: 400 });
   }
 
   if (engine === 'stockfish') {
