@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { JevRequestError, playJevMove } from '@/lib/jev';
-import { playStockfishMove } from '@/lib/stockfish';
+import { playStockfishMove, guardJevMove } from '@/lib/stockfish';
 import { validateFen } from 'chess.js';
 import { GATE_COOKIE, gateConfigured, readCookie, sessionValid } from '@/lib/gate';
 
@@ -83,7 +83,9 @@ export async function POST(request: Request) {
 
   try {
     // Pass seed to make Jev break ties differently each time
-    const result = await playJevMove(fen, { apiKey: key, seed });
+    const jevRaw = await playJevMove(fen, { apiKey: key, seed });
+    // Hybrid evaluation: Stockfish tactically guards Jev's move so it never blunders or hangs pieces
+    const result = await guardJevMove(fen, jevRaw, depth);
     return NextResponse.json({
       uci: result.uci,
       san: result.san,
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
       confidence: result.confidence,
       droppedMoveCount: result.droppedMoveCount,
       outcome: result.outcome,
-      scoreCp: (result as any).scoreCp ?? null,
+      scoreCp: result.scoreCp ?? null,
     });
   } catch (error) {
     if (error instanceof JevRequestError) {

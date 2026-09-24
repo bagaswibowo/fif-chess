@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { JevRequestError, playJevMove } from "@/lib/jev";
-import { playStockfishMove } from "@/lib/stockfish";
+import { playStockfishMove, guardJevMove } from "@/lib/stockfish";
 import { validateFen } from "chess.js";
 import { GATE_COOKIE, gateConfigured, readCookie, sessionValid } from "@/lib/gate";
 
@@ -79,7 +79,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await playJevMove(fen, { apiKey: key });
+    const jevRaw = await playJevMove(fen, { apiKey: key });
+    const result = await guardJevMove(fen, jevRaw, 8);
     return NextResponse.json({
       uci: result.uci,
       san: result.san,

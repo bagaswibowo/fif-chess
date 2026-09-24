@@ -14,7 +14,7 @@ export const JEV_MODEL = "jev-latest";
 export const MOVE_QUESTION_ID = "move";
 
 export const MOVE_INSTRUCTIONS =
-  "Pick the best legal chess move for the side to move. Option keys are UCI; descriptions are the same move in SAN.";
+  "Pick the best legal chess move for the side to move. Option keys are UCI; descriptions are the same move in SAN. Play sound, active chess: defend pieces under threat, recapture material when taken, control the center, and develop pieces actively. Avoid purposeless king moves unless under check or forced.";
 
 export type JevState = {
   fen: string;
@@ -57,14 +57,14 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
   const { selected, dropped } = selectMovesForChoice(getLegalMoves(chess));
   const criteria: Record<string, string> = {};
   for (const move of selected) {
-    let desc = move.san
-    if (move.isCheckmate) desc += ' - checkmate'
-    else if (move.isCheck) desc += ' - check, king at risk'
-    else if (move.isCapture) desc += ' - captures piece, verify king safety'
-    else if (move.isCastle) desc += ' - king safe, rook active'
-    else if (move.isPromotion) desc += ' - promote, big gain'
-    else desc += ' - standard move'
-    criteria[move.uci] = desc
+    let desc = move.san;
+    if (move.isCheckmate) desc += " - delivers checkmate";
+    else if (move.isPromotion) desc += " - promote pawn";
+    else if (move.isCheck) desc += " - check";
+    else if (move.isCapture) desc += " - captures piece";
+    else if (move.isCastle) desc += " - castle king";
+    else desc += " - positional move";
+    criteria[move.uci] = desc;
   }
 
   return {
@@ -77,7 +77,7 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
       questions: {
         move: {
           type: "choice",
-          instructions: `${MOVE_INSTRUCTIONS} STRICTLY: King safety overrides all material. NEVER sacrifice king defense for pawn or positional advantage. If capture opens diagonal toward own king, AVOID regardless of material. Choose safest strong move, not greediest.${
+          instructions: `${MOVE_INSTRUCTIONS}${
             seed !== undefined
               ? ` For tie-breaking, prefer option ending with digit ${seed % 10}.`
               : ""
