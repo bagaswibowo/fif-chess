@@ -1,7 +1,7 @@
 "use client";
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,6 +98,9 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
   const [outcome, setOutcome] = useState<GameOutcome | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+    const [lastMoveUci, setLastMoveUci] = useState<string | null>(null);
+  const [threatInfo, setThreatInfo] = useState<{ from: string; to: string; sq: string } | null>(null);
+  const [predictedMove, setPredictedMove] = useState<{ from: string; to: string } | null>(null);
   const [commentary, setCommentary] = useState<Commentary | null>({
     moveSan: "Mulai",
     actorName: "FIF Arena",
@@ -201,6 +204,62 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
         ? "Pertandingan selesai."
         : `${nextSide} diprediksi akan merespons dengan memblokade ancaman atau melancarkan serangan balik taktis.`;
 
+            // Compute threat & predicted move visual indicators for commentator
+      const fromSq = data.uci.slice(0, 2);
+      const toSq = data.uci.slice(2, 4);
+      setLastMoveUci(data.uci);
+
+      // 1. Detect Threats created by this move
+      let foundThreat: { from: string; to: string; sq: string } | null = null;
+      const nextTurnColor = chess.turn(); // opponent color now
+      const oppBoard = chess.board();
+      
+      // If check, threat is directly to the enemy King
+      if (chess.isCheck()) {
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const p = oppBoard[r]?.[c];
+            if (p && p.type === "k" && p.color === nextTurnColor) {
+              const kSq = (String.fromCharCode(97 + c) + (8 - r));
+              foundThreat = { from: toSq, to: kSq, sq: kSq };
+              break;
+            }
+          }
+          if (foundThreat) break;
+        }
+      } else {
+        // Find highest-value enemy piece attacked by the moved piece
+        const valMap: Record<string, number> = { q: 9, r: 5, b: 3, n: 3, p: 1 };
+        let maxVal = 0;
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const p = oppBoard[r]?.[c];
+            if (p && p.color === nextTurnColor) {
+              const targetSq = (String.fromCharCode(97 + c) + (8 - r));
+              if (chess.isAttacked(targetSq as any, isWhiteTurn ? "w" : "b")) {
+                const v = valMap[p.type] || 0;
+                if (v > maxVal) {
+                  maxVal = v;
+                  foundThreat = { from: toSq, to: targetSq, sq: targetSq };
+                }
+              }
+            }
+          }
+        }
+      }
+      setThreatInfo(foundThreat);
+
+      // 2. Predict opponent's next move (Prioritize captures, checks, or active moves)
+      const legals = chess.moves({ verbose: true });
+      if (legals.length > 0) {
+        const pred = legals.find(m => m.captured) || legals.find(m => m.san.includes("+")) || legals[0];
+        if (pred) {
+          setPredictedMove({ from: pred.from, to: pred.to });
+        }
+      } else {
+        setPredictedMove(null);
+      }
+
       setCommentary({
         moveSan: data.san,
         actorName: actorLabel,
@@ -255,6 +314,61 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
   const isLastMoveWhite = moves.length % 2 === 1;
   const whiteCp = lastCp !== null ? (isLastMoveWhite ? -lastCp : lastCp) : null;
   const barPct = whiteCp !== null ? Math.round((Math.tanh(whiteCp / 400) + 1) / 2 * 100) : 50;
+
+  // Visual Arrows on Spectator Board
+  const arrows = useMemo(() => {
+    const list: { startSquare: string; endSquare: string; color: string }[] = [];
+
+    // 1. Yellow Arrow: Move just played
+    if (lastMoveUci && lastMoveUci.length >= 4) {
+      list.push({
+        startSquare: lastMoveUci.slice(0, 2),
+        endSquare: lastMoveUci.slice(2, 4),
+        color: "#eab308", // Yellow
+      });
+    }
+
+    // 2. Red Arrow: Threat created (attacking King or high-value piece)
+    if (threatInfo && threatInfo.from !== threatInfo.to) {
+      list.push({
+        startSquare: threatInfo.from,
+        endSquare: threatInfo.to,
+        color: "#ef4444", // Red
+      });
+    }
+
+    // 3. Cyan Arrow: Predicted next move
+    if (predictedMove) {
+      list.push({
+        startSquare: predictedMove.from,
+        endSquare: predictedMove.to,
+        color: "#38bdf8", // Cyan / Sky Blue
+      });
+    }
+
+    return list;
+  }, [lastMoveUci, threatInfo, predictedMove]);
+
+  // Square Highlights for Threats & Predictions
+  const squareStyles = useMemo(() => {
+    const styles: Record<string, React.CSSProperties> = {};
+
+    if (threatInfo?.sq) {
+      styles[threatInfo.sq] = {
+        boxShadow: "inset 0 0 0 3px #ef4444",
+        backgroundColor: "rgba(239, 68, 68, 0.4)",
+      };
+    }
+
+    if (predictedMove?.to) {
+      styles[predictedMove.to] = {
+        boxShadow: "inset 0 0 0 3px #38bdf8",
+        backgroundColor: "rgba(56, 189, 248, 0.3)",
+      };
+    }
+
+    return styles;
+  }, [threatInfo, predictedMove]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-4 pb-8">
@@ -521,11 +635,29 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
                 position: currentFen,
                 boardOrientation: "white",
                 allowDragging: false,
+                arrows,
+                squareStyles,
                 darkSquareStyle: { backgroundColor: "#b58863" },
                 lightSquareStyle: { backgroundColor: "#f0d9b5" },
                 animationDurationInMs: 350,
               }}
             />
+          </div>
+
+          {/* Commentator Visual Indicators Legend */}
+          <div className="bg-[#191816] p-2.5 rounded-xl border border-[#36322d] flex items-center justify-around flex-wrap gap-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-yellow-500 border border-yellow-300" />
+              <span className="text-neutral-300">Langkah Terkini</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-red-500 border border-red-300" />
+              <span className="text-neutral-300 font-bold text-red-400">Target Diancam</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-sky-400 border border-sky-300" />
+              <span className="text-neutral-300 font-bold text-sky-400">Prediksi Melangkah</span>
+            </div>
           </div>
 
           {/* Outcome banner */}
