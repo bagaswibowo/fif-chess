@@ -23,6 +23,14 @@ type MatchMove = {
 
 type MatchStatus = "idle" | "running" | "paused" | "finished";
 
+type Commentary = {
+  moveSan: string;
+  actorName: string;
+  summary: string;
+  target: string;
+  prediction: string;
+};
+
 type Props = {
   lang?: "id" | "en";
   /** Called when user wants to try the resulting position themselves */
@@ -90,6 +98,13 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
   const [outcome, setOutcome] = useState<GameOutcome | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [commentary, setCommentary] = useState<Commentary | null>({
+    moveSan: "Mulai",
+    actorName: "FIF Arena",
+    summary: "Pertandingan siap dimulai! Putih dan Hitam bersiap melancarkan strategi pembukaan.",
+    target: "Kedua pihak memperebutkan kendali 4 petak pusat (e4, d4, e5, d5).",
+    prediction: "Putih diperkirakan akan membuka dengan dorongan pion sentral (e4/d4/c4) untuk inisiatif awal.",
+  });
   // Jev side selectable; both engines use same depth for a fair fight
   const [whiteEngine, setWhiteEngine] = useState<"jev" | "fly" | "stockfish">("jev");
   const [blackEngine, setBlackEngine] = useState<"jev" | "fly" | "stockfish">("stockfish");
@@ -157,6 +172,43 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
         scoreCp: data.scoreCp,
       };
       setMoves(prev => [...prev, newMove]);
+      // Generate live Grandmaster commentary
+      const actorLabel = actor === "jev" ? "Jev AI (FlyWire)" : actor === "fly" ? "Fruit Fly Brain" : "Stockfish 15";
+      let summaryText = "";
+      if (data.san.includes("#")) {
+        summaryText = `SKAKMAT! ${actorLabel} mengunci raja lawan dengan kombinasi serangan mematikan!`;
+      } else if (data.san.includes("+")) {
+        summaryText = `Skak tajam! ${actorLabel} melancarkan tekanan langsung ke raja lawan via ${data.san}.`;
+      } else if (data.san.includes("x")) {
+        summaryText = `Pertukaran perwira! ${actorLabel} memakan bidak di petak ${data.uci.slice(2, 4)} untuk membuka jalur tembakan.`;
+      } else if (data.san === "O-O" || data.san === "O-O-O") {
+        summaryText = `Rokade taktis! ${actorLabel} mengamankan raja dan mengaktifkan benteng ke lajur sentral.`;
+      } else if (data.san.startsWith("N") || data.san.startsWith("B")) {
+        summaryText = `${actorLabel} bermanuver mengaktifkan perwira minor (${data.san}) untuk mendominasi petak tengah.`;
+      } else if (data.san.startsWith("Q") || data.san.startsWith("R")) {
+        summaryText = `Serangan perwira berat! ${actorLabel} menempatkan ${data.san} untuk mengancam garis pertahanan.`;
+      } else {
+        summaryText = `Dorongan pion strategis (${data.san}) memperkuat struktur teritorial dan membatasi ruang musuh.`;
+      }
+
+      const oppKingSq = isWhiteTurn ? "sayap raja hitam (g8/e8)" : "sayap raja putih (g1/e1)";
+      const targetText = data.san.includes("+") || data.san.includes("#")
+        ? `Mengincar titik fatal di sekitar ${oppKingSq}.`
+        : `Menekan koordinasi perwira di petak ${data.uci.slice(2, 4)} dan merusak susunan pertahanan lawan.`;
+
+      const nextSide = !isWhiteTurn ? "Putih" : "Hitam";
+      const predText = data.san.includes("#")
+        ? "Pertandingan selesai."
+        : `${nextSide} diprediksi akan merespons dengan memblokade ancaman atau melancarkan serangan balik taktis.`;
+
+      setCommentary({
+        moveSan: data.san,
+        actorName: actorLabel,
+        summary: summaryText,
+        target: targetText,
+        prediction: predText,
+      });
+
 
       const out = describeOutcome(chess);
       if (out.over) {
@@ -348,6 +400,56 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
           );
         })}
       </div>
+
+      {/* LIVE GRANDMASTER AI COMMENTATOR */}
+      <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-3">
+        <div className="flex items-center justify-between border-b border-[#36322d] pb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🎙️</span>
+            <span className="font-black text-white text-sm md:text-base tracking-wide uppercase">
+              Komentator Catur AI Real-Time
+            </span>
+          </div>
+          {commentary && (
+            <Badge className="bg-emerald-600 text-white font-mono text-xs px-2.5 py-0.5">
+              Langkah: {commentary.moveSan} ({commentary.actorName})
+            </Badge>
+          )}
+        </div>
+
+        {commentary ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-[#191816] p-3 rounded-xl border border-[#36322d] space-y-1">
+              <span className="text-xs font-bold text-neutral-400 block uppercase tracking-wider">
+                1. Ulasan Langkah Terkini:
+              </span>
+              <p className="text-sm font-medium text-white leading-relaxed">
+                {commentary.summary}
+              </p>
+            </div>
+
+            <div className="bg-[#191816] p-3 rounded-xl border border-[#36322d] space-y-1">
+              <span className="text-xs font-bold text-amber-400 block uppercase tracking-wider">
+                2. Arah Serangan & Target:
+              </span>
+              <p className="text-sm font-medium text-neutral-200 leading-relaxed">
+                {commentary.target}
+              </p>
+            </div>
+
+            <div className="bg-[#191816] p-3 rounded-xl border border-[#36322d] space-y-1">
+              <span className="text-xs font-bold text-sky-400 block uppercase tracking-wider">
+                3. Tebakan Rencana Selanjutnya:
+              </span>
+              <p className="text-sm font-medium text-neutral-200 leading-relaxed">
+                {commentary.prediction}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-neutral-400">Tekan Start Match untuk memulai siaran ulasan komentator.</p>
+        )}
+      </Card>
 
       <div className="grid lg:grid-cols-[minmax(300px,1fr)_380px] gap-5 items-start">
         {/* Board + eval bar */}

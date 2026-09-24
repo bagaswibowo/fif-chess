@@ -226,6 +226,8 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
       desc += `[PROMOTION ADVANCE] Advances passed pawn to rank ${toRank}! Only ${myColor === "w" ? 8 - toRank : toRank - 1} square(s) from Queen promotion!`;
     } else if (isPassed) {
       desc += `[PASSED PAWN PUSH] Advances passed pawn toward promotion on ${move.to}`;
+    } else if (chess.history().length < 8 && (move.uci === "e2e4" || move.uci === "f2f4" || move.uci === "b2b4" || move.uci === "d2d4" || move.uci === "c2c4")) {
+      desc += `[AGGRESSIVE GAMBIT / CENTER DOMINANCE] Sharp dynamic opening thrust attacking central files and unlocking lines to the enemy King!`;
     } else if (move.isCapture) {
       const capName = raw?.captured ? (PIECE_NAMES[raw.captured] ?? raw.captured) : "piece";
       const capVal = raw?.captured ? (PIECE_VALUES[raw.captured] ?? 1) : 1;
