@@ -14,7 +14,7 @@ export const JEV_MODEL = "jev-latest";
 export const MOVE_QUESTION_ID = "move";
 
 export const MOVE_INSTRUCTIONS =
-  "Select the best legal chess move for the side to move. Evaluate tactical consequences strictly: 1. NEVER play moves tagged [FATAL] or [BLUNDER] that lose a piece or Queen for free. 2. If your piece is attacked, move it to a SAFE square not controlled by opponent pawns, or defend it. 3. Look for winning captures of unprotected opponent pieces. 4. Control center and develop actively.";
+  "Select the best legal chess move for the side to move. Evaluate tactical and strategic consequences strictly: 1. NEVER play moves tagged [FATAL BLUNDER] or [TEMPO LOSS]. 2. If your piece is attacked, move it to a SAFE square or defend it. 3. DO NOT move your Queen repeatedly back and forth while other pieces remain undeveloped. 4. Control the center, develop Knights and Bishops, and castle early. 5. Learn from previous errors: avoid premature attacks against Stockfish that lead to counter-attacks.";
 
 export const PIECE_VALUES: Record<string, number> = {
   p: 1,
@@ -37,9 +37,11 @@ export const PIECE_NAMES: Record<string, string> = {
 export type JevState = {
   fen: string;
   side_to_move: "white" | "black";
+  move_history: string[];
   in_check: boolean;
   my_threatened_pieces: string[];
   capturable_opponents: string[];
+  strategic_guidance: string;
   tactical_situation: string;
 };
 
@@ -70,7 +72,7 @@ export type BuiltJevRequest = {
   droppedUcis: string[];
 };
 
-export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
+export function buildJevRequest(fen: string, seed?: number, history: string[] = []): BuiltJevRequest {
   const chess = parseFen(fen);
   if (chess.isGameOver()) {
     throw new Error("The game is already over; there is no move to pick.");
@@ -79,6 +81,7 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
   const myColor = chess.turn();
   const oppColor = myColor === "w" ? "b" : "w";
   const board = chess.board();
+  const ply = history.length;
 
   // 1. Identify threatened own pieces and capturable opponent pieces
   const threatenedPieces: string[] = [];
@@ -97,13 +100,28 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
     }
   }
 
+  // Count recent Queen moves from history
+  const recentMyMoves = history
+    .filter((_, idx) => (myColor === "w" ? idx % 2 === 0 : idx % 2 === 1))
+    .slice(-6);
+  const queenMovesCount = recentMyMoves.filter((m) => m.startsWith("Q")).length;
+
+  let strategicGuidance = "";
+  if (ply < 24 && queenMovesCount >= 2) {
+    strategicGuidance = "CRITICAL LESSON: Queen has already moved repeatedly. Do NOT shuffle Queen again. Develop minor pieces (Knights/Bishops) or activate Rooks!";
+  } else if (ply < 16) {
+    strategicGuidance = "Opening Principle: Control the center (e4/d4/e5/d5), develop Knights and Bishops to active squares, and castle King to safety.";
+  } else {
+    strategicGuidance = "Middlegame Strategy: Coordinate Rooks on open files, create pawn breaks, and watch out for opponent Knight/Rook infiltrations.";
+  }
+
   const tacticalSituation = chess.isCheck()
     ? "ALERT: King is in CHECK! Must safely block, capture the checker, or move the king."
     : threatenedPieces.length > 0
     ? `TACTICAL ALERT: ${threatenedPieces.length} piece(s) under direct attack: ${threatenedPieces.join(", ")}. Defend or rescue safely!`
     : capturableOpponents.length > 0
     ? `OPPORTUNITY: Opponent has vulnerable piece(s) to capture: ${capturableOpponents.join(", ")}.`
-    : "Position is calm. Develop pieces, fight for center, or prepare attacking breakthrough.";
+    : "Position is calm. Proceed with sound development and king safety.";
 
   // 2. Build semantic descriptions with Static Exchange Evaluation & danger tags
   const { selected, dropped } = selectMovesForChoice(getLegalMoves(chess));
@@ -133,13 +151,17 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
       }
       if (move.isPromotion) desc += " and promotes to Queen";
     } else if (move.isCastle) {
-      desc += "[SOLID] Castles king to safety and connects rooks";
+      desc += "[BEST STRATEGY] Castles king to safe corner and connects rooks";
+    } else if (raw && raw.piece === "q" && ply < 24 && queenMovesCount >= 2 && !destAttacked) {
+      desc += `[TEMPO LOSS] Moves Queen again to ${move.to} while other pieces need development (AVOID)`;
     } else if (raw && destAttacked) {
       desc += `[DANGER] Moves ${pName} to ${move.to} which is under enemy attack!`;
     } else if (raw && chess.isAttacked(raw.from, oppColor)) {
       desc += `[RESCUE] Safely rescues threatened ${pName} from ${raw.from} to safe square ${move.to}`;
     } else if (move.isCheck) {
       desc += `[ACTIVE] ${pName} attacks opponent King with CHECK`;
+    } else if (raw && (raw.piece === "n" || raw.piece === "b" || raw.piece === "r")) {
+      desc += `[DEVELOPMENT] Develops and activates ${pName} to ${move.to}`;
     } else {
       desc += `Moves ${pName} to ${move.to}`;
     }
@@ -152,9 +174,11 @@ export function buildJevRequest(fen: string, seed?: number): BuiltJevRequest {
       state: {
         fen: chess.fen(),
         side_to_move: sideToMove(chess),
+        move_history: history.slice(-10),
         in_check: chess.isCheck(),
         my_threatened_pieces: threatenedPieces,
         capturable_opponents: capturableOpponents,
+        strategic_guidance: strategicGuidance,
         tactical_situation: tacticalSituation,
       },
       model: JEV_MODEL,
@@ -248,13 +272,15 @@ type PlayDeps = {
   fetchImpl?: typeof fetch;
   /** Seed to break ties — different value = different move */
   seed?: number;
+  /** Recent move history to prevent repetitive blunders & tempo waste */
+  history?: string[];
 };
 
 export async function playJevMove(
   fen: string,
-  { apiKey, fetchImpl = fetch, seed }: PlayDeps,
+  { apiKey, fetchImpl = fetch, seed, history = [] }: PlayDeps,
 ): Promise<JevPlaySuccess> {
-  const built = buildJevRequest(fen, seed);
+  const built = buildJevRequest(fen, seed, history);
   const legalSet = new Set(built.legalUcis);
 
   const response = await fetchImpl(TYPESAFE_ENDPOINT, {

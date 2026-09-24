@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
   const engine = parseEngine(bodyObj);
   // Seed is used to bias Jev's move selection so each reset produces different play
-  const seed = typeof bodyObj.seed === "number" ? bodyObj.seed : 0;
+  const seed = typeof bodyObj.seed === "number" ? bodyObj.seed : 0; const history = Array.isArray(bodyObj.history) ? (bodyObj.history as string[]) : [];
 
   if (engine === 'stockfish') {
     const result = await playStockfishMove(fen, depth);
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
 
   try {
     // Pass seed to make Jev break ties differently each time
-    const jevRaw = await playJevMove(fen, { apiKey: key, seed });
+    const jevRaw = await playJevMove(fen, { apiKey: key, seed, history });
     // Hybrid evaluation: Stockfish tactically guards Jev's move so it never blunders or hangs pieces
     const result = await guardJevMove(fen, jevRaw, depth);
     return NextResponse.json({

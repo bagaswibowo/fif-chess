@@ -42,11 +42,13 @@ async function fetchMove(
   depth: number,
   engine: "stockfish" | "jev",
   seed?: number,
+  history?: string[],
 ): Promise<{ uci: string; san: string; scoreCp: number | null } | null> {
   try {
     const body: Record<string, unknown> = { fen, depth, engine };
-    if (engine === "jev" && seed !== undefined) {
-      body.seed = seed;
+    if (engine === "jev") {
+      if (seed !== undefined) body.seed = seed;
+      if (history) body.history = history;
     }
     const res = await fetch("/api/engine-move", {
       method: "POST",
@@ -120,7 +122,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
       const depth = isJevTurn ? jevDepth : sfDepth;
       const actor: "jev" | "stockfish" = isJevTurn ? "jev" : "stockfish";
 
-      const data = await fetchMove(chess.fen(), depth, actor, seed + moves.length);
+      const data = await fetchMove(chess.fen(), depth, actor, seed + moves.length, moves.map(m => m.san));
       if (abortRef.current) break;
       if (!data) break;
 
