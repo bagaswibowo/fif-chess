@@ -348,80 +348,60 @@ export function CoachModeView({ lang = "id" }: Props) {
     <div className="max-w-5xl mx-auto space-y-3 pb-8">
       {showConfetti && <Confetti />}
 
-      {/* Header Info Matchup */}
-      <div className="bg-[#262421] px-4 py-3 rounded-2xl border border-[#36322d] shadow-xl flex flex-wrap justify-between items-center gap-3">
-        <div className="flex items-center gap-3">
-          <IconBot3D size={28} />
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-black text-white">
-                {lang === "id" ? "AI Coach — Mode Latih Mandiri" : "AI Coach — Self-Training"}
-              </h2>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[#81b64c]/20 text-[#81b64c] font-bold border border-[#81b64c]/40">
-                Lawan: Stockfish 15 NNUE | Coach: Jev System One
-              </span>
+      {/* Header Info Matchup - Ultra Compact on Mobile */}
+      <div className="bg-[#262421] px-3 py-2 rounded-xl border border-[#36322d] shadow-md flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <IconBot3D size={22} className="shrink-0" />
+          <div className="min-w-0">
+            <h2 className="text-xs md:text-sm font-black text-white truncate">
+              {lang === "id" ? "AI Coach — Mode Latih" : "AI Coach — Training"}
+            </h2>
+            <div className="text-[10px] md:text-xs text-neutral-400 truncate">
+              Lawan: Stockfish 15 NNUE
             </div>
-            <p className="text-xs text-neutral-300">
-              {lang === "id"
-                ? `Kamu bermain sebagai ${playerSide === "white" ? "Putih (di bawah)" : "Hitam (di bawah)"}, dibimbing rekomendasi Jev melawan Stockfish.`
-                : `You play as ${playerSide === "white" ? "White (bottom)" : "Black (bottom)"}, coached by Jev against Stockfish.`}
-            </p>
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button
+
+        {/* Compact 2-way Side Toggle Switch: Putih / Hitam */}
+        <div className="flex items-center bg-[#171614] p-0.5 rounded-lg border border-[#36322d] shrink-0">
+          <button
             onClick={() => void resetGame("white")}
-            variant="outline"
-            size="sm"
-            className={`border-[#36322d] text-sm font-bold ${playerSide === "white" ? "bg-[#81b64c] text-white hover:bg-[#81b64c]/90" : "bg-[#1c1a18] text-neutral-300 hover:text-white"}`}
             disabled={thinking}
+            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${
+              playerSide === "white"
+                ? "bg-[#81b64c] text-white shadow-sm"
+                : "text-neutral-400 hover:text-white"
+            }`}
           >
-            ♔ {lang === "id" ? "Main Putih (Bawah)" : "Play White (Bottom)"}
-          </Button>
-          <Button
+            <span>♔</span>
+            <span className="hidden sm:inline">Putih</span>
+          </button>
+          <button
             onClick={() => void resetGame("black")}
-            variant="outline"
-            size="sm"
-            className={`border-[#36322d] text-sm font-bold ${playerSide === "black" ? "bg-[#81b64c] text-white hover:bg-[#81b64c]/90" : "bg-[#1c1a18] text-neutral-300 hover:text-white"}`}
             disabled={thinking}
+            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${
+              playerSide === "black"
+                ? "bg-[#81b64c] text-white shadow-sm"
+                : "text-neutral-400 hover:text-white"
+            }`}
           >
-            ♚ {lang === "id" ? "Main Hitam (Bawah)" : "Play Black (Bottom)"}
-          </Button>
+            <span>♚</span>
+            <span className="hidden sm:inline">Hitam</span>
+          </button>
         </div>
       </div>
-
-      {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
+{/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
       <div className="grid lg:grid-cols-[1fr_380px] gap-4 items-start">
-        {/* LEFT COLUMN: Chessboard strictly anchored (NEVER JUMPS) */}
-        <div className="space-y-3">
-          {/* Eval bar */}
-          <div className="bg-[#1c1a18] rounded-xl border border-[#36322d] px-3 py-2 flex items-center gap-3">
-            <span className="text-sm text-neutral-300 font-mono w-14 text-right shrink-0">
-              {evalCp !== null ? (evalCp > 0 ? `+${(evalCp / 100).toFixed(1)}` : (evalCp / 100).toFixed(1)) : "="}
-            </span>
-            <div className="flex-1 h-3.5 bg-[#1a1a1a] rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${whitePct}%`,
-                  background: whitePct > 55
-                    ? "linear-gradient(90deg,#ccc,#fff)"
-                    : whitePct < 45
-                    ? "linear-gradient(90deg,#222,#555)"
-                    : "linear-gradient(90deg,#888,#bbb)",
-                }}
-              />
-            </div>
-            <span className="text-sm font-mono text-neutral-300 w-16 shrink-0">
-              {whitePct > 50 ? `Putih ${whitePct}%` : `Hitam ${100 - whitePct}%`}
-            </span>
-          </div>
-
-          {/* Opponent Status Bar */}
-          <div className="flex items-center justify-between px-3 py-1.5 bg-[#1c1a18] rounded-xl border border-[#36322d]">
-            <div className="flex items-center gap-2">
-              <div className={`w-3.5 h-3.5 rounded-full border ${playerSide === "white" ? "bg-neutral-800 border-neutral-600" : "bg-white border-neutral-300"}`} />
-              <span className="text-xs font-bold text-white">Stockfish 15 NNUE</span>
+        {/* LEFT COLUMN: Chessboard strictly anchored */}
+        <div className="space-y-2">
+          {/* Integrated Opponent Bar with Eval Badge & Captured Pieces */}
+          <div className="flex items-center justify-between px-3 py-1.5 bg-[#1c1a18] rounded-xl border border-[#36322d] shadow-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-neutral-800 border-neutral-600" : "bg-white border-neutral-300"}`} />
+              <span className="text-xs md:text-sm font-bold text-white truncate">Stockfish 15</span>
+              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/40 shrink-0">
+                {evalCp !== null ? (evalCp > 0 ? `+${(evalCp / 100).toFixed(1)}` : (evalCp / 100).toFixed(1)) : "="}
+              </span>
             </div>
             <CapturedPiecesBar fen={fen} side={playerSide === "white" ? "black" : "white"} />
           </div>
@@ -452,13 +432,26 @@ export function CoachModeView({ lang = "id" }: Props) {
             />
           </div>
 
-          {/* Player Status Bar */}
-          <div className="flex items-center justify-between px-3 py-1.5 bg-[#1c1a18] rounded-xl border border-[#36322d]">
+          {/* Player Status Bar with Hint Action */}
+          <div className="flex items-center justify-between px-3 py-1.5 bg-[#1c1a18] rounded-xl border border-[#36322d] shadow-sm">
             <div className="flex items-center gap-2">
-              <div className={`w-3.5 h-3.5 rounded-full border ${playerSide === "white" ? "bg-white border-neutral-300" : "bg-neutral-800 border-neutral-600"}`} />
-              <span className="text-xs font-bold text-white">Anda (Player)</span>
+              <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-white border-neutral-300" : "bg-neutral-800 border-neutral-600"}`} />
+              <span className="text-xs md:text-sm font-bold text-white">Anda (Player)</span>
+              {isPlayerTurn && <span className="text-[10px] text-[#81b64c] font-black animate-pulse">Giliran</span>}
             </div>
-            <CapturedPiecesBar fen={fen} side={playerSide} />
+            <div className="flex items-center gap-2">
+              <CapturedPiecesBar fen={fen} side={playerSide} />
+              {hint && (
+                <button
+                  onClick={() => setShowHintArrow(!showHintArrow)}
+                  className={`h-6 px-2 text-[11px] font-bold rounded-md border border-[#36322d] transition-all ${
+                    showHintArrow ? "bg-[#38bdf8] text-black" : "text-[#38bdf8] hover:bg-[#38bdf8]/10"
+                  }`}
+                >
+                  💡 Hint
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Controls Bar Below Board */}

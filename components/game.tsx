@@ -1058,7 +1058,7 @@ export function Game() {
           {[
             { id: "play", icon: IconPlay3D, labelId: "Bermain", labelEn: "Play" },
             { id: "coach", icon: IconCoach3D, labelId: "Latih", labelEn: "Train" },
-            { id: "puzzle", icon: IconPuzzle3D, labelId: "Teka", labelEn: "Puzzle" },
+            { id: "puzzle", icon: IconPuzzle3D, labelId: "Puzzle", labelEn: "Puzzle" },
             { id: "vision", icon: IconVision3D, labelId: "Belajar", labelEn: "Learn" },
             { id: "review", icon: IconMedal3D, labelId: "Review", labelEn: "Review" },
             { id: "community", icon: IconCommunity3D, labelId: "Klub", labelEn: "Club" },
