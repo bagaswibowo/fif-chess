@@ -117,3 +117,34 @@ export function evaluateWithFlyBrain(fen: string): {
     return null;
   }
 }
+
+import { describeOutcome } from "@/lib/chess";
+
+export function playFlyBrainMove(fen: string) {
+  const result = evaluateWithFlyBrain(fen);
+  if (!result || result.moves.length === 0) return null;
+
+  const best = result.moves[0];
+  const chess = new Chess(fen);
+  const applied = chess.move({
+    from: best.uci.slice(0, 2),
+    to: best.uci.slice(2, 4),
+    promotion: best.uci[4] || undefined,
+  });
+
+  const probs: Record<string, number> = {};
+  for (const m of result.moves) {
+    probs[m.uci] = m.prob;
+  }
+
+  return {
+    uci: best.uci,
+    san: applied ? applied.san : best.san,
+    fen: chess.fen(),
+    probabilities: probs,
+    confidence: best.prob,
+    droppedMoveCount: 0,
+    scoreCp: Math.round(result.value * 100),
+    outcome: describeOutcome(chess),
+  };
+}

@@ -1,3 +1,4 @@
+import { playFlyBrainMove } from "@/lib/flybrain/service";
 import { NextResponse } from 'next/server';
 import { JevRequestError, playJevMove } from '@/lib/jev';
 import { playStockfishMove, guardJevMove } from '@/lib/stockfish';
@@ -11,11 +12,14 @@ function apiKey(): string | undefined {
   return value && value.trim().length > 0 ? value : undefined;
 }
 
-function parseEngine(bodyObj: Record<string, unknown>): 'stockfish' | 'jev' {
+function parseEngine(bodyObj: Record<string, unknown>): 'stockfish' | 'jev' | 'fly' {
   const v = bodyObj.engine;
   if (v === 'jev') return 'jev';
+  if (v === 'fly' || v === 'flybrain') return 'fly';
   return 'stockfish';
 }
+
+
 
 export async function POST(request: Request) {
   if (!gateConfigured() || !sessionValid(readCookie(request, GATE_COOKIE))) {
@@ -58,6 +62,14 @@ export async function POST(request: Request) {
   const engine = parseEngine(bodyObj);
   // Seed is used to bias Jev's move selection so each reset produces different play
   const seed = typeof bodyObj.seed === "number" ? bodyObj.seed : 0; const history = Array.isArray(bodyObj.history) ? (bodyObj.history as string[]) : [];
+
+  
+  if (engine === "fly") {
+    const flyRes = playFlyBrainMove(fen);
+    if (flyRes) {
+      return NextResponse.json(flyRes);
+    }
+  }
 
   if (engine === 'stockfish') {
     const result = await playStockfishMove(fen, depth);

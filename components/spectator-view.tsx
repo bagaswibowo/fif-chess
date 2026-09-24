@@ -15,7 +15,7 @@ import { describeOutcome, getLegalMoves, findLegalMove, type GameOutcome } from 
 type MatchMove = {
   san: string;
   uci: string;
-  by: "jev" | "stockfish";
+  by: "jev" | "stockfish" | "fly" | "fly";
   fen: string;
   scoreCp: number | null;
 };
@@ -40,7 +40,7 @@ const MOVE_DELAY_MS = 1400;
 async function fetchMove(
   fen: string,
   depth: number,
-  engine: "stockfish" | "jev",
+  engine: "stockfish" | "jev" | "fly",
   seed?: number,
   history?: string[],
 ): Promise<{ uci: string; san: string; scoreCp: number | null } | null> {
@@ -89,7 +89,8 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
   const [outcome, setOutcome] = useState<GameOutcome | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   // Jev side selectable; both engines use same depth for a fair fight
-  const [jevSide, setJevSide] = useState<"white" | "black">("white");
+  const [whiteEngine, setWhiteEngine] = useState<"jev" | "fly" | "stockfish">("jev");
+  const [blackEngine, setBlackEngine] = useState<"jev" | "fly" | "stockfish">("stockfish");
   const [jevDepth, setJevDepth] = useState(10);
   const [sfDepth, setSfDepth] = useState(10);
   const [seed, setSeed] = useState(0);
@@ -117,10 +118,9 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
     let prevCp: number | null = null;
 
     while (!abortRef.current) {
-      const isJevTurn = (chess.turn() === "w" && jevSide === "white") ||
-                        (chess.turn() === "b" && jevSide === "black");
-      const depth = isJevTurn ? jevDepth : sfDepth;
-      const actor: "jev" | "stockfish" = isJevTurn ? "jev" : "stockfish";
+      const isWhiteTurn = chess.turn() === "w";
+      const actor: "jev" | "fly" | "stockfish" = isWhiteTurn ? whiteEngine : blackEngine;
+      const depth = actor === "stockfish" ? sfDepth : jevDepth;
 
       const data = await fetchMove(chess.fen(), depth, actor, seed + moves.length, moves.map(m => m.san));
       if (abortRef.current) break;
@@ -160,10 +160,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
       if (out.over) {
         setOutcome(out);
         setStatus("finished");
-        if (
-          (out.winner === "white" && jevSide === "white") ||
-          (out.winner === "black" && jevSide === "black")
-        ) {
+        if (out.winner) {
           setShowConfetti(true);
         }
         return;
@@ -177,7 +174,7 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
     if (!abortRef.current) {
       setStatus("finished");
     }
-  }, [jevSide, jevDepth, sfDepth, seed]);
+  }, [whiteEngine, blackEngine, jevDepth, sfDepth, seed]);
 
   const stopMatch = () => {
     abortRef.current = true;
@@ -201,10 +198,8 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
   const lastCp = lastMove?.scoreCp ?? null;
   // after move applied, scoreCp is from side-to-move (which is opponent of who just moved)
   // so to get white perspective: if last actor was white (just moved), scoreCp is black's perspective = negate
-  const whiteCp = lastCp !== null
-    ? (lastActor === "jev" && jevSide === "white") || (lastActor === "stockfish" && jevSide === "black")
-      ? -lastCp : lastCp
-    : null;
+  const isLastMoveWhite = moves.length % 2 === 1;
+  const whiteCp = lastCp !== null ? (isLastMoveWhite ? -lastCp : lastCp) : null;
   const barPct = whiteCp !== null ? Math.round((Math.tanh(whiteCp / 400) + 1) / 2 * 100) : 50;
 
   return (
@@ -259,22 +254,35 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
           </div>
         </div>
 
-        {/* Side & Depth Controls */}
-        <div className="flex flex-wrap gap-3 items-center border-t border-[#36322d] pt-3">
+        {/* Engine Matchup Selectors */}
+        <div className="flex flex-wrap gap-4 items-center border-t border-[#36322d] pt-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
-              {lang === "id" ? "Jev main:" : "Jev plays:"}
+              ♔ {lang === "id" ? "Putih:" : "White:"}
             </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => { setJevSide("white"); setSeed((s) => s + 1); }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${jevSide === "white" ? "bg-[#81b64c] text-white border-[#81b64c]" : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"}`}
-              >♔ {lang === "id" ? "Putih" : "White"}</button>
-              <button
-                onClick={() => { setJevSide("black"); setSeed((s) => s + 1); }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${jevSide === "black" ? "bg-[#81b64c] text-white border-[#81b64c]" : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"}`}
-              >♚ {lang === "id" ? "Hitam" : "Black"}</button>
-            </div>
+            <select
+              value={whiteEngine}
+              onChange={(e) => setWhiteEngine(e.target.value as any)}
+              className="bg-[#1f1d1a] border border-[#36322d] rounded-lg px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:border-[#81b64c]"
+            >
+              <option value="jev">🧠 Jev (Hybrid System One + FlyWire)</option>
+              <option value="fly">🪰 Fruit Fly (Drosophila 134k)</option>
+              <option value="stockfish">🤖 Stockfish 15 NNUE</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
+              ♚ {lang === "id" ? "Hitam:" : "Black:"}
+            </span>
+            <select
+              value={blackEngine}
+              onChange={(e) => setBlackEngine(e.target.value as any)}
+              className="bg-[#1f1d1a] border border-[#36322d] rounded-lg px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:border-[#81b64c]"
+            >
+              <option value="stockfish">🤖 Stockfish 15 NNUE</option>
+              <option value="jev">🧠 Jev (Hybrid System One + FlyWire)</option>
+              <option value="fly">🪰 Fruit Fly (Drosophila 134k)</option>
+            </select>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
@@ -301,9 +309,13 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
       {/* Player cards */}
       <div className="grid grid-cols-2 gap-3">
         {(["white", "black"] as const).map(side => {
-          const isJev = side === jevSide;
-          const actor = isJev ? "jev" : "stockfish";
-          const isMoving = status === "running" && lastActor !== actor;
+          const engineType = side === "white" ? whiteEngine : blackEngine;
+          const isMoving = status === "running" && lastActor !== engineType;
+          const engineName = engineType === "jev"
+            ? "Jev AI (TypeSafe + FlyWire)"
+            : engineType === "fly"
+            ? "Fruit Fly (Drosophila 134k)"
+            : "Stockfish 15 NNUE";
           return (
             <div
               key={side}
@@ -315,13 +327,11 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
             >
               <div className={`w-8 h-8 rounded-full border-2 flex-shrink-0 ${side === "white" ? "bg-white border-neutral-300" : "bg-neutral-800 border-neutral-600"}`} />
               <div className="min-w-0">
-                <div className="font-bold text-white text-sm">
-                  {isJev ? "Jev AI (TypeSafe)" : "Stockfish 15 NNUE"}
+                <div className="font-bold text-white text-sm truncate">
+                  {engineName}
                 </div>
                 <div className="text-xs text-neutral-300">
-                  {isJev
-                    ? (lang === "id" ? `Depth ${jevDepth} — Sisi ${side === "white" ? "Putih" : "Hitam"}` : `Depth ${jevDepth} — ${side}`)
-                    : (lang === "id" ? `Depth ${sfDepth} — Sisi ${side === "white" ? "Putih" : "Hitam"}` : `Depth ${sfDepth} — ${side}`)}
+                  {side === "white" ? "Sisi Putih (White)" : "Sisi Hitam (Black)"}
                 </div>
               </div>
               {isMoving && (
@@ -376,11 +386,11 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
               <IconTrophy3D size={28} className="mx-auto" />
               <div className="font-black text-white text-lg">{outcome.label}</div>
               <div className="text-sm text-neutral-300">
-                {outcome.winner === (jevSide === "white" ? "white" : "black")
-                  ? (lang === "id" ? "🎉 Jev AI menang!" : "🎉 Jev AI wins!")
-                  : outcome.winner === null
-                  ? (lang === "id" ? "Remis!" : "Draw!")
-                  : (lang === "id" ? "Stockfish menang." : "Stockfish wins.")}
+                {outcome.winner === "white"
+                  ? `${whiteEngine === "jev" ? "🎉 Jev AI" : whiteEngine === "fly" ? "🪰 Fruit Fly" : "Stockfish"} menang!`
+                  : outcome.winner === "black"
+                  ? `${blackEngine === "jev" ? "🎉 Jev AI" : blackEngine === "fly" ? "🪰 Fruit Fly" : "Stockfish"} menang!`
+                  : "Remis!"}
               </div>
               <div className="text-xs text-neutral-300">{moves.length} {lang === "id" ? "langkah total" : "total moves"}</div>
             </div>
