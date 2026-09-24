@@ -15,7 +15,7 @@ export const JEV_MODEL = "jev-latest";
 export const MOVE_QUESTION_ID = "move";
 
 export const MOVE_INSTRUCTIONS =
-  "Select the best legal chess move for the side to move. Evaluate tactical and strategic consequences strictly: 1. NEVER play moves tagged [FATAL BLUNDER] or [TEMPO LOSS]. 2. If your piece is attacked, move it to a SAFE square or defend it. 3. DO NOT move your Queen repeatedly back and forth while other pieces remain undeveloped. 4. Control the center, develop Knights and Bishops, and castle early. 5. Consider [FLY BRAIN RECOMMENDED] biological intuition moves for natural development.";
+  "You are an ultra-aggressive Grandmaster chess engine playing with ruthless attacking instinct (10,000 Elo ambition). Your goal: RELENTLESSLY ATTACK THE ENEMY KING AND FORCE CHECKMATE! 1. Prioritize forcing moves: direct checks, King-side mating attacks, forks, pins, and tactical traps. 2. Target weak squares around the enemy King (f7/f2/g7/h7) and push pieces aggressively forward. 3. NEVER make passive, timid retreats when an attacking option is available. 4. Prefer moves tagged [FATAL CHECKMATE], [FORCING CHECK], [TACTICAL FORK], or [AGGRESSIVE KING ATTACK]. Avoid [PASSIVE].";
 
 export const PIECE_VALUES: Record<string, number> = {
   p: 1,
@@ -42,8 +42,9 @@ export type JevState = {
   in_check: boolean;
   my_threatened_pieces: string[];
   capturable_opponents: string[];
+  opponent_king_square: string;
   fly_brain_top_moves: string[];
-  strategic_guidance: string;
+  attacking_mandate: string;
   tactical_situation: string;
 };
 
@@ -86,6 +87,17 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
   const board = chess.board();
   const ply = history.length;
 
+  // Locate opponent king
+  let oppKingSq = "e8";
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r]?.[c];
+      if (p && p.color === oppColor && p.type === "k") {
+        oppKingSq = `${String.fromCharCode(97 + c)}${8 - r}`;
+      }
+    }
+  }
+
   // 1. Biological Fly Brain Sensory Forward Pass (134k Drosophila neurons)
   const flyResult = evaluateWithFlyBrain(fen);
   const flyMoves = flyResult?.moves ?? [];
@@ -109,30 +121,26 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
     }
   }
 
-  // Count recent Queen moves from history
+  // Count recent Queen moves from history to prevent repetitive shuffle
   const recentMyMoves = history
     .filter((_, idx) => (myColor === "w" ? idx % 2 === 0 : idx % 2 === 1))
     .slice(-6);
   const queenMovesCount = recentMyMoves.filter((m) => m.startsWith("Q")).length;
 
-  let strategicGuidance = "";
-  if (ply < 24 && queenMovesCount >= 2) {
-    strategicGuidance = "CRITICAL LESSON: Queen has already moved repeatedly. Do NOT shuffle Queen again. Develop minor pieces (Knights/Bishops) or activate Rooks!";
-  } else if (ply < 16) {
-    strategicGuidance = "Opening Principle: Control center (e4/d4/e5/d5), develop Knights and Bishops actively, and castle King to safety.";
-  } else {
-    strategicGuidance = "Middlegame Strategy: Coordinate Rooks on open files, create pawn breaks, and watch out for opponent Knight infiltrations.";
-  }
+  const attackingMandate =
+    "ATTACKING DIRECTIVE: Target the enemy King on " +
+    oppKingSq +
+    "! Break through opponent pawns, launch devastating checks, set up tactical forks, and crush opponent resistance!";
 
   const tacticalSituation = chess.isCheck()
-    ? "ALERT: King is in CHECK! Must safely block, capture the checker, or move the king."
+    ? "ALERT: King is in CHECK! Safely block, capture the checker, or move the king."
     : threatenedPieces.length > 0
-    ? `TACTICAL ALERT: ${threatenedPieces.length} piece(s) under direct attack: ${threatenedPieces.join(", ")}. Defend or rescue safely!`
+    ? `TACTICAL SITUATION: ${threatenedPieces.length} piece(s) engaged in battle: ${threatenedPieces.join(", ")}. Counter-attack or defend aggressively!`
     : capturableOpponents.length > 0
-    ? `OPPORTUNITY: Opponent has vulnerable piece(s) to capture: ${capturableOpponents.join(", ")}.`
-    : "Position is calm. Proceed with sound development and king safety.";
+    ? `HUNTING OPPORTUNITY: Enemy piece(s) vulnerable to attack: ${capturableOpponents.join(", ")}. Attack aggressively!`
+    : "Position is primed for an aggressive breakthrough. Launch pieces toward the enemy King!";
 
-  // 3. Build semantic descriptions with Static Exchange Evaluation & Fly Brain tags
+  // 3. Build aggressive semantic descriptions
   const { selected, dropped } = selectMovesForChoice(getLegalMoves(chess));
   const rawMoves = chess.moves({ verbose: true });
   const rawMoveMap = new Map(rawMoves.map((m) => [m.lan, m]));
@@ -146,8 +154,29 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
     const destAttacked = raw ? chess.isAttacked(raw.to, oppColor) : false;
     const isFlyTop = flyTopUcis.has(move.uci);
 
+    // Simulate move to evaluate forward aggression
+    let attacksMultiple = false;
+    try {
+      const simChess = new Chess(fen);
+      simChess.move({ from: move.uci.slice(0, 2), to: move.uci.slice(2, 4), promotion: move.uci[4] });
+      let attackedCount = 0;
+      const bSim = simChess.board();
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const pt = bSim[r]?.[c];
+          if (pt && pt.color === oppColor) {
+            const sqSim = (String.fromCharCode(97 + c) + (8 - r)) as Square;
+            if (simChess.isAttacked(sqSim, myColor)) attackedCount++;
+          }
+        }
+      }
+      attacksMultiple = attackedCount >= 2;
+    } catch {}
+
     if (move.isCheckmate) {
-      desc += "[BEST] DELIVERS CHECKMATE and wins the game!";
+      desc += "[FATAL CHECKMATE] DELIVERS IMMEDIATE CHECKMATE! Crushes the enemy King and wins the game!";
+    } else if (move.isCheck) {
+      desc += `[FORCING CHECK] ${pName} delivers a direct CHECK to enemy King on ${oppKingSq}! Forces opponent into panic defense!`;
     } else if (move.isCapture) {
       const capName = raw?.captured ? (PIECE_NAMES[raw.captured] ?? raw.captured) : "piece";
       const capVal = raw?.captured ? (PIECE_VALUES[raw.captured] ?? 1) : 1;
@@ -155,27 +184,27 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
       if (destAttacked && pVal > capVal) {
         desc += `[FATAL BLUNDER] Sacrifices ${pName} for lower-value ${capName} on ${move.to} (DO NOT PLAY)`;
       } else if (!destAttacked) {
-        desc += `[WINNING] Cleanly captures undefended opponent ${capName} on ${move.to}`;
+        desc += `[TACTICAL CAPTURE] Cleanly destroys undefended opponent ${capName} on ${move.to}! Wins material advantage!`;
       } else {
-        desc += `Equal capture: ${pName} trades for opponent ${capName} on ${move.to}`;
+        desc += `[EQUAL TRADE] ${pName} strikes opponent ${capName} on ${move.to}!`;
       }
-      if (move.isPromotion) desc += " and promotes to Queen";
+      if (move.isPromotion) desc += " and promotes to Queen with lethal threat!";
+    } else if (attacksMultiple) {
+      desc += `[TACTICAL FORK / DOUBLE ATTACK] Moves ${pName} to ${move.to}, striking multiple enemy targets simultaneously!`;
     } else if (move.isCastle) {
-      desc += "[BEST STRATEGY] Castles king to safe corner and connects rooks";
+      desc += "[STRATEGIC FORTRESS] Castles king safely and unleases rook down open file for kingside attack";
     } else if (raw && raw.piece === "q" && ply < 24 && queenMovesCount >= 2 && !destAttacked) {
-      desc += `[TEMPO LOSS] Moves Queen again to ${move.to} while other pieces need development (AVOID)`;
+      desc += `[TEMPO LOSS] Shuffles Queen again to ${move.to} without development (AVOID)`;
     } else if (raw && destAttacked) {
       desc += `[DANGER] Moves ${pName} to ${move.to} which is under enemy attack!`;
     } else if (raw && chess.isAttacked(raw.from, oppColor)) {
-      desc += `[RESCUE] Safely rescues threatened ${pName} from ${raw.from} to safe square ${move.to}`;
-    } else if (move.isCheck) {
-      desc += `[ACTIVE] ${pName} attacks opponent King with CHECK`;
+      desc += `[RESCUE] Safely rescues threatened ${pName} from ${raw.from} to active square ${move.to}`;
     } else if (isFlyTop) {
-      desc += `[FLY BRAIN RECOMMENDED] Biological connectome prioritizes this development move to ${move.to}`;
+      desc += `[AGGRESSIVE FLY INTUITION] 134k Drosophila neurons recommend attacking push to ${move.to}`;
     } else if (raw && (raw.piece === "n" || raw.piece === "b" || raw.piece === "r")) {
-      desc += `[DEVELOPMENT] Develops and activates ${pName} to ${move.to}`;
+      desc += `[RAPID ATTACK DEVELOPMENT] Deploys ${pName} forward to ${move.to} aiming at opponent King territory`;
     } else {
-      desc += `Moves ${pName} to ${move.to}`;
+      desc += `[POSITIONAL] Moves ${pName} to ${move.to}`;
     }
 
     criteria[move.uci] = desc;
@@ -190,8 +219,9 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
         in_check: chess.isCheck(),
         my_threatened_pieces: threatenedPieces,
         capturable_opponents: capturableOpponents,
+        opponent_king_square: oppKingSq,
         fly_brain_top_moves: flyTop3.map((m) => `${m.san} (${(m.prob * 100).toFixed(0)}%)`),
-        strategic_guidance: strategicGuidance,
+        attacking_mandate: attackingMandate,
         tactical_situation: tacticalSituation,
       },
       model: JEV_MODEL,
@@ -341,7 +371,7 @@ export async function playJevMove(
   for (const uci of built.legalUcis) {
     const pJev = resolved.probabilities[uci] ?? 0;
     const pFly = flyMap[uci] ?? 0;
-    // 50% Jev Semantic Reasoning + 50% Fly Connectome Biological Instinct
+    // 50% Jev Semantic Attacking Drive + 50% Fly Connectome Spatial Instinct
     blendedProbs[uci] = Number((0.5 * pJev + 0.5 * pFly).toFixed(4));
   }
 
