@@ -536,10 +536,10 @@ export function Game() {
           <nav className="space-y-1.5">
             <button
               onClick={() => setNavTab("play")}
-              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "play"
-                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
-                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
+                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconPlay3D size={22} />
@@ -548,10 +548,10 @@ export function Game() {
 
             <button
               onClick={() => setNavTab("puzzle")}
-              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "puzzle"
-                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
-                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
+                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconPuzzle3D size={22} />
@@ -560,10 +560,10 @@ export function Game() {
 
             <button
               onClick={() => setNavTab("review")}
-              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "review"
-                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
-                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
+                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconMedal3D size={22} />
@@ -572,10 +572,10 @@ export function Game() {
 
             <button
               onClick={() => setNavTab("coach")}
-              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "coach"
-                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
-                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
+                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconBot3D size={22} />
@@ -584,10 +584,10 @@ export function Game() {
 
             <button
               onClick={() => setNavTab("vision")}
-              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "vision"
-                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
-                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
+                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconVision3D size={22} />
@@ -596,10 +596,10 @@ export function Game() {
 
             <button
               onClick={() => setNavTab("scan")}
-              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "scan"
-                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
-                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
+                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconScan3D size={22} />
@@ -608,10 +608,10 @@ export function Game() {
 
             <button
               onClick={() => setNavTab("community")}
-              className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left ${
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "community"
-                  ? "bg-gradient-to-b from-[#344622] to-[#233017] text-white border-2 border-[#81b64c] shadow-[0_4px_0_#141d0c,0_6px_12px_rgba(129,182,76,0.35)] translate-y-[1px]"
-                  : "bg-gradient-to-b from-[#2d2a27] to-[#1f1d1a] text-neutral-300 hover:text-white border border-[#3e3a35] shadow-[0_4px_0_#12110f,0_5px_10px_rgba(0,0,0,0.5)] hover:from-[#35322e] hover:to-[#262421] active:translate-y-[2px] active:shadow-[0_1px_0_#12110f]"
+                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconCommunity3D size={22} />
