@@ -101,17 +101,16 @@ export function CoachModeView({ lang = "id" }: Props) {
       if (!isThreat) return { hasThreat: false, msg: "", square: null };
       const sq = data.uci.slice(2, 4);
       const msg = data.san.includes("#")
-        ? `AWAS: Lawan bisa skakmat lewat ${data.san} di petak ${sq}!`
+        ? `AWAS: Lawan mengancam skakmat di petak ${sq} lewat ${data.san}!`
         : data.san.includes("+")
-        ? `PERINGATAN: Lawan bisa skak lewat ${data.san}! Amankan petak Raja.`
-        : `PERHATIAN: Lawan mengancam makan perwira di ${sq} lewat ${data.san}!`;
+        ? `PERINGATAN: Lawan bisa skak lewat ${data.san}!`
+        : `PERHATIAN: Lawan mengincar perwira di ${sq} lewat ${data.san}!`;
       return { hasThreat: true, msg, square: sq };
     } catch {
       return { hasThreat: false, msg: "", square: null };
     }
   };
 
-  // Compute recommendation & threat for current player position
   const computeCoachAdvice = useCallback(async (currentFen: string) => {
     try {
       const [bestData, threatData] = await Promise.all([
@@ -123,10 +122,10 @@ export function CoachModeView({ lang = "id" }: Props) {
           san: bestData.san,
           uci: bestData.uci,
           reason: bestData.san.includes("#")
-            ? "Langkah skakmat yang memenangkan pertandingan!"
+            ? "Skakmat mematikan — kunci kemenangan!"
             : bestData.san.includes("x")
-            ? "Memenangkan materi dan melumpuhkan perwira lawan."
-            : "Langkah posisional paling solid yang menjaga keunggulan.",
+            ? "Memenangkan pertukaran perwira."
+            : "Langkah posisional terkuat menjaga inisiatif.",
         });
         if (bestData.scoreCp !== null) {
           setEvalCp(bestData.scoreCp);
@@ -138,7 +137,6 @@ export function CoachModeView({ lang = "id" }: Props) {
     }
   }, []);
 
-  // Initial recommendation on mount
   useEffect(() => {
     if (isPlayerTurn && !hint) {
       void computeCoachAdvice(fen);
@@ -151,7 +149,6 @@ export function CoachModeView({ lang = "id" }: Props) {
     setShowHintArrow(false);
   };
 
-  // Reset Game
   const resetGame = useCallback(async (side: "white" | "black" = "white") => {
     const c = new Chess();
     setChess(c);
@@ -170,7 +167,6 @@ export function CoachModeView({ lang = "id" }: Props) {
     if (side === "white") {
       void computeCoachAdvice(c.fen());
     } else {
-      // Opponent moves first
       setThinking(true);
       thinkingRef.current = true;
       const botMove = await engineBest(c.fen(), "stockfish", 12);
@@ -189,7 +185,6 @@ export function CoachModeView({ lang = "id" }: Props) {
     }
   }, [computeCoachAdvice]);
 
-  // Core move execution with Coach Evaluation
   const tryMove = async (from: string, to: string) => {
     if (outcome.over || thinkingRef.current || !isPlayerTurn) return false;
 
@@ -205,7 +200,6 @@ export function CoachModeView({ lang = "id" }: Props) {
     thinkingRef.current = true;
     clearPreMoveState();
 
-    // 1. Grade the user move against the best engine move
     const bestMoveData = hint ?? (await engineBest(c.fen(), "stockfish", 10));
     const bestUci = bestMoveData?.uci ?? "";
     const bestSan = bestMoveData?.san ?? "";
@@ -215,7 +209,6 @@ export function CoachModeView({ lang = "id" }: Props) {
     const userUci = move.from + move.to + (move.promotion ?? "");
     const isBest = !bestUci || userUci === bestUci || move.san === bestSan;
 
-    // Apply player move to board immediately
     setChess(c);
     setFen(c.fen());
     setHistory(h => [...h, move.san]);
@@ -236,7 +229,6 @@ export function CoachModeView({ lang = "id" }: Props) {
       return true;
     }
 
-    // Evaluate position after player move
     const evalAfterData = await engineBest(c.fen(), "stockfish", 8);
     const evalAfter = evalAfterData?.scoreCp != null ? -evalAfterData.scoreCp : null;
     const cpLoss = evalAfter !== null && evalBefore !== null && !isBest
@@ -245,27 +237,26 @@ export function CoachModeView({ lang = "id" }: Props) {
 
     const quality = classifyLoss(cpLoss, isBest);
     let tactic = "";
-    if (move.san.includes("#")) tactic = "♚ SKAKMAT! Langkah kemenangan mutlak!";
-    else if (move.san.includes("+")) tactic = "♟ Skak langsung! Memaksa Raja lawan merespons.";
-    else if (move.isCapture) tactic = `✂ Taktik Memakan: Mengamankan perwira di petak ${move.to}.`;
-    else if (move.isCastle) tactic = "🏰 Rokade: Posisi Raja terlindungi dan Benteng aktif.";
+    if (move.san.includes("#")) tactic = "♚ SKAKMAT! Kemenangan mutlak!";
+    else if (move.san.includes("+")) tactic = "♟ Skak langsung ke Raja lawan.";
+    else if (move.isCapture) tactic = `✂ Pertukaran: memakan perwira di ${move.to}.`;
+    else if (move.isCastle) tactic = "🏰 Rokade: Raja terlindungi, Benteng terhubung.";
 
     setFeedback({
       quality,
       headline: lang === "id" ? QUALITY[quality].id : QUALITY[quality].en,
       reason: lang === "id"
         ? (isBest
-            ? `${move.san} adalah langkah terbaik yang tepat sasaran!`
-            : `Kurang optimal: Rekomendasi terbaik adalah ${bestSan} (kehilangan ~${cpLoss ?? "?"} cp).`)
+            ? `${move.san} adalah langkah terbaik pilihan AI Coach!`
+            : `Kurang optimal: AI Coach merekomendasikan ${bestSan} (kehilangan ~${cpLoss ?? "?"} cp).`)
         : (isBest
-            ? `${move.san} is the optimal engine choice!`
-            : `Suboptimal: Engine suggests ${bestSan} (~${cpLoss ?? "?"} cp loss).`),
+            ? `${move.san} is the optimal coach move!`
+            : `Suboptimal: Coach suggests ${bestSan} (~${cpLoss ?? "?"} cp loss).`),
       tactic,
       bestSan: isBest ? undefined : bestSan,
       cpLoss,
     });
 
-    // 2. Opponent (Stockfish) makes response move
     const botData = await engineBest(c.fen(), "stockfish", 12);
     if (botData) {
       const oppMove = findLegalMove(c, botData.uci.slice(0, 2) as Square, botData.uci.slice(2, 4) as Square,
@@ -288,7 +279,6 @@ export function CoachModeView({ lang = "id" }: Props) {
             cpLoss: null,
           });
         } else {
-          // 3. Pre-compute recommendation for upcoming player turn
           await computeCoachAdvice(c.fen());
         }
       }
@@ -357,18 +347,23 @@ export function CoachModeView({ lang = "id" }: Props) {
     <div className="max-w-5xl mx-auto space-y-3 pb-8">
       {showConfetti && <Confetti />}
 
-      {/* Header */}
+      {/* Header Info Matchup */}
       <div className="bg-[#262421] px-4 py-3 rounded-2xl border border-[#36322d] shadow-xl flex flex-wrap justify-between items-center gap-3">
         <div className="flex items-center gap-3">
           <IconBot3D size={28} />
           <div>
-            <h2 className="text-base font-black text-white">
-              {lang === "id" ? "AI Coach & Latih — Pembimbing Taktis" : "AI Coach — Tactical Trainer"}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-black text-white">
+                {lang === "id" ? "AI Coach — Mode Latih Mandiri" : "AI Coach — Self-Training"}
+              </h2>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[#81b64c]/20 text-[#81b64c] font-bold border border-[#81b64c]/40">
+                Lawan: Stockfish 15 NNUE | Coach: Jev System One
+              </span>
+            </div>
             <p className="text-xs text-neutral-300">
               {lang === "id"
-                ? "Dapatkan rekomendasi langkah terbaik + analisis kesalahan tiap langkahmu"
-                : "Real-time move recommendations + error analysis for every turn"}
+                ? `Kamu bermain sebagai ${playerSide === "white" ? "Putih (di bawah)" : "Hitam (di bawah)"}, dibimbing rekomendasi Jev melawan Stockfish.`
+                : `You play as ${playerSide === "white" ? "White (bottom)" : "Black (bottom)"}, coached by Jev against Stockfish.`}
             </p>
           </div>
         </div>
@@ -377,82 +372,26 @@ export function CoachModeView({ lang = "id" }: Props) {
             onClick={() => void resetGame("white")}
             variant="outline"
             size="sm"
-            className={`border-[#36322d] text-sm font-bold ${playerSide === "white" ? "bg-[#81b64c] text-white" : "bg-[#1c1a18] text-white"}`}
+            className={`border-[#36322d] text-sm font-bold ${playerSide === "white" ? "bg-[#81b64c] text-white hover:bg-[#81b64c]/90" : "bg-[#1c1a18] text-neutral-300 hover:text-white"}`}
             disabled={thinking}
           >
-            ♟ {lang === "id" ? "Main Putih" : "Play White"}
+            ♔ {lang === "id" ? "Main Putih (Bawah)" : "Play White (Bottom)"}
           </Button>
           <Button
             onClick={() => void resetGame("black")}
             variant="outline"
             size="sm"
-            className={`border-[#36322d] text-sm font-bold ${playerSide === "black" ? "bg-[#81b64c] text-white" : "bg-[#1c1a18] text-white"}`}
+            className={`border-[#36322d] text-sm font-bold ${playerSide === "black" ? "bg-[#81b64c] text-white hover:bg-[#81b64c]/90" : "bg-[#1c1a18] text-neutral-300 hover:text-white"}`}
             disabled={thinking}
           >
-            ♟ {lang === "id" ? "Main Hitam" : "Play Black"}
+            ♚ {lang === "id" ? "Main Hitam (Bawah)" : "Play Black (Bottom)"}
           </Button>
         </div>
       </div>
 
-      {/* REKOMENDASI LANGKAH AKTIF */}
-      {!outcome.over && isPlayerTurn && (
-        <div className="bg-gradient-to-r from-[#172e1c] to-[#1e2a14] border-2 border-[#81b64c]/60 p-4 rounded-2xl shadow-lg flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#81b64c]/20 border border-[#81b64c]/40 flex items-center justify-center shrink-0">
-              <IconLightning3D size={24} />
-            </div>
-            <div>
-              <div className="text-xs font-black uppercase tracking-wider text-[#81b64c]">
-                {lang === "id" ? "Rekomendasi Langkah AI Coach:" : "AI Coach Recommendation:"}
-              </div>
-              <div className="text-xl font-black text-white leading-tight">
-                {hint ? (
-                  <>
-                    <span className="text-[#81b64c] font-mono mr-2">{hint.san}</span>
-                    <span className="text-sm font-medium text-neutral-200">{hint.reason}</span>
-                  </>
-                ) : (
-                  <span className="text-sm text-neutral-400 animate-pulse">
-                    {lang === "id" ? "Menganalisis langkah terbaik..." : "Calculating best move..."}
-                  </span>
-                )}
-              </div>
-              {principle && (
-                <div className="text-xs text-[#81b64c]/80 mt-0.5">
-                  💡 {principle}
-                </div>
-              )}
-            </div>
-          </div>
-          {hint && (
-            <Button
-              onClick={() => setShowHintArrow(v => !v)}
-              size="sm"
-              className={`font-bold shrink-0 ${showHintArrow ? "bg-[#38bdf8] text-black hover:bg-[#38bdf8]/80" : "bg-[#81b64c] text-white hover:bg-[#81b64c]/80"}`}
-            >
-              {showHintArrow ? "✕ Sembunyikan" : "🎯 Tunjukkan di Papan"}
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* PERINGATAN ANCAMAN LAWAN */}
-      {threat?.hasThreat && (
-        <div className="bg-[#2e1717] border border-orange-500/50 p-3 rounded-xl flex items-center gap-3 text-orange-200 text-sm">
-          <span className="text-lg">⚠️</span>
-          <span>{threat.msg}</span>
-        </div>
-      )}
-
-      {/* Thinking state */}
-      {thinking && (
-        <div className="px-4 py-2.5 rounded-xl bg-[#1a1816] border border-[#36322d] text-neutral-300 text-sm animate-pulse flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#81b64c] animate-ping" />
-          {lang === "id" ? "AI Coach sedang mengevaluasi respon..." : "AI Coach is calculating response..."}
-        </div>
-      )}
-
-      <div className="grid lg:grid-cols-[1fr_360px] gap-4 items-start">
+      {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
+      <div className="grid lg:grid-cols-[1fr_380px] gap-4 items-start">
+        {/* LEFT COLUMN: Chessboard strictly anchored (NEVER JUMPS) */}
         <div className="space-y-3">
           {/* Eval bar */}
           <div className="bg-[#1c1a18] rounded-xl border border-[#36322d] px-3 py-2 flex items-center gap-3">
@@ -477,11 +416,12 @@ export function CoachModeView({ lang = "id" }: Props) {
             </span>
           </div>
 
-          {/* Chessboard (Support both Drag-and-Drop and Square Click) */}
-          <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full">
+          {/* Chessboard: Fixed Aspect Square with key=playerSide to force board orientation rotation */}
+          <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full bg-[#262421]">
             <Chessboard
+              key={`coach-board-${playerSide}`}
               options={{
-                id: "coach-board",
+                id: `coach-board-${playerSide}`,
                 position: fen,
                 boardOrientation: playerSide,
                 allowDragging: isPlayerTurn && !thinking,
@@ -502,6 +442,7 @@ export function CoachModeView({ lang = "id" }: Props) {
             />
           </div>
 
+          {/* Controls Bar Below Board */}
           <div className="flex gap-2">
             <Button
               onClick={handleUndo}
@@ -512,64 +453,131 @@ export function CoachModeView({ lang = "id" }: Props) {
             >
               ← {lang === "id" ? "Batalkan Langkah (Undo)" : "Undo Move"}
             </Button>
-            {hint && (
+            {hint && isPlayerTurn && (
               <Button
                 onClick={() => void tryMove(hint.uci.slice(0, 2), hint.uci.slice(2, 4))}
                 size="sm"
                 className="flex-1 bg-[#81b64c] hover:bg-[#81b64c]/80 text-white font-bold text-sm"
-                disabled={!isPlayerTurn || thinkingRef.current}
+                disabled={thinkingRef.current}
               >
-                ✓ {lang === "id" ? `Mainkan ${hint.san}` : `Play ${hint.san}`}
+                ✓ {lang === "id" ? `Mainkan Rekomendasi (${hint.san})` : `Play Recommendation (${hint.san})`}
               </Button>
             )}
           </div>
         </div>
 
+        {/* RIGHT COLUMN: Real-Time Coach Guidance, Threats & Move Review */}
         <div className="space-y-3">
-          {/* Move Evaluation & Feedback */}
-          <Card className="bg-[#262421] border-[#36322d] text-white">
-            <CardHeader className="py-3 px-4 border-b border-[#36322d]">
-              <CardTitle className="text-sm font-bold flex items-center justify-between">
-                <span>{lang === "id" ? "Evaluasi & Feedback Taktis" : "Tactical Move Review"}</span>
-                {feedback && <span className="text-xs uppercase tracking-wider font-bold text-neutral-400">Post-move</span>}
+          {/* REKOMENDASI LANGKAH AKTIF */}
+          <Card className="bg-[#1f291e] border-2 border-[#81b64c]/60 text-white shadow-lg overflow-hidden">
+            <CardHeader className="py-2.5 px-4 bg-[#81b64c]/10 border-b border-[#81b64c]/20 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <IconLightning3D size={20} />
+                <span className="text-xs font-black uppercase tracking-wider text-[#81b64c]">
+                  {lang === "id" ? "Rekomendasi Coach Jev" : "Coach Jev Recommendation"}
+                </span>
+              </div>
+              {hint && isPlayerTurn && (
+                <Button
+                  onClick={() => setShowHintArrow(v => !v)}
+                  size="sm"
+                  variant="outline"
+                  className={`h-7 px-2.5 text-xs font-bold border-[#81b64c]/40 ${
+                    showHintArrow ? "bg-[#38bdf8] text-black border-[#38bdf8]" : "bg-transparent text-[#81b64c] hover:bg-[#81b64c]/20"
+                  }`}
+                >
+                  {showHintArrow ? "✕ Panah Sembunyi" : "🎯 Tunjukkan Panah"}
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent className="p-3.5 space-y-2">
+              {!outcome.over && isPlayerTurn ? (
+                hint ? (
+                  <>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-mono text-2xl font-black text-[#81b64c]">{hint.san}</span>
+                      <span className="text-xs text-neutral-300 font-medium">{hint.reason}</span>
+                    </div>
+                    {principle && (
+                      <div className="text-xs text-[#81b64c]/90 bg-[#81b64c]/10 p-2 rounded-lg border border-[#81b64c]/20">
+                        💡 {principle}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-xs text-neutral-400 py-3 text-center animate-pulse flex items-center justify-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#81b64c] animate-ping" />
+                    {lang === "id" ? "Jev sedang menganalisis papan..." : "Calculating optimal tactic..."}
+                  </div>
+                )
+              ) : thinking ? (
+                <div className="text-xs text-neutral-400 py-3 text-center animate-pulse flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#81b64c] animate-ping" />
+                  {lang === "id" ? "Stockfish sedang merespon..." : "Stockfish is responding..."}
+                </div>
+              ) : (
+                <div className="text-xs text-neutral-400 py-2 text-center">
+                  {outcome.over
+                    ? (lang === "id" ? "Pertandingan telah berakhir." : "Match concluded.")
+                    : (lang === "id" ? "Menunggu giliran pemain..." : "Waiting for player turn...")}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* PERINGATAN ANCAMAN LAWAN */}
+          {threat?.hasThreat && (
+            <div className="bg-[#2e1717] border border-orange-500/50 p-3 rounded-xl flex items-center gap-2.5 text-orange-200 text-xs shadow-md">
+              <span className="text-base shrink-0">⚠️</span>
+              <span>{threat.msg}</span>
+            </div>
+          )}
+
+          {/* Evaluasi Langkah Terakhir */}
+          <Card className="bg-[#262421] border-[#36322d] text-white shadow-lg">
+            <CardHeader className="py-2.5 px-4 border-b border-[#36322d]">
+              <CardTitle className="text-xs font-bold text-neutral-300 flex items-center justify-between">
+                <span>{lang === "id" ? "Review Langkah Terakhir" : "Move Evaluation"}</span>
+                {feedback && <span className="text-[10px] font-mono text-[#81b64c]">Active</span>}
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-3 space-y-3">
+            <CardContent className="p-3.5 space-y-2.5">
               {feedback ? (
                 <>
-                  <div className={`text-2xl font-black ${qColor}`}>{feedback.headline}</div>
-                  {feedback.cpLoss !== null && feedback.cpLoss > 0 && (
-                    <div className="text-xs text-neutral-400 font-mono">
-                      Akurasi berkurang ~{feedback.cpLoss} centipawn
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between">
+                    <div className={`text-xl font-black ${qColor}`}>{feedback.headline}</div>
+                    {feedback.cpLoss !== null && feedback.cpLoss > 0 && (
+                      <div className="text-xs text-neutral-400 font-mono">
+                        -{feedback.cpLoss} cp
+                      </div>
+                    )}
+                  </div>
                   {feedback.reason && (
-                    <div className="p-3 rounded-xl bg-[#312e2b] text-sm text-neutral-200 leading-relaxed border border-[#3d3a36]">
+                    <div className="p-2.5 rounded-lg bg-[#312e2b] text-xs text-neutral-200 leading-relaxed border border-[#3d3a36]">
                       {feedback.reason}
                     </div>
                   )}
                   {feedback.tactic && (
-                    <div className="p-3 rounded-xl bg-[#1a1a14] border border-[#3d3a20] text-xs text-amber-300 font-semibold">
+                    <div className="p-2 rounded-lg bg-[#1a1a14] border border-[#3d3a20] text-xs text-amber-300 font-medium">
                       {feedback.tactic}
                     </div>
                   )}
                   {feedback.bestSan && (
-                    <div className="p-3 rounded-xl bg-[#0f2231] border border-[#38bdf8]/30 space-y-1">
-                      <div className="text-xs font-bold text-sky-300">
-                        {lang === "id" ? "Langkah yang Seharusnya Dipilih:" : "Optimal Choice Was:"}
+                    <div className="p-2.5 rounded-lg bg-[#0f2231] border border-[#38bdf8]/30 space-y-0.5">
+                      <div className="text-[11px] font-bold text-sky-300">
+                        {lang === "id" ? "Langkah Terbaik Seharusnya:" : "Optimal Choice Was:"}
                       </div>
-                      <div className="font-mono text-lg font-black text-sky-200">
+                      <div className="font-mono text-base font-black text-sky-200">
                         {feedback.bestSan}
                       </div>
                     </div>
                   )}
                 </>
               ) : (
-                <div className="text-sm text-neutral-300 py-6 text-center space-y-2">
-                  <div className="text-2xl">♟️</div>
-                  <div>{lang === "id" ? "Lakukan langkah pertamamu." : "Make your first move."}</div>
-                  <div className="text-xs text-neutral-400">
-                    {lang === "id" ? "AI Coach akan mengevaluasi akurasi dan menjelaskan taktiknya." : "AI Coach will evaluate your accuracy and explain the tactics."}
+                <div className="text-xs text-neutral-400 py-4 text-center space-y-1">
+                  <div>♟️ {lang === "id" ? "Silakan jalankan langkah pertama." : "Make your first move."}</div>
+                  <div className="text-[11px] text-neutral-500">
+                    {lang === "id" ? "AI Coach akan menilai kualitas dan akurasimu." : "AI Coach will rate move precision."}
                   </div>
                 </div>
               )}
@@ -579,17 +587,17 @@ export function CoachModeView({ lang = "id" }: Props) {
           {/* Riwayat Langkah */}
           {history.length > 0 && (
             <Card className="bg-[#262421] border-[#36322d] text-white">
-              <CardHeader className="py-2.5 px-4 border-b border-[#36322d]">
+              <CardHeader className="py-2 px-4 border-b border-[#36322d]">
                 <CardTitle className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
                   {lang === "id" ? "Riwayat Langkah" : "Move History"} ({history.length} ply)
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-3">
-                <div className="flex flex-wrap gap-1.5 font-mono text-xs max-h-[140px] overflow-y-auto">
+              <CardContent className="p-2.5">
+                <div className="flex flex-wrap gap-1 font-mono text-xs max-h-[110px] overflow-y-auto">
                   {history.map((san, idx) => (
                     <span
                       key={idx}
-                      className={`px-2 py-1 rounded ${
+                      className={`px-1.5 py-0.5 rounded ${
                         idx % 2 === 0 ? "bg-[#312e2b] text-neutral-200" : "bg-[#1c1a18] text-neutral-300"
                       } ${idx === history.length - 1 ? "ring-1 ring-[#81b64c] text-white font-bold" : ""}`}
                     >
