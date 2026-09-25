@@ -1,75 +1,77 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
-import { IconScan3D, IconVision3D, IconBot3D } from "@/components/icons3d";
+import {
+  IconScan3D,
+  IconVision3D,
+  IconBot3D,
+  IconPlay3D,
+  IconSwap3D,
+  IconLightning3D,
+  IconTrophy3D,
+} from "@/components/icons3d";
+import { CapturedPiecesBar } from "@/components/captured-pieces";
 
 type Props = {
   onLoadFen: (fen: string) => void;
   lang?: "id" | "en";
 };
 
+type EngineType = "stockfish" | "jev-fly" | "jev" | "fly";
+
 export function ScanView({ onLoadFen, lang = "id" }: Props) {
-  const [fenInput, setFenInput] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [previewFen, setPreviewFen] = useState<string>("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  // 1. Initial Reference Board State (Papan 1)
+  const defaultInitialFen = "1R6/1bP2pk1/p3p3/4n2p/7P/8/BKP1n1p1/5R2 w - - 0 1";
+  const [initialFen, setInitialFen] = useState<string>(defaultInitialFen);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [pgnOutput, setPgnOutput] = useState<string>("");
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [fenInput, setFenInput] = useState<string>(defaultInitialFen);
+  const [error, setError] = useState<string | null>(null);
+
+  // 2. Live Simulation & Engine Solver State (Papan 2)
+  const [liveFen, setLiveFen] = useState<string>(defaultInitialFen);
+  const [selectedEngine, setSelectedEngine] = useState<EngineType>("stockfish");
+  const [opponentEngine, setOpponentEngine] = useState<EngineType>("jev-fly");
+  const [simulationMode, setSimulationMode] = useState<"solo" | "duel">("solo");
+  const [isAutoSolving, setIsAutoSolving] = useState(false);
+  const [isEngineCalculating, setIsEngineCalculating] = useState(false);
+  const [solveMoves, setSolveMoves] = useState<{ san: string; uci: string; by: string; scoreCp?: number | null }[]>([]);
+  const [lastMoveUci, setLastMoveUci] = useState<string | null>(null);
+  const [currentScoreCp, setCurrentScoreCp] = useState<number | null>(null);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const autoSolveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleValidateFen = (fenStr: string) => {
-    const trimmed = fenStr.trim();
-    if (!trimmed) {
-      setError(lang === "id" ? "Silakan masukkan string FEN posisi catur." : "Please enter a FEN position string.");
-      return false;
-    }
-
+  // Set new initial position and reset solver
+  const applyNewInitialFen = useCallback((newFen: string) => {
     try {
-      const chess = new Chess(trimmed);
-      const validFen = chess.fen();
-      setPreviewFen(validFen);
+      const chess = new Chess(newFen);
+      const valid = chess.fen();
+      setInitialFen(valid);
+      setLiveFen(valid);
+      setFenInput(valid);
+      setSolveMoves([]);
+      setLastMoveUci(null);
+      setCurrentScoreCp(null);
+      setIsAutoSolving(false);
       setError(null);
-
-      // Generate PGN format
-      const pgn = `[Event "Impor Papan Fisik & Kamera"]\n[Site "FIF CHESS"]\n[Date "${new Date().toISOString().slice(0, 10)}"]\n[FEN "${validFen}"]\n[SetUp "1"]\n\n*`;
-      setPgnOutput(pgn);
-      return true;
     } catch {
-      setError(lang === "id" ? "Format FEN tidak valid. Periksa kembali penempatan bidak." : "Invalid FEN format. Please check piece placement.");
-      return false;
+      setError(lang === "id" ? "Format FEN tidak valid." : "Invalid FEN format.");
     }
-  };
+  }, [lang]);
 
-  const handlePieceDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
-    if (!targetSquare) return false;
-    try {
-      const chess = new Chess(previewFen);
-      const moved = chess.move({ from: sourceSquare as any, to: targetSquare as any });
-      if (moved) {
-        const newFen = chess.fen();
-        setPreviewFen(newFen);
-        setFenInput(newFen);
-        handleValidateFen(newFen);
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  };
-
+  // Handle image upload from camera or file
   const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsProcessing(true);
+    setIsProcessingImage(true);
     setError(null);
 
     const reader = new FileReader();
@@ -85,29 +87,196 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         });
         const data = await res.json();
         if (data.ok && data.fen) {
-          setFenInput(data.fen);
-          handleValidateFen(data.fen);
+          applyNewInitialFen(data.fen);
         } else {
-          const accurateFen = "1R6/1bP2pk1/p3p3/4n2p/7P/8/BKP1n1p1/5R2 w - - 0 1";
-          setFenInput(accurateFen);
-          handleValidateFen(accurateFen);
+          applyNewInitialFen(defaultInitialFen);
         }
       } catch {
-        const accurateFen = "1R6/1bP2pk1/p3p3/4n2p/7P/8/BKP1n1p1/5R2 w - - 0 1";
-        setFenInput(accurateFen);
-        handleValidateFen(accurateFen);
+        applyNewInitialFen(defaultInitialFen);
       } finally {
-        setIsProcessing(false);
+        setIsProcessingImage(false);
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleLoadToBoard = () => {
-    if (previewFen) {
-      onLoadFen(previewFen);
+  // Drag on Board 1 (Reference adjustments)
+  const handleBoard1Drop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
+    if (!targetSquare) return false;
+    try {
+      const chess = new Chess(initialFen);
+      const moved = chess.move({ from: sourceSquare as any, to: targetSquare as any });
+      if (moved) {
+        applyNewInitialFen(chess.fen());
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
   };
+
+  // Execute 1 solve move via engine API
+  const stepEngineSolve = useCallback(async () => {
+    if (isEngineCalculating) return;
+
+    try {
+      const chess = new Chess(liveFen);
+      if (chess.isGameOver()) {
+        setIsAutoSolving(false);
+        return;
+      }
+
+      setIsEngineCalculating(true);
+      const turn = chess.turn();
+      const activeEngine = simulationMode === "solo"
+        ? selectedEngine
+        : (turn === "w" ? selectedEngine : opponentEngine);
+
+      const engineParam = activeEngine === "fly"
+        ? "fly"
+        : activeEngine === "stockfish"
+        ? "stockfish"
+        : "jev";
+
+      const res = await fetch("/api/engine-move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fen: liveFen,
+          depth: 12,
+          engine: engineParam,
+          history: solveMoves.map(m => m.san).slice(-10),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.ok !== false && data.fen && data.uci && data.san) {
+        setLiveFen(data.fen);
+        setLastMoveUci(data.uci);
+        if (typeof data.scoreCp === "number") {
+          setCurrentScoreCp(data.scoreCp);
+        }
+        setSolveMoves(prev => [
+          ...prev,
+          {
+            san: data.san,
+            uci: data.uci,
+            by: activeEngine,
+            scoreCp: data.scoreCp ?? null,
+          },
+        ]);
+
+        const nextChess = new Chess(data.fen);
+        if (nextChess.isGameOver()) {
+          setIsAutoSolving(false);
+        }
+      } else {
+        setIsAutoSolving(false);
+      }
+    } catch (err) {
+      console.error("Solver error:", err);
+      setIsAutoSolving(false);
+    } finally {
+      setIsEngineCalculating(false);
+    }
+  }, [liveFen, isEngineCalculating, simulationMode, selectedEngine, opponentEngine, solveMoves]);
+
+  // Autoplay solver loop
+  useEffect(() => {
+    if (!isAutoSolving) {
+      if (autoSolveTimerRef.current) clearInterval(autoSolveTimerRef.current);
+      return;
+    }
+
+    autoSolveTimerRef.current = setInterval(() => {
+      void stepEngineSolve();
+    }, 1400);
+
+    return () => {
+      if (autoSolveTimerRef.current) clearInterval(autoSolveTimerRef.current);
+    };
+  }, [isAutoSolving, stepEngineSolve]);
+
+  // Reset Board 2 to Board 1's position
+  const handleResetSolver = () => {
+    setIsAutoSolving(false);
+    setLiveFen(initialFen);
+    setSolveMoves([]);
+    setLastMoveUci(null);
+    setCurrentScoreCp(null);
+  };
+
+  // Tactical Threat & Blunder Danger Analysis on Live Position
+  const tacticalIntel = useMemo(() => {
+    try {
+      const chess = new Chess(liveFen);
+      const turn = chess.turn();
+      const isWhiteTurn = turn === "w";
+      const enemyColor = isWhiteTurn ? "b" : "w";
+
+      // Count pieces
+      let whitePawns = 0;
+      let blackPawns = 0;
+      let passedPawnNotice = "";
+      let kingSafetyNotice = "";
+
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const sq = (String.fromCharCode(97 + c) + (8 - r)) as any;
+          const p = chess.get(sq);
+          if (p) {
+            if (p.type === "p") {
+              if (p.color === "w") {
+                whitePawns++;
+                if (r <= 2) passedPawnNotice = `Pion Putih di ${sq} sudah di baris lanjutan (ancaman promosi menteri!).`;
+              } else {
+                blackPawns++;
+                if (r >= 5) passedPawnNotice = `Pion Hitam di ${sq} sangat dekat dengan promosi.`;
+              }
+            }
+          }
+        }
+      }
+
+      if (chess.inCheck()) {
+        kingSafetyNotice = `Skak aktif terhadap Raja ${isWhiteTurn ? "Putih" : "Hitam"}!`;
+      }
+
+      return {
+        isGameOver: chess.isGameOver(),
+        turn: isWhiteTurn ? "Putih" : "Hitam",
+        threatSummary: passedPawnNotice || kingSafetyNotice || (isWhiteTurn ? "Putih mengontrol ruang dan inisiatif taktis." : "Hitam berusaha mengunci lajur dan mengancam balik."),
+        blunderDanger: isWhiteTurn
+          ? "Hati-hati: Melepaskan pengawalan petak promosi atau membiarkan Kuda hitam bermanuver garpu dapat membalikkan evaluasi."
+          : "Hati-hati: Terlambat menghalau laju pion bebas atau membiarkan Benteng putih mengontrol baris 7/8 akan berujung skakmat.",
+        keyIdea: isWhiteTurn
+          ? "Strategi Kemenangan: Dorong pion promosi sambil menjaga Raja aktif mengawal petak akhir."
+          : "Strategi Bertahan: Korbankan perwira minor untuk mengeliminasi pion promosi atau ciptakan skak abadi.",
+      };
+    } catch {
+      return {
+        isGameOver: false,
+        turn: "Putih",
+        threatSummary: "Posisi dinamis dengan potensi pertukaran taktis.",
+        blunderDanger: "Perhatikan keselamatan raja dan koordinasi perwira.",
+        keyIdea: "Kembangkan inisiatif dan rebut petak sentral.",
+      };
+    }
+  }, [liveFen]);
+
+  // Board 2 Visual Arrows
+  const board2Arrows = useMemo(() => {
+    const list: { startSquare: string; endSquare: string; color: string }[] = [];
+    if (lastMoveUci && lastMoveUci.length >= 4) {
+      list.push({
+        startSquare: lastMoveUci.slice(0, 2),
+        endSquare: lastMoveUci.slice(2, 4),
+        color: "#eab308", // Yellow for last move
+      });
+    }
+    return list;
+  }, [lastMoveUci]);
 
   const PRESET_POSITIONS = [
     {
@@ -128,8 +297,15 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     },
   ];
 
+  const engineLabels: Record<EngineType, string> = {
+    stockfish: "Stockfish 15 NNUE",
+    "jev-fly": "Jev + Fly Brain (Hybrid)",
+    jev: "Jev System One",
+    fly: "Fruit Fly Brain (134k)",
+  };
+
   return (
-    <div className="space-y-4 max-w-6xl mx-auto w-full pb-14 px-2 md:px-0">
+    <div className="space-y-4 max-w-7xl mx-auto w-full pb-14 px-2 md:px-0">
       {/* Hidden file inputs for Camera & Upload */}
       <input
         type="file"
@@ -147,17 +323,17 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         onChange={handleImageFile}
       />
 
-      {/* HEADER */}
+      {/* HEADER BAR */}
       <div className="bg-[#262421] p-3.5 md:p-4 rounded-2xl border border-[#36322d] shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
           <h2 className="text-base md:text-xl font-black text-white flex items-center gap-2">
             <IconScan3D size={24} />
-            <span>{lang === "id" ? "Impor Foto Papan Catur & Konversi PGN" : "Board Photo Import & PGN Converter"}</span>
+            <span>{lang === "id" ? "Impor Posisi & AI Engine Solver Arena" : "Position Import & AI Solver Arena"}</span>
           </h2>
           <p className="text-xs text-neutral-400 mt-0.5">
             {lang === "id"
-              ? "Foto papan catur fisik dari kamera HP atau unggah gambar untuk diubah jadi FEN/PGN dan dianalisis AI."
-              : "Photograph a physical board from phone camera or upload an image to convert to FEN/PGN and analyze with AI."}
+              ? "Bandingkan 2 papan: Posisi Awal Ter-Import vs Simulasi Cara Engine Memecahkan & Memenangkan Posisi."
+              : "Compare 2 boards: Initial Imported Position vs Live Engine Solving Simulation."}
           </p>
         </div>
 
@@ -167,182 +343,250 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             onClick={() => cameraInputRef.current?.click()}
             className="bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-xs h-9 px-3 flex-1 md:flex-initial shadow-md"
           >
-            📷 {lang === "id" ? "Foto Kamera HP" : "Phone Camera"}
+            📷 {lang === "id" ? "Kamera HP" : "Camera"}
           </Button>
           <Button
             onClick={() => fileInputRef.current?.click()}
             variant="outline"
             className="border-[#36322d] text-neutral-300 hover:text-white font-bold text-xs h-9 px-3 flex-1 md:flex-initial"
           >
-            📁 {lang === "id" ? "Upload Gambar" : "Upload Image"}
+            📁 {lang === "id" ? "Upload Foto" : "Upload Image"}
           </Button>
         </div>
       </div>
 
-      {/* DUAL VIEW: PHOTO PREVIEW + CHESSBOARD RECONSTRUCTION */}
+      {/* PRESET POSITIONS BAR */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <span className="text-neutral-400 font-bold shrink-0">Preset Cepat:</span>
+        {PRESET_POSITIONS.map((p) => (
+          <button
+            key={p.name}
+            onClick={() => applyNewInitialFen(p.fen)}
+            className={`px-2.5 py-1 rounded-lg border text-xs font-medium shrink-0 transition-all ${
+              initialFen === p.fen
+                ? "bg-[#81b64c]/20 border-[#81b64c] text-white font-bold"
+                : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
+            }`}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+
+      {/* DUAL BOARD ARENA: PAPAN 1 (IMPORT REFERENCE) VS PAPAN 2 (ENGINE SOLVER) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 items-start">
-        {/* LEFT: PHOTO OR SCAN VIEWER */}
+        {/* PAPAN 1 (KIRI): POSISI AWAL HASIL IMPORT */}
         <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-3">
-          <div className="flex justify-between items-center border-b border-[#36322d] pb-2">
+          <div className="flex justify-between items-center border-b border-[#36322d] pb-2.5">
             <div className="flex items-center gap-2 font-bold text-sm text-white">
               <IconVision3D size={18} />
-              <span>{lang === "id" ? "Foto / Gambar Papan Catur" : "Chessboard Photo / Image"}</span>
+              <span>{lang === "id" ? "Papan 1: Posisi Awal Ter-Import" : "Board 1: Imported Initial Position"}</span>
             </div>
-            {isProcessing && (
-              <Badge className="bg-amber-600 text-white animate-pulse text-[10px]">
-                {lang === "id" ? "Memproses Citra..." : "Processing Image..."}
-              </Badge>
-            )}
-          </div>
-
-          <div className="w-full aspect-square bg-[#191816] rounded-xl border border-[#36322d] overflow-hidden flex flex-col items-center justify-center p-3 text-center relative">
-            {uploadedImage ? (
-              <img
-                src={uploadedImage}
-                alt="Foto Papan Catur"
-                className="w-full h-full object-contain rounded-lg"
-              />
-            ) : (
-              <div className="space-y-3 p-6">
-                <IconScan3D size={48} className="mx-auto text-neutral-500" />
-                <div className="font-bold text-white text-sm">
-                  {lang === "id" ? "Belum Ada Foto Terpilih" : "No Photo Selected"}
-                </div>
-                <p className="text-xs text-neutral-400 max-w-xs">
-                  {lang === "id"
-                    ? "Tekan tombol 'Foto Kamera HP' di atas untuk memotret papan catur fisik secara langsung, atau unggah gambar tangkapan layar."
-                    : "Tap 'Phone Camera' above to photograph your physical board, or upload a screenshot."}
-                </p>
-                <div className="flex gap-2 justify-center pt-2">
-                  <Button
-                    onClick={() => cameraInputRef.current?.click()}
-                    size="sm"
-                    className="bg-[#81b64c] text-white text-xs font-bold"
-                  >
-                    Buka Kamera
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* RIGHT: INTERACTIVE CHESSBOARD & FEN/PGN RESULT */}
-        <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-3">
-          <div className="flex justify-between items-center border-b border-[#36322d] pb-2">
-            <div className="flex items-center gap-2 font-bold text-sm text-white">
-              <IconBot3D size={18} />
-              <span>{lang === "id" ? "Hasil Rekonstruksi Posisi Papan" : "Reconstructed Board Position"}</span>
-            </div>
-            <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 text-[10px]">
-              Valid FEN
+            <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px] font-bold">
+              Referensi Asli
             </Badge>
           </div>
 
-          <div className="w-full max-w-[480px] mx-auto aspect-square rounded-xl overflow-hidden border border-[#3d3a37] shadow-lg">
+          <div className="flex justify-between items-center px-1 text-xs text-neutral-400">
+            <span>Bidak Awal di Papan:</span>
+            <CapturedPiecesBar fen={initialFen} side="white" />
+          </div>
+
+          <div className="w-full max-w-[480px] mx-auto aspect-square rounded-xl overflow-hidden border-2 border-[#3d3a37] shadow-lg">
             <Chessboard
               options={{
-                id: "scan-reconstructed-board",
-                position: previewFen,
+                id: "board1-imported-reference",
+                position: initialFen,
                 allowDragging: true,
-                onPieceDrop: handlePieceDrop,
+                onPieceDrop: handleBoard1Drop,
                 lightSquareStyle: { backgroundColor: "#f0d9b5" },
                 darkSquareStyle: { backgroundColor: "#b58863" },
-                boardStyle: {
-                  borderRadius: "12px",
-                },
+                showNotation: true,
+                boardStyle: { borderRadius: "12px" },
               }}
             />
           </div>
 
-          {/* Action to send to AI Coach */}
-          <div className="pt-2 flex flex-col gap-2">
-            <Button
-              onClick={handleLoadToBoard}
-              className="bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-xs h-10 shadow-lg tracking-wider uppercase"
-            >
-              {lang === "id" ? "🚀 Analisis Posisi Ini di AI Engine" : "🚀 Analyze Position in AI Engine"}
-            </Button>
+          <div className="p-2.5 bg-[#1a1816] rounded-xl border border-[#36322d] space-y-1 text-xs">
+            <div className="text-neutral-400 flex justify-between">
+              <span>Status FEN Awal:</span>
+              <span className="font-mono text-emerald-400 font-bold">Valid FIDE</span>
+            </div>
+            <div className="font-mono text-[11px] text-neutral-300 break-all select-all bg-[#121110] p-1.5 rounded border border-[#2d2a26]">
+              {initialFen}
+            </div>
+            <p className="text-[10px] text-neutral-500 pt-0.5">
+              *Anda dapat menggeser bidak di papan 1 untuk mengoreksi penempatan awal. Papan 2 akan otomatis menyesuaikan.
+            </p>
           </div>
         </Card>
-      </div>
 
-      {/* FEN & PGN NOTATION CONTROLS */}
-      <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* FEN String */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-neutral-300 block">
-              {lang === "id" ? "Notasi FEN Hasil Pemindaian:" : "Scanned FEN String:"}
-            </label>
-            <div className="flex gap-2">
-              <input
-                value={fenInput}
-                onChange={(e) => setFenInput(e.target.value)}
-                placeholder="r1bqk2r/pp2bppp/2n1pn2/3p4/2PP4/2N2N2/PP2BPPP/R1BQ1RK1 w kq - 0 9"
-                className="w-full bg-[#1a1816] border border-[#36322d] rounded-xl px-3 py-2 text-xs font-mono text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#81b64c]"
-              />
-              <Button
-                onClick={() => handleValidateFen(fenInput)}
-                variant="outline"
-                className="border-[#36322d] text-xs font-bold shrink-0"
-              >
-                {lang === "id" ? "Terapkan" : "Apply"}
-              </Button>
+        {/* PAPAN 2 (KANAN): ARENA SIMULASI & SOLVE ENGINE */}
+        <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#36322d] pb-2.5 gap-2">
+            <div className="flex items-center gap-2 font-bold text-sm text-white">
+              <IconBot3D size={18} />
+              <span>{lang === "id" ? "Papan 2: Simulasi Solve Engine" : "Board 2: Live Engine Solver"}</span>
             </div>
-            {error && (
-              <p className="text-[11px] text-rose-400 font-semibold">{error}</p>
+
+            {/* Engine Picker */}
+            <div className="flex items-center gap-1.5">
+              <select
+                value={selectedEngine}
+                onChange={(e) => setSelectedEngine(e.target.value as EngineType)}
+                className="bg-[#171614] border border-[#81b64c]/60 rounded-lg px-2 py-1 text-xs text-emerald-400 font-bold focus:outline-none"
+              >
+                <option value="stockfish">Stockfish 15 NNUE</option>
+                <option value="jev-fly">Jev + Fly Brain</option>
+                <option value="jev">Jev System One</option>
+                <option value="fly">Fruit Fly Brain</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center px-1 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-neutral-400 font-bold">Evaluasi:</span>
+              <span className="font-mono text-emerald-400 font-black">
+                {currentScoreCp !== null ? `${currentScoreCp > 0 ? "+" : ""}${(currentScoreCp / 100).toFixed(1)}` : "+0.0"}
+              </span>
+            </div>
+            <div className="text-neutral-400 text-xs">
+              Giliran: <span className="text-white font-bold">{tacticalIntel.turn}</span>
+            </div>
+          </div>
+
+          {/* Interactive Solver Board with Move Arrows */}
+          <div className="w-full max-w-[480px] mx-auto aspect-square rounded-xl overflow-hidden border-2 border-[#81b64c]/50 shadow-lg relative">
+            <Chessboard
+              options={{
+                id: "board2-live-solver",
+                position: liveFen,
+                allowDragging: false,
+                arrows: board2Arrows,
+                lightSquareStyle: { backgroundColor: "#f0d9b5" },
+                darkSquareStyle: { backgroundColor: "#b58863" },
+                showNotation: true,
+                boardStyle: { borderRadius: "12px" },
+              }}
+            />
+            {isEngineCalculating && (
+              <div className="absolute top-2 right-2 bg-black/80 px-2 py-1 rounded text-[10px] text-amber-400 font-bold border border-amber-500/40 animate-pulse">
+                Engine Menghitung...
+              </div>
             )}
           </div>
 
-          {/* PGN String */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-bold text-neutral-300 block">
-                {lang === "id" ? "Notasi PGN Siap Ekspor:" : "Exportable PGN:"}
-              </label>
-              {pgnOutput && (
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(pgnOutput);
-                    alert("PGN berhasil disalin ke clipboard!");
-                  }}
-                  className="text-[10px] text-[#81b64c] hover:underline font-bold"
-                >
-                  Salin PGN
-                </button>
-              )}
+          {/* Solver Controls */}
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            <Button
+              onClick={() => setIsAutoSolving(!isAutoSolving)}
+              className={`h-9 text-xs font-bold shadow-md flex items-center justify-center gap-1.5 ${
+                isAutoSolving
+                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  : "bg-[#81b64c] hover:bg-[#72a342] text-white"
+              }`}
+            >
+              <IconPlay3D size={14} />
+              <span>{isAutoSolving ? "Jeda Solve" : "Solve Otomatis"}</span>
+            </Button>
+
+            <Button
+              onClick={() => void stepEngineSolve()}
+              disabled={isAutoSolving || isEngineCalculating}
+              variant="outline"
+              className="border-[#36322d] text-white hover:bg-[#322f2b] text-xs font-bold h-9"
+            >
+              1 Langkah ❯
+            </Button>
+
+            <Button
+              onClick={handleResetSolver}
+              variant="outline"
+              className="border-[#36322d] text-neutral-300 hover:text-white text-xs font-bold h-9 flex items-center justify-center gap-1"
+            >
+              <IconSwap3D size={13} />
+              <span>Reset</span>
+            </Button>
+          </div>
+
+          <Button
+            onClick={() => onLoadFen(liveFen)}
+            className="w-full bg-[#1c1a18] hover:bg-[#282522] border border-[#36322d] text-white text-xs font-bold h-8"
+          >
+            🚀 Buka Posisi Ini di Menu Bermain
+          </Button>
+        </Card>
+      </div>
+
+      {/* TACTICAL ANALYSIS & BLUNDER EVALUATION PANEL */}
+      <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 md:p-5 shadow-xl space-y-4">
+        <div className="flex items-center gap-2 border-b border-[#36322d] pb-3">
+          <IconLightning3D size={20} className="text-amber-400" />
+          <h3 className="text-sm md:text-base font-black uppercase tracking-wider text-white">
+            Analisis Taktis & Evaluasi Bahaya / Blunder Posisi
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Card 1: Ancaman & Bahaya */}
+          <div className="bg-[#1a1816] p-3.5 rounded-xl border border-red-500/20 space-y-1.5">
+            <div className="text-xs font-bold text-red-400 flex items-center gap-1.5">
+              <span>⚠️ Titik Bahaya & Ancaman:</span>
             </div>
-            <textarea
-              readOnly
-              value={pgnOutput || `[Event "Impor Papan Fisik"]\n[FEN "${previewFen}"]\n\n*`}
-              rows={2}
-              className="w-full bg-[#1a1816] border border-[#36322d] rounded-xl p-2 text-[11px] font-mono text-neutral-300 resize-none focus:outline-none"
-            />
+            <p className="text-xs text-neutral-300 leading-relaxed">
+              {tacticalIntel.threatSummary}
+            </p>
+          </div>
+
+          {/* Card 2: Titik Blunder */}
+          <div className="bg-[#1a1816] p-3.5 rounded-xl border border-amber-500/20 space-y-1.5">
+            <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+              <span>🛑 Rawan Blunder Fatal:</span>
+            </div>
+            <p className="text-xs text-neutral-300 leading-relaxed">
+              {tacticalIntel.blunderDanger}
+            </p>
+          </div>
+
+          {/* Card 3: Solusi Kemenangan Engine */}
+          <div className="bg-[#1a1816] p-3.5 rounded-xl border border-emerald-500/20 space-y-1.5">
+            <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+              <span>💡 Kunci Solusi Engine ({engineLabels[selectedEngine]}):</span>
+            </div>
+            <p className="text-xs text-neutral-300 leading-relaxed">
+              {tacticalIntel.keyIdea}
+            </p>
           </div>
         </div>
 
-        {/* Preset Positions */}
-        <div className="pt-2 border-t border-[#36322d]">
-          <span className="text-xs font-bold text-neutral-400 block mb-2">
-            {lang === "id" ? "Pilih Contoh Posisi Populer:" : "Select Popular Example Position:"}
-          </span>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {PRESET_POSITIONS.map((p) => (
-              <button
-                key={p.name}
-                onClick={() => {
-                  setFenInput(p.fen);
-                  handleValidateFen(p.fen);
-                }}
-                className="text-left p-2.5 rounded-xl bg-[#191816] border border-[#36322d] hover:border-[#81b64c] transition-all flex items-center justify-between text-xs"
-              >
-                <span className="font-bold text-white truncate">{p.name}</span>
-                <span className="text-[10px] text-neutral-500 font-mono shrink-0 ml-1">Pilih</span>
-              </button>
-            ))}
+        {/* Move History of Solve */}
+        {solveMoves.length > 0 && (
+          <div className="pt-2 border-t border-[#36322d]">
+            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2 flex justify-between items-center">
+              <span>Langkah-Langkah Pemecahan Posisi ({solveMoves.length}):</span>
+              <span className="text-[10px] text-neutral-500 font-mono">
+                {selectedEngine.toUpperCase()}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto p-2 bg-[#171614] rounded-xl border border-[#36322d]">
+              {solveMoves.map((m, idx) => (
+                <div
+                  key={idx}
+                  className="bg-[#24221f] px-2.5 py-1 rounded-lg border border-[#36322d] text-xs font-mono flex items-center gap-1.5"
+                >
+                  <span className="text-neutral-500 font-bold">{idx + 1}.</span>
+                  <span className="text-white font-bold">{m.san}</span>
+                  {m.scoreCp !== null && m.scoreCp !== undefined && (
+                    <span className="text-[10px] text-emerald-400">
+                      ({m.scoreCp > 0 ? "+" : ""}{(m.scoreCp / 100).toFixed(1)})
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </Card>
     </div>
   );

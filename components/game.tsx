@@ -955,7 +955,7 @@ export function Game() {
                             className="w-full py-2.5 rounded-xl text-xs font-bold border border-[#81b64c]/40 text-emerald-400 hover:text-white hover:bg-[#81b64c]/20 transition-all bg-[#171614] flex items-center justify-center gap-2"
                           >
                             <IconSwap3D size={15} />
-                            <span>Reset & Kembali ke Pengaturan</span>
+                            <span>Reset Permainan</span>
                           </button>
                         </div>
                       ) : (
