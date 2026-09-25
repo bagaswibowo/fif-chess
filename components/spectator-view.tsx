@@ -114,7 +114,6 @@ export function SpectatorView({
   const [blackEngine, setBlackEngine] = useState<EngineType>("stockfish");
   const [jevDepth, setJevDepth] = useState(10);
   const [sfDepth, setSfDepth] = useState(10);
-  const [showSettings, setShowSettings] = useState(false);
 
   const [currentFen, setCurrentFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
   const [moves, setMoves] = useState<MatchMove[]>([]);
@@ -432,14 +431,22 @@ export function SpectatorView({
             <span>Tukar Sisi</span>
           </Button>
 
-          <Button
-            onClick={() => setShowSettings(!showSettings)}
-            size="sm"
-            variant="outline"
-            className="border-[#36322d] text-neutral-400 font-bold text-xs h-7 px-2 active:translate-y-[1px]"
-          >
-            ⚙️ Mesin
-          </Button>
+          {/* Depth Quick Selector */}
+          <div className="flex items-center gap-1 bg-[#171614] p-0.5 rounded-lg border border-[#36322d]">
+            <span className="text-[10px] text-neutral-400 font-bold px-1">Depth:</span>
+            {[6, 10, 14].map((d) => (
+              <button
+                key={d}
+                onClick={() => { setJevDepth(d); setSfDepth(d); }}
+                className={`px-1.5 py-0.5 rounded text-[11px] font-bold transition-all ${
+                  jevDepth === d ? "bg-[#81b64c] text-white shadow-sm" : "text-neutral-400 hover:text-white"
+                }`}
+                title={`Kedalaman kalkulasi ${d}`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
 
           {(status === "finished" || moves.length >= 10) && (
             <Button
@@ -452,50 +459,6 @@ export function SpectatorView({
           )}
         </div>
       </div>
-
-      {/* Collapsible Settings Row */}
-      {showSettings && (
-        <div className="bg-[#1f1d1a] px-3 py-2 rounded-xl border border-[#36322d] flex flex-wrap items-center gap-3 text-xs animate-in fade-in duration-200">
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-neutral-400">Putih:</span>
-            <select
-              value={whiteEngine}
-              onChange={(e) => setWhiteEngine(e.target.value as any)}
-              className="bg-[#171614] border border-[#36322d] rounded px-2 py-0.5 text-xs text-white"
-            >
-              <option value="jev">Jev (Hybrid Connectome)</option>
-              <option value="fly">Fruit Fly Brain</option>
-              <option value="stockfish">Stockfish 15</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-neutral-400">Hitam:</span>
-            <select
-              value={blackEngine}
-              onChange={(e) => setBlackEngine(e.target.value as any)}
-              className="bg-[#171614] border border-[#36322d] rounded px-2 py-0.5 text-xs text-white"
-            >
-              <option value="stockfish">Stockfish 15</option>
-              <option value="jev">Jev (Hybrid Connectome)</option>
-              <option value="fly">Fruit Fly Brain</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-neutral-400">Depth:</span>
-            <div className="flex gap-1">
-              {[6, 10, 14].map(d => (
-                <button
-                  key={d}
-                  onClick={() => { setJevDepth(d); setSfDepth(d); }}
-                  className={`px-2 py-0.5 rounded text-[11px] font-bold ${jevDepth === d ? "bg-[#81b64c] text-white" : "bg-[#262421] text-neutral-400"}`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MAIN TWO-COLUMN ARENA LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
