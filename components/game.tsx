@@ -71,6 +71,7 @@ export function Game() {
   const [guidedStartFen, setGuidedStartFen] = useState<string | undefined>(undefined);
   const [guidedStartMoves, setGuidedStartMoves] = useState<string[] | undefined>(undefined);
   const [aiDepth, setAiDepth] = useState(14);
+  const [selectedAiOpponent, setSelectedAiOpponent] = useState<"stockfish" | "jev-fly" | "jev" | "fly">("stockfish");
   const [rightTab, setRightTab] = useState<RightTab>("game-setup");
   const [lang, setLang] = useState<"id" | "en">("id");
   const [timeMode, setTimeMode] = useState<string>("5m");
@@ -173,10 +174,16 @@ export function Game() {
       setThinking(true);
       setError(null);
       try {
+        const engineParam = selectedAiOpponent === "fly" ? "fly" : selectedAiOpponent === "stockfish" ? "stockfish" : "jev";
         const response = await fetch("/api/engine-move", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fen: position, depth: aiDepth, engine: "stockfish" }),
+          body: JSON.stringify({
+            fen: position,
+            depth: aiDepth,
+            engine: engineParam,
+            history: chess.history().slice(-10),
+          }),
         });
         const payload = (await response.json()) as {
           error?: string;
@@ -195,6 +202,11 @@ export function Game() {
             retryable: payload.retryable !== false,
           });
           return;
+        }
+        try {
+          chess.load(payload.fen);
+        } catch {
+          // Fallback if load fails
         }
         setFen(payload.fen);
         setMoves((current) => [
@@ -225,7 +237,7 @@ export function Game() {
         }
       }
     },
-    [],
+    [aiDepth, selectedAiOpponent, chess],
   );
 
   const startGame = useCallback(
@@ -711,7 +723,9 @@ export function Game() {
                   {playMode === "ai" ? <IconBot3D size={28} /> : <IconCommunity3D size={28} />}
                   <div>
                     <div className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5">
-                      <span>{playMode === "ai" ? "Stockfish 15 NNUE" : pvpOpponentName}</span>
+                      <span>{playMode === "ai"
+                        ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain (Hybrid)" : selectedAiOpponent === "fly" ? "Fruit Fly Brain (134k)" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15 NNUE")
+                        : pvpOpponentName}</span>
                       <span className="text-xs font-normal text-neutral-400">
                         ({playMode === "ai" ? "3550" : "PvP Online"})
                       </span>
@@ -841,187 +855,211 @@ export function Game() {
                 </CardHeader>
 
                 <CardContent className="p-4 md:p-5 space-y-3 md:space-y-4">
-                  {/* TAB 1: GAME SETUP */}
+                  {/* TAB 1: GAME SETUP OR ACTIVE MATCH HUB */}
                   {rightTab === "game-setup" && (
-                    <div className="space-y-3 md:space-y-4">
-                      {/* MODE SWITCHER: LAWAN AI VS LAWAN PEMAIN NYATA */}
-                      <div>
-                        <label className="text-xs md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
-                          {lang === "id" ? "Mode Pertandingan:" : "Match Mode:"}
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => {
-                              setPlayMode("ai");
-                              setPvpStatus("idle");
-                            }}
-                            className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-                              playMode === "ai"
-                                ? "bg-[#3d3a37] border-[#81b64c] text-white shadow"
-                                : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
-                            }`}
-                          >
-                            <IconBot3D size={16} />
-                            <span>Lawan AI (Stockfish)</span>
-                          </button>
-                          <button
-                            onClick={() => setPlayMode("pvp")}
-                            className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-                              playMode === "pvp"
-                                ? "bg-[#3d3a37] border-[#81b64c] text-white shadow"
-                                : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
-                            }`}
-                          >
-                            <IconCommunity3D size={16} />
-                            <span>Lawan Pemain Nyata</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* PVP ROOM CONTROLS */}
-                      {playMode === "pvp" && (
-                        <div className="p-3.5 bg-[#1a1816] rounded-xl border border-[#36322d] space-y-2.5">
-                          <div className="text-xs font-bold text-white flex items-center justify-between">
-                            <span>Tanding Daring (Online PvP Room)</span>
-                            {pvpRoomCode && (
-                              <Badge className="bg-emerald-600 text-white font-mono text-xs">
-                                Room: {pvpRoomCode}
-                              </Badge>
-                            )}
+                    <div className="space-y-4">
+                      {/* WHEN MATCH IS ACTIVE: HIDE SETUP BUTTONS AND SHOW LIVE CLOCKS & IN-GAME CONTROLS */}
+                      {moves.length > 0 && !effectiveOutcome.over ? (
+                        <div className="space-y-3">
+                          <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex justify-between items-center">
+                            <span>Jam Catur Pertandingan</span>
+                            <Badge className="bg-[#81b64c]/20 text-[#81b64c] border border-[#81b64c]/40 text-[10px]">
+                              {timeMode === "unlimited" ? "Tanpa Batas" : timeMode}
+                            </Badge>
                           </div>
 
-                          {!pvpRoomCode ? (
-                            <div className="space-y-2">
-                              <Button
-                                onClick={createPvpRoom}
-                                className="w-full bg-[#81b64c] hover:bg-[#72a342] text-white text-xs font-bold"
-                              >
-                                Buat Meja Baru (Pemain Putih)
-                              </Button>
+                          {/* Opponent Live Clock */}
+                          <div className={`p-3 rounded-xl border transition-all flex items-center justify-between ${
+                            !humanToMove ? "bg-[#1f2a14] border-[#81b64c] shadow-md shadow-[#81b64c]/20" : "bg-[#171614] border-[#36322d]"
+                          }`}>
+                            <div>
+                              <span className="text-xs font-bold text-neutral-300 block">
+                                {playMode === "ai"
+                                  ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15")
+                                  : pvpOpponentName}
+                              </span>
+                              {!humanToMove && <span className="text-[10px] text-[#81b64c] font-black animate-pulse">Sedang Berpikir...</span>}
+                            </div>
+                            <div className="font-mono font-black text-2xl text-white">
+                              {humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
+                            </div>
+                          </div>
 
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="Kode Kamar (misal: FIF892)"
-                                  value={pvpJoinInput}
-                                  onChange={(e) => setPvpJoinInput(e.target.value.toUpperCase())}
-                                  className="flex-1 bg-[#262421] border border-[#36322d] rounded-xl px-3 py-1.5 text-xs text-white uppercase font-mono focus:outline-none focus:border-[#81b64c]"
-                                />
-                                <Button
-                                  onClick={joinPvpRoom}
-                                  variant="outline"
-                                  className="border-[#36322d] text-xs font-bold"
+                          {/* Player Live Clock */}
+                          <div className={`p-3 rounded-xl border transition-all flex items-center justify-between ${
+                            humanToMove ? "bg-[#1f2a14] border-[#81b64c] shadow-md shadow-[#81b64c]/20" : "bg-[#171614] border-[#36322d]"
+                          }`}>
+                            <div>
+                              <span className="text-xs font-bold text-neutral-300 block">Anda (Player)</span>
+                              {humanToMove && <span className="text-[10px] text-[#81b64c] font-black animate-pulse">Giliran Anda Melangkah</span>}
+                            </div>
+                            <div className="font-mono font-black text-2xl text-white">
+                              {humanSide === "white" ? formattedWhiteTime : formattedBlackTime}
+                            </div>
+                          </div>
+
+                          {/* In-Game Actions */}
+                          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#36322d]">
+                            <button
+                              onClick={() => {
+                                setCustomOutcome({
+                                  over: true,
+                                  winner: null,
+                                  kind: "draw",
+                                  label: "Remis — Kesepakatan Bersama",
+                                });
+                                setShowGameOverModal(true);
+                              }}
+                              className="btn-chess-dark py-2 px-3 rounded-xl text-xs font-bold text-neutral-300 hover:text-white"
+                            >
+                              Tawarkan Remis
+                            </button>
+                            <button
+                              onClick={() => {
+                                setCustomOutcome({
+                                  over: true,
+                                  winner: humanSide === "white" ? "black" : "white",
+                                  kind: "resigned",
+                                  label: "Kekalahan — Anda Menyerah",
+                                });
+                                setShowGameOverModal(true);
+                              }}
+                              className="btn-chess-dark py-2 px-3 rounded-xl text-xs font-bold text-red-400 hover:text-red-300"
+                            >
+                              Menyerah
+                            </button>
+                          </div>
+
+                          <button
+                            onClick={() => startGame(humanSide)}
+                            className="w-full py-2.5 rounded-xl text-xs font-bold border border-[#36322d] text-neutral-300 hover:text-white transition-all bg-[#171614]"
+                          >
+                            Mulai Ulang Pertandingan
+                          </button>
+                        </div>
+                      ) : (
+                        /* WHEN NO GAME IS RUNNING: SHOW SETUP CONTROLS */
+                        <div className="space-y-3.5">
+                          {/* 1. SELECT OPPONENT ENGINE */}
+                          <div>
+                            <label className="text-xs font-bold text-neutral-400 block mb-1.5 uppercase tracking-wider">
+                              Pilih Lawan Bertanding:
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {[
+                                { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine 3550+" },
+                                { id: "jev-fly", label: "Jev + Fly Brain", sub: "Hybrid Neuro-Connectome" },
+                                { id: "jev", label: "Jev System One", sub: "Semantic Reasoning" },
+                                { id: "fly", label: "Fruit Fly Brain", sub: "Drosophila 134k" },
+                              ].map(eng => (
+                                <button
+                                  key={eng.id}
+                                  onClick={() => { setPlayMode("ai"); setSelectedAiOpponent(eng.id as any); }}
+                                  className={`p-2 rounded-xl text-left border transition-all ${
+                                    playMode === "ai" && selectedAiOpponent === eng.id
+                                      ? "bg-[#3d3a37] border-[#81b64c] text-white shadow-sm"
+                                      : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
+                                  }`}
                                 >
-                                  Gabung
-                                </Button>
+                                  <div className="text-xs font-bold truncate">{eng.label}</div>
+                                  <div className="text-[10px] text-neutral-500 truncate">{eng.sub}</div>
+                                </button>
+                              ))}
+                            </div>
+                            <button
+                              onClick={() => setPlayMode("pvp")}
+                              className={`w-full mt-2 py-1.5 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                                playMode === "pvp"
+                                  ? "bg-[#3d3a37] border-[#81b64c] text-white shadow"
+                                  : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
+                              }`}
+                            >
+                              <IconCommunity3D size={16} />
+                              <span>Lawan Pemain Nyata (PvP Online)</span>
+                            </button>
+                          </div>
+
+                          {/* 2. DIFFICULTY */}
+                          {playMode === "ai" && (
+                            <div>
+                              <label className="text-xs font-bold text-neutral-400 block mb-1.5 uppercase tracking-wider">
+                                Tingkat Kesulitan AI:
+                              </label>
+                              <div className="grid grid-cols-3 gap-2 mb-2">
+                                {[
+                                  { depth: 3, label: "Mudah", elo: "~800" },
+                                  { depth: 8, label: "Sedang", elo: "~1600" },
+                                  { depth: 14, label: "Expert", elo: "3550+" },
+                                ].map(lvl => (
+                                  <button
+                                    key={lvl.depth}
+                                    onClick={() => setAiDepth(lvl.depth)}
+                                    className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                                      aiDepth === lvl.depth
+                                        ? "bg-[#3d3a37] border-[#81b64c] text-white shadow-sm"
+                                        : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
+                                    }`}
+                                  >
+                                    <div>{lvl.label}</div>
+                                    <div className="text-[10px] text-neutral-500">{lvl.elo}</div>
+                                  </button>
+                                ))}
                               </div>
                             </div>
-                          ) : (
-                            <div className="text-xs text-neutral-300 space-y-1">
-                              <div>Status: <span className="font-bold text-amber-400">{pvpStatus === "waiting" ? "Menunggu Lawan Bergabung..." : "Bertanding Aktif!"}</span></div>
-                              <div className="text-xs text-neutral-400">Bagikan kode <span className="font-mono font-bold text-white">{pvpRoomCode}</span> ke rekan catur Anda.</div>
+                          )}
+
+                          {/* 3. TIME CONTROL */}
+                          {playMode === "ai" && (
+                            <div>
+                              <label className="text-xs font-bold text-neutral-400 block mb-1.5 uppercase tracking-wider">
+                                Kontrol Waktu Permainan:
+                              </label>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {[
+                                  { id: "5m", label: "5 Menit" },
+                                  { id: "10m", label: "10 Menit" },
+                                  { id: "30m", label: "30 Menit" },
+                                  { id: "60m", label: "1 Jam" },
+                                  { id: "120m", label: "2 Jam" },
+                                  { id: "unlimited", label: "Tanpa Batas" },
+                                ].map((t) => (
+                                  <button
+                                    key={t.id}
+                                    onClick={() => setTimeMode(t.id)}
+                                    className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                                      timeMode === t.id
+                                        ? "bg-[#3d3a37] border-[#81b64c] text-white shadow-sm"
+                                        : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
+                                    }`}
+                                  >
+                                    {t.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 4. BIG START MATCH BUTTON */}
+                          {playMode === "ai" && (
+                            <div className="space-y-2 pt-1">
+                              <button
+                                onClick={() => startGame("white")}
+                                className="btn-chess-green w-full py-3 rounded-xl font-black text-sm md:text-base tracking-wider shadow-lg uppercase cursor-pointer flex items-center justify-center gap-2"
+                              >
+                                <IconPlay3D size={20} />
+                                <span>Mulai Sebagai Putih</span>
+                              </button>
+                              <button
+                                onClick={() => startGame("black")}
+                                className="btn-chess-dark w-full py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5"
+                              >
+                                <IconSwap3D size={14} />
+                                <span>Main Sebagai Hitam</span>
+                              </button>
                             </div>
                           )}
                         </div>
                       )}
-
-                      {/* TIME CONTROL */}
-                      {playMode === "ai" && (
-                        <div>
-                          <label className="text-xs md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
-                            {lang === "id" ? "Tingkat Kesulitan AI:" : "AI Difficulty:"}
-                        </label>
-                        <div className="grid grid-cols-3 gap-2 mb-3">
-                          {[
-                            { depth: 3, label: lang === "id" ? "Mudah" : "Easy", elo: "~800" },
-                            { depth: 8, label: lang === "id" ? "Sedang" : "Medium", elo: "~1600" },
-                            { depth: 14, label: lang === "id" ? "Expert" : "Expert", elo: "3550+" },
-                          ].map(lvl => (
-                            <button
-                              key={lvl.depth}
-                              onClick={() => setAiDepth(lvl.depth)}
-                              className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center ${aiDepth === lvl.depth ? "bg-[#3d3a37] border-[#81b64c] text-white shadow-sm" : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"}`}
-                            >
-                              <div>{lvl.label}</div>
-                              <div className="text-xs font-mono text-neutral-500">{lvl.elo}</div>
-                            </button>
-                          ))}
-                        </div>
-                        <label className="text-xs md:text-xs font-bold text-neutral-400 block mb-2 uppercase tracking-wider">
-                          {lang === "id" ? "Kontrol Waktu Permainan:" : "Time Control:"}
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {[
-                              { id: "3m", label: lang === "id" ? "Kilat 3 mnt" : "Blitz 3m", icon: <IconLightning3D size={15} /> },
-                              { id: "5m", label: lang === "id" ? "Cepat 5 mnt" : "Rapid 5m", icon: <IconClock3D size={15} /> },
-                              { id: "10m", label: lang === "id" ? "Standar 10 mnt" : "Rapid 10m", icon: <IconClock3D size={15} /> },
-                              { id: "unlimited", label: lang === "id" ? "Tanpa Batas" : "Casual", icon: <IconPawn3D size={15} /> },
-                            ].map((t) => (
-                              <button
-                                key={t.id}
-                                onClick={() => setTimeMode(t.id)}
-                                className={`flex items-center gap-2 py-2 px-2.5 rounded-xl text-xs font-bold border transition-all ${
-                                  timeMode === t.id
-                                    ? "bg-[#3d3a37] border-[#81b64c] text-white shadow-sm"
-                                    : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white hover:bg-[#282622]"
-                                }`}
-                              >
-                                {t.icon}
-                                <span>{t.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* BIG CHESS.COM GREEN CTA BUTTON */}
-                      {playMode === "ai" && (
-                        <button
-                          onClick={() => startGame(humanSide)}
-                          className="btn-chess-green w-full py-3.5 md:py-4 rounded-xl font-black text-base md:text-lg tracking-wider shadow-lg uppercase cursor-pointer flex items-center justify-center gap-2"
-                        >
-                          <IconPlay3D size={22} />
-                          <span>{lang === "id" ? "Mulai Permainan Baru" : "Play Game"}</span>
-                        </button>
-                      )}
-
-                      {/* Quick options with 3D icons */}
-                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#36322d]">
-                        <button
-                          onClick={() => startGame(humanSide === "white" ? "black" : "white")}
-                          className="btn-chess-dark py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
-                        >
-                          <IconSwap3D size={15} />
-                          <span>{lang === "id" ? `Main ${humanSide === "white" ? "Hitam" : "Putih"}` : `Play ${humanSide === "white" ? "Black" : "White"}`}</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setCustomOutcome({
-                              over: true,
-                              winner: humanSide === "white" ? "black" : "white",
-                              kind: "resigned",
-                              label: lang === "id" ? "Kekalahan — Anda Menyerah" : "Defeat — You Resigned",
-                            });
-                            setShowGameOverModal(true);
-                          }}
-                          className="btn-chess-dark py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
-                        >
-                          <span>{lang === "id" ? "Menyerah / Reset" : "Resign / Reset"}</span>
-                        </button>
-                      </div>
-
-                      <div className="bg-[#1c1a18] p-3 rounded-xl border border-[#36322d] text-xs text-neutral-400 space-y-1">
-                        <div className="flex justify-between items-center">
-                          <span>Status:</span>
-                          <span className="text-white font-bold">{effectiveOutcome.label}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Engine:</span>
-                          <span className="text-emerald-400 font-bold">
-                            {playMode === "ai" ? "Stockfish 15 NNUE (3550)" : "PvP Room Synchronized"}
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   )}
 

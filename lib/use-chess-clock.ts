@@ -9,10 +9,13 @@ export function useChessClock(
 ) {
   const getInitialMs = useCallback((mode: string) => {
     switch (mode) {
-      case "3m": return 180 * 1000;
-      case "5m": return 300 * 1000;
-      case "10m": return 600 * 1000;
-      default: return 9999 * 1000;
+      case "5m": return 5 * 60 * 1000;
+      case "10m": return 10 * 60 * 1000;
+      case "30m": return 30 * 60 * 1000;
+      case "60m": return 60 * 60 * 1000;
+      case "120m": return 120 * 60 * 1000;
+      case "unlimited": return Infinity;
+      default: return 10 * 60 * 1000;
     }
   }, []);
 
@@ -34,9 +37,9 @@ export function useChessClock(
     setIsRunning(mode !== "unlimited");
   }, [getInitialMs]);
 
-  // Pure timer loop: strictly updates state without side effects
+  // Timer loop
   useEffect(() => {
-    if (!isRunning || isOver) return;
+    if (!isRunning || isOver || timeMode === "unlimited") return;
 
     lastTickRef.current = Date.now();
 
@@ -63,11 +66,11 @@ export function useChessClock(
       }
       clearInterval(interval);
     };
-  }, [isRunning, turn, isOver]);
+  }, [isRunning, turn, isOver, timeMode]);
 
-  // Dedicated pure effect for timeout detection with turn validation
+  // Timeout detector
   useEffect(() => {
-    if (isRunning && !isOver) {
+    if (isRunning && !isOver && timeMode !== "unlimited") {
       if (turn === "white" && whiteMs <= 0) {
         setIsRunning(false);
         onTimeoutRef.current("white");
@@ -76,12 +79,17 @@ export function useChessClock(
         onTimeoutRef.current("black");
       }
     }
-  }, [whiteMs, blackMs, isRunning, isOver, turn]);
+  }, [whiteMs, blackMs, isRunning, isOver, turn, timeMode]);
 
   const formatMs = (ms: number) => {
+    if (!isFinite(ms) || timeMode === "unlimited") return "∞";
     const totalSeconds = Math.ceil(ms / 1000);
-    const m = Math.floor(totalSeconds / 60);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
+    if (h > 0) {
+      return `${h}:${m < 10 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`;
+    }
     return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
 
