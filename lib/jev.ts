@@ -223,9 +223,13 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
     } else if (move.isPromotion) {
       desc += "[QUEEN PROMOTION] PROMOTES PAWN TO QUEEN! Decisive game-winning promotion!";
     } else if (isPassed && ((myColor === "w" && toRank >= 6) || (myColor === "b" && toRank <= 3))) {
-      desc += `[PROMOTION ADVANCE] Advances passed pawn to rank ${toRank}! Only ${myColor === "w" ? 8 - toRank : toRank - 1} square(s) from Queen promotion!`;
+      desc += `[CRITICAL PROMOTION SPRINT] Advances passed pawn to rank ${toRank}! Only ${myColor === "w" ? 8 - toRank : toRank - 1} square(s) from Queen promotion! Top tactical priority!`;
     } else if (isPassed) {
       desc += `[PASSED PAWN PUSH] Advances passed pawn toward promotion on ${move.to}`;
+    } else if (isEndgame && hasPassedPawns && raw && raw.piece === "k") {
+      desc += `[KING PASSED PAWN ESCORT] King steps to ${move.to} to actively shield, guard, and escort the passed pawn to Queen promotion!`;
+    } else if (isEndgame && hasPassedPawns && raw && raw.piece === "p" && !isPassed) {
+      desc += `[TEMPO LOSS] Wastes crucial endgame move on flank pawn ${move.uci} instead of escorting or pushing the passed pawn! (AVOID)`;
     } else if (chess.history().length < 8 && (move.uci === "e2e4" || move.uci === "f2f4" || move.uci === "b2b4" || move.uci === "d2d4" || move.uci === "c2c4")) {
       desc += `[AGGRESSIVE GAMBIT / CENTER DOMINANCE] Sharp dynamic opening thrust attacking central files and unlocking lines to the enemy King!`;
     } else if (move.isCapture) {

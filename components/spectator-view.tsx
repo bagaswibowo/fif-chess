@@ -91,6 +91,71 @@ function qualityLabel(cpLoss: number | null): { label: string; color: string } {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+
+// Strict FIDE legal attack generator for piece on a square
+function getAttackedSquares(chess: Chess, sq: string): string[] {
+  const piece = chess.get(sq as any);
+  if (!piece) return [];
+  const col = sq.charCodeAt(0) - 97;
+  const row = parseInt(sq[1], 10) - 1;
+  const attacks: string[] = [];
+
+  if (piece.type === "p") {
+    const dir = piece.color === "w" ? 1 : -1;
+    const r = row + dir;
+    if (r >= 0 && r < 8) {
+      if (col > 0) attacks.push(String.fromCharCode(96 + col) + (r + 1));
+      if (col < 7) attacks.push(String.fromCharCode(98 + col) + (r + 1));
+    }
+    return attacks;
+  }
+
+  if (piece.type === "n") {
+    const deltas = [[1,2],[1,-2],[-1,2],[-1,-2],[2,1],[2,-1],[-2,1],[-2,-1]];
+    for (const [dc, dr] of deltas) {
+      const c = col + dc;
+      const r = row + dr;
+      if (c >= 0 && c < 8 && r >= 0 && r < 8) attacks.push(String.fromCharCode(97 + c) + (r + 1));
+    }
+    return attacks;
+  }
+
+  if (piece.type === "k") {
+    for (let dc = -1; dc <= 1; dc++) {
+      for (let dr = -1; dr <= 1; dr++) {
+        if (dc === 0 && dr === 0) continue;
+        const c = col + dc;
+        const r = row + dr;
+        if (c >= 0 && c < 8 && r >= 0 && r < 8) attacks.push(String.fromCharCode(97 + c) + (r + 1));
+      }
+    }
+    return attacks;
+  }
+
+  // Sliding pieces: b, r, q
+  const dirs: [number, number][] = [];
+  if (piece.type === "b" || piece.type === "q") {
+    dirs.push([1,1], [1,-1], [-1,1], [-1,-1]);
+  }
+  if (piece.type === "r" || piece.type === "q") {
+    dirs.push([1,0], [-1,0], [0,1], [0,-1]);
+  }
+
+  for (const [dc, dr] of dirs) {
+    let c = col + dc;
+    let r = row + dr;
+    while (c >= 0 && c < 8 && r >= 0 && r < 8) {
+      const target = String.fromCharCode(97 + c) + (r + 1);
+      attacks.push(target);
+      if (chess.get(target as any)) break; // ray blocked
+      c += dc;
+      r += dr;
+    }
+  }
+
+  return attacks;
+}
+
 export function SpectatorView({ lang = "id", onTryPosition }: Props) {
   const [status, setStatus] = useState<MatchStatus>("idle");
   const [moves, setMoves] = useState<MatchMove[]>([]);
@@ -194,73 +259,67 @@ export function SpectatorView({ lang = "id", onTryPosition }: Props) {
         summaryText = `Dorongan pion strategis (${data.san}) memperkuat struktur teritorial dan membatasi ruang musuh.`;
       }
 
-      const oppKingSq = isWhiteTurn ? "sayap raja hitam (g8/e8)" : "sayap raja putih (g1/e1)";
-      const targetText = data.san.includes("+") || data.san.includes("#")
-        ? `Mengincar titik fatal di sekitar ${oppKingSq}.`
-        : `Menekan koordinasi perwira di petak ${data.uci.slice(2, 4)} dan merusak susunan pertahanan lawan.`;
-
-      const nextSide = !isWhiteTurn ? "Putih" : "Hitam";
-      const predText = data.san.includes("#")
-        ? "Pertandingan selesai."
-        : `${nextSide} diprediksi akan merespons dengan memblokade ancaman atau melancarkan serangan balik taktis.`;
-
-            // Compute threat & predicted move visual indicators for commentator
+      // Compute threat & predicted move visual indicators for commentator (STRICT FIDE RULES)
       const fromSq = data.uci.slice(0, 2);
       const toSq = data.uci.slice(2, 4);
       setLastMoveUci(data.uci);
 
-      // 1. Detect Threats created by this move
+      const nextTurnColor = chess.turn(); // opponent to move
       let foundThreat: { from: string; to: string; sq: string } | null = null;
-      const nextTurnColor = chess.turn(); // opponent color now
-      const oppBoard = chess.board();
-      
-      // If check, threat is directly to the enemy King
-      if (chess.isCheck()) {
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
-            const p = oppBoard[r]?.[c];
-            if (p && p.type === "k" && p.color === nextTurnColor) {
-              const kSq = (String.fromCharCode(97 + c) + (8 - r));
-              foundThreat = { from: toSq, to: kSq, sq: kSq };
-              break;
-            }
-          }
-          if (foundThreat) break;
-        }
-      } else {
-        // Find highest-value enemy piece attacked by the moved piece
-        const valMap: Record<string, number> = { q: 9, r: 5, b: 3, n: 3, p: 1 };
-        let maxVal = 0;
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
-            const p = oppBoard[r]?.[c];
-            if (p && p.color === nextTurnColor) {
-              const targetSq = (String.fromCharCode(97 + c) + (8 - r));
-              if (chess.isAttacked(targetSq as any, isWhiteTurn ? "w" : "b")) {
-                const v = valMap[p.type] || 0;
-                if (v > maxVal) {
-                  maxVal = v;
-                  foundThreat = { from: toSq, to: targetSq, sq: targetSq };
-                }
-              }
-            }
+      let threatDesc = "";
+
+      // 1. Detect ONLY real legal attacks directly from the piece at toSq
+      const legalAttacks = getAttackedSquares(chess, toSq);
+      const valMap: Record<string, number> = { k: 1000, q: 9, r: 5, b: 3, n: 3, p: 1 };
+      let maxVal = 0;
+
+      for (const targetSq of legalAttacks) {
+        const targetPiece = chess.get(targetSq as any);
+        if (targetPiece && targetPiece.color === nextTurnColor) {
+          const v = valMap[targetPiece.type] || 0;
+          if (v > maxVal) {
+            maxVal = v;
+            foundThreat = { from: toSq, to: targetSq, sq: targetSq };
+            const pNames: Record<string, string> = { k: "Raja", q: "Menteri", r: "Benteng", b: "Gajah", n: "Kuda", p: "Pion" };
+            threatDesc = `Mengancam ${pNames[targetPiece.type] || "bidak"} lawan di ${targetSq}!`;
           }
         }
       }
       setThreatInfo(foundThreat);
 
-      // 2. Predict opponent's next move (Prioritize captures, checks, or active moves)
+      // 2. Predict opponent's logical response (Prioritize recaptures, check escapes, or captures)
       const legals = chess.moves({ verbose: true });
+      let chosenPred: { from: string; to: string; san: string } | null = null;
+      let predDesc = "";
+
       if (legals.length > 0) {
-        const pred = legals.find(m => m.captured) || legals.find(m => m.san.includes("+")) || legals[0];
-        if (pred) {
-          setPredictedMove({ from: pred.from, to: pred.to });
+        // Priority A: If the piece that just moved is attacked and can be captured: "Kalau ke sini, dimakan ini!"
+        const recapture = legals.find(m => m.to === toSq && m.captured);
+        if (recapture) {
+          chosenPred = { from: recapture.from, to: recapture.to, san: recapture.san };
+          predDesc = `Ditebak lawan akan membalas memakan ${data.san} di ${toSq} via ${recapture.san}!`;
+        } else if (chess.isCheck()) {
+          // Priority B: Escape check
+          const escape = legals.find(m => m.piece === "k") || legals[0];
+          chosenPred = { from: escape.from, to: escape.to, san: escape.san };
+          predDesc = `Ditebak raja lawan terpaksa menghindar atau memblokade via ${escape.san}.`;
+        } else {
+          // Priority C: Highest-value capture or active move
+          const captures = legals.filter(m => m.captured).sort((a,b) => (valMap[b.captured || "p"] || 0) - (valMap[a.captured || "p"] || 0));
+          const bestMove = captures[0] || legals.find(m => m.san.includes("+")) || legals[0];
+          chosenPred = { from: bestMove.from, to: bestMove.to, san: bestMove.san };
+          predDesc = `Ditebak lawan akan merespons dengan ${bestMove.san} untuk mengimbangi posisi.`;
         }
-      } else {
-        setPredictedMove(null);
       }
 
-      setCommentary({
+      setPredictedMove(chosenPred ? { from: chosenPred.from, to: chosenPred.to } : null);
+
+      const oppKingSq = isWhiteTurn ? "sayap raja hitam (g8/e8)" : "sayap raja putih (g1/e1)";
+      const targetText = threatDesc || (data.san.includes("+") ? `Mengancam Raja lawan (${oppKingSq}) dengan skak!` : `Mengamankan kendali petak ${data.uci.slice(2, 4)}.`);
+
+      const nextSide = !isWhiteTurn ? "Putih" : "Hitam";
+      const predText = data.san.includes("#") ? "Pertandingan selesai." : (predDesc || `${nextSide} bersiap merespons.`);
+setCommentary({
         moveSan: data.san,
         actorName: actorLabel,
         summary: summaryText,
