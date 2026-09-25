@@ -33,11 +33,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [fenInput, setFenInput] = useState<string>(defaultInitialFen);
   const [error, setError] = useState<string | null>(null);
 
-  // 2. Live Simulation & Engine Solver State (Papan 2)
+  // 2. Dual-Engine Configuration (White Engine & Black Engine) & Solver State (Papan 2)
   const [liveFen, setLiveFen] = useState<string>(defaultInitialFen);
-  const [selectedEngine, setSelectedEngine] = useState<EngineType>("stockfish");
-  const [opponentEngine, setOpponentEngine] = useState<EngineType>("jev-fly");
-  const [simulationMode, setSimulationMode] = useState<"solo" | "duel">("solo");
+  const [whiteEngine, setWhiteEngine] = useState<EngineType>("stockfish");
+  const [blackEngine, setBlackEngine] = useState<EngineType>("jev-fly");
   const [isAutoSolving, setIsAutoSolving] = useState(false);
   const [isEngineCalculating, setIsEngineCalculating] = useState(false);
   const [solveMoves, setSolveMoves] = useState<{ san: string; uci: string; by: string; scoreCp?: number | null }[]>([]);
@@ -116,7 +115,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     }
   };
 
-  // Execute 1 solve move via engine API
+  // Execute 1 solve move via engine API based on White vs Black selected engine
   const stepEngineSolve = useCallback(async () => {
     if (isEngineCalculating) return;
 
@@ -129,9 +128,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
       setIsEngineCalculating(true);
       const turn = chess.turn();
-      const activeEngine = simulationMode === "solo"
-        ? selectedEngine
-        : (turn === "w" ? selectedEngine : opponentEngine);
+      const activeEngine = turn === "w" ? whiteEngine : blackEngine;
 
       const engineParam = activeEngine === "fly"
         ? "fly"
@@ -180,7 +177,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     } finally {
       setIsEngineCalculating(false);
     }
-  }, [liveFen, isEngineCalculating, simulationMode, selectedEngine, opponentEngine, solveMoves]);
+  }, [liveFen, isEngineCalculating, whiteEngine, blackEngine, solveMoves]);
 
   // Autoplay solver loop
   useEffect(() => {
@@ -213,11 +210,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       const chess = new Chess(liveFen);
       const turn = chess.turn();
       const isWhiteTurn = turn === "w";
-      const enemyColor = isWhiteTurn ? "b" : "w";
 
-      // Count pieces
-      let whitePawns = 0;
-      let blackPawns = 0;
       let passedPawnNotice = "";
       let kingSafetyNotice = "";
 
@@ -225,15 +218,11 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         for (let c = 0; c < 8; c++) {
           const sq = (String.fromCharCode(97 + c) + (8 - r)) as any;
           const p = chess.get(sq);
-          if (p) {
-            if (p.type === "p") {
-              if (p.color === "w") {
-                whitePawns++;
-                if (r <= 2) passedPawnNotice = `Pion Putih di ${sq} sudah di baris lanjutan (ancaman promosi menteri!).`;
-              } else {
-                blackPawns++;
-                if (r >= 5) passedPawnNotice = `Pion Hitam di ${sq} sangat dekat dengan promosi.`;
-              }
+          if (p && p.type === "p") {
+            if (p.color === "w" && r <= 2) {
+              passedPawnNotice = `Pion Putih di ${sq} sudah di baris lanjutan (ancaman promosi menteri!).`;
+            } else if (p.color === "b" && r >= 5) {
+              passedPawnNotice = `Pion Hitam di ${sq} sangat dekat dengan promosi.`;
             }
           }
         }
@@ -332,25 +321,27 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           </h2>
           <p className="text-xs text-neutral-400 mt-0.5">
             {lang === "id"
-              ? "Bandingkan 2 papan: Posisi Awal Ter-Import vs Simulasi Cara Engine Memecahkan & Memenangkan Posisi."
-              : "Compare 2 boards: Initial Imported Position vs Live Engine Solving Simulation."}
+              ? "Bandingkan 2 papan: Posisi Awal Ter-Import vs Simulasi Perlawanan Engine Putih & Hitam."
+              : "Compare 2 boards: Initial Imported Position vs White & Black Engine Duel Simulation."}
           </p>
         </div>
 
-        {/* Action Buttons for Mobile Camera & Upload */}
+        {/* Action Buttons for Mobile Camera & Upload (100% 3D Icons, Zero Emoji) */}
         <div className="flex items-center gap-2 w-full md:w-auto">
           <Button
             onClick={() => cameraInputRef.current?.click()}
-            className="bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-xs h-9 px-3 flex-1 md:flex-initial shadow-md"
+            className="bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-xs h-9 px-3 flex-1 md:flex-initial shadow-md flex items-center gap-1.5"
           >
-            📷 {lang === "id" ? "Kamera HP" : "Camera"}
+            <IconScan3D size={16} />
+            <span>{lang === "id" ? "Kamera HP" : "Camera"}</span>
           </Button>
           <Button
             onClick={() => fileInputRef.current?.click()}
             variant="outline"
-            className="border-[#36322d] text-neutral-300 hover:text-white font-bold text-xs h-9 px-3 flex-1 md:flex-initial"
+            className="border-[#36322d] text-neutral-300 hover:text-white font-bold text-xs h-9 px-3 flex-1 md:flex-initial flex items-center gap-1.5"
           >
-            📁 {lang === "id" ? "Upload Foto" : "Upload Image"}
+            <IconVision3D size={16} />
+            <span>{lang === "id" ? "Upload Foto" : "Upload Image"}</span>
           </Button>
         </div>
       </div>
@@ -429,18 +420,39 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <span>{lang === "id" ? "Papan 2: Simulasi Solve Engine" : "Board 2: Live Engine Solver"}</span>
             </div>
 
-            {/* Engine Picker */}
-            <div className="flex items-center gap-1.5">
-              <select
-                value={selectedEngine}
-                onChange={(e) => setSelectedEngine(e.target.value as EngineType)}
-                className="bg-[#171614] border border-[#81b64c]/60 rounded-lg px-2 py-1 text-xs text-emerald-400 font-bold focus:outline-none"
-              >
-                <option value="stockfish">Stockfish 15 NNUE</option>
-                <option value="jev-fly">Jev + Fly Brain</option>
-                <option value="jev">Jev System One</option>
-                <option value="fly">Fruit Fly Brain</option>
-              </select>
+            {/* DUAL ENGINE PICKER: WHITE ENGINE & BLACK ENGINE */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* White Engine Picker */}
+              <div className="flex items-center gap-1.5 bg-[#171614] px-2 py-1 rounded-lg border border-[#36322d]">
+                <span className="w-2.5 h-2.5 rounded-full bg-white border border-neutral-400 inline-block shrink-0"></span>
+                <span className="text-[11px] font-bold text-neutral-300">Putih:</span>
+                <select
+                  value={whiteEngine}
+                  onChange={(e) => setWhiteEngine(e.target.value as EngineType)}
+                  className="bg-transparent text-xs text-white font-bold focus:outline-none cursor-pointer"
+                >
+                  <option value="stockfish" className="bg-[#1c1a18]">Stockfish 15</option>
+                  <option value="jev-fly" className="bg-[#1c1a18]">Jev + Fly Brain</option>
+                  <option value="jev" className="bg-[#1c1a18]">Jev System One</option>
+                  <option value="fly" className="bg-[#1c1a18]">Fruit Fly Brain</option>
+                </select>
+              </div>
+
+              {/* Black Engine Picker */}
+              <div className="flex items-center gap-1.5 bg-[#171614] px-2 py-1 rounded-lg border border-[#36322d]">
+                <span className="w-2.5 h-2.5 rounded-full bg-neutral-900 border border-neutral-600 inline-block shrink-0"></span>
+                <span className="text-[11px] font-bold text-neutral-300">Hitam:</span>
+                <select
+                  value={blackEngine}
+                  onChange={(e) => setBlackEngine(e.target.value as EngineType)}
+                  className="bg-transparent text-xs text-white font-bold focus:outline-none cursor-pointer"
+                >
+                  <option value="jev-fly" className="bg-[#1c1a18]">Jev + Fly Brain</option>
+                  <option value="stockfish" className="bg-[#1c1a18]">Stockfish 15</option>
+                  <option value="jev" className="bg-[#1c1a18]">Jev System One</option>
+                  <option value="fly" className="bg-[#1c1a18]">Fruit Fly Brain</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -453,6 +465,9 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             </div>
             <div className="text-neutral-400 text-xs">
               Giliran: <span className="text-white font-bold">{tacticalIntel.turn}</span>
+              <span className="text-neutral-500 font-normal ml-1">
+                ({tacticalIntel.turn === "Putih" ? engineLabels[whiteEngine] : engineLabels[blackEngine]})
+              </span>
             </div>
           </div>
 
@@ -471,8 +486,9 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               }}
             />
             {isEngineCalculating && (
-              <div className="absolute top-2 right-2 bg-black/80 px-2 py-1 rounded text-[10px] text-amber-400 font-bold border border-amber-500/40 animate-pulse">
-                Engine Menghitung...
+              <div className="absolute top-2 right-2 bg-black/80 px-2.5 py-1 rounded text-[10px] text-amber-400 font-bold border border-amber-500/40 animate-pulse flex items-center gap-1.5">
+                <IconBot3D size={12} />
+                <span>Engine Menghitung...</span>
               </div>
             )}
           </div>
@@ -495,9 +511,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               onClick={() => void stepEngineSolve()}
               disabled={isAutoSolving || isEngineCalculating}
               variant="outline"
-              className="border-[#36322d] text-white hover:bg-[#322f2b] text-xs font-bold h-9"
+              className="border-[#36322d] text-white hover:bg-[#322f2b] text-xs font-bold h-9 flex items-center justify-center gap-1.5"
             >
-              1 Langkah ❯
+              <span>1 Langkah</span>
+              <IconPlay3D size={12} />
             </Button>
 
             <Button
@@ -512,9 +529,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
           <Button
             onClick={() => onLoadFen(liveFen)}
-            className="w-full bg-[#1c1a18] hover:bg-[#282522] border border-[#36322d] text-white text-xs font-bold h-8"
+            className="w-full bg-[#1c1a18] hover:bg-[#282522] border border-[#36322d] text-white text-xs font-bold h-8 flex items-center justify-center gap-1.5"
           >
-            🚀 Buka Posisi Ini di Menu Bermain
+            <IconPlay3D size={13} />
+            <span>Buka Posisi Ini di Menu Bermain</span>
           </Button>
         </Card>
       </div>
@@ -522,7 +540,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       {/* TACTICAL ANALYSIS & BLUNDER EVALUATION PANEL */}
       <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 md:p-5 shadow-xl space-y-4">
         <div className="flex items-center gap-2 border-b border-[#36322d] pb-3">
-          <IconLightning3D size={20} className="text-amber-400" />
+          <IconLightning3D size={20} />
           <h3 className="text-sm md:text-base font-black uppercase tracking-wider text-white">
             Analisis Taktis & Evaluasi Bahaya / Blunder Posisi
           </h3>
@@ -532,7 +550,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           {/* Card 1: Ancaman & Bahaya */}
           <div className="bg-[#1a1816] p-3.5 rounded-xl border border-red-500/20 space-y-1.5">
             <div className="text-xs font-bold text-red-400 flex items-center gap-1.5">
-              <span>⚠️ Titik Bahaya & Ancaman:</span>
+              <IconLightning3D size={16} />
+              <span>Titik Bahaya & Ancaman:</span>
             </div>
             <p className="text-xs text-neutral-300 leading-relaxed">
               {tacticalIntel.threatSummary}
@@ -542,7 +561,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           {/* Card 2: Titik Blunder */}
           <div className="bg-[#1a1816] p-3.5 rounded-xl border border-amber-500/20 space-y-1.5">
             <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-              <span>🛑 Rawan Blunder Fatal:</span>
+              <IconBot3D size={16} />
+              <span>Rawan Blunder Fatal:</span>
             </div>
             <p className="text-xs text-neutral-300 leading-relaxed">
               {tacticalIntel.blunderDanger}
@@ -552,7 +572,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           {/* Card 3: Solusi Kemenangan Engine */}
           <div className="bg-[#1a1816] p-3.5 rounded-xl border border-emerald-500/20 space-y-1.5">
             <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-              <span>💡 Kunci Solusi Engine ({engineLabels[selectedEngine]}):</span>
+              <IconTrophy3D size={16} />
+              <span>Kunci Solusi Posisi:</span>
             </div>
             <p className="text-xs text-neutral-300 leading-relaxed">
               {tacticalIntel.keyIdea}
@@ -566,7 +587,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2 flex justify-between items-center">
               <span>Langkah-Langkah Pemecahan Posisi ({solveMoves.length}):</span>
               <span className="text-[10px] text-neutral-500 font-mono">
-                {selectedEngine.toUpperCase()}
+                {whiteEngine.toUpperCase()} vs {blackEngine.toUpperCase()}
               </span>
             </div>
             <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto p-2 bg-[#171614] rounded-xl border border-[#36322d]">
@@ -577,6 +598,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 >
                   <span className="text-neutral-500 font-bold">{idx + 1}.</span>
                   <span className="text-white font-bold">{m.san}</span>
+                  <span className="text-[10px] text-neutral-400">({m.by})</span>
                   {m.scoreCp !== null && m.scoreCp !== undefined && (
                     <span className="text-[10px] text-emerald-400">
                       ({m.scoreCp > 0 ? "+" : ""}{(m.scoreCp / 100).toFixed(1)})
