@@ -71,6 +71,7 @@ export function Game() {
   const [guidedStartFen, setGuidedStartFen] = useState<string | undefined>(undefined);
   const [guidedStartMoves, setGuidedStartMoves] = useState<string[] | undefined>(undefined);
   const [aiDepth, setAiDepth] = useState(14);
+  const [gameActive, setGameActive] = useState(false);
   const [selectedAiOpponent, setSelectedAiOpponent] = useState<"stockfish" | "jev-fly" | "jev" | "fly">("stockfish");
   const [rightTab, setRightTab] = useState<RightTab>("game-setup");
   const [lang, setLang] = useState<"id" | "en">("id");
@@ -243,6 +244,7 @@ export function Game() {
   const startGame = useCallback(
     (side: Side) => {
       requestGen.current += 1;
+      try { chess.load(START_FEN); } catch (_) {}
       setHumanSide(side);
       setFen(START_FEN);
       setMoves([]);
@@ -255,12 +257,30 @@ export function Game() {
       setShowGameOverModal(false);
       setOpponentTacticSaved(false);
       resetClocks(timeMode);
+      setGameActive(true);
       if (playMode === "ai" && side === "black") {
         void askEngine(START_FEN);
       }
     },
-    [askEngine, timeMode, resetClocks, playMode],
+    [askEngine, timeMode, resetClocks, playMode, chess],
   );
+
+  const resetGame = useCallback(() => {
+    requestGen.current += 1;
+    try { chess.load(START_FEN); } catch (_) {}
+    setFen(START_FEN);
+    setMoves([]);
+    setAnalysis(null);
+    setError(null);
+    setSelectedSquare(null);
+    setPendingPromotion(null);
+    setThinking(false);
+    setCustomOutcome(null);
+    setShowGameOverModal(false);
+    setOpponentTacticSaved(false);
+    resetClocks(timeMode);
+    setGameActive(false);
+  }, [timeMode, resetClocks, chess]);
 
   // Save last move by opponent as a dynamic puzzle
   const saveOpponentTrick = () => {
@@ -859,7 +879,7 @@ export function Game() {
                   {rightTab === "game-setup" && (
                     <div className="space-y-4">
                       {/* WHEN MATCH IS ACTIVE: HIDE SETUP BUTTONS AND SHOW LIVE CLOCKS & IN-GAME CONTROLS */}
-                      {moves.length > 0 && !effectiveOutcome.over ? (
+                      {gameActive && !effectiveOutcome.over ? (
                         <div className="space-y-3">
                           <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex justify-between items-center">
                             <span>Jam Catur Pertandingan</span>
@@ -931,10 +951,11 @@ export function Game() {
                           </div>
 
                           <button
-                            onClick={() => startGame(humanSide)}
-                            className="w-full py-2.5 rounded-xl text-xs font-bold border border-[#36322d] text-neutral-300 hover:text-white transition-all bg-[#171614]"
+                            onClick={resetGame}
+                            className="w-full py-2.5 rounded-xl text-xs font-bold border border-[#81b64c]/40 text-emerald-400 hover:text-white hover:bg-[#81b64c]/20 transition-all bg-[#171614] flex items-center justify-center gap-2"
                           >
-                            Mulai Ulang Pertandingan
+                            <IconSwap3D size={15} />
+                            <span>Reset & Kembali ke Pengaturan</span>
                           </button>
                         </div>
                       ) : (

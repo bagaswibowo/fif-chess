@@ -2,7 +2,8 @@ import { playFlyBrainMove } from "@/lib/flybrain/service";
 import { NextResponse } from 'next/server';
 import { JevRequestError, playJevMove } from '@/lib/jev';
 import { playStockfishMove, guardJevMove } from '@/lib/stockfish';
-import { validateFen } from 'chess.js';
+import { Chess, validateFen } from 'chess.js';
+import { applyUci, describeOutcome } from '@/lib/chess';
 import { GATE_COOKIE, gateConfigured, readCookie, sessionValid } from '@/lib/gate';
 
 export const runtime = 'nodejs';
@@ -73,17 +74,38 @@ export async function POST(request: Request) {
   }
 
   if (engine === 'stockfish') {
-    const result = await playStockfishMove(fen, depth);
-    return NextResponse.json({
-      uci: result.uci,
-      san: result.san,
-      fen: result.fen,
-      probabilities: result.probabilities,
-      confidence: result.confidence,
-      droppedMoveCount: result.droppedMoveCount,
-      outcome: result.outcome,
-      scoreCp: (result as any).scoreCp ?? null,
-    });
+    try {
+      const result = await playStockfishMove(fen, depth);
+      return NextResponse.json({
+        uci: result.uci,
+        san: result.san,
+        fen: result.fen,
+        probabilities: result.probabilities,
+        confidence: result.confidence,
+        droppedMoveCount: result.droppedMoveCount,
+        outcome: result.outcome,
+        scoreCp: (result as any).scoreCp ?? null,
+      });
+    } catch (err) {
+      console.error("Stockfish fallback execution:", err);
+      const chess = new Chess(fen);
+      const legals = chess.moves({ verbose: true });
+      if (legals.length > 0) {
+        const fb = legals[0];
+        const applied = applyUci(chess, fb.lan);
+        return NextResponse.json({
+          uci: fb.lan,
+          san: applied.san,
+          fen: chess.fen(),
+          probabilities: { [fb.lan]: 1.0 },
+          confidence: 0.5,
+          droppedMoveCount: 0,
+          outcome: describeOutcome(chess),
+          scoreCp: 0,
+        });
+      }
+      return NextResponse.json({ error: "No legal moves.", retryable: false }, { status: 400 });
+    }
   }
 
   const key = apiKey();

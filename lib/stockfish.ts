@@ -111,7 +111,7 @@ function getStockfishEval(fen: string, depth = 12, multipv = 5): Promise<Stockfi
       p.stdin.write("uci\n");
       p.stdin.write(`setoption name MultiPV value ${multipv}\n`);
       p.stdin.write(`position fen ${fen}\n`);
-      p.stdin.write(`go depth ${depth}\n`);
+      p.stdin.write(`go depth ${depth} movetime 3000\n`);
     } catch {
       clearTimeout(timer);
       cleanup();
@@ -186,7 +186,7 @@ function evalSingleMove(fen: string, move: string, depth = 10): Promise<number |
 
     try {
       p.stdin.write(`position fen ${fen} moves ${move}\n`);
-      p.stdin.write(`go depth ${depth}\n`);
+      p.stdin.write(`go depth ${depth} movetime 3000\n`);
     } catch {
       clearTimeout(timer);
       cleanup();
@@ -322,8 +322,24 @@ export async function playStockfishMove(fen: string, depth = 14): Promise<Stockf
 
     const timeout = setTimeout(() => {
       cleanup();
+      const fallbackMove = topMoves.get(1) || (chess.moves({ verbose: true })[0]?.lan);
+      if (fallbackMove) {
+        try {
+          const applied = applyUci(chess, fallbackMove);
+          return resolve({
+            uci: fallbackMove,
+            san: applied.san,
+            scoreCp: topScores.get(1) ?? null,
+            fen: chess.fen(),
+            probabilities: { [fallbackMove]: 1.0 },
+            confidence: 0.8,
+            droppedMoveCount: 0,
+            outcome: describeOutcome(chess),
+          });
+        } catch (_) {}
+      }
       reject(new Error("Stockfish calculation timeout"));
-    }, 5000);
+    }, 6000);
 
     p.stdout.on("data", (data: Buffer) => {
       out += data.toString();
@@ -383,6 +399,6 @@ export async function playStockfishMove(fen: string, depth = 14): Promise<Stockf
 
     p.stdin.write("setoption name MultiPV value 3\n");
     p.stdin.write(`position fen ${fen}\n`);
-    p.stdin.write(`go depth ${depth}\n`);
+    p.stdin.write(`go depth ${depth} movetime 3000\n`);
   });
 }
