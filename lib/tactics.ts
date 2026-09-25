@@ -341,7 +341,7 @@ export function computeTektokkanExchange(chess: Chess, lastUci: string): Tektokk
         targetSq: toSq,
         defenderFrom: chosen.from,
         defenderPiece: pName,
-        explanation: `⚡ Tektokkan Taktis: Bidak di ${toSq} berada dalam jangkauan tembak lawan! Jika terjadi pemakanan di petak ini, lawan diprediksi membalas memakan balik dengan ${pName} dari ${chosen.from} (${chosen.san}).`,
+        explanation: `Kalkulasi Pertukaran: Bidak di ${toSq} berada dalam jangkauan tembak. Jika terjadi pemakanan di petak ini, lawan diprediksi membalas memakan balik dengan ${pName} dari ${chosen.from} (${chosen.san}).`,
         arrows: [
           { startSquare: chosen.from, endSquare: toSq, color: "#38bdf8" },
         ],

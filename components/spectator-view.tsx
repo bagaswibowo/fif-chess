@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Confetti } from "@/components/confetti";
-import { IconBot3D, IconLightning3D, IconTrophy3D } from "@/components/icons3d";
+import { IconBot3D, IconLightning3D, IconTrophy3D, IconSwap3D, IconVision3D } from "@/components/icons3d";
 import { describeOutcome, findLegalMove, type GameOutcome } from "@/lib/chess";
 import {
   identifyOpeningOrGambit,
@@ -255,10 +255,13 @@ export function SpectatorView({
 
       setPredictedMove(chosenPred ? { from: chosenPred.from, to: chosenPred.to } : null);
 
-      // Recognize Tactics (John A. Bain) or Openings/Gambits
-      const opening = identifyOpeningOrGambit(chess.history());
+      // Recognize Tactics (John A. Bain Ch. 1-13) or Openings (only during early opening moves)
+      const plyCount = chess.history().length;
+      const isEarlyOpening = plyCount <= 10;
       const tactic = identifyBainTactics(chess, data.uci);
-      const activeConcept = tactic || opening;
+      const opening = isEarlyOpening ? identifyOpeningOrGambit(chess.history()) : null;
+      // If a real tactic appears, prioritize tactic. If in early opening, show opening. Otherwise null (do not show stale badge).
+      const activeConcept = tactic || (isEarlyOpening ? opening : null);
 
       const actorLabel = actor === "jev" ? "Jev AI" : actor === "fly" ? "Fruit Fly" : "Stockfish 15";
       let summaryText = "";
@@ -383,7 +386,7 @@ export function SpectatorView({
               </span>
             </h2>
             <div className="text-[10px] text-neutral-400 truncate">
-              {status === "running" ? "⚡ Pertandingan Sedang Berlangsung..." : status === "finished" ? `🏁 Selesai (${moves.length} langkah)` : "Siap Dimulai"}
+              {status === "running" ? "Pertandingan Sedang Berlangsung..." : status === "finished" ? `Selesai (${moves.length} langkah)` : "Siap Dimulai"}
             </div>
           </div>
         </div>
@@ -396,7 +399,7 @@ export function SpectatorView({
               size="sm"
               className="bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-xs h-7 px-2.5 shadow-sm active:translate-y-[1px]"
             >
-              {status === "idle" ? "▶ Mulai" : "▶ Resume"}
+              {status === "idle" ? "Mulai" : "Lanjutkan"}
             </Button>
           ) : (
             <Button
@@ -405,7 +408,7 @@ export function SpectatorView({
               variant="outline"
               className="border-red-500/50 text-red-400 font-bold text-xs h-7 px-2.5 active:translate-y-[1px]"
             >
-              ⏸ Pause
+              Jeda
             </Button>
           )}
 
@@ -416,7 +419,7 @@ export function SpectatorView({
               variant="outline"
               className="border-[#36322d] text-neutral-300 font-bold text-xs h-7 px-2 active:translate-y-[1px]"
             >
-              ↺ Reset
+              Reset
             </Button>
           )}
 
@@ -424,10 +427,10 @@ export function SpectatorView({
             onClick={swapSides}
             size="sm"
             variant="outline"
-            className="border-[#81b64c]/60 text-[#81b64c] hover:bg-[#81b64c]/10 font-bold text-xs h-7 px-2.5 flex items-center gap-1 active:translate-y-[1px]"
+            className="border-[#81b64c]/60 text-[#81b64c] hover:bg-[#81b64c]/10 font-bold text-xs h-7 px-2.5 flex items-center gap-1.5 active:translate-y-[1px]"
             title="Tukar posisi Putih dan Hitam"
           >
-            <span className="text-sm">⇄</span>
+            <IconSwap3D size={14} />
             <span>Tukar Sisi</span>
           </Button>
 
@@ -454,7 +457,7 @@ export function SpectatorView({
               size="sm"
               className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs h-7 px-2.5 shadow-sm active:translate-y-[1px]"
             >
-              🔍 Review
+              Review
             </Button>
           )}
         </div>
@@ -546,7 +549,7 @@ export function SpectatorView({
             </span>
             <span className="flex items-center gap-2">
               <span className="w-3.5 h-3.5 rounded bg-sky-400 border border-sky-300" />
-              <span className="text-sky-400">Prediksi Tektokkan</span>
+              <span className="text-sky-400 font-bold">Prediksi Balasan</span>
             </span>
           </div>
         </div>
@@ -556,14 +559,17 @@ export function SpectatorView({
           
           {/* LIVE AI COMMENTATOR & TACTICS CARD - Tipografi Besar & Kontras Jelas */}
           <Card className="bg-[#262421] border-[#36322d] text-white shadow-xl overflow-hidden">
-            <CardHeader className="py-3 px-4 border-b border-[#36322d] bg-[#1e1c19] flex flex-row items-center justify-between">
+            <CardHeader className="py-3 px-4 border-b border-[#36322d] bg-[#1e1c19] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <CardTitle className="text-sm md:text-base font-black uppercase tracking-wider text-white flex items-center gap-2">
-                <span>🎙️ Komentator & Taktik AI</span>
+                <IconBot3D size={20} className="shrink-0" />
+                <span>Komentator & Taktik AI</span>
               </CardTitle>
               {commentary?.tacticalBadge && (
-                <span className={`text-xs md:text-sm font-black px-2.5 py-1 rounded-full border shadow-sm ${commentary.tacticalBadge.badgeColor}`}>
-                  {commentary.tacticalBadge.name}
-                </span>
+                <div className="self-start sm:self-auto shrink-0">
+                  <span className={`text-xs md:text-sm font-black px-3 py-1 rounded-full border shadow-sm inline-block ${commentary.tacticalBadge.badgeColor}`}>
+                    {commentary.tacticalBadge.name}
+                  </span>
+                </div>
               )}
             </CardHeader>
 
@@ -573,7 +579,7 @@ export function SpectatorView({
                   {/* Tactical Concept Explanation if detected */}
                   {commentary.tacticalBadge && (
                     <div className="p-3 rounded-xl bg-[#171614] border-2 border-amber-500/30 text-xs md:text-sm text-neutral-200 leading-relaxed">
-                      <span className="font-black text-amber-400 text-sm">📖 Konsep Taktis: </span>
+                      <span className="font-black text-amber-400 text-sm">Konsep Taktis: </span>
                       {commentary.tacticalBadge.description}
                     </div>
                   )}
@@ -593,7 +599,7 @@ export function SpectatorView({
                   {/* Tektokkan Recapture or Next Move Prediction */}
                   <div className="p-3 rounded-xl bg-[#14232c] border-2 border-sky-500/40 text-xs md:text-sm shadow-inner">
                     <div className="font-black text-sky-400 text-sm flex items-center gap-1.5 mb-1">
-                      <span>⚡ Prediksi Respons (Tektokkan):</span>
+                      <span>Prediksi Respons Lawan:</span>
                     </div>
                     <div className="text-sky-100 font-bold leading-relaxed">
                       {commentary.prediction}
@@ -602,7 +608,7 @@ export function SpectatorView({
                 </>
               ) : (
                 <div className="text-center py-6 text-neutral-400 font-medium italic text-sm">
-                  Tekan "▶ Mulai" untuk mendengarkan ulasan strategi dan tektokkan taktis secara langsung.
+                  Tekan "Mulai" untuk mengaktifkan analisis taktik dan prediksi langkah secara langsung.
                 </div>
               )}
             </CardContent>
