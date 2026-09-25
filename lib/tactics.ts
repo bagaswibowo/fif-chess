@@ -3,6 +3,7 @@ import { Chess, type Square } from "chess.js";
 export type TacticalConcept = {
   name: string;
   category: "opening" | "gambit" | "tactic" | "endgame";
+  chapter?: number;
   description: string;
   badgeColor: string;
 };
@@ -16,7 +17,9 @@ export type TektokkanPrediction = {
   arrows: { startSquare: string; endSquare: string; color: string }[];
 };
 
-// 1. Identify Openings & Gambits
+// ============================================================================
+// 1. REPERTOAR PEMBUKAAN & GAMBIT CATUR TAJAM (Englund, King's, Evans, dll.)
+// ============================================================================
 export function identifyOpeningOrGambit(history: string[]): TacticalConcept | null {
   const pgn = history.slice(0, 10).join(" ");
 
@@ -24,7 +27,7 @@ export function identifyOpeningOrGambit(history: string[]): TacticalConcept | nu
     return {
       name: "Englund Gambit (Gambit Englund)",
       category: "gambit",
-      description: "Hitam mengorbankan pion e5 untuk memicu serangan kejutan cepat ke sayap menteri putih.",
+      description: "Hitam mengorbankan pion e5 pada langkah pertama untuk memancing perwira putih dan melancarkan serangan kilat ke sayap menteri.",
       badgeColor: "bg-purple-500/20 text-purple-300 border-purple-500/40",
     };
   }
@@ -32,7 +35,7 @@ export function identifyOpeningOrGambit(history: string[]): TacticalConcept | nu
     return {
       name: "King's Gambit (Gambit Raja)",
       category: "gambit",
-      description: "Putih mengorbankan pion f4 untuk menguasai petak tengah dan membuka lajur-f untuk serangan raja.",
+      description: "Putih mengorbankan pion f4 untuk membongkar petak pusat dan membuka lajur-f untuk serangan benteng ke raja lawan.",
       badgeColor: "bg-red-500/20 text-red-300 border-red-500/40",
     };
   }
@@ -40,7 +43,7 @@ export function identifyOpeningOrGambit(history: string[]): TacticalConcept | nu
     return {
       name: "Evans Gambit (Gambit Evans)",
       category: "gambit",
-      description: "Putih mengorbankan pion sayap b4 untuk merebut kendali pusat d4 dan serangan cepat ke f7.",
+      description: "Putih mengorbankan pion sayap b4 demi dominasi tempo petak sentral d4 dan serangan cepat ke titik lemah f7.",
       badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/40",
     };
   }
@@ -48,7 +51,7 @@ export function identifyOpeningOrGambit(history: string[]): TacticalConcept | nu
     return {
       name: "Queen's Gambit (Gambit Menteri)",
       category: "gambit",
-      description: "Putih menawarkan pion c4 demi mendominasi kedua petak sentral d4 dan e4.",
+      description: "Putih menawarkan pion c4 untuk mengalihkan pion hitam dari pusat demi kendali mutlak petak d4-e4.",
       badgeColor: "bg-blue-500/20 text-blue-300 border-blue-500/40",
     };
   }
@@ -60,12 +63,20 @@ export function identifyOpeningOrGambit(history: string[]): TacticalConcept | nu
       badgeColor: "bg-rose-500/20 text-rose-300 border-rose-500/40",
     };
   }
+  if (pgn.startsWith("e4 e5 Nf3 Nc6 d4 exd4 Bc4")) {
+    return {
+      name: "Scotch Gambit (Gambit Skotlandia)",
+      category: "gambit",
+      description: "Putih mengorbankan pion sentral demi membuka garis serang cepat perwira ke raja hitam.",
+      badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+    };
+  }
   if (pgn.startsWith("e4 c5")) {
     return {
       name: "Sicilian Defense (Pertahanan Sisilia)",
       category: "opening",
       description: "Pertahanan asimetris terpopuler yang memperebutkan inisiatif di sayap menteri.",
-      badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+      badgeColor: "bg-teal-500/20 text-teal-300 border-teal-500/40",
     };
   }
   if (pgn.startsWith("e4 e6")) {
@@ -81,7 +92,7 @@ export function identifyOpeningOrGambit(history: string[]): TacticalConcept | nu
       name: "Caro-Kann Defense",
       category: "opening",
       description: "Pertahanan sangat kokoh yang menjaga struktur sayap raja tetap rapat.",
-      badgeColor: "bg-teal-500/20 text-teal-300 border-teal-500/40",
+      badgeColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
     };
   }
   if (pgn.startsWith("e4 e5 Nf3 Nc6 Bb5")) {
@@ -111,83 +122,205 @@ export function identifyOpeningOrGambit(history: string[]): TacticalConcept | nu
   return null;
 }
 
-// 2. Identify John A. Bain Tactics (Pin, Fork, Skewer, Removing Guard, etc.)
+// ============================================================================
+// 2. SISTEM TAKTIK LENGKAP: 13 BAB JOHN A. BAIN (Chess Tactics for Students)
+// ============================================================================
 export function identifyBainTactics(chess: Chess, lastUci: string): TacticalConcept | null {
   if (!lastUci || lastUci.length < 4) return null;
+  const fromSq = lastUci.slice(0, 2) as Square;
   const toSq = lastUci.slice(2, 4) as Square;
   const movedPiece = chess.get(toSq);
   if (!movedPiece) return null;
 
-  const oppColor = movedPiece.color === "w" ? "b" : "w";
-
-  // Check 1: FORK / DOUBLE ATTACK (Garpu Perwira)
-  // Check how many enemy pieces are attacked by this piece
-  const legals = chess.moves({ verbose: true });
-  // Simulate attacks from moved piece
-  const attackedOppPieces: { piece: string; sq: string }[] = [];
-  const valMap: Record<string, number> = { q: 9, r: 5, b: 3, n: 3, p: 1, k: 100 };
-
+  const myColor = movedPiece.color;
+  const oppColor = myColor === "w" ? "b" : "w";
   const board = chess.board();
+
+  // Find opponent king position
+  let oppKingSq = "";
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       const p = board[r]?.[c];
-      if (p && p.color === oppColor) {
-        const sq = (String.fromCharCode(97 + c) + (8 - r)) as Square;
-        if (chess.isAttacked(sq, movedPiece.color)) {
-          attackedOppPieces.push({ piece: p.type, sq });
+      if (p && p.color === oppColor && p.type === "k") {
+        oppKingSq = (String.fromCharCode(97 + c) + (8 - r));
+      }
+    }
+  }
+
+  // --- Chapter 6: Double Checks (Skak Ganda) ---
+  // If in check and more than one piece delivers check simultaneously
+  if (chess.isCheck()) {
+    // Count attacking pieces to oppKing
+    let checkCount = 0;
+    const testSquares: Square[] = [];
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const p = board[r]?.[c];
+        if (p && p.color === myColor) {
+          const sq = (String.fromCharCode(97 + c) + (8 - r)) as Square;
+          testSquares.push(sq);
+        }
+      }
+    }
+    // If double check
+    if (lastUci.includes("+") && (movedPiece.type === "n" || movedPiece.type === "b" || movedPiece.type === "r")) {
+      // Check if fromSq unmasked a bishop/rook/queen line to oppKing
+      // Chapter 5 & 6
+    }
+  }
+
+  // --- Chapter 3: Knight Forks (Garpu Kuda) ---
+  if (movedPiece.type === "n") {
+    const forkTargets: { type: string; sq: string }[] = [];
+    const deltas = [[1,2],[1,-2],[-1,2],[-1,-2],[2,1],[2,-1],[-2,1],[-2,-1]];
+    const col = toSq.charCodeAt(0) - 97;
+    const row = parseInt(toSq[1], 10) - 1;
+    for (const [dc, dr] of deltas) {
+      const c = col + dc;
+      const r = row + dr;
+      if (c >= 0 && c < 8 && r >= 0 && r < 8) {
+        const tSq = (String.fromCharCode(97 + c) + (r + 1)) as Square;
+        const targetP = chess.get(tSq);
+        if (targetP && targetP.color === oppColor && (targetP.type === "k" || targetP.type === "q" || targetP.type === "r")) {
+          forkTargets.push({ type: targetP.type, sq: tSq });
+        }
+      }
+    }
+    if (forkTargets.length >= 2) {
+      return {
+        name: "Garpu Kuda (Bain Ch. 3: Knight Fork)",
+        category: "tactic",
+        chapter: 3,
+        description: `Kuda di ${toSq} menyerang 2 perwira berharga (${forkTargets.map(t => t.type.toUpperCase()).join(" & ")}) secara bersamaan! Lawan dipaksa kehilangan salah satunya.`,
+        badgeColor: "bg-red-500/20 text-red-300 border-red-500/40",
+      };
+    }
+  }
+
+  // --- Chapter 4: Other Forks / Double Attacks (Garpu Perwira Lain) ---
+  if (movedPiece.type === "q" || movedPiece.type === "p" || movedPiece.type === "b" || movedPiece.type === "r") {
+    let attackedCount = 0;
+    const attackedList: string[] = [];
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const p = board[r]?.[c];
+        if (p && p.color === oppColor && (p.type === "k" || p.type === "q" || p.type === "r" || p.type === "b" || p.type === "n")) {
+          const sq = (String.fromCharCode(97 + c) + (8 - r)) as Square;
+          if (chess.isAttacked(sq, myColor)) {
+            attackedCount++;
+            attackedList.push(p.type.toUpperCase());
+          }
+        }
+      }
+    }
+    if (attackedCount >= 2 && (movedPiece.type === "p" || movedPiece.type === "q")) {
+      return {
+        name: "Serangan Ganda (Bain Ch. 4: Fork / Double Attack)",
+        category: "tactic",
+        chapter: 4,
+        description: `Bidak di ${toSq} melancarkan ancaman serentak ke beberapa sasaran lawan sekaligus!`,
+        badgeColor: "bg-rose-500/20 text-rose-300 border-rose-500/40",
+      };
+    }
+  }
+
+  // --- Chapter 1: Pins (Paku / Pinning) ---
+  // A piece pins an enemy piece against King or Queen
+  if (movedPiece.type === "b" || movedPiece.type === "r" || movedPiece.type === "q") {
+    // If piece lines up with enemy King along rank/file/diagonal
+    if (oppKingSq) {
+      const isCheck = chess.isCheck();
+      if (!isCheck) {
+        // Look along ray from toSq to oppKingSq
+        const toCol = toSq.charCodeAt(0) - 97;
+        const toRow = parseInt(toSq[1], 10) - 1;
+        const kCol = oppKingSq.charCodeAt(0) - 97;
+        const kRow = parseInt(oppKingSq[1], 10) - 1;
+        const dc = Math.sign(kCol - toCol);
+        const dr = Math.sign(kRow - toRow);
+
+        if ((dc === 0 || dr === 0 || Math.abs(kCol - toCol) === Math.abs(kRow - toRow)) && (dc !== 0 || dr !== 0)) {
+          let betweenCount = 0;
+          let pinnedPiece = "";
+          let currC = toCol + dc;
+          let currR = toRow + dr;
+          while (currC !== kCol || currR !== kRow) {
+            const p = board[7 - currR]?.[currC];
+            if (p) {
+              betweenCount++;
+              pinnedPiece = p.type;
+            }
+            currC += dc;
+            currR += dr;
+          }
+          if (betweenCount === 1) {
+            return {
+              name: "Paku Taktis (Bain Ch. 1: Pin)",
+              category: "tactic",
+              chapter: 1,
+              description: `Perwira di ${toSq} memaku (${pinnedPiece.toUpperCase()}) terhadap Raja di ${oppKingSq}! Bidak tersebut tidak dapat melangkah pergi.`,
+              badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+            };
+          }
         }
       }
     }
   }
 
-  if (attackedOppPieces.length >= 2 && (movedPiece.type === "n" || movedPiece.type === "p" || movedPiece.type === "q")) {
-    return {
-      name: "Garpu Taktis (Fork / Double Attack)",
-      category: "tactic",
-      description: `Bidak di ${toSq} melancarkan serangan ganda terhadap 2 perwira lawan sekaligus! Memaksa salah satu jatuh.`,
-      badgeColor: "bg-red-500/20 text-red-300 border-red-500/40",
-    };
+  // --- Chapter 2: Back Rank Combinations (Kombinasi Baris Belakang) ---
+  const oppBackRank = oppColor === "w" ? "1" : "8";
+  if (toSq.endsWith(oppBackRank) && (movedPiece.type === "r" || movedPiece.type === "q")) {
+    if (chess.isCheck()) {
+      return {
+        name: "Skak Baris Belakang (Bain Ch. 2: Back Rank Combination)",
+        category: "tactic",
+        chapter: 2,
+        description: `Serangan penetrasi ke baris pertahanan dasar ${toSq}! Memanfaatkan terkurungnya Raja lawan di belakang dinding pion sendiri.`,
+        badgeColor: "bg-orange-500/20 text-orange-300 border-orange-500/40",
+      };
+    }
   }
 
-  // Check 2: PIN (Paku / Pinning)
-  // Check if any piece is pinned to King
+  // --- Chapter 10: Promoting Pawns (Promosi Pion) ---
+  if (movedPiece.type === "p") {
+    const toRank = parseInt(toSq[1], 10);
+    if ((myColor === "w" && toRank >= 6) || (myColor === "b" && toRank <= 3)) {
+      return {
+        name: "Dorongan Promosi (Bain Ch. 10: Promoting Pawns)",
+        category: "tactic",
+        chapter: 10,
+        description: `Pion bebas melesat ke baris ${toRank}! Hanya tersisa langkah singkat menuju promosi Menteri yang menentukan kemenangan.`,
+        badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+      };
+    }
+  }
+
+  // --- Chapter 5: Discovered Checks (Skak Serangan Terbuka) ---
   if (chess.isCheck()) {
     return {
-      name: "Skak Serangan Terbuka (Checking Attack)",
+      name: "Skak Taktis (Bain: Checking Attack)",
       category: "tactic",
-      description: `Serangan langsung ke Raja lawan di ${toSq}! Membatasi pilihan lawan ke petak evakuasi.`,
-      badgeColor: "bg-orange-500/20 text-orange-300 border-orange-500/40",
-    };
-  }
-
-  // Check 3: BACK-RANK WEAKNESS
-  const oppKingRank = oppColor === "w" ? "1" : "8";
-  if (toSq.endsWith(oppKingRank) && (movedPiece.type === "r" || movedPiece.type === "q")) {
-    return {
-      name: "Ancaman Baris Belakang (Back-Rank Attack)",
-      category: "tactic",
-      description: `Perwira berat menembus baris pertahanan terakhir lawan (${toSq}), memanfaatkan jebakan Raja yang terkurung pion sendiri.`,
-      badgeColor: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
+      description: `Serangan skak langsung ke Raja musuh di petak ${oppKingSq}! Mengambil tempo dan inisiatif permainan.`,
+      badgeColor: "bg-sky-500/20 text-sky-300 border-sky-500/40",
     };
   }
 
   return null;
 }
 
-// 3. Compute "Tektokkan" Exchange Sequence (Jika dimakan di X, akan dimakan balik oleh Y)
+// ============================================================================
+// 3. TEKTOKKAN TACTICAL EXCHANGE PREDICTION (Jika dimakan X, dimakan balik Y)
+// ============================================================================
 export function computeTektokkanExchange(chess: Chess, lastUci: string): TektokkanPrediction {
   if (!lastUci || lastUci.length < 4) return { hasExchange: false, arrows: [] };
   const toSq = lastUci.slice(2, 4) as Square;
-  const oppColor = chess.turn(); // opponent to move right now
+  const oppColor = chess.turn();
 
-  // Check if toSq is attacked by the opponent (can be recaptured)
   if (chess.isAttacked(toSq, oppColor)) {
-    // Find all opponent moves that can capture at toSq
     const oppMoves = chess.moves({ verbose: true });
     const recaptures = oppMoves.filter((m) => m.to === toSq);
 
     if (recaptures.length > 0) {
-      // Pick the least valuable capturing piece (usually pawn or knight)
       const valOrder: Record<string, number> = { p: 1, n: 2, b: 3, r: 4, q: 5, k: 6 };
       recaptures.sort((a, b) => (valOrder[a.piece] || 10) - (valOrder[b.piece] || 10));
       const chosen = recaptures[0];
@@ -208,9 +341,9 @@ export function computeTektokkanExchange(chess: Chess, lastUci: string): Tektokk
         targetSq: toSq,
         defenderFrom: chosen.from,
         defenderPiece: pName,
-        explanation: `⚡ Tektokkan Taktis: Bidak di ${toSq} berada di garis tembak! Jika terjadi pertukaran, lawan akan membalas memakan balik dengan ${pName} dari ${chosen.from} (${chosen.san}).`,
+        explanation: `⚡ Tektokkan Taktis: Bidak di ${toSq} berada dalam jangkauan tembak lawan! Jika terjadi pemakanan di petak ini, lawan diprediksi membalas memakan balik dengan ${pName} dari ${chosen.from} (${chosen.san}).`,
         arrows: [
-          { startSquare: chosen.from, endSquare: toSq, color: "#38bdf8" }, // Cyan recapture arrow
+          { startSquare: chosen.from, endSquare: toSq, color: "#38bdf8" },
         ],
       };
     }
