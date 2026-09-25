@@ -301,6 +301,15 @@ export function SpectatorView({
     if (!abortRef.current) setStatus("finished");
   }, [whiteEngine, blackEngine, jevDepth, sfDepth, seed, currentFen]);
 
+    const swapSides = () => {
+    if (status === "running") stopMatch();
+    const prevWhite = whiteEngine;
+    const prevBlack = blackEngine;
+    setWhiteEngine(prevBlack);
+    setBlackEngine(prevWhite);
+    resetMatch();
+  };
+
   const stopMatch = () => {
     abortRef.current = true;
     setStatus("paused");
@@ -413,6 +422,17 @@ export function SpectatorView({
           )}
 
           <Button
+            onClick={swapSides}
+            size="sm"
+            variant="outline"
+            className="border-[#81b64c]/60 text-[#81b64c] hover:bg-[#81b64c]/10 font-bold text-xs h-7 px-2.5 flex items-center gap-1 active:translate-y-[1px]"
+            title="Tukar posisi Putih dan Hitam"
+          >
+            <span className="text-sm">⇄</span>
+            <span>Tukar Sisi</span>
+          </Button>
+
+          <Button
             onClick={() => setShowSettings(!showSettings)}
             size="sm"
             variant="outline"
@@ -483,14 +503,20 @@ export function SpectatorView({
         {/* LEFT COLUMN (7 Cols): Chess Arena (Eval Bar + Top Player + Board + Bottom Player + Legend) */}
         <div className="lg:col-span-7 space-y-2">
           
-          {/* Top Player (Black) with Captured Pieces */}
-          <div className="bg-[#1c1a18] px-3 py-1.5 rounded-xl border border-[#36322d] flex items-center justify-between gap-2 shadow-sm">
+          {/* Top Player (Black) with 1-Click Engine Selector & Captured Pieces */}
+          <div className="bg-[#1c1a18] px-3 py-2 rounded-xl border border-[#36322d] flex items-center justify-between gap-2 shadow-sm">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-3.5 h-3.5 rounded-full bg-neutral-900 border border-neutral-600 shrink-0" />
-              <span className="text-xs md:text-sm font-bold text-white truncate">
-                {blackEngine === "jev" ? "Jev AI" : blackEngine === "fly" ? "Fruit Fly Brain" : "Stockfish 15"}
-              </span>
-              <span className="text-[10px] text-neutral-400 font-mono">
+              <div className="w-4 h-4 rounded-full bg-neutral-900 border-2 border-neutral-600 shrink-0" />
+              <select
+                value={blackEngine}
+                onChange={(e) => { setBlackEngine(e.target.value as any); if (status !== "idle") resetMatch(); }}
+                className="bg-[#262421] text-xs md:text-sm font-black text-white border border-[#36322d] rounded-lg px-2 py-1 focus:outline-none focus:border-[#81b64c] cursor-pointer"
+              >
+                <option value="stockfish">Stockfish 15 NNUE (Hitam)</option>
+                <option value="jev">Jev AI Connectome (Hitam)</option>
+                <option value="fly">Fruit Fly Brain (Hitam)</option>
+              </select>
+              <span className="text-xs text-neutral-400 font-mono font-bold">
                 {whiteCp !== null ? (whiteCp < 0 ? `+${(-whiteCp/100).toFixed(1)}` : `-${(whiteCp/100).toFixed(1)}`) : "="}
               </span>
             </div>
@@ -525,33 +551,39 @@ export function SpectatorView({
             </div>
           </div>
 
-          {/* Bottom Player (White) with Captured Pieces */}
-          <div className="bg-[#1c1a18] px-3 py-1.5 rounded-xl border border-[#36322d] flex items-center justify-between gap-2 shadow-sm">
+          {/* Bottom Player (White) with 1-Click Engine Selector & Captured Pieces */}
+          <div className="bg-[#1c1a18] px-3 py-2 rounded-xl border border-[#36322d] flex items-center justify-between gap-2 shadow-sm">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-3.5 h-3.5 rounded-full bg-white border border-neutral-300 shrink-0" />
-              <span className="text-xs md:text-sm font-bold text-white truncate">
-                {whiteEngine === "jev" ? "Jev AI" : whiteEngine === "fly" ? "Fruit Fly Brain" : "Stockfish 15"}
-              </span>
-              <span className="text-[10px] text-emerald-400 font-mono font-bold">
+              <div className="w-4 h-4 rounded-full bg-white border-2 border-neutral-300 shrink-0" />
+              <select
+                value={whiteEngine}
+                onChange={(e) => { setWhiteEngine(e.target.value as any); if (status !== "idle") resetMatch(); }}
+                className="bg-[#262421] text-xs md:text-sm font-black text-white border border-[#36322d] rounded-lg px-2 py-1 focus:outline-none focus:border-[#81b64c] cursor-pointer"
+              >
+                <option value="jev">Jev AI Connectome (Putih)</option>
+                <option value="stockfish">Stockfish 15 NNUE (Putih)</option>
+                <option value="fly">Fruit Fly Brain (Putih)</option>
+              </select>
+              <span className="text-xs text-emerald-400 font-mono font-bold">
                 {whiteCp !== null ? (whiteCp > 0 ? `+${(whiteCp/100).toFixed(1)}` : (whiteCp/100).toFixed(1)) : "="}
               </span>
             </div>
             <CapturedPiecesBar fen={currentFen} side="white" />
           </div>
 
-          {/* Compact Visual Arrows Legend */}
-          <div className="bg-[#191816] px-3 py-1.5 rounded-lg border border-[#36322d] flex items-center justify-around text-[11px] text-neutral-400">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-yellow-500" />
+          {/* Visual Arrows Legend - Besar & Jelas Terbaca */}
+          <div className="bg-[#191816] px-3.5 py-2.5 rounded-xl border border-[#36322d] flex items-center justify-around text-xs md:text-sm font-bold text-neutral-300 shadow-sm">
+            <span className="flex items-center gap-2">
+              <span className="w-3.5 h-3.5 rounded bg-yellow-500 border border-yellow-300" />
               <span>Langkah Terkini</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-red-500" />
-              <span className="text-red-400 font-bold">Target Diancam</span>
+            <span className="flex items-center gap-2">
+              <span className="w-3.5 h-3.5 rounded bg-red-500 border border-red-300" />
+              <span className="text-red-400">Target Diancam</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-sky-400" />
-              <span className="text-sky-400 font-bold">Prediksi / Tektokkan</span>
+            <span className="flex items-center gap-2">
+              <span className="w-3.5 h-3.5 rounded bg-sky-400 border border-sky-300" />
+              <span className="text-sky-400">Prediksi Tektokkan</span>
             </span>
           </div>
         </div>
@@ -559,54 +591,54 @@ export function SpectatorView({
         {/* RIGHT COLUMN (5 Cols): Live AI Commentary & Move History */}
         <div className="lg:col-span-5 space-y-3">
           
-          {/* LIVE AI COMMENTATOR & TACTICS CARD */}
-          <Card className="bg-[#262421] border-[#36322d] text-white shadow-lg overflow-hidden">
-            <CardHeader className="py-2.5 px-3.5 border-b border-[#36322d] bg-[#1e1c19] flex flex-row items-center justify-between">
-              <CardTitle className="text-xs font-black uppercase tracking-wider text-neutral-300 flex items-center gap-1.5">
+          {/* LIVE AI COMMENTATOR & TACTICS CARD - Tipografi Besar & Kontras Jelas */}
+          <Card className="bg-[#262421] border-[#36322d] text-white shadow-xl overflow-hidden">
+            <CardHeader className="py-3 px-4 border-b border-[#36322d] bg-[#1e1c19] flex flex-row items-center justify-between">
+              <CardTitle className="text-sm md:text-base font-black uppercase tracking-wider text-white flex items-center gap-2">
                 <span>🎙️ Komentator & Taktik AI</span>
               </CardTitle>
               {commentary?.tacticalBadge && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${commentary.tacticalBadge.badgeColor}`}>
+                <span className={`text-xs md:text-sm font-black px-2.5 py-1 rounded-full border shadow-sm ${commentary.tacticalBadge.badgeColor}`}>
                   {commentary.tacticalBadge.name}
                 </span>
               )}
             </CardHeader>
 
-            <CardContent className="p-3 space-y-2.5 text-xs">
+            <CardContent className="p-4 space-y-3.5 text-sm md:text-base">
               {commentary ? (
                 <>
                   {/* Tactical Concept Explanation if detected */}
                   {commentary.tacticalBadge && (
-                    <div className="p-2 rounded-lg bg-[#171614] border border-[#36322d] text-[11px] text-neutral-300">
-                      <span className="font-bold text-amber-400">📖 Konsep Taktis: </span>
+                    <div className="p-3 rounded-xl bg-[#171614] border-2 border-amber-500/30 text-xs md:text-sm text-neutral-200 leading-relaxed">
+                      <span className="font-black text-amber-400 text-sm">📖 Konsep Taktis: </span>
                       {commentary.tacticalBadge.description}
                     </div>
                   )}
 
                   {/* Summary of current move */}
-                  <div className="flex items-start gap-2">
-                    <span className="text-neutral-400 font-bold shrink-0">Langkah:</span>
-                    <span className="text-white font-medium">{commentary.summary}</span>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-neutral-400 font-black shrink-0 text-sm">Langkah:</span>
+                    <span className="text-white font-bold leading-snug">{commentary.summary}</span>
                   </div>
 
                   {/* Target & Threat */}
-                  <div className="flex items-start gap-2">
-                    <span className="text-red-400 font-bold shrink-0">Ancaman:</span>
-                    <span className="text-neutral-300">{commentary.target}</span>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-red-400 font-black shrink-0 text-sm">Ancaman:</span>
+                    <span className="text-neutral-200 font-semibold leading-snug">{commentary.target}</span>
                   </div>
 
                   {/* Tektokkan Recapture or Next Move Prediction */}
-                  <div className="p-2 rounded-lg bg-[#14232c] border border-sky-500/30 text-[11px]">
-                    <div className="font-bold text-sky-400 flex items-center gap-1 mb-0.5">
+                  <div className="p-3 rounded-xl bg-[#14232c] border-2 border-sky-500/40 text-xs md:text-sm shadow-inner">
+                    <div className="font-black text-sky-400 text-sm flex items-center gap-1.5 mb-1">
                       <span>⚡ Prediksi Respons (Tektokkan):</span>
                     </div>
-                    <div className="text-sky-200">
+                    <div className="text-sky-100 font-bold leading-relaxed">
                       {commentary.prediction}
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="text-center py-4 text-neutral-500 italic text-xs">
+                <div className="text-center py-6 text-neutral-400 font-medium italic text-sm">
                   Tekan "▶ Mulai" untuk mendengarkan ulasan strategi dan tektokkan taktis secara langsung.
                 </div>
               )}
