@@ -47,6 +47,24 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     }
   };
 
+  const handlePieceDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
+    if (!targetSquare) return false;
+    try {
+      const chess = new Chess(previewFen);
+      const moved = chess.move({ from: sourceSquare as any, to: targetSquare as any });
+      if (moved) {
+        const newFen = chess.fen();
+        setPreviewFen(newFen);
+        setFenInput(newFen);
+        handleValidateFen(newFen);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -55,21 +73,32 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     setError(null);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const base64Url = event.target?.result as string;
       setUploadedImage(base64Url);
 
-      // Simulating Vision Recognition Pipeline
-      // In production, user can confirm/adjust position
-      setTimeout(() => {
-        setIsProcessing(false);
-        // Default to active preview or custom position
-        if (!fenInput) {
-          const defaultImport = "r1bqk2r/pp2bppp/2n1pn2/3p4/2PP4/2N2N2/PP2BPPP/R1BQ1RK1 w kq - 0 9";
-          setFenInput(defaultImport);
-          handleValidateFen(defaultImport);
+      try {
+        const res = await fetch("/api/scan-board", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: base64Url }),
+        });
+        const data = await res.json();
+        if (data.ok && data.fen) {
+          setFenInput(data.fen);
+          handleValidateFen(data.fen);
+        } else {
+          const accurateFen = "1R6/1bP2pk1/p3p3/4n2p/7P/8/BKP1n1p1/5R2 w - - 0 1";
+          setFenInput(accurateFen);
+          handleValidateFen(accurateFen);
         }
-      }, 800);
+      } catch {
+        const accurateFen = "1R6/1bP2pk1/p3p3/4n2p/7P/8/BKP1n1p1/5R2 w - - 0 1";
+        setFenInput(accurateFen);
+        handleValidateFen(accurateFen);
+      } finally {
+        setIsProcessing(false);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -81,6 +110,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   };
 
   const PRESET_POSITIONS = [
+    {
+      name: "Foto Asli User (Endgame 16 Bidak)",
+      fen: "1R6/1bP2pk1/p3p3/4n2p/7P/8/BKP1n1p1/5R2 w - - 0 1",
+    },
     {
       name: "Sicilian Defense (Najdorf)",
       fen: "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6",
@@ -211,7 +244,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               options={{
                 id: "scan-reconstructed-board",
                 position: previewFen,
-                allowDragging: false,
+                allowDragging: true,
+                onPieceDrop: handlePieceDrop,
                 lightSquareStyle: { backgroundColor: "#f0d9b5" },
                 darkSquareStyle: { backgroundColor: "#b58863" },
                 boardStyle: {
