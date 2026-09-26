@@ -163,23 +163,23 @@ body {
 .ctl-sm { min-height: var(--ctl-h-sm); padding: 0 0.9rem; font-size: var(--text-sm); border-radius: 0.6rem; }
 .ctl-lg { min-height: var(--ctl-h-lg); padding: 0 1.75rem; font-size: var(--text-base); font-weight: 800; border-radius: 0.85rem; }
 
-/* Primary Button: Chess.com Big Green CTA with Shadow */
+/* Primary Button: Solid 3D Tactile (No Glow) */
 .ctl-primary {
   background: #81b64c;
   border-color: #689938;
   color: #ffffff;
-  box-shadow: 0 4px 0 #4d7a27, 0 6px 16px rgba(129, 182, 76, 0.35);
+  box-shadow: 0 3px 0 #4d7a27;
 }
 
 .ctl-primary:hover:not(:disabled) {
   background: #8ec357;
   border-color: #72a342;
-  box-shadow: 0 4px 0 #4d7a27, 0 8px 20px rgba(129, 182, 76, 0.45);
+  box-shadow: 0 3px 0 #4d7a27;
 }
 
 .ctl-primary:active:not(:disabled) {
   transform: translateY(2px);
-  box-shadow: 0 2px 0 #4d7a27;
+  box-shadow: 0 1px 0 #4d7a27;
 }
 
 .ctl-quiet {
