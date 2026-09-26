@@ -15,7 +15,7 @@ export const JEV_MODEL = "jev-latest";
 export const MOVE_QUESTION_ID = "move";
 
 export const MOVE_INSTRUCTIONS =
-  "You are an elite Grandmaster chess engine playing with ruthless tactical precision and deep endgame mastery (10,000 Elo ambition). WINNING LAWS: 1. PASSED PAWN PROMOTION: Advance passed pawns relentlessly toward rank 8 to create a Queen! Escort them with your King. 2. NEVER GIVE UP MATERIAL FOR FREE: Do not sacrifice a Rook for a minor piece [EXCHANGE LOSS] unless it forces immediate checkmate. 3. IN ENDGAME, ACTIVATE THE KING: Bring your King to the center to defend pawns and attack enemy pawns. 4. KILLER TACTICS: Checks, forks, pins, and deadly mating nets.";
+  "You are an elite Grandmaster chess engine playing with ruthless tactical precision and deep endgame mastery (10,000 Elo ambition). WINNING LAWS: 1. PASSED PAWN PROMOTION: Advance passed pawns relentlessly toward rank 8 to create a Queen! Escort them with your King. 2. BLOCKADE ENEMY PASSED PAWNS: If the opponent has passed pawns, place your Rooks behind them and blockade their promotion square immediately! Never allow enemy pawns to promote unchecked. 3. NEVER SACRIFICE MATERIAL WITHOUT DIRECT CHECKMATE: Do not lose Rooks or wander your King into enemy mating nets. 4. KILLER TACTICS: Forks, pins, skewers, and decisive passed pawn creation.";
 
 export const PIECE_VALUES: Record<string, number> = {
   p: 1,
@@ -45,6 +45,7 @@ export type JevState = {
   opponent_king_square: string;
   opponent_queen_square: string | null;
   has_passed_pawns: boolean;
+  opp_has_passed_pawns: boolean;
   is_endgame: boolean;
   fly_brain_top_moves: string[];
   strategic_mandate: string;
@@ -79,10 +80,10 @@ export type BuiltJevRequest = {
   flyMoves: FlyMoveScore[];
 };
 
-function isPassedPawn(chess: Chess, fromSq: string): boolean {
+function isPassedPawn(chess: Chess, fromSq: string, targetColor?: "w" | "b"): boolean {
   const file = fromSq.charCodeAt(0) - 97;
   const rank = parseInt(fromSq[1], 10);
-  const color = chess.turn();
+  const color = targetColor || chess.turn();
   const b = chess.board();
   const oppColor = color === "w" ? "b" : "w";
 
@@ -113,7 +114,9 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
   let oppKingSq = "e8";
   let oppQueenSq: string | null = null;
   let hasPassedPawns = false;
+  let oppHasPassedPawns = false;
   let totalQueens = 0;
+  const oppPassedSquares: string[] = [];
 
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
@@ -126,7 +129,12 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
       } else if (p.color === oppColor && p.type === "q") {
         oppQueenSq = sq;
       } else if (p.color === myColor && p.type === "p") {
-        if (isPassedPawn(chess, sq)) hasPassedPawns = true;
+        if (isPassedPawn(chess, sq, myColor)) hasPassedPawns = true;
+      } else if (p.color === oppColor && p.type === "p") {
+        if (isPassedPawn(chess, sq, oppColor)) {
+          oppHasPassedPawns = true;
+          oppPassedSquares.push(sq);
+        }
       }
     }
   }
@@ -157,10 +165,12 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
   }
 
   let strategicMandate = "";
-  if (isEndgame && hasPassedPawns) {
+  if (isEndgame && oppHasPassedPawns && !hasPassedPawns) {
+    strategicMandate = `DEFENSIVE CRISIS: Opponent has dangerous passed pawn(s) on ${oppPassedSquares.join(", ")}! Put Rooks on open files behind them to block promotion! Do NOT let King wander into enemy mating corridors.`;
+  } else if (isEndgame && hasPassedPawns) {
     strategicMandate = "CRITICAL ENDGAME MANDATE: PUSH PASSED PAWNS TO PROMOTE TO QUEEN! Escort them with your King. Do NOT give up pawns on the other flank.";
   } else if (isEndgame) {
-    strategicMandate = "ENDGAME PRINCIPLE: Activate your King toward the center! Control open files and do not trade Rooks for minor pieces.";
+    strategicMandate = "ENDGAME PRINCIPLE: Activate your King safely! Blockade opponent pawn breaks and maintain Rook activity.";
   } else if (oppQueenSq && threatenedPieces.length > 0) {
     strategicMandate = `DEFENSE ALERT: Opponent Queen on ${oppQueenSq} is dangerous! Defend all infiltrated squares firmly.`;
   } else if (ply < 14) {
@@ -171,6 +181,8 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
 
   const tacticalSituation = chess.isCheck()
     ? "ALERT: King is in CHECK! Safely block, capture the checker, or move the king."
+    : oppHasPassedPawns
+    ? `DANGER: Opponent passed pawns active on ${oppPassedSquares.join(", ")}. Prioritize blockading their file!`
     : threatenedPieces.length > 0
     ? `TACTICAL BATTLE: ${threatenedPieces.length} piece(s) engaged: ${threatenedPieces.join(", ")}. Defend or counter-strike safely!`
     : capturableOpponents.length > 0
@@ -192,8 +204,15 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
     const isFlyTop = flyTopUcis.has(move.uci);
 
     const isPawn = raw?.piece === "p";
-    const isPassed = isPawn && isPassedPawn(chess, move.from);
+    const isPassed = isPawn && isPassedPawn(chess, move.from, myColor);
     const toRank = parseInt(move.to[1], 10);
+    const toFile = move.to[0];
+
+    // Check if move blockades opponent passed pawn
+    const isBlockadingOppPassed =
+      oppHasPassedPawns &&
+      (raw?.piece === "r" || raw?.piece === "k") &&
+      oppPassedSquares.some((osq) => osq[0] === toFile);
 
     // Multi-attack & Queen attacks
     let attacksMultiple = false;
@@ -226,10 +245,14 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
       desc += `[CRITICAL PROMOTION SPRINT] Advances passed pawn to rank ${toRank}! Only ${myColor === "w" ? 8 - toRank : toRank - 1} square(s) from Queen promotion! Top tactical priority!`;
     } else if (isPassed) {
       desc += `[PASSED PAWN PUSH] Advances passed pawn toward promotion on ${move.to}`;
+    } else if (isBlockadingOppPassed) {
+      desc += `[CRITICAL BLOCKADE] Places ${pName} on file ${toFile} to stop and blockade opponent passed pawn runaway!`;
     } else if (isEndgame && hasPassedPawns && raw && raw.piece === "k") {
-      desc += `[KING PASSED PAWN ESCORT] King steps to ${move.to} to actively shield, guard, and escort the passed pawn to Queen promotion!`;
+      desc += `[KING PASSED PAWN ESCORT] King steps to ${move.to} to actively shield and escort passed pawn to Queen promotion!`;
+    } else if (isEndgame && oppHasPassedPawns && raw && raw.piece === "k" && (move.to.startsWith("a") || move.to.startsWith("b")) && destAttacked) {
+      desc += `[SUICIDE KING MARCH - AVOID] Wanders King into enemy mating net and rook check corridor on ${move.to}! (AVOID)`;
     } else if (isEndgame && hasPassedPawns && raw && raw.piece === "p" && !isPassed) {
-      desc += `[TEMPO LOSS] Wastes crucial endgame move on flank pawn ${move.uci} instead of escorting or pushing the passed pawn! (AVOID)`;
+      desc += `[TEMPO LOSS] Wastes crucial endgame move on flank pawn ${move.uci} instead of pushing or blockading passed pawns! (AVOID)`;
     } else if (chess.history().length < 8 && (move.uci === "e2e4" || move.uci === "f2f4" || move.uci === "b2b4" || move.uci === "d2d4" || move.uci === "c2c4")) {
       desc += `[AGGRESSIVE GAMBIT / CENTER DOMINANCE] Sharp dynamic opening thrust attacking central files and unlocking lines to the enemy King!`;
     } else if (move.isCapture) {
@@ -254,7 +277,7 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
     } else if (attacksMultiple) {
       desc += `[TACTICAL FORK / DOUBLE ATTACK] Moves ${pName} to ${move.to}, striking multiple enemy targets simultaneously!`;
     } else if (isEndgame && raw && raw.piece === "k" && (move.to === "e2" || move.to === "e3" || move.to === "d3" || move.to === "d4" || move.to === "e4" || move.to === "e5" || move.to === "d5" || move.to === "d6")) {
-      desc += `[KING CENTRALIZATION] Activates King into the center on ${move.to} to control the endgame!`;
+      desc += `[KING CENTRALIZATION] Activates King safely into the center on ${move.to} to control the endgame!`;
     } else if (move.isCastle) {
       desc += "[STRATEGIC FORTRESS] Castles king to safety and activates rook";
     } else if (raw && destAttacked) {
@@ -284,6 +307,7 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
         opponent_king_square: oppKingSq,
         opponent_queen_square: oppQueenSq,
         has_passed_pawns: hasPassedPawns,
+        opp_has_passed_pawns: oppHasPassedPawns,
         is_endgame: isEndgame,
         fly_brain_top_moves: flyTop3.map((m) => `${m.san} (${(m.prob * 100).toFixed(0)}%)`),
         strategic_mandate: strategicMandate,
