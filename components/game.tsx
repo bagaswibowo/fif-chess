@@ -1201,7 +1201,12 @@ export function Game() {
       </nav>
 
       {showAuthModal && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAuthModal(false);
+          }}
+        >
           <AuthPanel
             user={currentUser}
             onClose={() => setShowAuthModal(false)}

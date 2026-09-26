@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { SessionUser } from "@/lib/use-session";
+import { IconPawn3D } from "@/components/icons3d";
 
 type Props = {
   user: SessionUser | null;
@@ -17,158 +18,397 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
   const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState("Mahasiswa TI Tel-U");
+  const [agreeTerms, setAgreeTerms] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "err" | "info"; text: string } | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setMessage(null);
+
+    if (mode === "register") {
+      if (password.length < 6) {
+        setMessage({ tone: "err", text: "Kata sandi minimal 6 karakter." });
+        return;
+      }
+      if (password !== confirmPassword) {
+        setMessage({ tone: "err", text: "Konfirmasi kata sandi tidak cocok." });
+        return;
+      }
+      if (!agreeTerms) {
+        setMessage({ tone: "err", text: "Harap menyetujui syarat & ketentuan komunitas." });
+        return;
+      }
+    }
+
+    setBusy(true);
     try {
       const data =
         mode === "login"
-          ? await onLogin(username.trim(), password)
-          : await onRegister(username.trim(), password, fullName.trim(), role.trim());
+          ? await onLogin(username.trim().toLowerCase(), password)
+          : await onRegister(username.trim().toLowerCase(), password, fullName.trim(), role.trim());
+
       if (data?.error) {
         setMessage({ tone: data.pending ? "info" : "err", text: data.error });
       } else if (mode === "register") {
-        setMessage({ tone: "info", text: data?.message || "Pendaftaran terkirim, tunggu persetujuan admin." });
+        setMessage({
+          tone: "info",
+          text: data?.message || "Pendaftaran berhasil dikirim! Menunggu persetujuan Pak Bagas Wibowo sebelum bisa login.",
+        });
         setMode("login");
         setPassword("");
+        setConfirmPassword("");
       } else {
         onClose();
       }
     } catch {
-      setMessage({ tone: "err", text: "Tidak dapat menghubungi server." });
+      setMessage({ tone: "err", text: "Tidak dapat menghubungi server auth." });
     } finally {
       setBusy(false);
     }
   }
 
+  // LOGGED IN: Profile Card Modal View
   if (user) {
+    const winRate =
+      user.wins + user.losses + user.draws > 0
+        ? Math.round((user.wins / (user.wins + user.losses + user.draws)) * 100)
+        : 0;
+
     return (
-      <div className="panel p-4 stack">
-        <div className="row-between">
-          <div className="min-w-0">
-            <div className="font-bold text-[--text-base] truncate">{user.fullName}</div>
-            <div className="prose-note truncate">
-              @{user.username} · {user.role}
-            </div>
-          </div>
-          {user.isAdmin && (
-            <span className="ctl ctl-xs ctl-active shrink-0" aria-label="Peran admin">
-              Admin
-            </span>
-          )}
-        </div>
-        <div className="row" style={{ gap: "0.5rem" }}>
-          <span className="clock text-[--text-base]">{user.elo}</span>
-          <span className="prose-note">
-            {user.wins} menang · {user.draws} remis · {user.losses} kalah
-          </span>
-        </div>
-        <button className="ctl ctl-sm" onClick={() => void onLogout()}>
-          Keluar
+      <div className="bg-[#211e19] border border-[#38322a] rounded-2xl p-5 md:p-6 w-full max-w-[420px] shadow-2xl space-y-4 text-white relative animate-in fade-in zoom-in-95 duration-200">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#2b2721] hover:bg-[#38322a] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold"
+          aria-label="Tutup"
+        >
+          ✕
         </button>
+
+        {/* Profile Header */}
+        <div className="flex items-center gap-3.5 pr-8">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#81b64c] to-[#334621] border-2 border-[#81b64c] flex items-center justify-center text-base font-black text-white shadow-md shrink-0">
+            {user.username.slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-base text-white truncate">{user.fullName}</h3>
+              {user.isAdmin && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                  Admin
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-neutral-400 truncate">
+              @{user.username} · {user.role}
+            </p>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-2 bg-[#1a1714] p-3 rounded-xl border border-[#38322a] text-center">
+          <div>
+            <span className="block text-[10px] uppercase font-bold text-neutral-400">Rating ELO</span>
+            <span className="font-mono font-black text-lg text-[#81b64c]">{user.elo}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] uppercase font-bold text-neutral-400">Menang/Kalah</span>
+            <span className="font-mono font-bold text-sm text-neutral-200">
+              {user.wins}W / {user.losses}L
+            </span>
+          </div>
+          <div>
+            <span className="block text-[10px] uppercase font-bold text-neutral-400">Win Rate</span>
+            <span className="font-mono font-bold text-sm text-emerald-400">{winRate}%</span>
+          </div>
+        </div>
+
+        {/* Admin Quick Action */}
+        {user.isAdmin && (
+          <div className="bg-amber-950/40 border border-amber-500/40 p-3 rounded-xl text-xs text-amber-200 flex items-center gap-2">
+            <span>🛡️</span>
+            <span className="font-medium">Akses Admin aktif untuk moderasi & persetujuan user.</span>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2.5 pt-2 border-t border-[#38322a]">
+          <button
+            onClick={onClose}
+            className="flex-1 h-10 px-4 rounded-xl border border-[#38322a] bg-[#2b2721] hover:bg-[#38322a] text-neutral-200 font-bold text-sm transition-all"
+          >
+            Tutup
+          </button>
+          <button
+            onClick={() => void onLogout()}
+            className="flex-1 h-10 px-4 rounded-xl border border-red-500/50 bg-red-950/40 hover:bg-red-900/60 text-red-300 font-bold text-sm transition-all"
+          >
+            Keluar (Logout)
+          </button>
+        </div>
       </div>
     );
   }
 
+  // NOT LOGGED IN: Tabbed Login / Signup Modal
   return (
-    <div className="panel p-4 stack">
-      <div className="row" role="tablist" aria-label="Mode akun">
+    <div className="bg-[#211e19] border border-[#38322a] rounded-2xl p-5 md:p-6 w-full max-w-[420px] shadow-2xl space-y-4 text-white relative animate-in fade-in zoom-in-95 duration-200">
+      {/* Close Button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#2b2721] hover:bg-[#38322a] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold cursor-pointer"
+        aria-label="Tutup"
+      >
+        ✕
+      </button>
+
+      {/* Modal Branding Header */}
+      <div className="flex items-center gap-2.5 pr-8">
+        <div className="w-8 h-8 rounded-lg bg-[#2b2721] border border-[#38322a] flex items-center justify-center text-[#81b64c]">
+          <IconPawn3D size={20} />
+        </div>
+        <div>
+          <h2 className="text-base font-black text-white tracking-wide uppercase leading-tight">
+            FIF <span className="text-[#81b64c]">CHESS</span>
+          </h2>
+          <p className="text-[11px] text-neutral-400">Platform Catur Civitas Telkom University</p>
+        </div>
+      </div>
+
+      {/* Mode Switcher Tabs */}
+      <div className="flex bg-[#1a1714] p-1 rounded-xl border border-[#38322a]">
         <button
-          role="tab"
-          aria-selected={mode === "login"}
-          className={`ctl ctl-sm ctl-choice ${mode === "login" ? "ctl-active" : ""}`}
-          onClick={() => setMode("login")}
+          type="button"
+          onClick={() => {
+            setMode("login");
+            setMessage(null);
+          }}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            mode === "login"
+              ? "bg-[#81b64c] text-white shadow-md"
+              : "text-neutral-400 hover:text-white"
+          }`}
         >
-          Masuk
+          Masuk (Login)
         </button>
         <button
-          role="tab"
-          aria-selected={mode === "register"}
-          className={`ctl ctl-sm ctl-choice ${mode === "register" ? "ctl-active" : ""}`}
-          onClick={() => setMode("register")}
+          type="button"
+          onClick={() => {
+            setMode("register");
+            setMessage(null);
+          }}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            mode === "register"
+              ? "bg-[#81b64c] text-white shadow-md"
+              : "text-neutral-400 hover:text-white"
+          }`}
         >
-          Daftar
+          Daftar Akun Baru
         </button>
       </div>
 
-      <form onSubmit={submit} className="stack-tight">
-        <label className="label" htmlFor="au">
-          Username
-        </label>
-        <input
-          id="au"
-          className="field"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          autoComplete="username"
-          placeholder="misal: budisantoso"
-          required
-        />
+      {/* Auth Form */}
+      <form onSubmit={submit} className="space-y-3.5">
+        {/* Username Field */}
+        <div>
+          <label
+            className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1.5"
+            htmlFor="auth-username"
+          >
+            Username
+          </label>
+          <input
+            id="auth-username"
+            className="w-full h-11 px-3.5 rounded-xl border border-[#38322a] bg-[#1a1714] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#81b64c] focus:ring-1 focus:ring-[#81b64c] text-sm transition-all"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            placeholder="misal: bagaswibowo"
+            required
+          />
+          {mode === "register" && (
+            <span className="block text-[10px] text-neutral-400 mt-1">
+              3-20 karakter, huruf kecil, angka, atau garis bawah.
+            </span>
+          )}
+        </div>
 
+        {/* Additional Register Fields */}
         {mode === "register" && (
           <>
-            <label className="label" htmlFor="af">
-              Nama lengkap
-            </label>
-            <input
-              id="af"
-              className="field"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              autoComplete="name"
-              required
-            />
-            <label className="label" htmlFor="ar">
-              Fakultas / keterangan
-            </label>
-            <input
-              id="ar"
-              className="field"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            />
+            <div>
+              <label
+                className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1.5"
+                htmlFor="auth-fullname"
+              >
+                Nama Lengkap
+              </label>
+              <input
+                id="auth-fullname"
+                className="w-full h-11 px-3.5 rounded-xl border border-[#38322a] bg-[#1a1714] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#81b64c] focus:ring-1 focus:ring-[#81b64c] text-sm transition-all"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                autoComplete="name"
+                placeholder="misal: Pak Bagas Wibowo / Budi Santoso"
+                required
+              />
+            </div>
+
+            <div>
+              <label
+                className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1.5"
+                htmlFor="auth-role"
+              >
+                Peran / Civitas Tel-U
+              </label>
+              <select
+                id="auth-role"
+                className="w-full h-11 px-3.5 rounded-xl border border-[#38322a] bg-[#1a1714] text-white focus:outline-none focus:border-[#81b64c] text-sm transition-all cursor-pointer"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
+                <option value="Mahasiswa TI Tel-U">Mahasiswa Teknik Informatika Tel-U</option>
+                <option value="Mahasiswa Sistem Informasi Tel-U">Mahasiswa Sistem Informasi Tel-U</option>
+                <option value="Mahasiswa Tel-U (Umum)">Mahasiswa Telkom University (Lainnya)</option>
+                <option value="Dosen Telkom University">Dosen Telkom University</option>
+                <option value="UKM Catur Telkom University">Anggota UKM Catur Tel-U</option>
+                <option value="Alumni Telkom University">Alumni Telkom University</option>
+                <option value="Umum / Tamu">Umum / Komunitas Catur</option>
+              </select>
+            </div>
           </>
         )}
 
-        <label className="label" htmlFor="ap">
-          Kata sandi
-        </label>
-        <input
-          id="ap"
-          className="field"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete={mode === "login" ? "current-password" : "new-password"}
-          minLength={6}
-          required
-        />
+        {/* Password Field */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label
+              className="block text-xs font-bold text-neutral-300 uppercase tracking-wider"
+              htmlFor="auth-password"
+            >
+              Kata Sandi
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="text-[11px] text-[#81b64c] hover:underline cursor-pointer"
+            >
+              {showPassword ? "Sembunyikan" : "Lihat Sandi"}
+            </button>
+          </div>
+          <input
+            id="auth-password"
+            className="w-full h-11 px-3.5 rounded-xl border border-[#38322a] bg-[#1a1714] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#81b64c] focus:ring-1 focus:ring-[#81b64c] text-sm transition-all"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            placeholder="••••••••"
+            minLength={6}
+            required
+          />
+        </div>
 
-        {message && (
-          <p
-            role="status"
-            className="text-[--text-xs] leading-snug"
-            style={{ color: message.tone === "err" ? "var(--destructive)" : "var(--accent)" }}
-          >
-            {message.text}
-          </p>
+        {/* Confirm Password (Register Only) */}
+        {mode === "register" && (
+          <div>
+            <label
+              className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1.5"
+              htmlFor="auth-confirm-password"
+            >
+              Konfirmasi Kata Sandi
+            </label>
+            <input
+              id="auth-confirm-password"
+              className="w-full h-11 px-3.5 rounded-xl border border-[#38322a] bg-[#1a1714] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#81b64c] focus:ring-1 focus:ring-[#81b64c] text-sm transition-all"
+              type={showPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="••••••••"
+              minLength={6}
+              required
+            />
+          </div>
         )}
 
-        <button className="ctl ctl-primary" type="submit" disabled={busy}>
-          {busy ? "Memproses…" : mode === "login" ? "Masuk" : "Kirim pendaftaran"}
+        {/* Terms Agreement Checkbox (Register Only) */}
+        {mode === "register" && (
+          <label className="flex items-start gap-2.5 text-xs text-neutral-300 cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              checked={agreeTerms}
+              onChange={(e) => setAgreeTerms(e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded bg-[#1a1714] border-[#38322a] text-[#81b64c] focus:ring-[#81b64c] accent-[#81b64c]"
+              required
+            />
+            <span>Saya menyetujui aturan fair-play dan ketentuan komunitas catur Telkom University.</span>
+          </label>
+        )}
+
+        {/* Message Banner */}
+        {message && (
+          <div
+            role="status"
+            className={`p-3 rounded-xl text-xs leading-relaxed border ${
+              message.tone === "err"
+                ? "bg-red-950/50 border-red-500/50 text-red-200"
+                : message.tone === "info"
+                ? "bg-[#81b64c]/15 border-[#81b64c]/40 text-[#81b64c]"
+                : "bg-emerald-950/50 border-emerald-500/50 text-emerald-200"
+            }`}
+          >
+            {message.text}
+          </div>
+        )}
+
+        {/* Submit Button */}
+        <button
+          className="w-full h-11 rounded-xl bg-[#81b64c] hover:bg-[#72a342] active:translate-y-[1px] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          type="submit"
+          disabled={busy}
+        >
+          {busy ? (
+            <span className="flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Memproses...</span>
+            </span>
+          ) : mode === "login" ? (
+            "Masuk ke Arena"
+          ) : (
+            "Kirim Pendaftaran Akun"
+          )}
         </button>
       </form>
 
-      <p className="prose-note" style={{ fontSize: "var(--text-xs)" }}>
-        Pendaftaran baru menunggu persetujuan admin (Pak Bagas Wibowo) sebelum bisa masuk. Admin masuk dengan
-        username <span className="clock">bagaswibowo</span>.
-      </p>
+      {/* Info Footnote */}
+      <div className="pt-2 border-t border-[#38322a] text-[11px] text-neutral-400 space-y-1 text-center">
+        {mode === "login" ? (
+          <p>
+            Belum punya akun?{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setMode("register");
+                setMessage(null);
+              }}
+              className="text-[#81b64c] font-bold hover:underline cursor-pointer"
+            >
+              Daftar di sini
+            </button>
+          </p>
+        ) : (
+          <p className="text-neutral-400 leading-normal">
+            ℹ️ Akun baru diverifikasi dan disetujui oleh{" "}
+            <strong className="text-white">Pak Bagas Wibowo</strong> sebelum dapat login.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
