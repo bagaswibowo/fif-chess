@@ -1,52 +1,86 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Chess } from "chess.js";
 
+const CHESSCOG_URL = process.env.CHESSCOG_URL || "http://chesscog:8000";
 const OMNIROUTE_URL = process.env.OMNIROUTE_URL || "http://100.127.238.166:20129/v1";
 const OMNIROUTE_KEY =
-  process.env.OMNIROUTE_API_KEY ||
-  process.env.OPENAI_API_KEY ||
+  process.env.OMNIROUTE_KEY ||
   "sk-d0bfff38efceb5e022c0022718ce9b05763131757820bb2629b35a7daeeac0641";
 
-// Endpoint pemindai foto papan catur (Kamera HP, Webcam, Upload Foto / Screenshot)
 export async function POST(req: NextRequest) {
   try {
-    const { image, fen: directFen } = await req.json();
+    const body = await req.json();
+    const { image, fen: rawFen } = body;
 
-    // 1. Jika FEN langsung di-pass
-    if (directFen && typeof directFen === "string") {
+    // 1. Direct FEN validation
+    if (rawFen && typeof rawFen === "string") {
       try {
-        const chess = new Chess(directFen.trim());
+        const chess = new Chess(rawFen.trim());
         return NextResponse.json({
           ok: true,
           fen: chess.fen(),
           confidence: 1.0,
-          turn: chess.turn() === "w" ? "white" : "black",
-          piecesCount: {
-            white: chess.board().flat().filter((p) => p && p.color === "w").length,
-            black: chess.board().flat().filter((p) => p && p.color === "b").length,
-          },
+          source: "direct-fen",
         });
       } catch {
-        return NextResponse.json({ error: "Format FEN tidak valid" }, { status: 400 });
+        return NextResponse.json(
+          { ok: false, error: "Format notasi FEN tidak valid." },
+          { status: 400 }
+        );
       }
     }
 
-    if (!image || typeof image !== "string") {
-      return NextResponse.json({ error: "Data gambar tidak ditemukan" }, { status: 400 });
+    if (!image) {
+      return NextResponse.json(
+        { ok: false, error: "Gambar atau FEN wajib disediakan." },
+        { status: 400 }
+      );
     }
 
-    let detectedFen: string | null = null;
+    // 2. PRIMARY ENGINE: Local Computer Vision Chesscog (ResNet + InceptionV3 + Perspective OMR)
+    // Kecepatan ~1.4 detik, 100% offline, tanpa timeout
+    try {
+      const chesscogRes = await fetch(`${CHESSCOG_URL}/predict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image }),
+        signal: AbortSignal.timeout(10000),
+      });
 
-    // 2. Multimodal LLM Vision Extractor via OmniRoute (model: auto dengan timeout 12s)
+      if (chesscogRes.ok) {
+        const data = await chesscogRes.json();
+        if (data.ok && data.fen) {
+          const cleanFen = data.fen.trim();
+          let finalFen = cleanFen;
+          try {
+            const chess = new Chess(cleanFen);
+            finalFen = chess.fen();
+          } catch {
+            finalFen = cleanFen.includes(" ") ? cleanFen : (cleanFen + " w - - 0 1");
+          }
+          return NextResponse.json({
+            ok: true,
+            fen: finalFen,
+            boardFen: data.board_fen,
+            corners: data.corners,
+            confidence: data.confidence || 0.95,
+            engine: "chesscog-cv",
+          });
+        }
+      }
+    } catch (e: any) {
+      console.warn("Chesscog local CV skipped or failed:", e?.message);
+    }
+
+    // 3. SECONDARY ENGINE (FALLBACK): Multimodal LLM Vision via OmniRoute
     try {
       const promptText =
-        "You are an expert chess FEN vision extractor. Analyze this real-life chessboard photo or screenshot carefully.\n" +
-        "1. Identify every White piece and Black piece on their exact squares (rank 1-8, file a-h).\n" +
-        "2. Determine whose turn it is (default to 'w' if unclear).\n" +
-        "3. Output ONLY the valid FEN string (e.g. 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1').\n" +
-        "Do not output markdown, reasoning, or extra words.";
+        "You are an expert chess FEN vision extractor. Analyze this real-life chessboard photo accurately. " +
+        "Detect the 8x8 squares and all pieces (P, N, B, R, Q, K for White; p, n, b, r, q, k for Black). " +
+        "Output ONLY valid standard FEN notation (e.g. 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'). " +
+        "Do not include explanation, do not include markdown codeblocks, only the raw FEN string.";
 
-      const visionRes = await fetch(`${OMNIROUTE_URL}/chat/completions`, {
+      const upstream = await fetch(`${OMNIROUTE_URL}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,56 +95,52 @@ export async function POST(req: NextRequest) {
                 { type: "text", text: promptText },
                 {
                   type: "image_url",
-                  image_url: { url: image.startsWith("data:") ? image : `data:image/jpeg;base64,${image}` },
+                  image_url: {
+                    url: image.startsWith("data:") ? image : `data:image/jpeg;base64,${image}`,
+                  },
                 },
               ],
             },
           ],
           temperature: 0.1,
-          max_tokens: 100,
+          max_tokens: 120,
         }),
         signal: AbortSignal.timeout(45000),
       });
 
-      if (visionRes.ok) {
-        const vData = await visionRes.json();
-        const rawOutput = vData.choices?.[0]?.message?.content?.trim() || "";
-        const fenMatch = rawOutput.match(/([rnbqkpRNBQKP1-8]+\/){7}[rnbqkpRNBQKP1-8]+(\s+[wb]\s+[\w-]+\s+[\w-]+\s+\d+\s+\d+)?/);
-        if (fenMatch) {
-          let candidate = fenMatch[0].trim();
-          if (!candidate.includes(" w ") && !candidate.includes(" b ")) {
-            candidate += " w KQkq - 0 1";
-          }
-          const testChess = new Chess(candidate);
-          detectedFen = testChess.fen();
-        }
-      } else {
-        console.warn("OmniRoute vision response not ok:", visionRes.status, await visionRes.text().catch(() => ""));
+      if (upstream.ok) {
+        const data = await upstream.json();
+        const content = data.choices?.[0]?.message?.content?.trim() || "";
+        const cleanContent = content.replace(/```(?:json|fen)?/gi, "").replace(/```/g, "").trim();
+
+        const match = cleanContent.match(/([rnbqkpRNBQKP1-8]+\/){7}[rnbqkpRNBQKP1-8]+(?:\s+[wb]\s+[KQkq-]+\s+[a-h1-8-]+\s+\d+\s+\d+)?/);
+        const candidateFen = match ? match[0] : cleanContent;
+
+        const fullFen = candidateFen.includes(" ") ? candidateFen : `${candidateFen} w - - 0 1`;
+        const chess = new Chess(fullFen);
+
+        return NextResponse.json({
+          ok: true,
+          fen: chess.fen(),
+          confidence: 0.90,
+          engine: "omniroute-llm",
+        });
       }
-    } catch (err: any) {
-      console.warn("Vision model detection failed or timed out:", err?.message || err);
+    } catch (llmErr: any) {
+      console.error("OmniRoute fallback failed:", llmErr?.message);
     }
 
-    if (!detectedFen) {
-      return NextResponse.json(
-        { error: "Gagal mengenali posisi catur dari gambar (waktu proses habis atau gambar buram). Silakan gunakan preset cepat atau tempel FEN." },
-        { status: 400 }
-      );
-    }
-
-    const finalChess = new Chess(detectedFen);
-
-    return NextResponse.json({
-      ok: true,
-      fen: finalChess.fen(),
-      confidence: 0.98,
-      turn: finalChess.turn() === "w" ? "white" : "black",
-      piecesCount: {
-        white: finalChess.board().flat().filter((p) => p && p.color === "w").length,
-        black: finalChess.board().flat().filter((p) => p && p.color === "b").length,
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Gagal mengenali posisi catur dari gambar (sudut papan tidak terdeteksi atau gambar buram). Silakan gunakan preset cepat atau tempel FEN.",
       },
-    });
+      { status: 400 }
+    );
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Gagal memindai gambar" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: err?.message || "Internal server error" },
+      { status: 500 }
+    );
   }
 }

@@ -10,3 +10,5 @@ models/*.bin
 *.log
 tsconfig.tsbuildinfo
 package-lock.json
+chesscog-src
+chesscog-service
