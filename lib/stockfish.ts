@@ -232,7 +232,15 @@ export async function guardJevMove(
     (m) => m.promotion === "q" || (m.piece === "p" && (m.to.endsWith("8") || m.to.endsWith("1")))
   );
   if (promoMove) {
-    const promoUci = promoMove.lan ? promoMove.lan.slice(0, 5) : (promoMove.from + promoMove.to + "q");
+    let chosenPromo = "q";
+    try {
+      const testC = new Chess(chess.fen());
+      testC.move({ from: promoMove.from, to: promoMove.to, promotion: "q" });
+      if (testC.isDraw() || testC.isStalemate()) {
+        chosenPromo = "r"; // Hindari pat/remis tak sengaja via under-promotion
+      }
+    } catch {}
+    const promoUci = promoMove.from + promoMove.to + chosenPromo;
     let promoScore = sf.candidateScores.get(promoUci);
     if (promoScore === undefined) {
       promoScore = (await evalSingleMove(fen, promoUci, Math.max(8, guardDepth - 2))) ?? undefined;

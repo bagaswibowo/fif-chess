@@ -84,6 +84,20 @@ export function sanitizeAndRepairFen(rawFen: string): string | null {
       return squares;
     });
 
+    let whitePawns = 0;
+    let blackPawns = 0;
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        if (expanded[r][c] === "P") {
+          whitePawns++;
+          if (whitePawns > 8) expanded[r][c] = "";
+        } else if (expanded[r][c] === "p") {
+          blackPawns++;
+          if (blackPawns > 8) expanded[r][c] = "";
+        }
+      }
+    }
+
     if (!hasWhiteKing) {
       if (!expanded[7][4] || expanded[7][4] === "") expanded[7][4] = "K";
       else {
