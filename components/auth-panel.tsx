@@ -56,12 +56,10 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
         setMessage({ tone: data.pending ? "info" : "err", text: data.error });
       } else if (mode === "register") {
         setMessage({
-          tone: "info",
-          text: data?.message || "Pendaftaran berhasil dikirim! Menunggu persetujuan Admin Komunitas sebelum bisa login.",
+          tone: "ok",
+          text: data?.message || "Pendaftaran berhasil! Anda otomatis masuk.",
         });
-        setMode("login");
-        setPassword("");
-        setConfirmPassword("");
+        setTimeout(() => onClose(), 800);
       } else {
         onClose();
       }

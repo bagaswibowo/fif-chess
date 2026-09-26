@@ -42,3 +42,4 @@ yarn-error.log*
 next-env.d.ts
 models/*.flyb
 chesscog-service/models/*.pt
+artefacts/

@@ -40,6 +40,93 @@ const PRESET_POSITIONS = [
 ];
 
 
+
+function sanitizeAndRepairFen(rawFen: string): string | null {
+  if (!rawFen || typeof rawFen !== "string") return null;
+  let fen = rawFen.trim();
+  if (!fen.includes(" ")) fen += " w - - 0 1";
+
+  try {
+    const c = new Chess(fen);
+    return c.fen();
+  } catch {
+    // Attempt repair
+  }
+
+  try {
+    const parts = fen.split(" ");
+    const ranks = parts[0].split("/");
+    if (ranks.length !== 8) return null;
+
+    let hasWhiteKing = parts[0].includes("K");
+    let hasBlackKing = parts[0].includes("k");
+
+    const expanded = ranks.map((rank, rankIdx) => {
+      let squares: string[] = [];
+      for (const ch of rank) {
+        if (ch >= "1" && ch <= "8") {
+          for (let i = 0; i < parseInt(ch, 10); i++) squares.push("");
+        } else {
+          squares.push(ch);
+        }
+      }
+      if (squares.length < 8) {
+        while (squares.length < 8) squares.push("");
+      } else if (squares.length > 8) {
+        squares = squares.slice(0, 8);
+      }
+      if (rankIdx === 0 || rankIdx === 7) {
+        squares = squares.map((sq) => (sq.toLowerCase() === "p" ? "" : sq));
+      }
+      return squares;
+    });
+
+    if (!hasWhiteKing) {
+      if (!expanded[7][4] || expanded[7][4] === "") expanded[7][4] = "K";
+      else {
+        const idx = expanded[7].findIndex((s) => s === "");
+        if (idx !== -1) expanded[7][idx] = "K";
+        else expanded[7][4] = "K";
+      }
+    }
+
+    if (!hasBlackKing) {
+      if (!expanded[0][4] || expanded[0][4] === "") expanded[0][4] = "k";
+      else {
+        const idx = expanded[0].findIndex((s) => s === "");
+        if (idx !== -1) expanded[0][idx] = "k";
+        else expanded[0][4] = "k";
+      }
+    }
+
+    const recompressed = expanded
+      .map((row) => {
+        let r = "";
+        let empty = 0;
+        for (const sq of row) {
+          if (!sq) {
+            empty++;
+          } else {
+            if (empty > 0) {
+              r += empty;
+              empty = 0;
+            }
+            r += sq;
+          }
+        }
+        if (empty > 0) r += empty;
+        return r;
+      })
+      .join("/");
+
+    const candidate = recompressed + " " + (parts[1] || "w") + " " + (parts[2] || "-") + " " + (parts[3] || "-") + " " + (parts[4] || "0") + " " + (parts[5] || "1");
+    const c = new Chess(candidate);
+    return c.fen();
+  } catch {
+    return null;
+  }
+}
+
 function compressImage(dataUrl: string, maxDim = 800): Promise<string> {
   return new Promise((resolve) => {
     if (typeof window === "undefined") return resolve(dataUrl);
@@ -173,16 +260,16 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [currentScoreCp, setCurrentScoreCp] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mobileCameraInputRef = useRef<HTMLInputElement>(null);
   const autoSolveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const applyNewInitialFen = useCallback(
     (newFen: string, msg?: string) => {
-      try {
-        const chess = new Chess(newFen);
-        const valid = chess.fen();
-        setInitialFen(valid);
-        setLiveFen(valid);
-        setFenInput(valid);
+      const repaired = sanitizeAndRepairFen(newFen);
+      if (repaired) {
+        setInitialFen(repaired);
+        setLiveFen(repaired);
+        setFenInput(repaired);
         setSolveMoves([]);
         setCurrentScoreCp(null);
         setIsAutoSolving(false);
@@ -192,8 +279,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           setScanSuccessMessage(msg);
           setTimeout(() => setScanSuccessMessage(null), 4000);
         }
-      } catch {
-        setError(lang === "id" ? "Format FEN tidak valid." : "Invalid FEN format.");
+      } else {
+        setError(lang === "id" ? "Format FEN tidak valid atau posisi tidak terbaca." : "Invalid FEN format.");
       }
     },
     [lang]
@@ -480,6 +567,30 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           <p className="text-xs text-[var(--muted-foreground)] max-w-md mt-1 mb-6 leading-relaxed">
             Halaman ini siap menerima posisi catur dari foto papan fisik kamera HP, screenshot gambar, preset pembukaan/endgame, atau kode FEN manual.
           </p>
+
+                    {/* MOBILE HERO CAMERA BUTTON (TOMBOL KAMERA TENGAH DI HP) */}
+          <div className="md:hidden w-full flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-[var(--surface)] to-[var(--card)] border border-[var(--border)] shadow-lg mb-4">
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              ref={mobileCameraInputRef}
+              className="hidden"
+              onChange={handleImageFile}
+            />
+            <button
+              type="button"
+              onClick={() => mobileCameraInputRef.current?.click()}
+              disabled={isProcessingImage}
+              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm flex items-center justify-center gap-2.5 shadow-lg active:scale-95 transition-all"
+            >
+              <IconScan3D size={24} />
+              <span>{isProcessingImage ? "Memproses Gambar..." : "Ambil Foto via Kamera HP"}</span>
+            </button>
+            <span className="text-[11px] text-[var(--muted-foreground)] mt-2">
+              Arahkan kamera langsung ke papan catur fisik
+            </span>
+          </div>
 
           {/* ACTION BUTTON GRID */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full max-w-2xl">

@@ -871,6 +871,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
   };
 
   const handleSubmitReply = () => {
+    if (!user) {
+      alert("Harap masuk atau daftarkan akun terlebih dahulu untuk membalas diskusi komunitas.");
+      return;
+    }
     if (!replyText.trim() && selectedGamesForReply.length === 0) return;
 
     const newPost: ForumPost = {
@@ -906,6 +910,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
   };
 
   const handleCreateTopic = () => {
+    if (!user) {
+      alert("Harap masuk atau daftarkan akun terlebih dahulu untuk membuat topik diskusi baru.");
+      return;
+    }
     if (!newTopicTitle.trim() || !newTopicContent.trim()) return;
 
     const cat = categories.find((c) => c.id === newTopicCategory) || categories[0];

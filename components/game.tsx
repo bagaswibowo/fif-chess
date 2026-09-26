@@ -99,6 +99,14 @@ export function Game() {
     const [activeDockModal, setActiveDockModal] = useState<DockModalType>(null);
 const [showAuthModal, setShowAuthModal] = useState(false);
   const [fullscreenClocks, setFullscreenClocks] = useState(false);
+  const handleNavClick = (tab: NavTab) => {
+    if (!currentUser) {
+      setShowAuthModal(true);
+      return;
+    }
+    setNavTab(tab);
+  };
+
 
   // Sisi yang dipilih pemain. "random" di-resolve sekali di sini lalu dipakai
   // ke AI maupun PvP supaya tidak ada ketidaksamaan antar menu.
@@ -534,7 +542,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
     <div className="flex flex-col md:flex-row min-h-screen bg-[var(--muted)] text-white">
       {/* MOBILE TOP BAR (Hidden on Desktop) */}
       <header className="flex md:hidden items-center justify-between px-3.5 py-2.5 bg-[var(--card)] border-b border-[var(--border)] sticky top-0 z-30 shadow-md">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setNavTab("play")}>
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick("play")}>
           <div className="w-8 h-8 rounded-lg bg-[var(--surface)] border border-[var(--muted)] flex items-center justify-center shadow">
             <IconPlay3D size={20} />
           </div>
@@ -568,7 +576,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
       <aside className="hidden md:flex md:w-64 bg-[var(--card)] border-r border-[var(--border)] flex-col justify-between p-3 shrink-0">
         <div>
           {/* Logo with 3D Pawn */}
-          <div className="flex items-center gap-3 px-3 py-4 mb-3 cursor-pointer" onClick={() => setNavTab("play")}>
+          <div className="flex items-center gap-3 px-3 py-4 mb-3 cursor-pointer" onClick={() => handleNavClick("play")}>
             <div className="w-10 h-10 rounded-xl bg-[var(--surface)] border border-[var(--muted)] flex items-center justify-center shadow-lg">
               <IconPawn3D size={28} />
             </div>
@@ -583,7 +591,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
           {/* Navigation Menu with 3D Icons */}
           <nav className="space-y-1.5">
             <button
-              onClick={() => setNavTab("play")}
+              onClick={() => handleNavClick("play")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "play"
                   ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
@@ -595,7 +603,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
             </button>
 
             <button
-              onClick={() => setNavTab("puzzle")}
+              onClick={() => handleNavClick("puzzle")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "puzzle"
                   ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
@@ -607,7 +615,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
             </button>
 
             <button
-              onClick={() => setNavTab("review")}
+              onClick={() => handleNavClick("review")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "review"
                   ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
@@ -619,7 +627,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
             </button>
 
             <button
-              onClick={() => setNavTab("coach")}
+              onClick={() => handleNavClick("coach")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "coach"
                   ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
@@ -632,7 +640,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
 
             {currentUser?.isAdmin && (
               <button
-                onClick={() => setNavTab("admin")}
+                onClick={() => handleNavClick("admin")}
                 className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                   navTab === "admin"
                     ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
@@ -646,7 +654,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
             )}
 
             <button
-              onClick={() => setNavTab("vision")}
+              onClick={() => handleNavClick("vision")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "vision"
                   ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
@@ -658,7 +666,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
             </button>
 
             <button
-              onClick={() => setNavTab("scan")}
+              onClick={() => handleNavClick("scan")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "scan"
                   ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
@@ -670,7 +678,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
             </button>
 
             <button
-              onClick={() => setNavTab("community")}
+              onClick={() => handleNavClick("community")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "community"
                   ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
@@ -762,6 +770,28 @@ const [showAuthModal, setShowAuthModal] = useState(false);
 
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col p-2.5 md:p-6 pb-24 md:pb-6 overflow-y-auto max-w-7xl mx-auto w-full">
+        {!currentUser ? (
+          <div className="w-full max-w-md mx-auto my-auto p-4 sm:p-6 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-2xl stack items-center text-center animate-in fade-in duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center mb-2 shadow-inner">
+              <IconKingWhite3D size={32} />
+            </div>
+            <h2 className="text-base sm:text-lg font-black text-white m-0">
+              JEV Chess Telkom University
+            </h2>
+            <p className="text-xs text-[var(--muted-foreground)] mt-1 mb-4 leading-relaxed">
+              Semua menu dan arena bermain terkunci. Silakan Masuk atau Daftarkan Akun Anda terlebih dahulu untuk membuka seluruh fitur.
+            </p>
+            <div className="w-full text-left">
+              <AuthPanel
+                user={currentUser}
+                onClose={() => {}}
+                onLogin={login}
+                onRegister={register}
+                onLogout={logout}
+              />
+            </div>
+          </div>
+        ) : (<>
         {navTab === "coach" && (
           <div className="space-y-4">
             {/* Coach sub-tab switcher */}
@@ -842,7 +872,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               </div>
 
               {/* Chessboard (Responsive to Viewport Width) */}
-              <div className="w-full aspect-square relative shadow-2xl rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)]">
+              <div className="w-full max-w-[min(88vw,42vh)] lg:max-w-none aspect-square mx-auto relative shadow-2xl rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)]">
                 <Chessboard
                   options={{
                     id: "fif-chess-main",
@@ -1271,22 +1301,24 @@ const [showAuthModal, setShowAuthModal] = useState(false);
             </div>
           </div>
         )}
+      </>
+        )}
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--border)] shadow-2xl overflow-x-auto">
         <div className="flex justify-around items-center py-2 px-1 gap-1 min-w-full">
           {[
-            { id: "play", icon: IconKingWhite3D, IconKingBlack3D, IconDice3D, IconFriends3D, IconMessages3D, IconBell3D, IconSettings3D, IconPlay3D, labelId: "Bermain", labelEn: "Play" },
+            { id: "play", icon: IconPlay3D, labelId: "Bermain", labelEn: "Play" },
             { id: "coach", icon: IconCoach3D, labelId: "Latih", labelEn: "Train" },
+            { id: "scan", icon: IconScan3D, labelId: "Scan", labelEn: "Scan" },
             { id: "puzzle", icon: IconPuzzle3D, labelId: "Puzzle", labelEn: "Puzzle" },
-            { id: "vision", icon: IconVision3D, labelId: "Belajar", labelEn: "Learn" },
             { id: "review", icon: IconMedal3D, labelId: "Review", labelEn: "Review" },
             { id: "community", icon: IconCommunity3D, labelId: "Klub", labelEn: "Club" },
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setNavTab(tab.id as NavTab)}
+              onClick={() => handleNavClick(tab.id as NavTab)}
               className={`flex flex-col items-center gap-1 px-2 py-1 rounded-lg transition-all min-w-[56px] ${
                 navTab === tab.id ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
               }`}
