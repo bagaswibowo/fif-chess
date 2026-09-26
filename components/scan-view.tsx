@@ -39,6 +39,39 @@ const PRESET_POSITIONS = [
   { name: "Sicilian Najdorf", fen: "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6" },
 ];
 
+
+function compressImage(dataUrl: string, maxDim = 800): Promise<string> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(dataUrl);
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      } else {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 export function ScanView({ onLoadFen, lang = "id" }: Props) {
   // State: Mulai dengan posisi kosong (belum ada papan yang dimuat)
   const [hasPositionLoaded, setHasPositionLoaded] = useState<boolean>(false);
@@ -50,6 +83,80 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [scanSuccessMessage, setScanSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [scanProgress, setScanProgress] = useState<{ percent: number; stage: string } | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const cancelScanning = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsProcessingImage(false);
+    setScanProgress(null);
+    setError(lang === "id" ? "Pemindaian dibatalkan." : "Scan cancelled.");
+  }, [lang]);
+
+  const processAndScanImage = async (rawBase64: string) => {
+    setIsProcessingImage(true);
+    setError(null);
+    setScanProgress({ percent: 15, stage: "Mengompresi gambar & resolusi..." });
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, 16000);
+
+    try {
+      const compressed = await compressImage(rawBase64, 800);
+      setScanProgress({ percent: 45, stage: "Mengunggah data gambar ke AI Vision..." });
+
+      const p1 = setTimeout(() => {
+        setScanProgress({ percent: 70, stage: "Menganalisis 64 petak papan catur & posisi bidak..." });
+      }, 1000);
+      const p2 = setTimeout(() => {
+        setScanProgress({ percent: 90, stage: "Memvalidasi notasi FEN..." });
+      }, 3000);
+
+      const res = await fetch("/api/scan-board", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: compressed }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(p1);
+      clearTimeout(p2);
+      clearTimeout(timer);
+
+      const data = await res.json();
+      if (data.ok && data.fen) {
+        setScanProgress({ percent: 100, stage: "Selesai! Memuat posisi ke papan..." });
+        setTimeout(() => {
+          applyNewInitialFen(data.fen, "Foto berhasil dipindai & posisi dimuat ke papan!");
+          setScanProgress(null);
+          setIsProcessingImage(false);
+        }, 400);
+      } else {
+        setError(data.error || "Gagal mengekstrak posisi dari gambar.");
+        setScanProgress(null);
+        setIsProcessingImage(false);
+      }
+    } catch (err: any) {
+      clearTimeout(timer);
+      if (err.name === "AbortError") {
+        setError("Pemindaian memakan waktu terlalu lama atau dibatalkan. Silakan gunakan preset cepat atau tempel FEN.");
+      } else {
+        setError(err.message || "Terjadi kesalahan saat memproses gambar.");
+      }
+      setScanProgress(null);
+      setIsProcessingImage(false);
+    } finally {
+      abortControllerRef.current = null;
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   // Live Web Camera State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -149,10 +256,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const handleCaptureSnapshot = async () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
-
     try {
-      setIsProcessingImage(true);
-      setError(null);
       const canvas = document.createElement("canvas");
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
@@ -161,23 +265,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const base64Url = canvas.toDataURL("image/jpeg", 0.88);
         stopWebcam();
-
-        const res = await fetch("/api/scan-board", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64Url }),
-        });
-        const data = await res.json();
-        if (data.ok && data.fen) {
-          applyNewInitialFen(data.fen, "Foto papan berhasil dipindai & posisi dimuat!");
-        } else {
-          setError(data.error || "Gagal memindai foto catur.");
-        }
+        await processAndScanImage(base64Url);
       }
     } catch (e: any) {
-      setError(e.message || "Gagal memproses gambar kamera.");
-    } finally {
-      setIsProcessingImage(false);
+      setError(e.message || "Gagal mengambil snapshot kamera.");
     }
   };
 
@@ -191,29 +282,11 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsProcessingImage(true);
-    setError(null);
-
     const reader = new FileReader();
     reader.onload = async (event) => {
       const base64Url = event.target?.result as string;
-      try {
-        const res = await fetch("/api/scan-board", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64Url }),
-        });
-        const data = await res.json();
-        if (data.ok && data.fen) {
-          applyNewInitialFen(data.fen, "Foto berhasil di-upload & posisi dimuat ke papan!");
-        } else {
-          setError(data.error || "Gagal mengekstrak posisi dari berkas gambar.");
-        }
-      } catch (err: any) {
-        setError(err.message || "Terjadi kesalahan saat memproses gambar.");
-      } finally {
-        setIsProcessingImage(false);
-        if (fileInputRef.current) fileInputRef.current.value = "";
+      if (base64Url) {
+        await processAndScanImage(base64Url);
       }
     };
     reader.readAsDataURL(file);
@@ -349,6 +422,36 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageFile} />
 
         {/* NOTIFICATIONS */}
+        {/* SCAN PROGRESS BAR WITH CANCEL BUTTON */}
+      {scanProgress && (
+        <div className="p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--primary)] stack-tight animate-in fade-in">
+          <div className="row-between items-center text-xs font-bold text-white mb-1">
+            <div className="flex items-center gap-2">
+              <IconVision3D size={16} />
+              <span>{scanProgress.stage}</span>
+            </div>
+            <span className="font-mono text-[var(--primary)] font-black">{scanProgress.percent}%</span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-neutral-800 overflow-hidden border border-[var(--border)]">
+            <div
+              className="h-full bg-[var(--primary)] transition-all duration-300 rounded-full"
+              style={{ width: `${scanProgress.percent}%` }}
+            />
+          </div>
+          <div className="row-between items-center pt-1">
+            <span className="text-[10px] text-[var(--muted-foreground)]">
+              *Otomatis dikompresi & dimaksimalkan agar cepat diproses AI
+            </span>
+            <button
+              type="button"
+              onClick={cancelScanning}
+              className="ctl ctl-xs ctl-danger font-bold px-2.5"
+            >
+              Batalkan
+            </button>
+          </div>
+        </div>
+      )}
         {error && (
           <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500 text-rose-200 text-xs font-bold flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -563,6 +666,36 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       </div>
 
       {/* SUCCESS / ERROR NOTIFICATION */}
+      {/* SCAN PROGRESS BAR WITH CANCEL BUTTON */}
+      {scanProgress && (
+        <div className="p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--primary)] stack-tight animate-in fade-in">
+          <div className="row-between items-center text-xs font-bold text-white mb-1">
+            <div className="flex items-center gap-2">
+              <IconVision3D size={16} />
+              <span>{scanProgress.stage}</span>
+            </div>
+            <span className="font-mono text-[var(--primary)] font-black">{scanProgress.percent}%</span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-neutral-800 overflow-hidden border border-[var(--border)]">
+            <div
+              className="h-full bg-[var(--primary)] transition-all duration-300 rounded-full"
+              style={{ width: `${scanProgress.percent}%` }}
+            />
+          </div>
+          <div className="row-between items-center pt-1">
+            <span className="text-[10px] text-[var(--muted-foreground)]">
+              *Otomatis dikompresi & dimaksimalkan agar cepat diproses AI
+            </span>
+            <button
+              type="button"
+              onClick={cancelScanning}
+              className="ctl ctl-xs ctl-danger font-bold px-2.5"
+            >
+              Batalkan
+            </button>
+          </div>
+        </div>
+      )}
       {scanSuccessMessage && (
         <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500 text-emerald-200 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200">
           <IconCheck3D size={16} />

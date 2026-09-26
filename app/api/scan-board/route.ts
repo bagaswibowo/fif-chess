@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     let detectedFen: string | null = null;
 
-    // 2. Multimodal LLM Vision Extractor via OmniRoute (auto/best-vision)
+    // 2. Multimodal LLM Vision Extractor via OmniRoute (model: auto dengan timeout 12s)
     try {
       const promptText =
         "You are an expert chess FEN vision extractor. Analyze this real-life chessboard photo or screenshot carefully.\n" +
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           Authorization: `Bearer ${OMNIROUTE_KEY}`,
         },
         body: JSON.stringify({
-          model: "auto/best-vision",
+          model: "auto",
           messages: [
             {
               role: "user",
@@ -67,7 +67,9 @@ export async function POST(req: NextRequest) {
             },
           ],
           temperature: 0.1,
+          max_tokens: 100,
         }),
+        signal: AbortSignal.timeout(12000),
       });
 
       if (visionRes.ok) {
@@ -85,13 +87,13 @@ export async function POST(req: NextRequest) {
       } else {
         console.warn("OmniRoute vision response not ok:", visionRes.status, await visionRes.text().catch(() => ""));
       }
-    } catch (err) {
-      console.warn("Vision model detection failed:", err);
+    } catch (err: any) {
+      console.warn("Vision model detection failed or timed out:", err?.message || err);
     }
 
     if (!detectedFen) {
       return NextResponse.json(
-        { error: "Gagal mengenali posisi catur dari gambar. Pastikan 64 petak papan catur terlihat jelas atau masukkan FEN secara manual." },
+        { error: "Gagal mengenali posisi catur dari gambar (waktu proses habis atau gambar buram). Silakan gunakan preset cepat atau tempel FEN." },
         { status: 400 }
       );
     }

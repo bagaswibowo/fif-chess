@@ -64,6 +64,7 @@ export type ForumPost = {
   likes: number;
   createdAt: string;
   attachedGame?: GameRecord;
+  attachedGames?: GameRecord[];
 };
 
 export type ForumThread = {
@@ -203,13 +204,13 @@ function RichTextToolbar({
   value,
   onChange,
   onAttachGame,
-  hasAttachedGame,
+  attachedGamesCount = 0,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   value: string;
   onChange: (val: string) => void;
   onAttachGame?: () => void;
-  hasAttachedGame?: boolean;
+  attachedGamesCount?: number;
 }) {
   const insertFormat = (before: string, after: string = "", placeholder: string = "") => {
     const el = textareaRef.current;
@@ -345,14 +346,14 @@ function RichTextToolbar({
             type="button"
             onClick={onAttachGame}
             className={`ml-auto px-2 py-0.5 rounded font-bold text-xs flex items-center gap-1 transition-all ${
-              hasAttachedGame
+              attachedGamesCount > 0
                 ? "bg-[var(--primary)] text-white shadow-sm"
                 : "bg-[var(--card)] text-white border border-[var(--border)] hover:border-[var(--primary)]"
             }`}
-            title="Lampirkan Partai Catur dari Riwayat Permainan"
+            title="Lampirkan Permainan Catur dari Riwayat Permainan"
           >
             <IconHistory3D size={13} />
-            <span>{hasAttachedGame ? "Partai Terlampir ✓" : "+ Lampirkan Partai"}</span>
+            <span>{attachedGamesCount > 0 ? `${attachedGamesCount} Permainan Terlampir ✓` : "+ Lampirkan Permainan"}</span>
           </button>
         )}
       </div>
@@ -570,6 +571,167 @@ function EmbeddedMatchPlayer({
   );
 }
 
+// Modal Dialog Pemilihan Permainan Berbentuk Tabel (Mendukung Multi-Select)
+function GameAttachmentModal({
+  isOpen,
+  onClose,
+  games,
+  selectedGames,
+  onConfirm,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  games: GameRecord[];
+  selectedGames: GameRecord[];
+  onConfirm: (selected: GameRecord[]) => void;
+}) {
+  const [currentSelectedIds, setCurrentSelectedIds] = useState<Set<string>>(
+    new Set(selectedGames.map((g) => g.id))
+  );
+
+  useEffect(() => {
+    setCurrentSelectedIds(new Set(selectedGames.map((g) => g.id)));
+  }, [isOpen, selectedGames]);
+
+  if (!isOpen) return null;
+
+  const toggleSelect = (id: string) => {
+    setCurrentSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (currentSelectedIds.size === games.length) {
+      setCurrentSelectedIds(new Set());
+    } else {
+      setCurrentSelectedIds(new Set(games.map((g) => g.id)));
+    }
+  };
+
+  const handleApply = () => {
+    const chosen = games.filter((g) => currentSelectedIds.has(g.id));
+    onConfirm(chosen);
+    onClose();
+  };
+
+  return (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-sm">
+      <div className="panel p-5 stack max-w-2xl w-full max-h-[85vh] rounded-2xl border border-[var(--primary)] shadow-2xl" style={{ background: "var(--card)" }}>
+        <div className="row-between pb-2.5 border-b border-[var(--border)]">
+          <div className="flex items-center gap-2">
+            <IconHistory3D size={18} />
+            <div>
+              <h3 className="text-sm font-bold text-white m-0">Lampirkan Permainan Catur</h3>
+              <p className="text-[11px] text-[var(--muted-foreground)] m-0">
+                Pilih satu atau lebih permainan dari riwayat permainan Anda untuk dilampirkan ke dalam diskusi
+              </p>
+            </div>
+          </div>
+          <button className="ctl ctl-xs ctl-quiet" onClick={onClose}>
+            <IconClose3D size={14} />
+          </button>
+        </div>
+
+        {/* TABEL PERMAINAN */}
+        <div className="flex-1 overflow-y-auto max-h-[50vh] rounded-xl border border-[var(--border)] bg-[var(--surface)] my-2">
+          {games.length === 0 ? (
+            <div className="text-center py-10 text-xs text-neutral-400">
+              Belum ada riwayat permainan yang tersimpan di browser ini.
+            </div>
+          ) : (
+            <table className="w-full text-xs font-mono border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-[var(--card)] text-neutral-400 text-[11px]">
+                  <th className="py-2 px-3 text-center w-12">
+                    <input
+                      type="checkbox"
+                      checked={games.length > 0 && currentSelectedIds.size === games.length}
+                      onChange={selectAll}
+                      className="cursor-pointer"
+                      title="Pilih Semua"
+                    />
+                  </th>
+                  <th className="py-2 px-3 text-left font-sans">Waktu</th>
+                  <th className="py-2 px-3 text-left font-sans">Lawan</th>
+                  <th className="py-2 px-3 text-center font-sans">Sisi</th>
+                  <th className="py-2 px-3 text-center font-sans">Hasil</th>
+                  <th className="py-2 px-3 text-center font-sans">Langkah</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]/60">
+                {games.map((g) => {
+                  const isChecked = currentSelectedIds.has(g.id);
+                  const dateStr = new Date(g.playedAt).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  return (
+                    <tr
+                      key={g.id}
+                      onClick={() => toggleSelect(g.id)}
+                      className={`cursor-pointer transition-colors ${
+                        isChecked ? "bg-[var(--primary)]/15 font-bold" : "hover:bg-neutral-800/40"
+                      }`}
+                    >
+                      <td className="py-2 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelect(g.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-2 px-3 text-neutral-300 font-sans">{dateStr}</td>
+                      <td className="py-2 px-3 text-white font-bold font-sans">vs {g.opponent}</td>
+                      <td className="py-2 px-3 text-center font-sans">
+                        <span className={`px-2 py-0.5 rounded text-[10px] ${g.humanSide === "white" ? "bg-white text-black font-bold" : "bg-neutral-800 text-white border border-neutral-600"}`}>
+                          {g.humanSide === "white" ? "Putih" : "Hitam"}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-center font-sans">
+                        <span className={`text-[11px] font-bold ${g.outcomeKind === "checkmate" ? "text-emerald-400" : g.outcomeKind === "draw" ? "text-amber-300" : "text-neutral-300"}`}>
+                          {g.outcomeKind === "checkmate" ? "Skakmat" : g.outcomeKind === "draw" ? "Remis" : g.outcomeKind}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-center text-neutral-400">{g.moves?.length || 0} Ply</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="row-between items-center pt-2 border-t border-[var(--border)]">
+          <div className="text-xs text-[var(--muted-foreground)]">
+            <span className="font-bold text-white">{currentSelectedIds.size}</span> permainan dipilih
+          </div>
+          <div className="flex gap-2">
+            <button type="button" className="ctl ctl-xs ctl-quiet" onClick={onClose}>
+              Batal
+            </button>
+            <button
+              type="button"
+              className="ctl ctl-xs ctl-primary font-bold px-3"
+              onClick={handleApply}
+              disabled={games.length === 0}
+            >
+              Lampirkan ({currentSelectedIds.size} Permainan)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CommunityView({ user, lang = "id" }: Props) {
   const { history: gameHistory } = useGameHistory();
   const [viewMode, setViewMode] = useState<"index" | "thread">("index");
@@ -582,13 +744,13 @@ export function CommunityView({ user, lang = "id" }: Props) {
   const [newTopicCategory, setNewTopicCategory] = useState("general");
   const [newTopicTitle, setNewTopicTitle] = useState("");
   const [newTopicContent, setNewTopicContent] = useState("");
-  const [selectedGameForNewTopic, setSelectedGameForNewTopic] = useState<GameRecord | null>(null);
+  const [selectedGamesForNewTopic, setSelectedGamesForNewTopic] = useState<GameRecord[]>([]);
   const [showGamePickerInNewTopic, setShowGamePickerInNewTopic] = useState(false);
   const newTopicTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Reply Form State
   const [replyText, setReplyText] = useState("");
-  const [selectedGameForReply, setSelectedGameForReply] = useState<GameRecord | null>(null);
+  const [selectedGamesForReply, setSelectedGamesForReply] = useState<GameRecord[]>([]);
   const [showGameImportPicker, setShowGameImportPicker] = useState(false);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -709,7 +871,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
   };
 
   const handleSubmitReply = () => {
-    if (!replyText.trim() && !selectedGameForReply) return;
+    if (!replyText.trim() && selectedGamesForReply.length === 0) return;
 
     const newPost: ForumPost = {
       id: `p-${Date.now()}`,
@@ -722,7 +884,8 @@ export function CommunityView({ user, lang = "id" }: Props) {
       content: replyText,
       likes: 0,
       createdAt: "Baru saja",
-      attachedGame: selectedGameForReply || undefined,
+      attachedGame: selectedGamesForReply[0] || undefined,
+      attachedGames: selectedGamesForReply.length > 0 ? selectedGamesForReply : undefined,
     };
 
     setThreads((prev) =>
@@ -739,7 +902,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
     );
 
     setReplyText("");
-    setSelectedGameForReply(null);
+    setSelectedGamesForReply([]);
   };
 
   const handleCreateTopic = () => {
@@ -759,7 +922,8 @@ export function CommunityView({ user, lang = "id" }: Props) {
       content: newTopicContent,
       likes: 0,
       createdAt: "Baru saja",
-      attachedGame: selectedGameForNewTopic || undefined,
+      attachedGame: selectedGamesForNewTopic[0] || undefined,
+      attachedGames: selectedGamesForNewTopic.length > 0 ? selectedGamesForNewTopic : undefined,
     };
 
     const createdThread: ForumThread = {
@@ -774,12 +938,12 @@ export function CommunityView({ user, lang = "id" }: Props) {
       repliesCount: 1,
       lastActivity: "Baru saja",
       posts: [initialPost],
-      attachedGameSummary: selectedGameForNewTopic
+      attachedGameSummary: selectedGamesForNewTopic[0]
         ? {
-            opponent: selectedGameForNewTopic.opponent,
-            outcome: selectedGameForNewTopic.outcomeKind,
-            movesCount: selectedGameForNewTopic.moves.length,
-            playedAs: selectedGameForNewTopic.humanSide,
+            opponent: selectedGamesForNewTopic[0].opponent,
+            outcome: selectedGamesForNewTopic[0].outcomeKind,
+            movesCount: selectedGamesForNewTopic[0].moves.length,
+            playedAs: selectedGamesForNewTopic[0].humanSide,
           }
         : undefined,
     };
@@ -790,7 +954,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
     setShowNewTopicModal(false);
     setNewTopicTitle("");
     setNewTopicContent("");
-    setSelectedGameForNewTopic(null);
+    setSelectedGamesForNewTopic([]);
   };
 
   const filteredThreads = useMemo(() => {
@@ -883,7 +1047,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   value={newTopicContent}
                   onChange={setNewTopicContent}
                   onAttachGame={() => setShowGamePickerInNewTopic(!showGamePickerInNewTopic)}
-                  hasAttachedGame={Boolean(selectedGameForNewTopic)}
+                  attachedGamesCount={selectedGamesForNewTopic.length}
                 />
                 <textarea
                   ref={newTopicTextareaRef}
@@ -895,51 +1059,50 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 />
               </div>
 
-              {/* Game Attachment Picker Drawer */}
-              {showGamePickerInNewTopic && (
-                <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--primary)] stack-tight">
-                  <div className="row-between text-xs font-bold text-white">
-                    <span>Pilih Partai untuk Dilampirkan:</span>
-                    <button onClick={() => setShowGamePickerInNewTopic(false)} className="text-[var(--muted-foreground)]">✕</button>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-                    {gameHistory.length === 0 ? (
-                      <p className="prose-note text-[11px]">Belum ada riwayat permainan yang tersimpan di browser ini.</p>
-                    ) : (
-                      gameHistory.map((g) => (
-                        <button
-                          key={g.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedGameForNewTopic(g);
-                            setShowGamePickerInNewTopic(false);
-                          }}
-                          className={`px-2 py-1 rounded text-left border text-[11px] transition-all ${
-                            selectedGameForNewTopic?.id === g.id
-                              ? "bg-[var(--primary)] text-white border-[var(--primary)] font-bold"
-                              : "bg-[var(--card)] border-[var(--border)] text-neutral-300 hover:border-[var(--primary)]"
-                          }`}
-                        >
-                          <div>vs {g.opponent} ({g.humanSide === "white" ? "Putih" : "Hitam"})</div>
-                          <div className="text-[10px] opacity-80">{g.outcomeKind} · {g.moves.length} langkah</div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
+              {/* Game Attachment Picker Modal & Attached Games Chips */}
+              <GameAttachmentModal
+                isOpen={showGamePickerInNewTopic}
+                onClose={() => setShowGamePickerInNewTopic(false)}
+                games={gameHistory}
+                selectedGames={selectedGamesForNewTopic}
+                onConfirm={(chosen) => setSelectedGamesForNewTopic(chosen)}
+              />
 
-              {selectedGameForNewTopic && (
-                <div className="p-2 rounded-xl bg-[var(--surface)] border border-[var(--primary)] row-between text-xs">
-                  <div>
-                    <span className="font-bold text-white">Partai Terlampir: </span>
-                    <span className="text-[var(--primary)] font-bold">
-                      vs {selectedGameForNewTopic.opponent} ({selectedGameForNewTopic.humanSide === "white" ? "Putih" : "Hitam"} · {selectedGameForNewTopic.outcomeKind})
+              {selectedGamesForNewTopic.length > 0 && (
+                <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--primary)] stack-tight text-xs">
+                  <div className="row-between pb-1 border-b border-[var(--border)]">
+                    <span className="font-bold text-white flex items-center gap-1.5">
+                      <IconHistory3D size={14} /> Permainan Terlampir ({selectedGamesForNewTopic.length}):
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowGamePickerInNewTopic(true)}
+                      className="text-xs text-[var(--primary)] font-bold hover:underline"
+                    >
+                      + Ubah / Tambah Permainan
+                    </button>
                   </div>
-                  <button onClick={() => setSelectedGameForNewTopic(null)} className="text-xs text-[var(--destructive)] font-bold hover:underline">
-                    Hapus
-                  </button>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {selectedGamesForNewTopic.map((g) => (
+                      <div
+                        key={g.id}
+                        className="px-2.5 py-1 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center gap-2 text-xs"
+                      >
+                        <span className="font-bold text-white">vs {g.opponent}</span>
+                        <span className="text-[10px] text-[var(--muted-foreground)]">
+                          ({g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedGamesForNewTopic((prev) => prev.filter((item) => item.id !== g.id))}
+                          className="text-[var(--destructive)] font-bold hover:scale-110 transition-transform"
+                          title="Hapus lampiran ini"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1085,9 +1248,15 @@ export function CommunityView({ user, lang = "id" }: Props) {
 
                 <FormattedPostContent text={post.content} />
 
-                {post.attachedGame && (
+                {post.attachedGames && post.attachedGames.length > 0 ? (
+                  <div className="space-y-3 mt-2">
+                    {post.attachedGames.map((g, idx) => (
+                      <EmbeddedMatchPlayer key={g.id || idx} game={g} authorUsername={post.authorUsername} />
+                    ))}
+                  </div>
+                ) : post.attachedGame ? (
                   <EmbeddedMatchPlayer game={post.attachedGame} authorUsername={post.authorUsername} />
-                )}
+                ) : null}
 
                 <div className="row-between pt-1.5 text-xs" style={{ borderTop: "1px solid var(--border)" }}>
                   <button
@@ -1125,47 +1294,49 @@ export function CommunityView({ user, lang = "id" }: Props) {
           <div className="panel p-3 stack-tight" style={{ background: "var(--surface)" }}>
             <span className="label font-bold text-xs">Balas Diskusi:</span>
 
-            {/* Attached game badge in reply */}
-            {selectedGameForReply && (
-              <div className="p-1.5 rounded-lg bg-[var(--card)] border border-[var(--primary)] row-between text-xs">
-                <div>
-                  <span className="font-bold text-white">Partai Terlampir: </span>
-                  <span className="text-[var(--primary)] font-bold">
-                    vs {selectedGameForReply.opponent} ({selectedGameForReply.humanSide === "white" ? "Putih" : "Hitam"} · {selectedGameForReply.outcomeKind})
-                  </span>
-                </div>
-                <button onClick={() => setSelectedGameForReply(null)} className="text-xs text-[var(--destructive)] font-bold hover:underline">
-                  Lepas
-                </button>
-              </div>
-            )}
+            {/* Game Attachment Modal & Attached Games in Reply */}
+            <GameAttachmentModal
+              isOpen={showGameImportPicker}
+              onClose={() => setShowGameImportPicker(false)}
+              games={gameHistory}
+              selectedGames={selectedGamesForReply}
+              onConfirm={(chosen) => setSelectedGamesForReply(chosen)}
+            />
 
-            {/* Drawer */}
-            {showGameImportPicker && (
-              <div className="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--primary)] stack-tight">
-                <div className="row-between text-xs font-bold text-white">
-                  <span>Pilih Partai dari Riwayat:</span>
-                  <button onClick={() => setShowGameImportPicker(false)} className="text-[var(--muted-foreground)]">✕</button>
+            {selectedGamesForReply.length > 0 && (
+              <div className="p-2 rounded-xl bg-[var(--card)] border border-[var(--primary)] stack-tight text-xs">
+                <div className="row-between pb-1 border-b border-[var(--border)]">
+                  <span className="font-bold text-white flex items-center gap-1.5">
+                    <IconHistory3D size={14} /> Permainan Terlampir ({selectedGamesForReply.length}):
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowGameImportPicker(true)}
+                    className="text-xs text-[var(--primary)] font-bold hover:underline"
+                  >
+                    + Ubah / Tambah Permainan
+                  </button>
                 </div>
-                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-                  {gameHistory.length === 0 ? (
-                    <p className="prose-note text-[11px]">Belum ada riwayat permainan.</p>
-                  ) : (
-                    gameHistory.map((g) => (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {selectedGamesForReply.map((g) => (
+                    <div
+                      key={g.id}
+                      className="px-2 py-0.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center gap-1.5 text-[11px]"
+                    >
+                      <span className="font-bold text-white">vs {g.opponent}</span>
+                      <span className="text-[10px] text-[var(--muted-foreground)]">
+                        ({g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind})
+                      </span>
                       <button
-                        key={g.id}
                         type="button"
-                        onClick={() => {
-                          setSelectedGameForReply(g);
-                          setShowGameImportPicker(false);
-                        }}
-                        className="px-2 py-1 rounded bg-[var(--surface)] border border-[var(--border)] text-left hover:border-[var(--primary)] text-[11px]"
+                        onClick={() => setSelectedGamesForReply((prev) => prev.filter((item) => item.id !== g.id))}
+                        className="text-[var(--destructive)] font-bold hover:scale-110"
+                        title="Hapus"
                       >
-                        <div className="font-bold text-white">vs {g.opponent}</div>
-                        <div className="text-[10px] text-[var(--muted-foreground)]">{g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind}</div>
+                        ✕
                       </button>
-                    ))
-                  )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1177,7 +1348,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 value={replyText}
                 onChange={setReplyText}
                 onAttachGame={() => setShowGameImportPicker(!showGameImportPicker)}
-                hasAttachedGame={Boolean(selectedGameForReply)}
+                attachedGamesCount={selectedGamesForReply.length}
               />
               <textarea
                 ref={replyInputRef}
@@ -1192,7 +1363,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
             <div className="row justify-end pt-1">
               <button
                 onClick={handleSubmitReply}
-                disabled={!replyText.trim() && !selectedGameForReply}
+                disabled={!replyText.trim() && selectedGamesForReply.length === 0}
                 className="ctl ctl-xs ctl-primary font-bold flex items-center gap-1 px-3"
               >
                 <IconMessages3D size={13} />
