@@ -33,6 +33,8 @@ type EngineType = "stockfish" | "jev-fly" | "jev" | "fly";
 type ViewTab = "solver" | "reference" | "compare";
 
 const PRESET_POSITIONS = [
+  { name: "Colle System: Serangan Greek Gift Bxh7+ (D05)", fen: "r1bq1rk1/pp1nbppp/4p3/3pP3/8/2PB1N2/PP3PPP/R1BQK2R w KQ - 0 10" },
+  { name: "Colle-Zukertort: Sepasang Gajah Diagonal (D05)", fen: "r1bq1rk1/pp1nbppp/2p1pn2/3p4/2PP4/1P1BPN2/PB1N1PPP/R2QK2R b KQ - 2 8" },
   { name: "Giuoco Piano: Idealzentrum (C53)", fen: "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/2P2N2/PP1P1PPP/RNBQK2R b KQkq - 0 4" },
   { name: "Evans Gambit: Serangan Sayap (C51)", fen: "r1bqk1nr/pppp1ppp/2n5/2b5/1PB1P3/5N2/P1PP1PPP/RNBQK2R b KQkq b3 0 4" },
   { name: "Giuoco Piano: Serangan Greco f7 (C54)", fen: "r1bqk2r/pppp1ppp/2n5/4p3/2B1n3/2P2N2/PPP2PPP/R1BQK2R w KQkq - 0 6" },
