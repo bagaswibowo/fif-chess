@@ -1,345 +1,678 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import type { SessionUser } from "@/lib/use-session";
-import { IconCommunity3D, IconMedal3D } from "@/components/icons3d";
+import { IconCommunity3D, IconMedal3D, IconPlay3D } from "@/components/icons3d";
+
+export type ForumCategory = {
+  id: string;
+  name: string;
+  description: string;
+  threadsCount: number;
+};
+
+export type ForumThread = {
+  id: string;
+  categoryId: string;
+  categoryName: string;
+  title: string;
+  authorUsername: string;
+  authorName: string;
+  authorTitle?: string;
+  avatarInitials: string;
+  repliesCount: number;
+  lastActivity: string;
+  isHot?: boolean;
+  isPinned?: boolean;
+  isLocked?: boolean;
+  posts: ForumPost[];
+};
 
 export type ForumPost = {
   id: string;
+  postNumber: number;
   authorUsername: string;
   authorName: string;
-  authorRole: string;
   authorTitle?: string;
+  authorRole: string;
   avatarInitials: string;
-  postNumber: number;
   content: string;
-  category: string;
   likes: number;
   dislikes: number;
   createdAt: string;
 };
 
-export type RecentActivity = {
-  id: string;
-  title: string;
-  author: string;
-  replies: number;
-  timeAgo: string;
+type Props = {
+  user: SessionUser | null;
+  lang?: "id" | "en";
 };
 
-type Props = { user: SessionUser | null; lang?: "id" | "en" };
-
 export function CommunityView({ user, lang = "id" }: Props) {
-  const [posts, setPosts] = useState<ForumPost[]>([
-    {
-      id: "p1",
-      authorUsername: "bagaswibowo",
-      authorName: "Pak Bagas Wibowo",
-      authorRole: "Dosen Tel-U & Admin",
-      authorTitle: "👑 ADMIN",
-      avatarInitials: "BW",
-      postNumber: 1,
-      content: "Selamat datang di Forum Komunitas Catur Telkom University (FIF CHESS). Di sini kita dapat berdiskusi mengenai pembukaan, analisis partai, berbagi teka-teki, dan mengorganisir turnamen civitas. Mari junjung tinggi fair play!",
-      category: "Pengumuman",
-      likes: 12,
-      dislikes: 0,
-      createdAt: "3 jam lalu",
-    },
-    {
-      id: "p2",
-      authorUsername: "daron_k1",
-      authorName: "DaRonK1",
-      authorRole: "Mahasiswa Informatika",
-      authorTitle: "♟️ 2300",
-      avatarInitials: "DR",
-      postNumber: 2,
-      content: "Halo semua, saya baru saja mencoba mode latihan Stockfish 15 NNUE di kedalaman 14. Evaluasinya sangat tajam dan bank teka-teki 50 posisi sangat membantu pemahaman taktik!",
-      category: "Analisis & Teori",
-      likes: 8,
-      dislikes: 0,
-      createdAt: "2 jam lalu",
-    },
-    {
-      id: "p3",
-      authorUsername: "zenwisteriaclarines",
-      authorName: "Zen Wisteria",
-      authorRole: "Civitas Akademika",
-      authorTitle: "💎 PRO",
-      avatarInitials: "ZW",
-      postNumber: 3,
-      content: "Apakah ada rencana turnamen kilat (Blitz 5 mnt) antar mahasiswa minggu depan? Saya siap mendaftar!",
-      category: "Turnamen Civitas",
-      likes: 5,
-      dislikes: 0,
-      createdAt: "1 jam lalu",
-    },
-  ]);
+  // State for Navigation: 'index' (forum categories) or 'thread' (specific topic)
+  const [viewMode, setViewMode] = useState<"index" | "thread">("index");
+  const [activeThreadId, setActiveThreadId] = useState<string>("t1");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showNewTopicModal, setShowNewTopicModal] = useState(false);
 
-  const [recentActivities] = useState<RecentActivity[]>([
-    { id: "r1", title: "Diskusi Pembukaan Scotch Game & Center Fork", author: "DaRonK1", replies: 14, timeAgo: "23 mnt lalu" },
-    { id: "r2", title: "Jadwal Latihan Bersama UKM Catur Tel-U", author: "parth_18", replies: 9, timeAgo: "31 mnt lalu" },
-    { id: "r3", title: "Koleksi Taktik Menakjubkan: Greek Gift di h7", author: "TheGreatJata", replies: 27, timeAgo: "38 mnt lalu" },
-    { id: "r4", title: "Bagikan Langkah Brilian Anda di Sini!", author: "parth_18", replies: 42, timeAgo: "41 mnt lalu" },
-    { id: "r5", title: "Evaluasi AI Coach untuk Endgame Raja & Benteng", author: "SirChessterton", replies: 18, timeAgo: "52 mnt lalu" },
-  ]);
+  // New Topic Form State
+  const [newTopicCategory, setNewTopicCategory] = useState("general");
+  const [newTopicTitle, setNewTopicTitle] = useState("");
+  const [newTopicContent, setNewTopicContent] = useState("");
 
+  // Reply Form State
   const [replyText, setReplyText] = useState("");
   const [followThread, setFollowThread] = useState(true);
-  const [busy, setBusy] = useState(false);
 
-  const wordCount = replyText.trim() ? replyText.trim().split(/\s+/).length : 0;
+  // Categories
+  const categories: ForumCategory[] = [
+    { id: "general", name: "Diskusi Umum Catur", description: "Opini catur, perdebatan menarik, dan topik santai", threadsCount: 1420 },
+    { id: "telu", name: "Komunitas Tel-U / FIF CHESS", description: "Pengumuman kampus, turnamen civitas, dan jadwal latihan UKM", threadsCount: 380 },
+    { id: "analysis", name: "Analisis Permainan & Taktik", description: "Bagikan partai brilian, evaluasi engine, dan koleksi blunder", threadsCount: 890 },
+    { id: "beginner", name: "Untuk Pemula & Latihan", description: "Tanya jawab pemula, trik garpu kuda, dan panduan taktik dasar", threadsCount: 512 },
+  ];
 
+  // Threads Data
+  const [threads, setThreads] = useState<ForumThread[]>([
+    {
+      id: "t1",
+      categoryId: "general",
+      categoryName: "Diskusi Umum Catur",
+      title: "🤔🔥 What's your biggest chess HOT TAKE 🔥🤔",
+      authorUsername: "smiley_face10",
+      authorName: "Smiley Face",
+      authorTitle: "💎 PRO",
+      avatarInitials: "SF",
+      repliesCount: 42,
+      lastActivity: "2 mnt lalu",
+      isHot: true,
+      posts: [
+        {
+          id: "p1",
+          postNumber: 1,
+          authorUsername: "smiley_face10",
+          authorName: "Smiley Face",
+          authorTitle: "💎 PRO",
+          authorRole: "Civitas Catur Tel-U",
+          avatarInitials: "SF",
+          content: "Tell me your chess hot takes. Mine is that chess is partially a luck based game. Hear me out: you cannot see thirty moves into the future. There are positions where making the best human move opens an emergent tactical dynamic twenty moves later that neither side could completely compute. What are your biggest hot takes?",
+          likes: 24,
+          dislikes: 3,
+          createdAt: "2 jam lalu",
+        },
+        {
+          id: "p2",
+          postNumber: 2,
+          authorUsername: "bagaswibowo",
+          authorName: "Pak Bagas Wibowo",
+          authorTitle: "👑 ADMIN",
+          authorRole: "Dosen Tel-U & Admin",
+          avatarInitials: "BW",
+          content: "Hot take yang sangat menarik! Dari perspektif teori komputasi dan pohon pencarian Minimax/Stockfish, kompleksitas posisi catur memang memiliki branching factor ~35 per ply. Namun itulah mengapa penguasaan pola (heuristik) dan manajemen risiko waktu (time control) menjadi pembeda antara Master dan Grandmaster.",
+          likes: 38,
+          dislikes: 0,
+          createdAt: "1 jam lalu",
+        },
+        {
+          id: "p3",
+          postNumber: 3,
+          authorUsername: "DaRonK1",
+          authorName: "DaRonK1",
+          authorTitle: "♟️ 2300",
+          authorRole: "Mahasiswa Informatika",
+          avatarInitials: "DR",
+          content: "Saya setuju bahwa di time control kilat (Bullet / Blitz 3 mnt), elemen intuisi instan sangat dominan. Tapi di partai Klasik, kalkulasi konkret tetap menjadi penentu kemenangan utama!",
+          likes: 19,
+          dislikes: 1,
+          createdAt: "45 mnt lalu",
+        },
+      ],
+    },
+    {
+      id: "t2",
+      categoryId: "telu",
+      categoryName: "Komunitas Tel-U / FIF CHESS",
+      title: "Jadwal Turnamen Kilat Blitz 5 Mnt Antar Mahasiswa FIF Tel-U 🏆",
+      authorUsername: "bagaswibowo",
+      authorName: "Pak Bagas Wibowo",
+      authorTitle: "👑 ADMIN",
+      avatarInitials: "BW",
+      repliesCount: 28,
+      lastActivity: "15 mnt lalu",
+      isPinned: true,
+      posts: [
+        {
+          id: "p2_1",
+          postNumber: 1,
+          authorUsername: "bagaswibowo",
+          authorName: "Pak Bagas Wibowo",
+          authorTitle: "👑 ADMIN",
+          authorRole: "Dosen Tel-U & Admin",
+          avatarInitials: "BW",
+          content: "Diberitahukan kepada seluruh mahasiswa dan civitas Telkom University, turnamen online PvP Blitz 5 mnt akan diadakan setiap Jumat sore di platform ini. Sistem pertandingan menggunakan pairing Swiss 5 ronde. Silakan daftarkan akun Anda dan lakukan verifikasi.",
+          likes: 45,
+          dislikes: 0,
+          createdAt: "4 jam lalu",
+        },
+      ],
+    },
+    {
+      id: "t3",
+      categoryId: "analysis",
+      categoryName: "Analisis Permainan & Taktik",
+      title: "Post your brilliant moves here! (Koleksi Taktik Spektakuler)",
+      authorUsername: "parth_18",
+      authorName: "Parth Chess",
+      authorTitle: "♟️ 1950",
+      avatarInitials: "PC",
+      repliesCount: 64,
+      lastActivity: "39 mnt lalu",
+      isHot: true,
+      posts: [
+        {
+          id: "p3_1",
+          postNumber: 1,
+          authorUsername: "parth_18",
+          authorName: "Parth Chess",
+          authorTitle: "♟️ 1950",
+          authorRole: "Mahasiswa SI",
+          avatarInitials: "PC",
+          content: "Bagikan langkah brilian (!!) Anda saat melawan bot Stockfish atau pemain nyata. Pengorbanan menteri di d1 atau Greek Gift di h7 paling disambut!",
+          likes: 29,
+          dislikes: 0,
+          createdAt: "5 jam lalu",
+        },
+      ],
+    },
+    {
+      id: "t4",
+      categoryId: "beginner",
+      categoryName: "Untuk Pemula & Latihan",
+      title: "Perbedaan Nyata Antara Pemain Rating 1200, 1600, dan 2300",
+      authorUsername: "zenwisteriaclarines",
+      authorName: "Zen Wisteria",
+      authorTitle: "💎 PRO",
+      avatarInitials: "ZW",
+      repliesCount: 17,
+      lastActivity: "22 mnt lalu",
+      posts: [
+        {
+          id: "p4_1",
+          postNumber: 1,
+          authorUsername: "zenwisteriaclarines",
+          authorName: "Zen Wisteria",
+          authorTitle: "💎 PRO",
+          authorRole: "Civitas Akademika",
+          avatarInitials: "ZW",
+          content: "Bagi pemula, kunci naik dari 1200 ke 1600 adalah eliminasi blunder 1-langkah dan latihan teka-teki taktis 50 posisi secara konsisten.",
+          likes: 21,
+          dislikes: 0,
+          createdAt: "3 jam lalu",
+        },
+      ],
+    },
+  ]);
+
+  const activeThread = threads.find((t) => t.id === activeThreadId) || threads[0];
+
+  // Submit New Topic
+  const handleCreateTopic = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTopicTitle.trim() || !newTopicContent.trim() || !user) return;
+
+    const catObj = categories.find((c) => c.id === newTopicCategory) || categories[0];
+    const newThread: ForumThread = {
+      id: "t-" + Date.now(),
+      categoryId: catObj.id,
+      categoryName: catObj.name,
+      title: newTopicTitle.trim(),
+      authorUsername: user.username,
+      authorName: user.fullName,
+      authorTitle: user.isAdmin ? "👑 ADMIN" : "♟️ MEMBER",
+      avatarInitials: user.username.slice(0, 2).toUpperCase(),
+      repliesCount: 0,
+      lastActivity: "Baru saja",
+      posts: [
+        {
+          id: "p-" + Date.now(),
+          postNumber: 1,
+          authorUsername: user.username,
+          authorName: user.fullName,
+          authorTitle: user.isAdmin ? "👑 ADMIN" : "♟️ MEMBER",
+          authorRole: user.role,
+          avatarInitials: user.username.slice(0, 2).toUpperCase(),
+          content: newTopicContent.trim(),
+          likes: 0,
+          dislikes: 0,
+          createdAt: "Baru saja",
+        },
+      ],
+    };
+
+    setThreads((prev) => [newThread, ...prev]);
+    setActiveThreadId(newThread.id);
+    setViewMode("thread");
+    setShowNewTopicModal(false);
+    setNewTopicTitle("");
+    setNewTopicContent("");
+  };
+
+  // Submit Reply to Active Thread
   const handlePostReply = (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim() || !user) return;
-    setBusy(true);
 
     const newPost: ForumPost = {
       id: "p-" + Date.now(),
+      postNumber: activeThread.posts.length + 1,
       authorUsername: user.username,
       authorName: user.fullName,
-      authorRole: user.role,
       authorTitle: user.isAdmin ? "👑 ADMIN" : "♟️ MEMBER",
+      authorRole: user.role,
       avatarInitials: user.username.slice(0, 2).toUpperCase(),
-      postNumber: posts.length + 1,
       content: replyText.trim(),
-      category: "Diskusi Umum",
       likes: 0,
       dislikes: 0,
       createdAt: "Baru saja",
     };
 
-    setPosts((prev) => [...prev, newPost]);
-    setReplyText("");
-    setBusy(false);
-  };
+    setThreads((prev) =>
+      prev.map((t) =>
+        t.id === activeThread.id
+          ? {
+              ...t,
+              repliesCount: t.repliesCount + 1,
+              lastActivity: "Baru saja",
+              posts: [...t.posts, newPost],
+            }
+          : t
+      )
+    );
 
-  const handleInsertFormat = (tag: string) => {
-    if (tag === "b") setReplyText((prev) => prev + " **teks tebal** ");
-    if (tag === "i") setReplyText((prev) => prev + " *teks miring* ");
-    if (tag === "quote") setReplyText((prev) => prev + "\n> Kutipan teks...\n");
-    if (tag === "code") setReplyText((prev) => prev + " `1.e4 e5 2.Nf3` ");
-    if (tag === "board") setReplyText((prev) => prev + " [FEN: r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4] ");
+    setReplyText("");
   };
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
-      {/* HEADER UTAS / THREAD TITLE */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#81b64c] uppercase tracking-wider">
-            <span>Forum Komunitas</span>
-            <span>•</span>
-            <span className="text-neutral-400">Pengumuman & Diskusi Terbuka</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black text-white leading-tight">
-            Selamat Datang di Arena Catur Civitas Telkom University (FIF CHESS)
-          </h1>
-          <p className="text-xs text-neutral-400 font-medium">
-            Dimulai oleh <strong className="text-white">@bagaswibowo</strong> • {posts.length} balasan aktif • Terbuka untuk umum
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="px-3 py-2 rounded-xl bg-[#211f1d] hover:bg-[#302e2b] border border-[#3d3a34] text-xs font-bold text-neutral-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>^</span>
-            <span>Papan Atas</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2-KOLOM (MAIN CONTENT + RIGHT SIDEBAR) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
-        {/* KOLOM TENGAH: POSTINGAN THREAD + EDITOR BALASAN */}
-        <div className="space-y-5 min-w-0">
-          {/* DAFTAR POSTINGAN ANGGOTA */}
-          <div className="space-y-4">
-            {posts.map((p) => (
-              <div
-                key={p.id}
-                className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3.5 shadow-sm transition-all hover:border-neutral-500"
-              >
-                {/* Header Post */}
-                <div className="flex items-start justify-between gap-3 border-b border-[#312e2b] pb-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#81b64c] to-[#457524] flex items-center justify-center font-bold text-sm text-white shrink-0 shadow">
-                      {p.avatarInitials}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-sm text-white">{p.authorName}</span>
-                        <span className="text-xs text-[#81b64c] font-semibold">@{p.authorUsername}</span>
-                        {p.authorTitle && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#1a1714] border border-[#3d3a34] text-[10px] font-black text-amber-400">
-                            {p.authorTitle}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-neutral-400 mt-0.5">
-                        <span>{p.authorRole}</span>
-                        <span className="mx-1.5">•</span>
-                        <span>{p.createdAt}</span>
-                      </div>
-                    </div>
+      {/* 2-KOLOM UTAMA: KONTEN FORUM + RIGHT SIDEBAR TOOLS */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_330px] gap-6 items-start">
+        {/* KOLOM KIRI / TENGAH: INDEX KATEGORI ATAU DETAIL UTAS */}
+        <div className="space-y-6 min-w-0">
+          {viewMode === "index" ? (
+            /* ================= VIEW 1: FORUM CATEGORIES INDEX ================= */
+            <div className="space-y-6">
+              {/* Header Forum Index */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] flex items-center justify-between shadow-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#1a1714] border border-[#383530] flex items-center justify-center text-xl text-[#81b64c]">
+                    💬
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-mono font-bold text-neutral-500">#{p.postNumber}</span>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-white leading-tight">Forum Komunitas</h1>
+                    <p className="text-xs text-neutral-400 font-medium">
+                      Pusat diskusi catur civitas Telkom University & analisis taktik
+                    </p>
                   </div>
                 </div>
 
-                {/* Konten Post */}
-                <div className="text-sm text-neutral-200 leading-relaxed whitespace-pre-wrap">
-                  {p.content}
-                </div>
-
-                {/* Footer Interaksi */}
-                <div className="flex items-center justify-between pt-2 border-t border-[#312e2b] text-xs text-neutral-400">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setPosts(prev => prev.map(x => x.id === p.id ? { ...x, likes: x.likes + 1 } : x))}
-                      className="px-2.5 py-1 rounded-lg bg-[#1a1714] hover:bg-[#302e2b] border border-[#3d3a34] flex items-center gap-1.5 font-bold hover:text-white transition-all cursor-pointer"
-                    >
-                      <span className="text-[#81b64c]">↑</span>
-                      <span>{p.likes}</span>
-                      <span className="text-neutral-500">↓</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setReplyText(prev => prev + `\n> @${p.authorUsername} menulis:\n> "${p.content.slice(0, 100)}..."\n\n`)}
-                      className="hover:text-white flex items-center gap-1 font-semibold cursor-pointer"
-                    >
-                      <span>”</span>
-                      <span>Kutip</span>
-                    </button>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-md bg-[#1a1714] text-[10px] text-neutral-400 font-medium">
-                    {p.category}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* FORM BALASAN / RICH TEXT INPUT BOX */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#211f1d] border border-[#3d3a34] space-y-3.5 shadow-md">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Tulis Balasan ke Forum</span>
-              <span className="text-xs text-neutral-400 font-mono">Kata: {wordCount} • Karakter: {replyText.length}</span>
-            </div>
-
-            {/* WYSIWYG Toolbar */}
-            <div className="flex items-center gap-1 p-1.5 rounded-xl bg-[#1a1714] border border-[#312e2b] flex-wrap">
-              <button
-                type="button"
-                onClick={() => handleInsertFormat("b")}
-                className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
-                title="Tebal (Bold)"
-              >
-                B
-              </button>
-              <button
-                type="button"
-                onClick={() => handleInsertFormat("i")}
-                className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm italic font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
-                title="Miring (Italic)"
-              >
-                I
-              </button>
-              <button
-                type="button"
-                onClick={() => handleInsertFormat("quote")}
-                className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
-                title="Kutipan (Quote)"
-              >
-                ”
-              </button>
-              <button
-                type="button"
-                onClick={() => handleInsertFormat("code")}
-                className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm font-mono text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
-                title="Notasi / Kode"
-              >
-                #
-              </button>
-              <button
-                type="button"
-                onClick={() => handleInsertFormat("board")}
-                className="px-2.5 h-8 rounded-lg hover:bg-[#302e2b] text-xs font-bold text-[#81b64c] hover:text-white flex items-center gap-1 cursor-pointer"
-                title="Sisipkan Diagram Papan"
-              >
-                <span>♟️</span>
-                <span>Papan</span>
-              </button>
-            </div>
-
-            {/* Textarea Input */}
-            <form onSubmit={handlePostReply} className="space-y-3">
-              <textarea
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder={user ? "Ketik tanggapan atau analisis Anda di sini..." : "Silakan masuk untuk menulis balasan ke forum..."}
-                disabled={!user}
-                rows={4}
-                className="w-full p-3.5 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[#81b64c] leading-relaxed resize-y"
-              />
-
-              <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
-                <label className="flex items-center gap-2 text-xs text-neutral-400 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={followThread}
-                    onChange={(e) => setFollowThread(e.target.checked)}
-                    className="w-4 h-4 accent-[#81b64c] rounded cursor-pointer"
-                  />
-                  <span>Ikuti pembaruan utas ini (Notifikasi)</span>
-                </label>
-
+                {/* Mobile Button Buat Topik */}
                 <button
-                  type="submit"
-                  disabled={!user || !replyText.trim() || busy}
-                  className="px-6 py-2.5 rounded-xl bg-[#81b64c] hover:bg-[#72a342] disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-sm transition-all shadow-[0_3px_0_#4d7a27] cursor-pointer"
+                  type="button"
+                  onClick={() => setShowNewTopicModal(true)}
+                  className="lg:hidden px-3.5 py-2 rounded-xl bg-[#81b64c] text-white text-xs font-bold transition-all shadow"
                 >
-                  {busy ? "Mengirim…" : "Tulisan (Kirim)"}
+                  + Topik
                 </button>
               </div>
-            </form>
-          </div>
+
+              {/* DAFTAR KATEGORI FORUM & TOPIK TERAKHIR */}
+              <div className="space-y-6">
+                {categories.map((cat) => {
+                  const catThreads = threads.filter((t) => t.categoryId === cat.id);
+                  return (
+                    <div
+                      key={cat.id}
+                      className="p-4 sm:p-5 rounded-2xl bg-[#211f1d] border border-[#3d3a34] space-y-3.5 shadow-md"
+                    >
+                      {/* Category Header */}
+                      <div className="flex items-center justify-between border-b border-[#312e2b] pb-2.5">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-base font-black text-white hover:text-[#81b64c] cursor-pointer transition-colors">
+                              {cat.name}
+                            </h2>
+                            <span className="text-xs text-neutral-500 font-bold">›</span>
+                          </div>
+                          <p className="text-[11px] text-neutral-400 mt-0.5">{cat.description}</p>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full bg-[#1a1714] text-[10px] font-mono font-bold text-neutral-400">
+                          {catThreads.length} Topik
+                        </span>
+                      </div>
+
+                      {/* Top Threads in this Category */}
+                      <div className="space-y-2">
+                        {catThreads.length === 0 ? (
+                          <p className="text-xs text-neutral-500 italic py-2">Belum ada topik di kategori ini.</p>
+                        ) : (
+                          catThreads.map((t) => (
+                            <div
+                              key={t.id}
+                              onClick={() => {
+                                setActiveThreadId(t.id);
+                                setViewMode("thread");
+                                window.scrollTo({ top: 0, behavior: "smooth" });
+                              }}
+                              className="p-3 rounded-xl bg-[#262421] border border-[#312e2b] hover:border-neutral-400 flex items-center justify-between gap-3 cursor-pointer transition-all hover:bg-[#2b2926]"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                {t.isPinned && <span className="text-sm text-amber-400 shrink-0" title="Dipin">📌</span>}
+                                {t.isHot && <span className="text-sm text-red-400 shrink-0" title="Hangat">🔥</span>}
+                                <div className="min-w-0">
+                                  <div className="text-xs sm:text-sm font-bold text-white hover:text-[#81b64c] truncate transition-colors">
+                                    {t.title}
+                                  </div>
+                                  <div className="text-[10px] text-neutral-400 flex items-center gap-1.5 mt-0.5">
+                                    <span>Oleh <strong className="text-neutral-300">@{t.authorUsername}</strong></span>
+                                    <span>•</span>
+                                    <span>{t.lastActivity}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 text-xs text-neutral-400 font-mono shrink-0">
+                                <span>💬</span>
+                                <span className="font-bold text-white">{t.repliesCount}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            /* ================= VIEW 2: ACTIVE THREAD DETAIL ================= */
+            <div className="space-y-5">
+              {/* Back Button & Breadcrumbs */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("index")}
+                  className="px-3.5 py-2 rounded-xl bg-[#211f1d] hover:bg-[#302e2b] border border-[#3d3a34] text-xs font-bold text-neutral-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <span>‹</span>
+                  <span>Kembali ke Semua Forum</span>
+                </button>
+                <div className="text-xs text-neutral-400 flex items-center gap-1 font-medium">
+                  <span>Forum</span>
+                  <span>›</span>
+                  <span className="text-neutral-300">{activeThread.categoryName}</span>
+                </div>
+              </div>
+
+              {/* Thread Header Card */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-2 shadow-lg">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#1a1714] text-[10px] font-bold text-[#81b64c] border border-[#3d3a34]">
+                    {activeThread.categoryName}
+                  </span>
+                  {activeThread.isPinned && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-950/60 text-amber-300 text-[10px] font-bold">
+                      📌 Dipin
+                    </span>
+                  )}
+                  {activeThread.isHot && (
+                    <span className="px-2 py-0.5 rounded-full bg-red-950/60 text-red-300 text-[10px] font-bold">
+                      🔥 Topik Hangat
+                    </span>
+                  )}
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black text-white leading-snug">{activeThread.title}</h1>
+                <div className="text-xs text-neutral-400 font-medium">
+                  Dimulai oleh <strong className="text-white">@{activeThread.authorUsername}</strong> • {activeThread.posts.length} kiriman aktif
+                </div>
+              </div>
+
+              {/* POSTS LIST (Post #1, #2, #3...) */}
+              <div className="space-y-4">
+                {activeThread.posts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3.5 shadow-sm transition-all hover:border-neutral-400"
+                  >
+                    {/* Author Header */}
+                    <div className="flex items-start justify-between gap-3 border-b border-[#312e2b] pb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#81b64c] to-[#457524] flex items-center justify-center font-bold text-sm text-white shrink-0 shadow">
+                          {post.avatarInitials}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-white">{post.authorName}</span>
+                            <span className="text-xs text-[#81b64c] font-semibold">@{post.authorUsername}</span>
+                            {post.authorTitle && (
+                              <span className="px-2 py-0.5 rounded-full bg-[#1a1714] border border-[#3d3a34] text-[10px] font-black text-amber-400">
+                                {post.authorTitle}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-neutral-400 mt-0.5">
+                            <span>{post.authorRole}</span>
+                            <span className="mx-1.5">•</span>
+                            <span>{post.createdAt}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-neutral-500">#{post.postNumber}</span>
+                    </div>
+
+                    {/* Post Content */}
+                    <div className="text-sm text-neutral-200 leading-relaxed whitespace-pre-wrap">
+                      {post.content}
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="flex items-center justify-between pt-2 border-t border-[#312e2b] text-xs text-neutral-400">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setThreads((prev) =>
+                              prev.map((t) =>
+                                t.id === activeThread.id
+                                  ? {
+                                      ...t,
+                                      posts: t.posts.map((p) =>
+                                        p.id === post.id ? { ...p, likes: p.likes + 1 } : p
+                                      ),
+                                    }
+                                  : t
+                              )
+                            );
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-[#1a1714] hover:bg-[#302e2b] border border-[#3d3a34] flex items-center gap-1.5 font-bold hover:text-white transition-all cursor-pointer"
+                        >
+                          <span className="text-[#81b64c]">↑</span>
+                          <span>{post.likes}</span>
+                          <span className="text-neutral-500">↓</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setReplyText((prev) => prev + `\n> @${post.authorUsername} menulis:\n> "${post.content.slice(0, 120)}..."\n\n`)
+                          }
+                          className="hover:text-white flex items-center gap-1 font-semibold cursor-pointer"
+                        >
+                          <span>”</span>
+                          <span>Kutip</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* REPLY FORM / RICH TEXT EDITOR */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#211f1d] border border-[#3d3a34] space-y-3.5 shadow-md">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Tulis Balasan</span>
+                  <span className="text-xs text-neutral-400 font-mono">Karakter: {replyText.length}</span>
+                </div>
+
+                {/* Toolbar */}
+                <div className="flex items-center gap-1 p-1.5 rounded-xl bg-[#1a1714] border border-[#312e2b] flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setReplyText((prev) => prev + " **teks tebal** ")}
+                    className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
+                    title="Tebal"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReplyText((prev) => prev + " *teks miring* ")}
+                    className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm italic font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
+                    title="Miring"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReplyText((prev) => prev + "\n> Kutipan teks...\n")}
+                    className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
+                    title="Kutipan"
+                  >
+                    ”
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReplyText((prev) => prev + " `1.e4 e5 2.Nf3` ")}
+                    className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm font-mono text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
+                    title="Notasi"
+                  >
+                    #
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReplyText((prev) => prev + " [FEN: r1bqkb1r/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 4] ")}
+                    className="px-2.5 h-8 rounded-lg hover:bg-[#302e2b] text-xs font-bold text-[#81b64c] hover:text-white flex items-center gap-1 cursor-pointer"
+                    title="Sisipkan Diagram Papan"
+                  >
+                    <span>♟️</span>
+                    <span>Papan</span>
+                  </button>
+                </div>
+
+                {/* Textarea */}
+                <form onSubmit={handlePostReply} className="space-y-3">
+                  <textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder={user ? "Ketik tanggapan atau analisis Anda..." : "Silakan masuk untuk menulis tanggapan..."}
+                    disabled={!user}
+                    rows={4}
+                    className="w-full p-3.5 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[#81b64c] leading-relaxed"
+                  />
+
+                  <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
+                    <label className="flex items-center gap-2 text-xs text-neutral-400 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={followThread}
+                        onChange={(e) => setFollowThread(e.target.checked)}
+                        className="w-4 h-4 accent-[#81b64c] rounded cursor-pointer"
+                      />
+                      <span>Ikuti pembaruan utas ini (Notifikasi)</span>
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={!user || !replyText.trim()}
+                      className="px-6 py-2.5 rounded-xl bg-[#81b64c] hover:bg-[#72a342] disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-sm transition-all shadow-[0_3px_0_#4d7a27] cursor-pointer"
+                    >
+                      Tulisan (Kirim)
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* KOLOM KANAN: WIDGETS CHESS.COM (POSTINGAN TERBARU & KETERANGAN FORUM) */}
+        {/* KOLOM KANAN (RIGHT SIDEBAR TOOLS: + TOPIK BARU, SEARCH, TERBARU, LEGENDA) */}
         <div className="space-y-5">
-          {/* WIDGET 1: POSTINGAN TERBARU */}
+          {/* TOMBOL AKBAR + TOPIK BARU */}
+          <button
+            type="button"
+            onClick={() => setShowNewTopicModal(true)}
+            className="w-full h-12 rounded-xl bg-[#81b64c] hover:bg-[#72a342] text-white font-black text-sm transition-all shadow-[0_4px_0_#4d7a27,0_4px_16px_rgba(129,182,76,0.3)] flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span className="text-lg font-bold">+</span>
+            <span>Topik Baru</span>
+          </button>
+
+          {/* FILTER & SEARCH WIDGET */}
+          <div className="p-4 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3 shadow-md">
+            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Cari & Saring</div>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Cari topik forum..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#81b64c]"
+              />
+
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-xs text-neutral-300 focus:outline-none focus:border-[#81b64c]"
+              >
+                <option value="all">-- Semua Kategori --</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* WIDGET: TERBARU (LATEST ACTIVITY) */}
           <div className="p-4 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3 shadow-md">
             <div className="flex items-center justify-between border-b border-[#312e2b] pb-2.5">
-              <span className="text-xs font-bold text-white uppercase tracking-wider">Postingan Terbaru</span>
+              <span className="text-xs font-bold text-white uppercase tracking-wider">Terbaru</span>
               <span className="text-[10px] text-[#81b64c] font-bold">Aktivitas Live</span>
             </div>
             <div className="space-y-2.5">
-              {recentActivities.map((act) => (
+              {threads.slice(0, 5).map((t) => (
                 <div
-                  key={act.id}
+                  key={t.id}
+                  onClick={() => {
+                    setActiveThreadId(t.id);
+                    setViewMode("thread");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   className="p-2.5 rounded-xl bg-[#1a1714] border border-[#312e2b] hover:border-neutral-500 transition-all cursor-pointer space-y-1"
                 >
                   <div className="text-xs font-bold text-white hover:text-[#81b64c] line-clamp-2 transition-colors">
-                    {act.title}
+                    {t.title}
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-neutral-400">
-                    <span>@{act.author}</span>
+                    <span>@{t.authorUsername}</span>
                     <span className="text-neutral-500">•</span>
-                    <span>{act.timeAgo}</span>
-                    <span className="text-neutral-500">•</span>
-                    <span className="font-mono text-[#81b64c]">{act.replies} balasan</span>
+                    <span>{t.lastActivity}</span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* WIDGET 2: KETERANGAN FORUM (FORUM LEGEND) */}
+          {/* WIDGET: KETERANGAN FORUM */}
           <div className="p-4 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3 shadow-md text-xs">
             <div className="border-b border-[#312e2b] pb-2">
               <span className="font-bold text-white uppercase tracking-wider text-xs">Keterangan Forum</span>
@@ -350,30 +683,102 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 <span>Mengikuti Topik</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="text-base text-blue-400">💬</span>
-                <span>Komentar Baru Tersedia</span>
-              </div>
-              <div className="flex items-center gap-2.5">
                 <span className="text-base text-amber-400">📌</span>
                 <span>Topik Pilihan Civitas</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="text-base text-neutral-400">🔒</span>
-                <span>Topik Terkunci</span>
+                <span className="text-base text-red-400">🔥</span>
+                <span>Topik Hangat & Viral</span>
               </div>
-            </div>
-            <div className="pt-2 border-t border-[#312e2b]">
-              <button
-                type="button"
-                onClick={() => alert("Semua topik ditandai sudah dibaca.")}
-                className="text-xs text-[#81b64c] hover:underline font-semibold cursor-pointer"
-              >
-                Tandai semua topik sebagai DIBACA
-              </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* MODAL BUAT TOPIK BARU (+ TOPIK BARU) */}
+      {showNewTopicModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowNewTopicModal(false);
+          }}
+        >
+          <div className="w-full max-w-lg bg-[#211f1d] border border-[#3d3a34] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden text-white flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#312e2b] bg-[#262421]">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">✍️</span>
+                <span className="font-bold text-base">Buat Topik Diskusi Baru</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewTopicModal(false)}
+                className="w-8 h-8 rounded-lg bg-[#302e2b] hover:bg-[#3d3a34] text-neutral-400 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTopic} className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Kategori Forum</label>
+                <select
+                  value={newTopicCategory}
+                  onChange={(e) => setNewTopicCategory(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-sm text-white focus:outline-none focus:border-[#81b64c]"
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Judul Topik</label>
+                <input
+                  type="text"
+                  placeholder="Misal: Taktik Pembukaan Scotch Game yang Efektif"
+                  value={newTopicTitle}
+                  onChange={(e) => setNewTopicTitle(e.target.value)}
+                  maxLength={120}
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-sm text-white focus:outline-none focus:border-[#81b64c]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Isi Pembahasan</label>
+                <textarea
+                  placeholder="Tuliskan gagasan, pertanyaan, atau analisis lengkap Anda..."
+                  value={newTopicContent}
+                  onChange={(e) => setNewTopicContent(e.target.value)}
+                  rows={5}
+                  required
+                  className="w-full p-3.5 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-sm text-white focus:outline-none focus:border-[#81b64c] leading-relaxed"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowNewTopicModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] text-neutral-300 text-sm font-bold transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!user || !newTopicTitle.trim() || !newTopicContent.trim()}
+                  className="px-6 py-2.5 rounded-xl bg-[#81b64c] hover:bg-[#72a342] disabled:opacity-50 text-white font-bold text-sm transition-all shadow-[0_3px_0_#4d7a27] cursor-pointer"
+                >
+                  Publikasikan Topik
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
