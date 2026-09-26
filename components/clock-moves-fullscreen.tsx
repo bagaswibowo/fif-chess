@@ -157,7 +157,7 @@ export function ClockMovesFullscreen({
       <div className="flex-1 flex flex-col lg:flex-row items-center justify-center p-2 sm:p-4 gap-3 lg:gap-6 max-w-7xl mx-auto w-full overflow-hidden">
         
         {/* LEFT / CENTER: EVAL BAR + BOARD + PLAYER CARDS */}
-        <div className="flex flex-col items-center justify-center w-full max-w-[min(94vw,66vh)] flex-shrink-0">
+        <div className="flex flex-col items-center justify-center w-full max-w-[min(96vw,84vh)] flex-shrink-0">
           
           {/* TOP PLAYER CARD (OPPONENT) */}
           <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] mb-1.5 shadow-sm">
@@ -204,7 +204,7 @@ export function ClockMovesFullscreen({
             </div>
 
             {/* BOARD CONTAINER */}
-            <div className="flex-1 aspect-square rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-black/40">
+            <div className="flex-1 aspect-square rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)]">
               <Chessboard
                 options={{
                   id: "fullscreen-focus-board",

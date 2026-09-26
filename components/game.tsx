@@ -872,7 +872,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               </div>
 
               {/* Chessboard (Responsive to Viewport Width) */}
-              <div className="w-full max-w-[min(88vw,42vh)] lg:max-w-none aspect-square mx-auto relative shadow-2xl rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)]">
+              <div className="w-full max-w-[min(94vw,65vh)] lg:max-w-none aspect-square mx-auto relative shadow-2xl rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)]">
                 <Chessboard
                   options={{
                     id: "fif-chess-main",
