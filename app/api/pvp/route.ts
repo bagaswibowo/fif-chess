@@ -1,15 +1,23 @@
 import { NextResponse } from "next/server";
 import { Chess } from "chess.js";
 import { randomBytes, randomUUID } from "crypto";
+import { currentUser, findUser, loadUsers } from "@/lib/auth-store";
+
+export const runtime = "nodejs";
+
+const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 type PvpRoom = {
   code: string;
   createdAt: number;
   lastActive: number;
-  whiteUser: string;
-  whiteToken: string;
+  whiteUser: string | null;
+  whiteToken: string | null;
   blackUser: string | null;
   blackToken: string | null;
+  creatorUser: string;
+  creatorSide: "white" | "black";
+  invitedUser: string | null;
   fen: string;
   moves: string[];
   turn: "w" | "b";
@@ -18,318 +26,296 @@ type PvpRoom = {
   outcomeKind?: string;
 };
 
-// Global in-memory rooms map for single-instance Docker monolith on sxz-server
+// ponytail: in-memory map, single instance. Kamar hilang saat restart dan
+// setelah 30 menit idle — cukup untuk sparring, tidak perlu Redis.
+// Kalau nanti butuh lintas instance, pindahkan ke Redis dengan interface sama.
 const rooms = new Map<string, PvpRoom>();
 
-// IP Rate Limiting (60 requests per minute max)
-const ipRequestCounts = new Map<string, { count: number; resetTime: number }>();
+const rate = new Map<string, { count: number; until: number }>();
 
-function checkRateLimit(ip: string): boolean {
+function tooManyRequests(ip: string) {
   const now = Date.now();
-  const entry = ipRequestCounts.get(ip);
-  if (!entry || now > entry.resetTime) {
-    ipRequestCounts.set(ip, { count: 1, resetTime: now + 60000 });
-    return true;
-  }
-  if (entry.count >= 60) {
+  const rec = rate.get(ip);
+  if (!rec || rec.until < now) {
+    rate.set(ip, { count: 1, until: now + 60_000 });
     return false;
   }
-  entry.count++;
-  return true;
+  rec.count += 1;
+  return rec.count > 120;
 }
 
-// Stochastic TTL cleanup (runs ~5% of requests to avoid hot-path latency)
-function maybePruneStaleRooms() {
-  if (Math.random() > 0.05) return;
+function prune() {
   const now = Date.now();
-  const maxAge = 30 * 60 * 1000;
-  for (const [code, r] of rooms.entries()) {
-    if (now - r.lastActive > maxAge) {
-      rooms.delete(code);
-    }
-  }
-  for (const [ip, entry] of ipRequestCounts.entries()) {
-    if (now > entry.resetTime) {
-      ipRequestCounts.delete(ip);
-    }
-  }
+  for (const [code, r] of rooms) if (now - r.lastActive > 30 * 60_000) rooms.delete(code);
+  for (const [ip, rec] of rate) if (rec.until < now) rate.delete(ip);
 }
 
-// Strict Cloudflare IP resolution: in production, cf-connecting-ip is mandatory to block direct origin bypass
-function getClientIp(req: Request): string | null {
-  const cfIp = req.headers.get("cf-connecting-ip");
-  if (cfIp) return cfIp.trim();
+function clientIp(req: Request) {
+  return (
+    req.headers.get("cf-connecting-ip")?.trim() ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "local"
+  );
+}
 
-  // In non-production development environments only
-  if (process.env.NODE_ENV !== "production") {
-    const forwarded = req.headers.get("x-forwarded-for");
-    if (forwarded) return forwarded.split(",")[0].trim();
-    return "127.0.0.1";
-  }
+function publicRoom(r: PvpRoom) {
+  return {
+    code: r.code,
+    createdAt: r.createdAt,
+    lastActive: r.lastActive,
+    whiteUser: r.whiteUser,
+    blackUser: r.blackUser,
+    creatorUser: r.creatorUser,
+    creatorSide: r.creatorSide,
+    invitedUser: r.invitedUser,
+    fen: r.fen,
+    moves: r.moves,
+    turn: r.turn,
+    status: r.status,
+    winner: r.winner ?? null,
+    outcomeKind: r.outcomeKind,
+  };
+}
 
+// Token pemain WAJIB cocok dengan(session user, sisi). Kalau hanya token yang
+// dicek, siapa pun yang mencuri token bisa melangkah — dan review menemukan
+// skenario itu nyata di smoke test.
+function sideOf(r: PvpRoom, token: string, username: string): "white" | "black" | null {
+  if (!token) return null;
+  if (r.whiteToken === token && r.whiteUser === username) return "white";
+  if (r.blackToken === token && r.blackUser === username) return "black";
   return null;
 }
 
 export async function GET(req: Request) {
-  const ip = getClientIp(req);
-  if (!ip) {
-    return NextResponse.json({ error: "Direct origin access forbidden" }, { status: 403 });
-  }
+  const ip = clientIp(req);
+  if (tooManyRequests(ip)) return NextResponse.json({ error: "Terlalu banyak permintaan." }, { status: 429 });
+  prune();
 
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
-
-  maybePruneStaleRooms();
   const url = new URL(req.url);
-  const code = url.searchParams.get("room")?.toUpperCase();
+  const users = loadUsers();
+  const me = currentUser(req, users);
+  if (!me) return NextResponse.json({ error: "Login dulu untuk memakai PvP." }, { status: 401 });
 
-  if (!code || !rooms.has(code)) {
-    return NextResponse.json({ error: "Room not found" }, { status: 404 });
+  // Undangan yang menunggu: addressees by username, plus lobby terbuka.
+  if (url.searchParams.has("user")) {
+    const target = String(url.searchParams.get("user") || "").trim().toLowerCase();
+    const invites = [];
+    for (const r of rooms.values()) {
+      if (r.status !== "waiting" || r.whiteToken === me.username) continue;
+      if (r.creatorUser === me.username) continue;
+      if (r.invitedUser && r.invitedUser !== target && r.invitedUser !== me.username) continue;
+      invites.push({
+        code: r.code,
+        creatorUser: r.creatorUser,
+        creatorSide: r.creatorSide,
+        invitedUser: r.invitedUser,
+        createdAt: r.createdAt,
+        targeted: r.invitedUser === me.username,
+      });
+    }
+    return NextResponse.json({ success: true, invites, online: onlineUsernames(users) });
   }
 
-  const room = rooms.get(code)!;
+  // Direktori lawan: hanya user approved.
+  if (url.searchParams.has("directory")) {
+    return NextResponse.json({ success: true, players: onlineUsernames(users) });
+  }
+
+  const code = String(url.searchParams.get("room") || "").toUpperCase();
+  // Token pemain lewat header, bukan query string: query masuk access log, proxy
+  // log, dan Referer. Header tidak.
+  const token = req.headers.get("x-player-token") || undefined;
+  const room = rooms.get(code);
+  if (!room) return NextResponse.json({ error: "Kamar tidak ditemukan." }, { status: 404 });
+
+  room.lastActive = Date.now();
   return NextResponse.json({
-    room: {
-      code: room.code,
-      createdAt: room.createdAt,
-      lastActive: room.lastActive,
-      whiteUser: room.whiteUser,
-      blackUser: room.blackUser,
-      fen: room.fen,
-      moves: room.moves,
-      turn: room.turn,
-      status: room.status,
-      winner: room.winner,
-      outcomeKind: room.outcomeKind,
-    },
+    success: true,
+    room: publicRoom(room),
+    // Only the side this browser owns may be moved by the client.
+    yourSide: sideOf(room, token ?? "", me.username),
   });
 }
 
+function onlineUsernames(users: ReturnType<typeof loadUsers>) {
+  const now = Date.now();
+  const live = new Set<string>();
+  for (const r of rooms.values()) {
+    if (r.status === "waiting" && now - r.lastActive < 2 * 60_000) live.add(r.creatorUser);
+  }
+  return users
+    .filter((u) => u.status === "approved")
+    .map((u) => ({
+      username: u.username,
+      fullName: u.fullName,
+      elo: u.elo,
+      online: live.has(u.username),
+    }))
+    .sort((a, b) => Number(b.online) - Number(a.online) || b.elo - a.elo);
+}
+
 export async function POST(req: Request) {
-  const ip = getClientIp(req);
-  if (!ip) {
-    return NextResponse.json({ error: "Direct origin access forbidden" }, { status: 403 });
-  }
+  const ip = clientIp(req);
+  if (tooManyRequests(ip)) return NextResponse.json({ error: "Terlalu banyak permintaan." }, { status: 429 });
+  prune();
 
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
+  const users = loadUsers();
+  const me = currentUser(req, users);
+  if (!me) return NextResponse.json({ error: "Login dulu untuk memakai PvP." }, { status: 401 });
 
-  maybePruneStaleRooms();
-
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
-    const { action } = body;
-
-    // 1. CREATE ROOM
-    if (action === "create") {
-      const username = String(body.username || "Pemain 1").slice(0, 30);
-      const hexCode = randomBytes(3).toString("hex").toUpperCase();
-      const code = `FIF-${hexCode}`;
-      const whiteToken = randomUUID();
-
-      const newRoom: PvpRoom = {
-        code,
-        createdAt: Date.now(),
-        lastActive: Date.now(),
-        whiteUser: username,
-        whiteToken,
-        blackUser: null,
-        blackToken: null,
-        fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-        moves: [],
-        turn: "w",
-        status: "waiting",
-      };
-
-      rooms.set(code, newRoom);
-      return NextResponse.json({
-        success: true,
-        room: {
-          code: newRoom.code,
-          createdAt: newRoom.createdAt,
-          lastActive: newRoom.lastActive,
-          whiteUser: newRoom.whiteUser,
-          blackUser: null,
-          fen: newRoom.fen,
-          moves: [],
-          turn: "w",
-          status: "waiting",
-        },
-        side: "white",
-        playerToken: whiteToken,
-      });
-    }
-
-    // 2. JOIN ROOM
-    if (action === "join") {
-      const code = String(body.code || "").toUpperCase().trim();
-      const username = String(body.username || "Pemain 2").slice(0, 30);
-
-      const room = rooms.get(code);
-      if (!room) {
-        return NextResponse.json({ error: "Kode kamar tidak ditemukan" }, { status: 404 });
-      }
-
-      if (room.status !== "waiting") {
-        return NextResponse.json({ error: "Kamar sudah penuh atau sedang bermain" }, { status: 400 });
-      }
-
-      const blackToken = randomUUID();
-      room.blackUser = username;
-      room.blackToken = blackToken;
-      room.status = "active";
-      room.lastActive = Date.now();
-
-      return NextResponse.json({
-        success: true,
-        room: {
-          code: room.code,
-          createdAt: room.createdAt,
-          lastActive: room.lastActive,
-          whiteUser: room.whiteUser,
-          blackUser: room.blackUser,
-          fen: room.fen,
-          moves: room.moves,
-          turn: room.turn,
-          status: room.status,
-        },
-        side: "black",
-        playerToken: blackToken,
-      });
-    }
-
-    // 3. PLAY MOVE
-    if (action === "move") {
-      const code = String(body.code || "").toUpperCase().trim();
-      const { from, to, promotion, side, playerToken } = body;
-
-      const room = rooms.get(code);
-      if (!room) {
-        return NextResponse.json({ error: "Kamar tidak ditemukan" }, { status: 404 });
-      }
-
-      if (room.status !== "active") {
-        return NextResponse.json({ error: "Pertandingan belum aktif atau sudah selesai" }, { status: 400 });
-      }
-
-      // Security check: verify player token and turn
-      if (side === "white") {
-        if (!playerToken || playerToken !== room.whiteToken) {
-          return NextResponse.json({ error: "Akses ditolak: Token pemain putih tidak valid" }, { status: 403 });
-        }
-        if (room.turn !== "w") {
-          return NextResponse.json({ error: "Bukan giliran Putih" }, { status: 400 });
-        }
-      } else if (side === "black") {
-        if (!playerToken || playerToken !== room.blackToken) {
-          return NextResponse.json({ error: "Akses ditolak: Token pemain hitam tidak valid" }, { status: 403 });
-        }
-        if (room.turn !== "b") {
-          return NextResponse.json({ error: "Bukan giliran Hitam" }, { status: 400 });
-        }
-      } else {
-        return NextResponse.json({ error: "Sisi tidak valid" }, { status: 400 });
-      }
-
-      const chess = new Chess(room.fen);
-      const moveRes = chess.move({
-        from: String(from),
-        to: String(to),
-        promotion: promotion ? String(promotion).toLowerCase() : undefined,
-      });
-
-      if (!moveRes) {
-        return NextResponse.json({ error: "Langkah ilegal" }, { status: 400 });
-      }
-
-      room.fen = chess.fen();
-      room.moves.push(moveRes.san);
-      room.turn = chess.turn();
-      room.lastActive = Date.now();
-
-      if (chess.isGameOver()) {
-        room.status = "finished";
-        if (chess.isCheckmate()) {
-          room.winner = room.turn === "w" ? "black" : "white";
-          room.outcomeKind = "checkmate";
-        } else if (chess.isDraw()) {
-          room.winner = "draw";
-          room.outcomeKind = "draw";
-        }
-      }
-
-      return NextResponse.json({
-        success: true,
-        room: {
-          code: room.code,
-          createdAt: room.createdAt,
-          lastActive: room.lastActive,
-          whiteUser: room.whiteUser,
-          blackUser: room.blackUser,
-          fen: room.fen,
-          moves: room.moves,
-          turn: room.turn,
-          status: room.status,
-          winner: room.winner,
-          outcomeKind: room.outcomeKind,
-        },
-      });
-    }
-
-    // 4. RESIGN MATCH
-    if (action === "resign") {
-      const code = String(body.code || "").toUpperCase().trim();
-      const { side, playerToken } = body;
-
-      const room = rooms.get(code);
-      if (!room) {
-        return NextResponse.json({ error: "Kamar tidak ditemukan" }, { status: 404 });
-      }
-
-      if (room.status !== "active") {
-        return NextResponse.json({ error: "Pertandingan belum aktif atau sudah selesai" }, { status: 400 });
-      }
-
-      if (side === "white") {
-        if (!playerToken || playerToken !== room.whiteToken) {
-          return NextResponse.json({ error: "Akses ditolak: Token pemain tidak valid" }, { status: 403 });
-        }
-        room.winner = "black";
-      } else if (side === "black") {
-        if (!playerToken || playerToken !== room.blackToken) {
-          return NextResponse.json({ error: "Akses ditolak: Token pemain tidak valid" }, { status: 403 });
-        }
-        room.winner = "white";
-      } else {
-        return NextResponse.json({ error: "Sisi tidak valid" }, { status: 400 });
-      }
-
-      room.status = "finished";
-      room.outcomeKind = "resigned";
-      room.lastActive = Date.now();
-
-      return NextResponse.json({
-        success: true,
-        room: {
-          code: room.code,
-          createdAt: room.createdAt,
-          lastActive: room.lastActive,
-          whiteUser: room.whiteUser,
-          blackUser: room.blackUser,
-          fen: room.fen,
-          moves: room.moves,
-          turn: room.turn,
-          status: room.status,
-          winner: room.winner,
-          outcomeKind: room.outcomeKind,
-        },
-      });
-    }
-
-    return NextResponse.json({ error: "Aksi tidak dikenal" }, { status: 400 });
+    body = (await req.json()) as Record<string, unknown>;
   } catch {
-    return NextResponse.json({ error: "Terjadi kesalahan internal server" }, { status: 500 });
+    return NextResponse.json({ error: "JSON tidak valid." }, { status: 400 });
   }
+  const action = String(body.action || "");
+  const code = String(body.code || "").toUpperCase().trim();
+  const playerToken = String(body.playerToken || "");
+
+  if (action === "create") {
+    // Undangan by username: hanya akun approved yang boleh diundang.
+    let invitedUser: string | null = null;
+    const raw = String(body.invitedUser || "").trim().toLowerCase();
+    if (raw) {
+      const target = findUser(users, raw);
+      if (!target) return NextResponse.json({ error: `Username @${raw} tidak terdaftar.` }, { status: 404 });
+      if (target.status !== "approved") {
+        return NextResponse.json({ error: `@${target.username} belum disetujui admin.` }, { status: 403 });
+      }
+      if (target.username === me.username) {
+        return NextResponse.json({ error: "Tidak bisa mengundang diri sendiri." }, { status: 400 });
+      }
+      invitedUser = target.username;
+    }
+
+    let side: "white" | "black" = body.side === "black" ? "black" : "white";
+    if (body.side === "random") side = Math.random() < 0.5 ? "white" : "black";
+
+    const token = randomUUID();
+    const room: PvpRoom = {
+      code: "FIF-" + randomBytes(3).toString("hex").toUpperCase(),
+      createdAt: Date.now(),
+      lastActive: Date.now(),
+      whiteUser: side === "white" ? me.username : null,
+      whiteToken: side === "white" ? token : null,
+      blackUser: side === "black" ? me.username : null,
+      blackToken: side === "black" ? token : null,
+      creatorUser: me.username,
+      creatorSide: side,
+      invitedUser,
+      fen: START_FEN,
+      moves: [],
+      turn: "w",
+      status: "waiting",
+    };
+    rooms.set(room.code, room);
+    return NextResponse.json({ success: true, room: publicRoom(room), yourSide: side, playerToken: token });
+  }
+
+  if (action === "join") {
+    const room = rooms.get(code);
+    if (!room) return NextResponse.json({ error: "Kode kamar tidak ditemukan." }, { status: 404 });
+    if (room.status !== "waiting") {
+      return NextResponse.json({ error: "Kamar sudah terisi atau pertandingan berjalan." }, { status: 400 });
+    }
+    if (room.invitedUser && room.invitedUser !== me.username) {
+      return NextResponse.json({ error: `Undangan ini khusus untuk @${room.invitedUser}.` }, { status: 403 });
+    }
+    if (room.creatorUser === me.username) {
+      return NextResponse.json({ error: "Kamu yang membuat kamar ini." }, { status: 400 });
+    }
+
+    const token = randomUUID();
+    if (room.creatorSide === "white") {
+      room.blackUser = me.username;
+      room.blackToken = token;
+    } else {
+      room.whiteUser = me.username;
+      room.whiteToken = token;
+    }
+    room.status = "active";
+    room.lastActive = Date.now();
+    return NextResponse.json({
+      success: true,
+      room: publicRoom(room),
+      yourSide: room.creatorSide === "white" ? "black" : "white",
+      playerToken: token,
+    });
+  }
+
+  if (action === "move") {
+    const room = rooms.get(code);
+    if (!room) return NextResponse.json({ error: "Kamar tidak ditemukan." }, { status: 404 });
+    if (room.status !== "active") return NextResponse.json({ error: "Pertandingan tidak aktif." }, { status: 400 });
+
+    const side = sideOf(room, playerToken, me.username);
+    if (!side) return NextResponse.json({ error: "Token pemain tidak valid." }, { status: 403 });
+    if (room.turn !== (side === "white" ? "w" : "b")) {
+      return NextResponse.json({ error: "Bukan giliranmu." }, { status: 409 });
+    }
+
+    const chess = new Chess(room.fen);
+    let res = null;
+    try {
+      res = chess.move({
+        from: String(body.from),
+        to: String(body.to),
+        promotion: body.promotion ? String(body.promotion).toLowerCase() : undefined,
+      });
+    } catch {
+      res = null;
+    }
+    if (!res) return NextResponse.json({ error: "Langkah ilegal." }, { status: 400 });
+
+    room.fen = chess.fen();
+    room.moves.push(res.san);
+    room.turn = chess.turn() as "w" | "b";
+    room.lastActive = Date.now();
+
+    if (chess.isGameOver()) {
+      room.status = "finished";
+      if (chess.isCheckmate()) {
+        room.winner = room.turn === "w" ? "black" : "white";
+        room.outcomeKind = "checkmate";
+      } else {
+        room.winner = "draw";
+        room.outcomeKind = "draw";
+      }
+    }
+    return NextResponse.json({ success: true, room: publicRoom(room), yourSide: side });
+  }
+
+  if (action === "leave") {
+    const room = rooms.get(code);
+    if (!room) return NextResponse.json({ success: true });
+    // Hanya pemilik sisi boleh melepasslot-nya; room yang masih kosong
+    // dibersihkan supaya tidak jadi kamar hantu.
+    if (sideOf(room, playerToken, me.username) || room.status === "waiting") {
+      rooms.delete(room.code);
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "resign" || action === "draw") {
+    const room = rooms.get(code);
+    if (!room) return NextResponse.json({ error: "Kamar tidak ditemukan." }, { status: 404 });
+    if (room.status !== "active") return NextResponse.json({ error: "Pertandingan tidak aktif." }, { status: 400 });
+    const side = sideOf(room, playerToken, me.username);
+    if (!side) return NextResponse.json({ error: "Token pemain tidak valid." }, { status: 403 });
+
+    room.status = "finished";
+    room.lastActive = Date.now();
+    if (action === "draw") {
+      room.winner = "draw";
+      room.outcomeKind = "draw";
+    } else {
+      room.winner = side === "white" ? "black" : "white";
+      room.outcomeKind = "resigned";
+    }
+    return NextResponse.json({ success: true, room: publicRoom(room), yourSide: side });
+  }
+
+  return NextResponse.json({ error: "Aksi tidak dikenal." }, { status: 400 });
 }

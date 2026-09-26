@@ -1,110 +1,227 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { IconCommunity3D, IconTrophy3D } from "@/components/icons3d";
+// Komunitas: papan diskusi + direktori pemain. Semua data dari server, tidak
+// ada placeholder. Penulisan requires login; moderasi (hapus) hanya admin.
 
-export function CommunityView({ lang = "id" }: { lang?: "id" | "en" }) {
+import { useCallback, useEffect, useState } from "react";
+import type { SessionUser } from "@/lib/use-session";
+
+export type CommunityPost = {
+  id: string;
+  authorUsername: string;
+  authorName: string;
+  authorRole: string;
+  title: string;
+  content: string;
+  category: string;
+  likes: number;
+  createdAt: string;
+};
+
+export type PlayerRow = { username: string; fullName: string; elo: number; online: boolean };
+
+type Props = { user: SessionUser | null; lang?: "id" | "en" };
+
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || "Gagal memuat data.");
+  return data as T;
+}
+
+export function CommunityView({ user, lang = "id" }: Props) {
+  const [tab, setTab] = useState<"feed" | "players">("feed");
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [players, setPlayers] = useState<PlayerRow[]>([]);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const [p, d] = await Promise.all([
+        api<{ posts: CommunityPost[] }>("/api/community"),
+        api<{ players: PlayerRow[] }>("/api/pvp?directory=1"),
+      ]);
+      setPosts(p.posts);
+      setPlayers(d.players);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, []);
+
+  useEffect(() => {
+    const key = user?.id ?? "anon";
+    if (loadedFor === key) return;
+    setLoadedFor(key);
+    void load();
+  }, [loadedFor, user?.id, load]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/community", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "create",
+          authorUsername: user.username,
+          authorName: user.fullName,
+          authorRole: user.role,
+          title,
+          content,
+        }),
+      });
+      setTitle("");
+      setContent("");
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function like(id: string) {
+    if (!user) return;
+    try {
+      await api("/api/community", { method: "POST", body: JSON.stringify({ action: "like", postId: id }) });
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function remove(id: string) {
+    if (!user?.isAdmin) return;
+    try {
+      await api("/api/community", { method: "POST", body: JSON.stringify({ action: "delete", postId: id }) });
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6 w-full">
-      <Card className="bg-[#262421] border-[#3d3a37]">
-        <CardHeader>
-          <div className="flex items-center gap-2 flex-wrap">
-            <IconCommunity3D size={28} />
-            <Badge className="bg-emerald-600 text-white">Komunitas Resmi</Badge>
-            <Badge variant="outline" className="border-amber-500/40 text-amber-300">Telkom University</Badge>
-          </div>
-          <CardTitle className="text-2xl text-white mt-1">
-            {lang === "id" ? "Komunitas Catur Fakultas Informatika (FIF)" : "Faculty of Informatics (FIF) Chess Community"}
-          </CardTitle>
-          <CardDescription className="text-neutral-400">
-            {lang === "id"
-              ? "Wadah latihan, sparring online vs engine Stockfish, dan analisis game turnamen civitas FIF Telkom University."
-              : "Training hub, sparring ground vs Stockfish engine, and tournament review for FIF Telkom University."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <div className="stack" style={{ maxWidth: "48rem", margin: "0 auto" }}>
+      <div className="row-between">
+        <h2 className="section-title">{lang === "id" ? "Komunitas FIF" : "FIF Community"}</h2>
+        <div className="row" style={{ gap: "0.5rem" }}>
+          <button className={`ctl ctl-sm ${tab === "feed" ? "ctl-active" : ""}`} onClick={() => setTab("feed")}>
+            Diskusi
+          </button>
+          <button className={`ctl ctl-sm ${tab === "players" ? "ctl-active" : ""}`} onClick={() => setTab("players")}>
+            Pemain
+          </button>
+        </div>
+      </div>
 
-          {/* Jadwal latihan nyata */}
-          <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] space-y-3">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              {lang === "id" ? "Jadwal Latihan Rutin" : "Regular Training Schedule"}
-            </h3>
-            <div className="space-y-2 text-sm">
-              {[
-                { day: lang === "id" ? "Jumat" : "Friday", time: "16:00–18:00 WIB", desc: lang === "id" ? "Latihan mingguan & blitz session" : "Weekly training & blitz session" },
-                { day: lang === "id" ? "Sabtu (insidentil)" : "Saturday (occasional)", time: "09:00–12:00 WIB", desc: lang === "id" ? "Turnamen internal & analisis game" : "Internal tournament & game analysis" },
-              ].map((s, i) => (
-                <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-[#262421] border border-[#36322d]">
-                  <div className="w-2 h-2 rounded-full bg-[#81b64c] mt-1.5 shrink-0" />
-                  <div>
-                    <div className="font-bold text-white">{s.day} — {s.time}</div>
-                    <div className="text-neutral-400 text-xs">{s.desc}</div>
+      {error && (
+        <p className="panel p-2 prose-note" style={{ borderColor: "var(--destructive)" }} role="alert">
+          {error}
+        </p>
+      )}
+
+      {tab === "feed" ? (
+        <>
+          {user ? (
+            <form className="panel p-3 stack-tight" onSubmit={submit}>
+              <div className="label">Tulis diskusi</div>
+              <input
+                className="field"
+                placeholder="Judul"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={120}
+                required
+              />
+              <textarea
+                className="field"
+                placeholder="Isi diskusi"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows={3}
+                maxLength={2000}
+                required
+                style={{ paddingTop: "0.5rem", height: "auto" }}
+              />
+              <button className="ctl ctl-primary ctl-sm" disabled={busy} type="submit">
+                {busy ? "Mengirim…" : "Kirim"}
+              </button>
+            </form>
+          ) : (
+            <p className="panel p-3 prose-note">Masuk dulu untuk ikut berdiskusi dan menantang teman.</p>
+          )}
+
+          {posts.length === 0 ? (
+            <p className="prose-note">Belum ada diskusi.</p>
+          ) : (
+            <ul className="stack-tight" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {posts.map((p) => (
+                <li key={p.id} className="panel p-3 stack-tight">
+                  <div className="row-between">
+                    <div className="min-w-0">
+                      <div className="font-bold wrap-anywhere">{p.title}</div>
+                      <div className="prose-note" style={{ fontSize: "var(--text-xs)" }}>
+                        @{p.authorUsername} · {p.authorName} · {new Date(p.createdAt).toLocaleString("id-ID")}
+                      </div>
+                    </div>
+                    <span className="ctl ctl-xs shrink-0">{p.category}</span>
                   </div>
-                </div>
+                  <p className="prose-note wrap-anywhere" style={{ whiteSpace: "pre-wrap" }}>
+                    {p.content}
+                  </p>
+                  <div className="row" style={{ gap: "0.5rem" }}>
+                    <button className="ctl ctl-xs" onClick={() => void like(p.id)} disabled={!user}>
+                      Suka · {p.likes}
+                    </button>
+                    {user?.isAdmin && (
+                      <button className="ctl ctl-xs ctl-danger" onClick={() => void remove(p.id)}>
+                        Hapus
+                      </button>
+                    )}
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
+          )}
+        </>
+      ) : (
+        <div className="panel" style={{ overflow: "hidden" }}>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Pemain</th>
+                  <th scope="col">Rating</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {players.map((p) => (
+                  <tr key={p.username}>
+                    <td className="wrap-anywhere">
+                      {p.fullName} <span className="prose-note">@{p.username}</span>
+                    </td>
+                    <td className="num">{p.elo}</td>
+                    <td style={{ color: p.online ? "var(--primary)" : "var(--muted-foreground)" }}>
+                      {p.online ? "Membuat kamar" : "Offline"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          {/* Pembina */}
-          <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d]">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">
-              {lang === "id" ? "Pembina & Koordinator" : "Advisor & Coordinator"}
-            </h3>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#81b64c]/20 border-2 border-[#81b64c]/50 flex items-center justify-center font-black text-[#81b64c] text-sm">BW</div>
-              <div>
-                <div className="font-bold text-white text-sm">Bagas Wibowo, S.Kom., M.Kom.</div>
-                <div className="text-neutral-400 text-xs">{lang === "id" ? "Dosen Teknik Informatika — KK SEAL, Telkom University" : "Lecturer, Informatics Engineering — KK SEAL, Telkom University"}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Leaderboard placeholder — jujur bahwa data belum real-time */}
-          <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <IconTrophy3D size={18} />
-                {lang === "id" ? "Peringkat (Sesi Ini)" : "Rankings (This Session)"}
-              </h3>
-              <Badge variant="outline" className="border-neutral-600 text-neutral-500 text-[10px]">
-                {lang === "id" ? "Berdasarkan game lokal" : "Based on local games"}
-              </Badge>
-            </div>
-            <div className="p-3 rounded-lg bg-[#262421] border border-[#36322d] text-xs text-neutral-400 text-center">
-              {lang === "id"
-                ? "Peringkat komunitas real-time akan tersedia setelah fitur akun multi-user diaktifkan. Saat ini skor hanya tersimpan di perangkat masing-masing pemain."
-                : "Real-time community rankings will be available after multi-user accounts are enabled. Currently scores are stored locally per device."}
-            </div>
-          </div>
-
-          {/* Kontak / Gabung */}
-          <div className="bg-[#1f1d1a] p-4 rounded-xl border border-[#36322d] space-y-3">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              {lang === "id" ? "Bergabung & Kontak" : "Join & Contact"}
-            </h3>
-            <div className="space-y-2 text-sm text-neutral-300">
-              <div className="flex items-center gap-2">
-                <span className="text-base">💬</span>
-                <span>
-                  {lang === "id"
-                    ? "Hubungi Pak Bagas atau pengurus FIF Chess untuk bergabung ke grup WhatsApp/Discord resmi."
-                    : "Contact Pak Bagas or FIF Chess board to join the official WhatsApp/Discord group."}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-base">🏛</span>
-                <span>
-                  {lang === "id"
-                    ? "Sekretariat FIF — Gedung Informatika, Telkom University, Bandung."
-                    : "FIF Secretariat — Informatics Building, Telkom University, Bandung."}
-                </span>
-              </div>
-            </div>
-          </div>
-
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 }

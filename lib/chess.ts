@@ -436,6 +436,29 @@ export function findLegalMove(
   });
 }
 
+/**
+ * Replay a SAN list from a starting FEN and return UCI+SAN per ply.
+ * PvP rooms only store SAN, but the board UI needs UCI for square highlights,
+ * so one replay is cheaper than a per-ply server round trip.
+ * ponytail: naive replay; a room is capped well below chess.js limits.
+ */
+export function replaySanList(
+  startFen: string,
+  sans: string[],
+): { san: string; uci: string }[] {
+  const out: { san: string; uci: string }[] = [];
+  const chess = parseFen(startFen);
+  for (const san of sans) {
+    try {
+      const move = chess.move(san);
+      out.push({ san: move.san, uci: uciFromMove(move) });
+    } catch {
+      break; // history and position disagree — stop rather than render garbage
+    }
+  }
+  return out;
+}
+
 export function describeOutcome(chess: Chess): GameOutcome {
   if (chess.isCheckmate()) {
     const winner: Side = chess.turn() === "w" ? "black" : "white";

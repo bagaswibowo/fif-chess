@@ -1,28 +1,58 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
-import { Chessboard } from "react-chessboard";
-import { Chess, type Square } from "chess.js";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  IconMedal3D,
-  IconBot3D,
-  IconPawn3D,
-  IconTrophy3D,
-  IconPlay3D,
-} from "@/components/icons3d";
+// Riwayat permainan: dua tab.
+//  - Riwayat: tabel yang bisa diurutkan (terlama/terbaru, hasil, jumlah langkah).
+//  - Review: playback papan + rekomendasi engine untuk satu permainan.
+//
+// Satu sumber data: satu fungsi sorting dan satu formatter tanggal dipakai
+// kedua tab, supaya tidak mungkin tampilnya berbeda.
 
-export type GameRecord = {
-  id: string;
-  date: string;
-  opponent: string;
-  humanSide: "white" | "black";
-  outcomeKind: string;
-  winner: "white" | "black" | "draw" | null;
-  moves: string[]; // SAN moves
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { Chessboard } from "react-chessboard";
+import { Chess } from "chess.js";
+import type { GameRecord } from "@/lib/game-history";
+
+type SortKey = "when" | "result" | "moves" | "opponent";
+type Dir = "asc" | "desc";
+
+const RESULT_LABEL: Record<string, string> = {
+  checkmate: "Skakmat",
+  timeout: "Waktu habis",
+  resigned: "Menyerah",
+  draw: "Remis",
+  stalemate: "Stalemate",
+  insufficient: "Material kurang",
+  threefold: "Pengulangan thrice",
+  fifty: "Aturan 50 langkah",
 };
+
+const resultRank = (r: GameRecord) => {
+  if (r.winner === null) return 1;
+  const won = r.winner === r.humanSide;
+  return won ? 0 : 2;
+};
+
+export function sortHistory(history: GameRecord[], key: SortKey, dir: Dir): GameRecord[] {
+  const sign = dir === "asc" ? 1 : -1;
+  const copy = [...history];
+  copy.sort((a, b) => {
+    let delta = 0;
+    if (key === "when") delta = a.playedAt - b.playedAt;
+    else if (key === "result") delta = resultRank(a) - resultRank(b);
+    else if (key === "moves") delta = a.moves.length - b.moves.length;
+    else delta = a.opponent.localeCompare(b.opponent);
+    // Tiebreak by waktu supaya urutannya stabil dan tidak berganti sendiri.
+    return delta !== 0 ? delta * sign : (a.playedAt - b.playedAt) * -1;
+  });
+  return copy;
+}
+
+export function formatWhen(ts: number) {
+  const d = new Date(ts);
+  const date = d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+  const time = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  return `${date} · ${time}`;
+}
 
 type Props = {
   history: GameRecord[];
@@ -30,490 +60,306 @@ type Props = {
   lang?: "id" | "en";
 };
 
-type AiEval = {
-  bestUci: string;
-  bestSan: string;
-  scoreCp: number | null;
-  depth?: number;
-};
+type Engine = "jev" | "fly" | "stockfish";
+type AiEval = { bestUci: string; bestSan: string; scoreCp: number | null; depth?: number };
 
 export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
-  const [selectedGameId, setSelectedGameId] = useState<string>(
-    history.length > 0 ? history[0].id : ""
+  const [tab, setTab] = useState<"list" | "review">("list");
+  const [sortKey, setSortKey] = useState<SortKey>("when");
+  const [dir, setDir] = useState<Dir>("desc");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [moveIndex, setMoveIndex] = useState(0);
+  const [engine, setEngine] = useState<Engine>("jev");
+  const [evalResult, setEvalResult] = useState<AiEval | null>(null);
+  const [loadingEval, setLoadingEval] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1200);
+  const cache = useRef(new Map<string, AiEval>());
+
+  const sorted = useMemo(() => sortHistory(history, sortKey, dir), [history, sortKey, dir]);
+
+  const active = useMemo(
+    () => sorted.find((g) => g.id === selectedId) ?? sorted[0] ?? null,
+    [sorted, selectedId]
   );
-  const [currentMoveIndex, setCurrentMoveIndex] = useState<number>(0);
-  const [reviewEngine, setReviewEngine] = useState<"jev" | "fly" | "stockfish">("jev");
-  const [aiEvaluation, setAiEvaluation] = useState<AiEval | null>(null);
-  const [loadingAi, setLoadingAi] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playSpeed, setPlaySpeed] = useState<number>(1500);
 
-  // In-memory evaluation cache keyed by FEN + Engine
-  const evalCache = useRef<Map<string, AiEval>>(new Map());
-
-  const activeGame = useMemo(() => {
-    return history.find((g) => g.id === selectedGameId) || history[0] || null;
-  }, [history, selectedGameId]);
-
-  // Reconstruct all FEN board snapshots and moves
-  const { fenList, playedMoveObjects } = useMemo(() => {
-    if (!activeGame || !activeGame.moves || activeGame.moves.length === 0) {
-      return {
-        fenList: ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],
-        playedMoveObjects: [],
-      };
+  const { fenList, played } = useMemo(() => {
+    if (!active?.moves.length) {
+      return { fenList: ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"], played: [] as { from: string; to: string; san: string }[] };
     }
-    const fList: string[] = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
-    const mList: { from: string; to: string; san: string }[] = [];
+    const fens: string[] = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
+    const list: { from: string; to: string; san: string }[] = [];
     const c = new Chess();
-    for (const moveSan of activeGame.moves) {
+    for (const san of active.moves) {
       try {
-        const res = c.move(moveSan);
-        if (res) {
-          fList.push(c.fen());
-          mList.push({ from: res.from, to: res.to, san: res.san });
-        }
+        const r = c.move(san);
+        if (!r) break;
+        fens.push(c.fen());
+        list.push({ from: r.from, to: r.to, san: r.san });
       } catch {
         break;
       }
     }
-    return { fenList: fList, playedMoveObjects: mList };
-  }, [activeGame]);
+    return { fenList: fens, played: list };
+  }, [active]);
 
-  const currentFen = fenList[currentMoveIndex] || fenList[0];
+  const currentFen = fenList[moveIndex] ?? fenList[0];
+  const playedNow = moveIndex > 0 ? played[moveIndex - 1] : null;
 
-  // Auto-play effect loop
   useEffect(() => {
-    if (!isPlaying) return;
+    setMoveIndex(0);
+    setPlaying(false);
+  }, [active?.id]);
 
-    if (currentMoveIndex >= fenList.length - 1) {
-      setIsPlaying(false);
+  useEffect(() => {
+    if (!playing) return;
+    if (moveIndex >= fenList.length - 1) {
+      setPlaying(false);
       return;
     }
+    const t = setTimeout(() => setMoveIndex((i) => Math.min(i + 1, fenList.length - 1)), speed);
+    return () => clearTimeout(t);
+  }, [playing, moveIndex, fenList.length, speed]);
 
-    const timer = setInterval(() => {
-      setCurrentMoveIndex((prev) => {
-        if (prev >= fenList.length - 1) {
-          setIsPlaying(false);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, playSpeed);
-
-    return () => clearInterval(timer);
-  }, [isPlaying, currentMoveIndex, fenList.length, playSpeed]);
-
-  // Fetch real Jev + FlyBrain / Selected Engine recommendation
   useEffect(() => {
     if (!currentFen) return;
-
-    const cacheKey = `${reviewEngine}:${currentFen}`;
-    if (evalCache.current.has(cacheKey)) {
-      setAiEvaluation(evalCache.current.get(cacheKey)!);
+    const key = `${engine}:${currentFen}`;
+    const hit = cache.current.get(key);
+    if (hit) {
+      setEvalResult(hit);
       return;
     }
-
-    const controller = new AbortController();
-    setLoadingAi(true);
-
+    const ctrl = new AbortController();
+    setLoadingEval(true);
     fetch("/api/engine-move", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fen: currentFen,
-        engine: reviewEngine,
-        depth: 12,
-      }),
-      signal: controller.signal,
+      body: JSON.stringify({ fen: currentFen, engine, depth: 12 }),
+      signal: ctrl.signal,
     })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.uci && data.san) {
-          const evalResult: AiEval = {
-            bestUci: data.uci,
-            bestSan: data.san,
-            scoreCp: data.scoreCp ?? null,
-            depth: data.depth ?? 12,
-          };
-          evalCache.current.set(cacheKey, evalResult);
-          setAiEvaluation(evalResult);
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.uci && d?.san) {
+          const v: AiEval = { bestUci: d.uci, bestSan: d.san, scoreCp: d.scoreCp ?? null, depth: d.depth ?? 12 };
+          cache.current.set(key, v);
+          setEvalResult(v);
         }
       })
-      .catch((err) => {
-        if (err.name !== "AbortError") {
-          // ignore aborted
-        }
-      })
+      .catch(() => {})
       .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoadingAi(false);
-        }
+        if (!ctrl.signal.aborted) setLoadingEval(false);
       });
+    return () => ctrl.abort();
+  }, [currentFen, engine]);
 
-    return () => {
-      controller.abort();
-    };
-  }, [currentFen, reviewEngine]);
-
-  // Current move played
-  const currentPlayedObj = currentMoveIndex > 0 ? playedMoveObjects[currentMoveIndex - 1] : null;
-  const playedSan = currentPlayedObj ? currentPlayedObj.san : null;
-
-  // Is player move equal to AI recommendation?
-  const isBestMove = useMemo(() => {
-    if (!playedSan || !aiEvaluation) return false;
-    return playedSan === aiEvaluation.bestSan;
-  }, [playedSan, aiEvaluation]);
-
-  // Visual Arrows on the Single Chessboard
-  const arrows = useMemo(() => {
-    const list: { startSquare: string; endSquare: string; color: string }[] = [];
-
-    // 1. Yellow Arrow for the move actually played in game
-    if (currentPlayedObj) {
-      list.push({
-        startSquare: currentPlayedObj.from,
-        endSquare: currentPlayedObj.to,
-        color: "#eab308", // Yellow
-      });
-    }
-
-    // 2. Green Arrow for AI Coach (Jev + Fly Brain) recommendation
-    if (aiEvaluation && aiEvaluation.bestUci.length >= 4) {
-      const from = aiEvaluation.bestUci.slice(0, 2);
-      const to = aiEvaluation.bestUci.slice(2, 4);
-      // Only show if different from played move or no move played
-      if (!currentPlayedObj || from !== currentPlayedObj.from || to !== currentPlayedObj.to) {
-        list.push({
-          startSquare: from,
-          endSquare: to,
-          color: "#81b64c", // Green
-        });
+  const toggleSort = useCallback(
+    (key: SortKey) => {
+      if (key === sortKey) setDir((d) => (d === "asc" ? "desc" : "asc"));
+      else {
+        setSortKey(key);
+        setDir(key === "when" || key === "moves" ? "desc" : "asc");
       }
-    }
+    },
+    [sortKey]
+  );
 
-    return list;
-  }, [currentPlayedObj, aiEvaluation]);
-
-  // Square highlights matching arrows
-  const squareStyles = useMemo(() => {
-    const styles: Record<string, React.CSSProperties> = {};
-    if (currentPlayedObj) {
-      styles[currentPlayedObj.from] = {
-        boxShadow: "inset 0 0 0 3px #facc15",
-        backgroundColor: "rgba(250, 204, 21, 0.3)",
-      };
-      styles[currentPlayedObj.to] = {
-        boxShadow: "inset 0 0 0 4px #facc15",
-        backgroundColor: "rgba(250, 204, 21, 0.45)",
-      };
-    }
-    if (aiEvaluation && aiEvaluation.bestUci.length >= 4) {
-      const from = aiEvaluation.bestUci.slice(0, 2);
-      const to = aiEvaluation.bestUci.slice(2, 4);
-      styles[from] = {
-        ...(styles[from] || {}),
-        boxShadow: "inset 0 0 0 3px #81b64c",
-      };
-      styles[to] = {
-        ...(styles[to] || {}),
-        boxShadow: "inset 0 0 0 4px #81b64c",
-      };
-    }
-    return styles;
-  }, [currentPlayedObj, aiEvaluation]);
-
-  if (!activeGame) {
+  if (history.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto w-full p-8 text-center bg-[#262421] border border-[#36322d] rounded-2xl space-y-4">
-        <IconMedal3D size={48} className="mx-auto" />
-        <h3 className="text-xl font-bold text-white">
-          {lang === "id" ? "Belum Ada Riwayat Permainan" : "No Game History Yet"}
-        </h3>
-        <p className="text-sm text-neutral-400">
+      <div className="panel p-6 stack items-center text-center" style={{ maxWidth: "36rem", margin: "0 auto" }}>
+        <h3 className="section-title">{lang === "id" ? "Belum ada riwayat" : "No history yet"}</h3>
+        <p className="prose-note">
           {lang === "id"
-            ? "Mainkan setidaknya 1 babak di menu 'Bermain' untuk melihat review blunder dan petunjuk garis taktis dari Jev + Fly Brain."
-            : "Play at least 1 match in 'Play' tab to review blunders with tactical arrows from Jev + Fly Brain."}
+            ? "Selesaikan satuandingan di menu Bermain, lalu riwayatnya muncul di sini lengkap dengan jam dan tanggal."
+            : "Finish a match in Play and it will appear here with time and date."}
         </p>
-        <Button onClick={onBackToPlay} className="bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-sm px-5 py-2.5">
-          {lang === "id" ? "Kembali ke Papan Permainan" : "Back to Chessboard"}
-        </Button>
+        <button className="ctl ctl-primary" onClick={onBackToPlay}>
+          {lang === "id" ? "Bermain sekarang" : "Play now"}
+        </button>
       </div>
     );
   }
 
+  const header = (key: SortKey, label: string) => (
+    <th scope="col" aria-sort={sortKey === key ? (dir === "asc" ? "ascending" : "descending") : "none"}>
+      <button className="ctl ctl-quiet ctl-xs" onClick={() => toggleSort(key)} style={{ fontWeight: 700 }}>
+        {label}
+        <span aria-hidden="true">{sortKey === key ? (dir === "asc" ? " ↑" : " ↓") : ""}</span>
+      </button>
+    </th>
+  );
+
   return (
-    <div className="space-y-4 max-w-6xl mx-auto w-full pb-14 px-2 md:px-0">
-      {/* 1. TOP HEADER & SETTINGS */}
-      <div className="bg-[#262421] p-4 rounded-2xl border border-[#36322d] shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-        <div>
-          <h2 className="text-lg md:text-2xl font-black text-white flex items-center gap-2">
-            <IconMedal3D size={26} />
-            <span>{lang === "id" ? "Review Blunder & Petunjuk Garis AI" : "Blunder Review & Tactical Arrows"}</span>
-          </h2>
-          <p className="text-xs md:text-sm text-neutral-400 mt-1">
-            {lang === "id"
-              ? "Garis kuning menunjukkan langkah riwayat Anda, garis hijau menunjukkan rekomendasi AI."
-              : "Yellow arrow shows your actual move, green arrow shows AI recommendation."}
-          </p>
-        </div>
-
-        <div className="flex items-center flex-wrap gap-2 w-full md:w-auto">
-          {/* Review Engine Selector */}
-          <select
-            value={reviewEngine}
-            onChange={(e) => setReviewEngine(e.target.value as any)}
-            className="bg-[#191816] text-white text-xs md:text-sm font-bold px-3 py-2 rounded-xl border border-[#36322d] focus:outline-none focus:border-[#81b64c]"
-          >
-            <option value="jev">Review: Jev AI (Hybrid FlyBrain)</option>
-            <option value="fly">Review: Fruit Fly Brain (134k)</option>
-            <option value="stockfish">Review: Stockfish 15 NNUE</option>
-          </select>
-
-          {/* Game Selector */}
-          <select
-            value={selectedGameId}
-            onChange={(e) => {
-              setSelectedGameId(e.target.value);
-              setCurrentMoveIndex(0);
-              setIsPlaying(false);
-            }}
-            className="bg-[#191816] text-white text-xs md:text-sm font-bold px-3 py-2 rounded-xl border border-[#36322d] focus:outline-none focus:border-[#81b64c]"
-          >
-            {history.map((g, idx) => (
-              <option key={g.id} value={g.id}>
-                Babak #{history.length - idx} ({g.date}) — {g.outcomeKind}
-              </option>
-            ))}
-          </select>
-
-          <Button
-            onClick={onBackToPlay}
-            variant="outline"
-            className="border-[#36322d] text-xs md:text-sm font-bold"
-          >
-            {lang === "id" ? "Bermain" : "Play"}
-          </Button>
-        </div>
+    <div className="stack" style={{ maxWidth: "72rem", margin: "0 auto" }}>
+      <div className="row-between">
+        <h2 className="section-title">{lang === "id" ? "Riwayat & Review" : "History & Review"}</h2>
+        <button className="ctl ctl-sm" onClick={onBackToPlay}>
+          {lang === "id" ? "Bermain" : "Play"}
+        </button>
       </div>
 
-      {/* 2. PLAYBACK CONTROLS & MOVE NAVIGATION AT TOP */}
-      <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-3 md:p-4 shadow-xl space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center flex-wrap gap-2">
-            <Button
-              onClick={() => {
-                setIsPlaying(!isPlaying);
-                if (!isPlaying && currentMoveIndex >= fenList.length - 1) {
-                  setCurrentMoveIndex(0);
-                }
-              }}
-              className={`font-bold text-xs md:text-sm h-9 px-4 shadow-md ${
-                isPlaying
-                  ? "bg-amber-600 hover:bg-amber-500 text-white"
-                  : "bg-[#81b64c] hover:bg-[#72a342] text-white"
-              }`}
-            >
-              {isPlaying ? "⏸ Jeda Otomatis" : "▶ Putar Otomatis"}
-            </Button>
+      <div className="row" role="tablist" aria-label="Tab riwayat">
+        <button role="tab" aria-selected={tab === "list"} className={`ctl ctl-choice ${tab === "list" ? "ctl-active" : ""}`} onClick={() => setTab("list")}>
+          {lang === "id" ? `Riwayat (${history.length})` : `History (${history.length})`}
+        </button>
+        <button role="tab" aria-selected={tab === "review"} className={`ctl ctl-choice ${tab === "review" ? "ctl-active" : ""}`} onClick={() => setTab("review")}>
+          {lang === "id" ? "Review papan" : "Board review"}
+        </button>
+      </div>
 
-            <Button
-              onClick={() => {
-                setIsPlaying(false);
-                setCurrentMoveIndex(0);
-              }}
-              disabled={currentMoveIndex === 0}
-              variant="outline"
-              size="sm"
-              className="border-[#36322d] text-xs md:text-sm font-bold h-9 px-3"
-            >
-              |◀ Awal
-            </Button>
-            <Button
-              onClick={() => {
-                setIsPlaying(false);
-                setCurrentMoveIndex((p) => Math.max(0, p - 1));
-              }}
-              disabled={currentMoveIndex === 0}
-              variant="outline"
-              size="sm"
-              className="border-[#36322d] text-xs md:text-sm font-bold h-9 px-3"
-            >
-              ◀ Mundur
-            </Button>
-            <Button
-              onClick={() => {
-                setIsPlaying(false);
-                setCurrentMoveIndex((p) => Math.min(fenList.length - 1, p + 1));
-              }}
-              disabled={currentMoveIndex >= fenList.length - 1}
-              variant="outline"
-              size="sm"
-              className="border-[#36322d] text-xs md:text-sm font-bold h-9 px-3"
-            >
-              Maju ▶
-            </Button>
-            <Button
-              onClick={() => {
-                setIsPlaying(false);
-                setCurrentMoveIndex(fenList.length - 1);
-              }}
-              disabled={currentMoveIndex >= fenList.length - 1}
-              variant="outline"
-              size="sm"
-              className="border-[#36322d] text-xs md:text-sm font-bold h-9 px-3"
-            >
-              Akhir ▶|
-            </Button>
-
-            {/* Speed Selector */}
-            <select
-              value={playSpeed}
-              onChange={(e) => setPlaySpeed(Number(e.target.value))}
-              className="bg-[#191816] text-neutral-200 text-xs md:text-sm font-bold px-2.5 py-1.5 h-9 rounded-xl border border-[#36322d]"
-            >
-              <option value={2000}>0.5x (2.0s)</option>
-              <option value={1500}>1.0x (1.5s)</option>
-              <option value={800}>2.0x (0.8s)</option>
-            </select>
-          </div>
-
-          <div className="text-xs md:text-sm font-bold text-neutral-300">
-            <span className="bg-[#191816] px-3 py-1.5 rounded-xl border border-[#36322d]">
-              Langkah: <strong className="text-white text-base">{currentMoveIndex}</strong> / {activeGame.moves.length}
-            </span>
+      {tab === "list" ? (
+        <div className="panel p-0" style={{ overflow: "hidden" }}>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  {header("when", lang === "id" ? "Waktu" : "When")}
+                  <th scope="col">{lang === "id" ? "Lawan" : "Opponent"}</th>
+                  <th scope="col">{lang === "id" ? "Sisi" : "Side"}</th>
+                  {header("result", lang === "id" ? "Hasil" : "Result")}
+                  {header("moves", lang === "id" ? "Langkah" : "Moves")}
+                  <th scope="col" aria-label={lang === "id" ? "Aksi" : "Action"} />
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((g) => {
+                  const won = g.winner === g.humanSide;
+                  const draw = g.winner === null;
+                  return (
+                    <tr key={g.id}>
+                      <td className="num" style={{ whiteSpace: "nowrap" }}>
+                        {formatWhen(g.playedAt)}
+                      </td>
+                      <td className="wrap-anywhere">{g.opponent}</td>
+                      <td>{g.humanSide === "white" ? "Putih" : "Hitam"}</td>
+                      <td>
+                        <span
+                          style={{
+                            color: draw ? "var(--muted-foreground)" : won ? "var(--primary)" : "var(--destructive)",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {draw ? (lang === "id" ? "Remis" : "Draw") : won ? (lang === "id" ? "Menang" : "Win") : lang === "id" ? "Kalah" : "Loss"}
+                        </span>
+                        <span className="prose-note" style={{ marginLeft: "0.5rem" }}>
+                          {RESULT_LABEL[g.outcomeKind] ?? g.outcomeKind}
+                        </span>
+                      </td>
+                      <td className="num">{Math.ceil(g.moves.length / 2)}</td>
+                      <td>
+                        <button
+                          className="ctl ctl-xs"
+                          onClick={() => {
+                            setSelectedId(g.id);
+                            setTab("review");
+                          }}
+                        >
+                          {lang === "id" ? "Review" : "Review"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
-
-        {/* CLICKABLE MOVES LIST SCROLLER */}
-        <div className="pt-2 border-t border-[#36322d] flex flex-wrap gap-1.5 max-h-28 overflow-y-auto no-scrollbar">
-          {activeGame.moves.map((m, idx) => {
-            const isWhite = idx % 2 === 0;
-            const moveNum = Math.floor(idx / 2) + 1;
-            return (
-              <button
-                key={idx}
-                onClick={() => {
-                  setIsPlaying(false);
-                  setCurrentMoveIndex(idx + 1);
-                }}
-                className={`px-2.5 py-1 rounded-lg text-xs md:text-sm font-mono transition-all flex items-center gap-1 ${
-                  currentMoveIndex === idx + 1
-                    ? "bg-[#81b64c] text-white font-bold shadow-md"
-                    : "bg-[#191816] text-neutral-300 hover:text-white border border-[#36322d]"
-                }`}
+      ) : (
+        !active ? (
+          <p className="prose-note">Pilih satu baris di tab Riwayat.</p>
+        ) : (
+          <div className="stack">
+            <div className="panel p-3 row" style={{ gap: "0.5rem" }}>
+              <label className="label" htmlFor="sel-game">
+                Permainan
+              </label>
+              <select
+                id="sel-game"
+                className="field"
+                style={{ maxWidth: "22rem" }}
+                value={active.id}
+                onChange={(e) => setSelectedId(e.target.value)}
               >
-                {isWhite ? `${moveNum}. ` : ""}{m}
+                {sorted.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {formatWhen(g.playedAt)} · {g.opponent}
+                  </option>
+                ))}
+              </select>
+              <select className="field" style={{ maxWidth: "14rem" }} value={engine} onChange={(e) => setEngine(e.target.value as Engine)} aria-label="Engine review">
+                <option value="jev">Jev + FlyBrain</option>
+                <option value="fly">FlyBrain</option>
+                <option value="stockfish">Stockfish 15</option>
+              </select>
+            </div>
+
+            <div className="row" style={{ gap: "0.5rem" }}>
+              <button className="ctl ctl-sm" onClick={() => { setPlaying((p) => !p); if (moveIndex >= fenList.length - 1) setMoveIndex(0); }}>
+                {playing ? "Jeda" : "Putar"}
               </button>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* 3. MAIN SECTION: 1 SINGLE CHESSBOARD WITH ARROWS + TACTICAL EXPLANATION SIDEBAR */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,580px)_1fr] gap-4 md:gap-6 items-start">
-        {/* THE SINGLE CLEAR BOARD WITH TACTICAL ARROWS */}
-        <Card className="bg-[#262421] border-[#36322d] rounded-2xl overflow-hidden shadow-2xl p-3 md:p-4 space-y-3">
-          <div className="flex justify-between items-center border-b border-[#36322d] pb-2">
-            <div className="flex items-center gap-2 font-bold text-sm md:text-base text-white">
-              <IconPawn3D size={20} />
-              <span>Papan Permainan & Petunjuk Garis</span>
+              <button className="ctl ctl-sm" onClick={() => { setPlaying(false); setMoveIndex(0); }} disabled={moveIndex === 0}>
+                Awal
+              </button>
+              <button className="ctl ctl-sm" onClick={() => { setPlaying(false); setMoveIndex((i) => Math.max(0, i - 1)); }} disabled={moveIndex === 0}>
+                Mundur
+              </button>
+              <button className="ctl ctl-sm" onClick={() => { setPlaying(false); setMoveIndex((i) => Math.min(fenList.length - 1, i + 1)); }} disabled={moveIndex >= fenList.length - 1}>
+                Maju
+              </button>
+              <button className="ctl ctl-sm" onClick={() => setSpeed((s) => (s === 1200 ? 600 : s === 600 ? 2000 : 1200))}>
+                {speed === 2000 ? "Lambat" : speed === 600 ? "Cepat" : "Normal"}
+              </button>
+              <span className="prose-note clock" style={{ marginLeft: "auto" }}>
+                {moveIndex}/{active.moves.length}
+              </span>
             </div>
-            {playedSan && (
-              <Badge
-                className={`text-xs md:text-sm font-bold px-2.5 py-0.5 ${
-                  isBestMove ? "bg-emerald-600 text-white" : "bg-amber-600 text-white"
-                }`}
-              >
-                {isBestMove ? "Langkah Akurat" : "Pilihan Pemain"}
-              </Badge>
-            )}
+
+            <div className="row" style={{ gap: "var(--gap-2)", alignItems: "flex-start" }}>
+              <div className="panel p-2 stack-tight" style={{ flex: "1 1 22rem" }}>
+                <div className="board-frame" style={{ width: "100%" }}>
+                  <div className="aspect-square" style={{ borderRadius: "var(--radius)", overflow: "hidden", border: "1px solid var(--border)" }}>
+                    <Chessboard
+                      options={{
+                        id: `review-${active.id}`,
+                        position: currentFen,
+                        boardOrientation: active.humanSide,
+                        allowDragging: false,
+                        darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                        lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                        arrows: [
+                          ...(playedNow ? [{ startSquare: playedNow.from, endSquare: playedNow.to, color: "var(--ring)" }] : []),
+                          ...(evalResult && evalResult.bestUci.length >= 4 && (!playedNow || evalResult.bestUci.slice(0, 4) !== playedNow.from + playedNow.to)
+                            ? [{ startSquare: evalResult.bestUci.slice(0, 2), endSquare: evalResult.bestUci.slice(2, 4), color: "var(--accent)" }]
+                            : []),
+                        ],
+                      }}
+                    />
+                  </div>
+                </div>
+                <p className="prose-note" style={{ fontSize: "var(--text-xs)" }}>
+                  Kuning: langkahmu. Biru: saran engine.
+                </p>
+              </div>
+
+              <div className="panel p-3 stack-tight" style={{ flex: "1 1 16rem" }}>
+                <div className="label">Langkah #{Math.max(1, moveIndex)}</div>
+                <div className="row" style={{ gap: "0.5rem" }}>
+                  <span className="clock" style={{ color: "var(--primary)" }}>{playedNow?.san ?? "—"}</span>
+                  <span className="clock" style={{ color: "var(--accent)" }}>
+                    {loadingEval ? "…" : (evalResult?.bestSan ?? "—")}
+                  </span>
+                </div>
+                <p className="prose-note">
+                  {moveIndex === 0
+                    ? "Posisi awal. Tekan Maju untuk mulai menganalisis."
+                    : playedNow?.san === evalResult?.bestSan
+                      ? "Langkahmu sama dengan saran engine — pilihan akurat."
+                      : `Engine lebih memilih ${evalResult?.bestSan ?? "…"}. Bandingkan keduanya di papan.`}
+                </p>
+              </div>
+            </div>
           </div>
-
-          <div className="w-full aspect-square rounded-xl overflow-hidden border border-[#3d3a37] shadow-xl">
-            <Chessboard
-              options={{
-                id: "review-single-board",
-                position: currentFen,
-                boardOrientation: activeGame.humanSide,
-                allowDragging: false,
-                squareStyles,
-                arrows,
-                darkSquareStyle: { backgroundColor: "#b58863" },
-                lightSquareStyle: { backgroundColor: "#f0d9b5" },
-                boardStyle: { borderRadius: "12px" },
-              }}
-            />
-          </div>
-
-          {/* ARROW LEGEND */}
-          <div className="bg-[#191816] p-3 rounded-xl border border-[#36322d] flex items-center justify-between text-xs md:text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3.5 h-3.5 rounded bg-yellow-500 border border-yellow-300" />
-              <span className="text-neutral-300">Garis Kuning: Langkah Anda</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3.5 h-3.5 rounded bg-[#81b64c] border border-emerald-300" />
-              <span className="text-neutral-300">Garis Hijau: Saran AI</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* TACTICAL ANALYSIS & RECOMMENDATION SIDEBAR */}
-        <div className="space-y-4">
-          {/* Card: Move Comparison */}
-          <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 md:p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#36322d] pb-3">
-              <div className="font-bold text-white text-base md:text-lg flex items-center gap-2">
-                <IconBot3D size={22} />
-                <span>Analisis Langkah #{currentMoveIndex || 1}</span>
-              </div>
-              <Badge variant="outline" className="text-xs md:text-sm text-emerald-400 border-emerald-500/40">
-                {reviewEngine === "jev"
-                  ? "Jev AI (FlyWire 134k)"
-                  : reviewEngine === "fly"
-                  ? "Drosophila Connectome"
-                  : "Stockfish 15"}
-              </Badge>
-            </div>
-
-            {/* Move details */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#191816] p-3.5 rounded-xl border border-[#36322d] space-y-1">
-                <span className="text-xs text-neutral-400 block font-semibold">Langkah Dimainkan:</span>
-                <span className="text-base md:text-lg font-black text-yellow-400 font-mono">
-                  {currentMoveIndex === 0 ? "Posisi Awal" : playedSan || "-"}
-                </span>
-              </div>
-
-              <div className="bg-[#191816] p-3.5 rounded-xl border border-[#36322d] space-y-1">
-                <span className="text-xs text-neutral-400 block font-semibold">Rekomendasi AI:</span>
-                <span className="text-base md:text-lg font-black text-[#81b64c] font-mono">
-                  {loadingAi ? "Menghitung..." : aiEvaluation ? `${aiEvaluation.bestSan}` : "-"}
-                </span>
-              </div>
-            </div>
-
-            {/* Tactical Pedagogy Explanation */}
-            <div className="bg-[#191816] p-4 rounded-xl border border-[#36322d] space-y-2">
-              <div className="font-bold text-sm md:text-base text-white flex items-center gap-2">
-                <IconTrophy3D size={18} />
-                <span>Pertimbangan Strategis AI:</span>
-              </div>
-              <p className="text-sm md:text-base text-neutral-300 leading-relaxed">
-                {currentMoveIndex === 0
-                  ? "Papan berada pada posisi awal pembukaan. Tekan 'Maju ▶' atau 'Putar Otomatis' untuk menganalisis setiap langkah."
-                  : isBestMove
-                  ? `Sempurna! Langkah ${playedSan} adalah langkah terbaik yang juga dipilih oleh AI. Anda menguasai ruang dan menjaga koordinasi perwira secara optimal.`
-                  : `Pada langkah ini, Anda memainkan ${playedSan}. AI (Jev + Fly Brain) merekomendasikan langkah alternatif ${
-                      aiEvaluation ? aiEvaluation.bestSan : "lain"
-                    } untuk memberikan tekanan lebih besar ke sayap lawan atau mencegah serangan balik berbahaya.`}
-              </p>
-            </div>
-          </Card>
-        </div>
-      </div>
+        )
+      )}
     </div>
   );
 }

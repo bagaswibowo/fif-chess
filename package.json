@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start --port 43173 --hostname 127.0.0.1",
     "lint": "eslint",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "node --experimental-strip-types --no-warnings scripts/check-core.ts",
+    "test:watch": "npm test"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

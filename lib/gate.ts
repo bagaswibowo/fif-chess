@@ -17,7 +17,7 @@ export function isGateConfigured(): boolean {
 }
 
 export function gateConfigured(): boolean {
-  return true;
+  return isGateConfigured();
 }
 
 function mac(key: string, message: string): string {

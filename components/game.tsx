@@ -12,16 +12,23 @@ import { JevDistribution } from "@/components/jev-distribution";
 import { MoveList } from "@/components/move-list";
 import { PromotionDialog } from "@/components/promotion-dialog";
 import { LearningHub } from "@/components/learning-hub";
-import { PuzzleView, type Puzzle } from "@/components/puzzle-view";
+import { PuzzleView } from "@/components/puzzle-view";
+import type { Puzzle } from "@/lib/puzzle-data";
+import { loadSaved, persistSaved } from "@/lib/puzzle-store";
 import { ScanView } from "@/components/scan-view";
 import { CommunityView } from "@/components/community-view";
-import { GameReview, type GameRecord } from "@/components/game-review";
+import { GameReview } from "@/components/game-review";
+import { AuthPanel } from "@/components/auth-panel";
+import { AdminPanel } from "@/components/admin-panel";
+import { PvpPanel, type PvpRoom } from "@/components/pvp-panel";
+import { ClockMovesFullscreen } from "@/components/clock-moves-fullscreen";
+import { useSession } from "@/lib/use-session";
+import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import { CoachModeView } from "@/components/coach-mode-view";
 import { SpectatorView } from "@/components/spectator-view";
 import { GuidedPlayView } from "@/components/guided-play-view";
 import { GameOverModal } from "@/components/game-over-modal";
 import { useChessClock } from "@/lib/use-chess-clock";
-import { getStoredUser, saveStoredUser, registerUser, type UserProfile } from "@/lib/user-auth";
 import {
   IconPawn3D, IconPlay3D,
   IconPuzzle3D,
@@ -41,6 +48,7 @@ import {
   describeOutcome,
   findLegalMove,
   getLegalMoves,
+  replaySanList,
   isPromotionAttempt,
   sideToMove,
   type PromotionPiece,
@@ -51,8 +59,15 @@ import type { JevAnalysis, JevError, PlayedMove } from "@/lib/types";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+const AI_LABEL: Record<string, string> = {
+  stockfish: "Stockfish 15 NNUE",
+  "jev-fly": "Jev + Fly Brain",
+  jev: "Jev System One",
+  fly: "Fruit Fly Brain",
+};
+
 type PendingPromotion = { from: string; to: string };
-type NavTab = "play" | "puzzle" | "vision" | "scan" | "community" | "review" | "coach";
+type NavTab = "play" | "puzzle" | "vision" | "scan" | "community" | "review" | "coach" | "admin";
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
 type CoachSubTab = "coach" | "spectator" | "guided";
@@ -77,34 +92,37 @@ export function Game() {
   const [lang, setLang] = useState<"id" | "en">("id");
   const [timeMode, setTimeMode] = useState<string>("5m");
 
-  // User Profile State
-  const [currentUser, setCurrentUser] = useState<UserProfile>(getStoredUser);
+  // Identitas: satu session server-side (cookie httpOnly). Tidak ada lagi
+  // identitas client-side yang bisa dipalsukan.
+  const { user: currentUser, login, register, logout } = useSession();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authInputName, setAuthInputName] = useState("");
-  const [authInputUsername, setAuthInputUsername] = useState("");
-  const [authInputRole, setAuthInputRole] = useState("Mahasiswa TI Tel-U");
+  const [fullscreenClocks, setFullscreenClocks] = useState(false);
+
+  // Sisi yang dipilih pemain. "random" di-resolve sekali di sini lalu dipakai
+  // ke AI maupun PvP supaya tidak ada ketidaksamaan antar menu.
+  const [sideChoice, setSideChoice] = useState<"white" | "black" | "random">("white");
+  // "random" diundi SEKALI saat permainan dimulai, lalu meng jadi nilai tetap
+  // supaya board, jam, dan nama kartu tidak berganti di tengah jalan.
+  const [sideResolved, setSideResolved] = useState<"white" | "black">("white");
+
+  // Nama tampilan untuk kartu pemain. guest = belum masuk; tidak pernah
+  // menyentuh currentUser tanpa dijaga null.
+  const me = currentUser
+    ? { name: currentUser.fullName, tag: `@${currentUser.username}`, elo: currentUser.elo, initials: currentUser.username.slice(0, 2).toUpperCase() }
+    : { name: "Tamu", tag: "belum masuk", elo: null as number | null, initials: "?" };
 
   // PvP Real-time State
   const [playMode, setPlayMode] = useState<PlayMode>("ai");
-  const [pvpRoomCode, setPvpRoomCode] = useState<string>("");
+  const [pvpRoom, setPvpRoom] = useState<PvpRoom | null>(null);
   const [pvpToken, setPvpToken] = useState<string>("");
   const [pvpJoinInput, setPvpJoinInput] = useState<string>("");
   const [pvpStatus, setPvpStatus] = useState<"idle" | "waiting" | "active" | "finished">("idle");
   const [pvpOpponentName, setPvpOpponentName] = useState<string>("Lawan Online");
   const [opponentTacticSaved, setOpponentTacticSaved] = useState<boolean>(false);
+  const pvpRoomCode = pvpRoom?.code ?? "";
 
-  // Game History State
-  const [gameHistory, setGameHistory] = useState<GameRecord[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const saved = localStorage.getItem("fif_chess_game_history");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
-    return [];
-  });
+  // Riwayat satu sumber: lib/game-history.ts (dibaca juga oleh tab Riwayat).
+  const { history: gameHistory, record: recordGameResult } = useGameHistory();
 
   const [customOutcome, setCustomOutcome] = useState<GameOutcome | null>(null);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
@@ -126,35 +144,20 @@ export function Game() {
     }
   }, [effectiveOutcome.over]);
 
-  // Record completed games to history
+  // Catat permainan selesai ke riwayat. playedAt = epoch ms supaya tab
+  // Riwayat bisa mengurutkan dan menampilkan tanggal+jam dengan benar.
   useEffect(() => {
-    if (effectiveOutcome.over && moves.length > 0) {
-      const record: GameRecord = {
-        id: "game-" + Date.now(),
-        date: new Date().toLocaleDateString("id-ID", {
-          day: "numeric",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        opponent: playMode === "ai" ? "Stockfish 15 NNUE" : pvpOpponentName,
-        humanSide,
-        outcomeKind: effectiveOutcome.kind,
-        winner: effectiveOutcome.winner,
-        moves: moves.map((m) => m.san),
-      };
-
-      setGameHistory((prev) => {
-        const exists = prev.some((g) => g.id === record.id);
-        if (exists) return prev;
-        const updated = [record, ...prev].slice(0, 50);
-        try {
-          localStorage.setItem("fif_chess_game_history", JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
-    }
-  }, [effectiveOutcome.over, moves, playMode, humanSide, effectiveOutcome.kind, effectiveOutcome.winner, pvpOpponentName]);
+    if (!effectiveOutcome.over || moves.length === 0) return;
+    recordGameResult({
+      opponent: playMode === "ai" ? AI_LABEL[selectedAiOpponent] : pvpOpponentName,
+      humanSide,
+      outcomeKind: effectiveOutcome.kind,
+      winner: effectiveOutcome.winner,
+      moves: moves.map((m) => m.san),
+      mode: playMode,
+      timeMode,
+    });
+  }, [effectiveOutcome.over, moves, playMode, humanSide, effectiveOutcome.kind, effectiveOutcome.winner, pvpOpponentName, selectedAiOpponent, timeMode, recordGameResult]);
 
   const onTimeout = useCallback((loser: Side) => {
     setCustomOutcome({
@@ -243,9 +246,12 @@ export function Game() {
 
   const startGame = useCallback(
     (side: Side) => {
+      // "Acak" diundi di sini, sekali, lalu meng jadi nilai tetap.
+      const resolved: Side = sideChoice === "random" ? (Math.random() < 0.5 ? "white" : "black") : side;
+      setSideResolved(resolved);
       requestGen.current += 1;
       try { chess.load(START_FEN); } catch (_) {}
-      setHumanSide(side);
+      setHumanSide(resolved);
       setFen(START_FEN);
       setMoves([]);
       setAnalysis(null);
@@ -258,11 +264,11 @@ export function Game() {
       setOpponentTacticSaved(false);
       resetClocks(timeMode);
       setGameActive(true);
-      if (playMode === "ai" && side === "black") {
+      if (playMode === "ai" && resolved === "black") {
         void askEngine(START_FEN);
       }
     },
-    [askEngine, timeMode, resetClocks, playMode, chess],
+    [askEngine, timeMode, resetClocks, playMode, chess, sideChoice],
   );
 
   const resetGame = useCallback(() => {
@@ -292,6 +298,8 @@ export function Game() {
       id: "opp-" + Date.now(),
       category: "opponent",
       difficulty: "Sedang",
+      track: "puzzle",
+      motif: "capture",
       fen: prevFen,
       turn: humanSide === "white" ? "b" : "w",
       solutionUci: lastM.uci,
@@ -300,14 +308,15 @@ export function Game() {
       description: `Langkah taktis ${lastM.san} yang dilancarkan oleh ${playMode === "ai" ? "Stockfish 15 NNUE" : pvpOpponentName} saat pertandingan langsung.`,
       hintPiece: `Perhatikan posisi bidak ${lastM.uci.slice(0, 2)}.`,
       hintExplanation: `Langkahkan ke petak ${lastM.uci.slice(2, 4)} untuk mereplikasi taktik kemenangan lawan.`,
+      xp: 15,
       trickExplanation: `Taktik dari Lawan: Langkah ${lastM.san} berhasil mengubah dinamika papan. Menganalisis dan memecahkan kembali langkah ini melatih refleks taktis menghadapi serangan serupa di turnamen nyata.`,
     };
 
     try {
-      const saved = localStorage.getItem("fif_chess_custom_puzzles");
-      const list = saved ? JSON.parse(saved) : [];
-      list.unshift(newPuzzle);
-      localStorage.setItem("fif_chess_custom_puzzles", JSON.stringify(list));
+      // Lewat store yang sama dengan Bank Teka-Teki, supaya triiknya benar-benar
+      // muncul di bank; key sendiri tidak akan dibaca siapa pun.
+      const list = loadSaved().filter((p) => p.id !== newPuzzle.id);
+      persistSaved([{ ...newPuzzle, savedAt: Date.now(), source: "live" }, ...list]);
       setOpponentTacticSaved(true);
       setTimeout(() => setOpponentTacticSaved(false), 3000);
     } catch {}
@@ -319,7 +328,10 @@ export function Game() {
 
     const poll = async () => {
       try {
-        const res = await fetch(`/api/pvp?room=${pvpRoomCode}`);
+        const res = await fetch(`/api/pvp?room=${pvpRoomCode}`, {
+          cache: "no-store",
+          headers: pvpToken ? { "x-player-token": pvpToken } : undefined,
+        });
         if (!res.ok) return;
         const data = await res.json();
         if (data.room) {
@@ -349,47 +361,47 @@ export function Game() {
     return () => clearInterval(interval);
   }, [playMode, pvpRoomCode, pvpStatus, fen, humanSide]);
 
-  // Create PvP Room
-  const createPvpRoom = async () => {
-    try {
-      const res = await fetch("/api/pvp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create", username: currentUser.fullName }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setPvpRoomCode(data.room.code);
-        setPvpToken(data.playerToken);
-        setHumanSide("white");
-        setPvpStatus("waiting");
-        setPlayMode("pvp");
-        startGame("white");
-      }
-    } catch {}
-  };
+  // Room PvP dibuat/diambil lewat PvpPanel; di sini hanya diterjemahkan ke
+  // state papan supaya sisi yang dipilih pemain jadi sisi sebenarnya.
+  const onPvpRoom = useCallback(
+    (room: PvpRoom, side: Side, token: string) => {
+      setPvpRoom(room);
+      setPvpToken(token);
+      setPlayMode("pvp");
+      setHumanSide(side);
+      setPvpStatus(room.status === "waiting" ? "waiting" : room.status === "finished" ? "finished" : "active");
+      setPvpOpponentName(
+        (side === "white" ? room.blackUser : room.whiteUser) || (room.invitedUser ?? "Lawan Online")
+      );
+      setFen(room.fen);
+      setMoves(
+        replaySanList(START_FEN, room.moves).map((m, i) => ({
+          san: m.san,
+          uci: m.uci,
+          by: i % 2 === 0 ? "human" : "jev",
+          ply: i + 1,
+        })),
+      );
+      setGameActive(true);
+    },
+    [],
+  );
 
-  // Join PvP Room
-  const joinPvpRoom = async () => {
-    if (!pvpJoinInput.trim()) return;
-    try {
-      const res = await fetch("/api/pvp", {
+  const leavePvpRoom = useCallback(() => {
+    if (pvpRoomCode) {
+      void fetch("/api/pvp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "join", code: pvpJoinInput.trim(), username: currentUser.fullName }),
+        body: JSON.stringify({ action: "leave", code: pvpRoomCode, token: pvpToken }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setPvpRoomCode(data.room.code);
-        setPvpToken(data.playerToken);
-        setHumanSide("black");
-        setPvpStatus("active");
-        setPvpOpponentName(data.room.whiteUser || "Pemain Putih");
-        setPlayMode("pvp");
-        setFen(data.room.fen);
-      }
-    } catch {}
-  };
+    }
+    setPvpRoom(null);
+    setPvpToken("");
+    setPvpStatus("idle");
+    setPlayMode("ai");
+    setGameActive(false);
+    resetGame();
+  }, [pvpRoomCode, pvpToken, resetGame]);
 
   const tryHumanMove = useCallback(
     (from: string, to: string, promotion?: PromotionPiece): boolean => {
@@ -473,7 +485,7 @@ export function Game() {
     const styles: Record<string, React.CSSProperties> = {};
     if (selectedSquare) {
       styles[selectedSquare] = {
-        boxShadow: "inset 0 0 0 4px #fde047",
+        boxShadow: "inset 0 0 0 4px var(--primary)",
       };
     }
     for (const square of destinations) {
@@ -504,7 +516,7 @@ export function Game() {
           if (piece && piece.type === "k" && piece.color === matedSide) {
             styles[sq] = {
               backgroundColor: "rgba(239, 68, 68, 0.5)",
-              boxShadow: "inset 0 0 0 4px #ef4444",
+              boxShadow: "inset 0 0 0 4px var(--destructive)",
               transform: "rotate(-85deg) translate(-8px, 12px)",
               transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
             };
@@ -517,16 +529,16 @@ export function Game() {
   }, [chess, destinations, lastMove, effectiveOutcome.kind, effectiveOutcome.over, selectedSquare]);
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-[#312e2b] text-white">
+    <div className="flex flex-col md:flex-row min-h-screen bg-[var(--muted)] text-white">
       {/* MOBILE TOP BAR (Hidden on Desktop) */}
-      <header className="flex md:hidden items-center justify-between px-3.5 py-2.5 bg-[#262421] border-b border-[#36322d] sticky top-0 z-30 shadow-md">
+      <header className="flex md:hidden items-center justify-between px-3.5 py-2.5 bg-[var(--card)] border-b border-[var(--border)] sticky top-0 z-30 shadow-md">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setNavTab("play")}>
-          <div className="w-8 h-8 rounded-lg bg-[#1f1d1a] border border-[#3d3a37] flex items-center justify-center shadow">
+          <div className="w-8 h-8 rounded-lg bg-[var(--surface)] border border-[var(--muted)] flex items-center justify-center shadow">
             <IconPlay3D size={20} />
           </div>
           <div>
             <div className="font-black text-sm uppercase leading-tight text-white flex items-center gap-1">
-              FIF <span className="text-[#81b64c]">CHESS</span>
+              FIF <span className="text-[var(--primary)]">CHESS</span>
             </div>
           </div>
         </div>
@@ -534,31 +546,33 @@ export function Game() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setLang((l) => (l === "id" ? "en" : "id"))}
-            className="flex items-center gap-1 text-xs font-bold text-neutral-300 bg-[#1f1d1a] border border-[#36322d] px-2 py-1 rounded-md"
+            className="flex items-center gap-1 text-xs font-bold text-neutral-300 bg-[var(--surface)] border border-[var(--border)] px-2 py-1 rounded-md"
           >
             <IconGlobe3D size={13} />
             <span>{lang.toUpperCase()}</span>
           </button>
-          <div
+          <button
             onClick={() => setShowAuthModal(true)}
             className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow cursor-pointer"
+            title={currentUser ? `@${currentUser.username}` : "Masuk / daftar"}
+            aria-label={currentUser ? `Akun @${currentUser.username}` : "Masuk atau daftar"}
           >
-            {currentUser.username.slice(0, 2).toUpperCase()}
-          </div>
+            {currentUser ? currentUser.username.slice(0, 2).toUpperCase() : "?"}
+          </button>
         </div>
       </header>
 
       {/* DESKTOP LEFT SIDEBAR (Hidden on Mobile) */}
-      <aside className="hidden md:flex md:w-64 bg-[#262421] border-r border-[#36322d] flex-col justify-between p-3 shrink-0">
+      <aside className="hidden md:flex md:w-64 bg-[var(--card)] border-r border-[var(--border)] flex-col justify-between p-3 shrink-0">
         <div>
           {/* Logo with 3D Pawn */}
           <div className="flex items-center gap-3 px-3 py-4 mb-3 cursor-pointer" onClick={() => setNavTab("play")}>
-            <div className="w-10 h-10 rounded-xl bg-[#1f1d1a] border border-[#3d3a37] flex items-center justify-center shadow-lg">
+            <div className="w-10 h-10 rounded-xl bg-[var(--surface)] border border-[var(--muted)] flex items-center justify-center shadow-lg">
               <IconPawn3D size={28} />
             </div>
             <div>
               <div className="font-black tracking-wider text-base uppercase leading-tight text-white flex items-center gap-1.5">
-                FIF <span className="text-[#81b64c]">CHESS</span>
+                FIF <span className="text-[var(--primary)]">CHESS</span>
               </div>
               <div className="text-xs text-neutral-400 font-semibold tracking-wide">ARENA CATUR TEL-U</div>
             </div>
@@ -570,8 +584,8 @@ export function Game() {
               onClick={() => setNavTab("play")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "play"
-                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
-                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconPlay3D size={22} />
@@ -582,8 +596,8 @@ export function Game() {
               onClick={() => setNavTab("puzzle")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "puzzle"
-                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
-                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconPuzzle3D size={22} />
@@ -594,8 +608,8 @@ export function Game() {
               onClick={() => setNavTab("review")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "review"
-                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
-                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconMedal3D size={22} />
@@ -606,20 +620,35 @@ export function Game() {
               onClick={() => setNavTab("coach")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "coach"
-                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
-                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconBot3D size={22} />
               <span>{lang === "id" ? "AI Coach & Latih" : "AI Coach & Train"}</span>
             </button>
 
+            {currentUser?.isAdmin && (
+              <button
+                onClick={() => setNavTab("admin")}
+                className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
+                  navTab === "admin"
+                    ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                    : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)]"
+                }`}
+                aria-current={navTab === "admin"}
+              >
+                <IconMedal3D size={22} />
+                <span>Admin</span>
+              </button>
+            )}
+
             <button
               onClick={() => setNavTab("vision")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "vision"
-                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
-                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconVision3D size={22} />
@@ -630,8 +659,8 @@ export function Game() {
               onClick={() => setNavTab("scan")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "scan"
-                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
-                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconScan3D size={22} />
@@ -642,8 +671,8 @@ export function Game() {
               onClick={() => setNavTab("community")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "community"
-                  ? "bg-[#334621] text-white border-2 border-[#81b64c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
-                  : "bg-[#24221f] text-neutral-300 hover:text-white border border-[#35322d] hover:bg-[#2c2925] active:bg-[#1c1a18] active:border-[#81b64c] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5),0_3px_8px_rgba(129,182,76,0.3)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
               <IconCommunity3D size={22} />
@@ -653,11 +682,11 @@ export function Game() {
         </div>
 
         {/* Bottom Sidebar: 3D Globe & User profile */}
-        <div className="pt-4 border-t border-[#36322d] space-y-3">
+        <div className="pt-4 border-t border-[var(--border)] space-y-3">
           <div className="flex items-center justify-between px-2">
             <button
               onClick={() => setLang((l) => (l === "id" ? "en" : "id"))}
-              className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300 hover:text-white bg-[#1f1d1a] border border-[#36322d] px-2.5 py-1.5 rounded-lg"
+              className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300 hover:text-white bg-[var(--surface)] border border-[var(--border)] px-2.5 py-1.5 rounded-lg"
             >
               <IconGlobe3D size={16} />
               <span>{lang.toUpperCase()}</span>
@@ -669,16 +698,16 @@ export function Game() {
 
           <div
             onClick={() => setShowAuthModal(true)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#1f1d1a] border border-[#36322d] cursor-pointer hover:border-[#81b64c] transition-all"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)] transition-all"
           >
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow">
-              {currentUser.username.slice(0, 2).toUpperCase()}
+              {me.initials}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold truncate text-white">{currentUser.fullName}</div>
+              <div className="text-xs font-bold truncate text-white">{me.name}</div>
               <div className="text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow-sm"></span>
-                <span>{currentUser.role} ({currentUser.elo})</span>
+                <span>{currentUser ? `${currentUser.role} (${currentUser.elo})` : "Masuk untuk rating"}</span>
               </div>
             </div>
           </div>
@@ -690,7 +719,7 @@ export function Game() {
         {navTab === "coach" && (
           <div className="space-y-4">
             {/* Coach sub-tab switcher */}
-            <div className="flex bg-[#262421] p-1.5 rounded-2xl border border-[#36322d] w-full max-w-lg mx-auto shadow-lg">
+            <div className="flex bg-[var(--card)] p-1.5 rounded-2xl border border-[var(--border)] w-full max-w-lg mx-auto shadow-lg">
               {([
                 { id: "coach", labelId: "AI Coach", labelEn: "AI Coach" },
                 { id: "spectator", labelId: "Jev vs Stockfish", labelEn: "Jev vs Stockfish" },
@@ -699,7 +728,7 @@ export function Game() {
                 <button
                   key={tab.id}
                   onClick={() => setCoachSubTab(tab.id)}
-                  className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all ${coachSubTab === tab.id ? "bg-[#81b64c] text-white shadow-md" : "text-neutral-400 hover:text-white"}`}
+                  className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all ${coachSubTab === tab.id ? "bg-[var(--primary)] text-white shadow-md" : "text-neutral-400 hover:text-white"}`}
                 >
                   {lang === "id" ? tab.labelId : tab.labelEn}
                 </button>
@@ -731,14 +760,15 @@ export function Game() {
           />
         )}
         {navTab === "scan" && <ScanView onLoadFen={(f) => { setFen(f); setNavTab("play"); }} lang={lang} />}
-        {navTab === "community" && <CommunityView lang={lang} />}
+        {navTab === "community" && <CommunityView user={currentUser} lang={lang} />}
+        {navTab === "admin" && <AdminPanel user={currentUser} />}
 
         {navTab === "play" && (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 md:gap-6 items-start w-full">
             {/* CENTER CHESSBOARD */}
             <div className="flex flex-col items-center max-w-[640px] w-full mx-auto space-y-2">
               {/* Opponent Card (Top) with 3D Bot Icon / Player Icon */}
-              <div className="w-full flex items-center justify-between px-3 py-2 bg-[#262421] rounded-xl border border-[#36322d] shadow-sm">
+              <div className="w-full flex items-center justify-between px-3 py-2 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm">
                 <div className="flex items-center gap-2.5">
                   {playMode === "ai" ? <IconBot3D size={28} /> : <IconCommunity3D size={28} />}
                   <div>
@@ -759,14 +789,14 @@ export function Game() {
                 </div>
                 <div className="flex items-center gap-3">
                   <CapturedPiecesBar fen={fen} side={humanSide === "white" ? "black" : "white"} />
-                  <div className="bg-[#1a1816] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[#36322d] shadow-inner">
+                  <div className="bg-[var(--background)] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[var(--border)] shadow-inner">
                     {humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
                   </div>
                 </div>
               </div>
 
               {/* Chessboard (Responsive to Viewport Width) */}
-              <div className="w-full aspect-square relative shadow-2xl rounded-xl md:rounded-2xl overflow-hidden border-2 border-[#45423e]">
+              <div className="w-full aspect-square relative shadow-2xl rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)]">
                 <Chessboard
                   options={{
                     id: "fif-chess-main",
@@ -792,8 +822,8 @@ export function Game() {
                       setSelectedSquare(isHumanPiece ? square : null);
                     },
                     squareStyles,
-                    lightSquareStyle: { backgroundColor: "#f0d9b5" },
-                    darkSquareStyle: { backgroundColor: "#b58863" },
+                    lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                    darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                     animationDurationInMs: 200,
                     showNotation: true,
                   }}
@@ -801,15 +831,15 @@ export function Game() {
               </div>
 
               {/* Player Card (Bottom) */}
-              <div className="w-full flex items-center justify-between px-3 py-2 bg-[#262421] rounded-xl border border-[#36322d] shadow-sm">
+              <div className="w-full flex items-center justify-between px-3 py-2 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow">
-                    {currentUser.username.slice(0, 2).toUpperCase()}
+                    {me.initials}
                   </div>
                   <div>
                     <div className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5">
-                      <span>{currentUser.fullName}</span>
-                      <span className="text-xs font-normal text-neutral-400">({currentUser.elo})</span>
+                      <span>{me.name}</span>
+                      {me.elo !== null && <span className="text-xs font-normal text-neutral-400">({me.elo})</span>}
                     </div>
                     <div className="text-xs md:text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
@@ -819,38 +849,70 @@ export function Game() {
                 </div>
                 <div className="flex items-center gap-3">
                   <CapturedPiecesBar fen={fen} side={humanSide} />
-                  <div className="bg-[#1a1816] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[#36322d] shadow-inner">
+                  <div className="bg-[var(--background)] px-2.5 py-1 rounded-lg font-mono font-bold text-base md:text-xl text-white border border-[var(--border)] shadow-inner">
                     {humanSide === "white" ? formattedWhiteTime : formattedBlackTime}
                   </div>
                 </div>
               </div>
 
-              {/* ACTION: CAPTURE OPPONENT TRICK INTO PUZZLES */}
-              {moves.length > 0 && (
-                <div className="w-full pt-1">
-                  <button
+              {/* ACTION: fullscreen jam + log, dan simpan trik lawan */}
+              <div className="w-full flex items-center gap-2">
+                <button
+                  onClick={() => setFullscreenClocks(true)}
+                  className="ctl ctl-sm"
+                  aria-label="Layar penuh: jam dan riwayat langkah"
+                >
+                  <IconClock3D size={14} />
+                  <span>Jam &amp; Log</span>
+                </button>
+                {moves.length > 0 && (
+                <button
                     onClick={saveOpponentTrick}
                     className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 ${
                       opponentTacticSaved
                         ? "bg-emerald-950/80 border-emerald-500 text-emerald-300"
-                        : "bg-[#262421] border-[#36322d] text-neutral-300 hover:text-white hover:border-[#81b64c]"
+                        : "bg-[var(--card)] border-[var(--border)] text-neutral-300 hover:text-white hover:border-[var(--primary)]"
                     }`}
                   >
                     <span>{opponentTacticSaved ? "✓ Trik Lawan Berhasil Disimpan ke Teka-Teki!" : "Simpan Trik Lawan Ini Jadi Teka-Teki"}</span>
-                  </button>
-                </div>
+                </button>
+                )}
+              </div>
+              {fullscreenClocks && (
+                <ClockMovesFullscreen
+                  fen={fen}
+                  moves={moves}
+                  whiteName={
+                    humanSide === "white"
+                      ? `${currentUser?.fullName ?? "Kamu"} (kamu)`
+                      : playMode === "ai"
+                        ? AI_LABEL[selectedAiOpponent]
+                        : pvpOpponentName
+                  }
+                  blackName={
+                    humanSide === "black"
+                      ? `${currentUser?.fullName ?? "Kamu"} (kamu)`
+                      : playMode === "ai"
+                        ? AI_LABEL[selectedAiOpponent]
+                        : pvpOpponentName
+                  }
+                  whiteTime={formattedWhiteTime}
+                  blackTime={formattedBlackTime}
+                  activeSide={effectiveOutcome.over ? null : turn}
+                  onClose={() => setFullscreenClocks(false)}
+                />
               )}
             </div>
 
             {/* RIGHT SIDEBAR (Control Panel) */}
             <div className="flex flex-col gap-3 md:gap-4 w-full">
-              <Card className="bg-[#262421] border-[#36322d] shadow-xl rounded-xl md:rounded-2xl overflow-hidden">
-                <CardHeader className="p-2.5 md:p-3 border-b border-[#36322d] bg-[#22201d]">
-                  <div className="flex bg-[#191816] p-1 rounded-xl border border-[#36322d]">
+              <Card className="bg-[var(--card)] border-[var(--border)] shadow-xl rounded-xl md:rounded-2xl overflow-hidden">
+                <CardHeader className="p-2.5 md:p-3 border-b border-[var(--border)] bg-[var(--muted)]">
+                  <div className="flex bg-[var(--background)] p-1 rounded-xl border border-[var(--border)]">
                     <button
                       onClick={() => setRightTab("game-setup")}
                       className={`flex-1 py-1.5 md:py-2 text-xs font-bold rounded-lg transition-all ${
-                        rightTab === "game-setup" ? "bg-[#81b64c] text-white shadow-md" : "text-neutral-400 hover:text-white"
+                        rightTab === "game-setup" ? "bg-[var(--primary)] text-white shadow-md" : "text-neutral-400 hover:text-white"
                       }`}
                     >
                       {lang === "id" ? "Permainan Baru" : "New Game"}
@@ -858,7 +920,7 @@ export function Game() {
                     <button
                       onClick={() => setRightTab("analysis")}
                       className={`flex-1 py-1.5 md:py-2 text-xs font-bold rounded-lg transition-all ${
-                        rightTab === "analysis" ? "bg-[#81b64c] text-white shadow-md" : "text-neutral-400 hover:text-white"
+                        rightTab === "analysis" ? "bg-[var(--primary)] text-white shadow-md" : "text-neutral-400 hover:text-white"
                       }`}
                     >
                       {lang === "id" ? "Analisis Engine" : "Analysis"}
@@ -866,7 +928,7 @@ export function Game() {
                     <button
                       onClick={() => setRightTab("moves")}
                       className={`flex-1 py-1.5 md:py-2 text-xs font-bold rounded-lg transition-all ${
-                        rightTab === "moves" ? "bg-[#81b64c] text-white shadow-md" : "text-neutral-400 hover:text-white"
+                        rightTab === "moves" ? "bg-[var(--primary)] text-white shadow-md" : "text-neutral-400 hover:text-white"
                       }`}
                     >
                       {lang === "id" ? "Langkah" : "Moves"}
@@ -883,14 +945,14 @@ export function Game() {
                         <div className="space-y-3">
                           <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex justify-between items-center">
                             <span>Jam Catur Pertandingan</span>
-                            <Badge className="bg-[#81b64c]/20 text-[#81b64c] border border-[#81b64c]/40 text-[10px]">
+                            <Badge className="bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/40 text-[10px]">
                               {timeMode === "unlimited" ? "Tanpa Batas" : timeMode}
                             </Badge>
                           </div>
 
                           {/* Opponent Live Clock */}
                           <div className={`p-3 rounded-xl border transition-all flex items-center justify-between ${
-                            !humanToMove ? "bg-[#1f2a14] border-[#81b64c] shadow-md shadow-[#81b64c]/20" : "bg-[#171614] border-[#36322d]"
+                            !humanToMove ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-md shadow-[var(--primary)]/20" : "bg-[var(--background)] border-[var(--border)]"
                           }`}>
                             <div>
                               <span className="text-xs font-bold text-neutral-300 block">
@@ -898,7 +960,7 @@ export function Game() {
                                   ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15")
                                   : pvpOpponentName}
                               </span>
-                              {!humanToMove && <span className="text-[10px] text-[#81b64c] font-black animate-pulse">Sedang Berpikir...</span>}
+                              {!humanToMove && <span className="text-[10px] text-[var(--primary)] font-black animate-pulse">Sedang Berpikir...</span>}
                             </div>
                             <div className="font-mono font-black text-2xl text-white">
                               {humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
@@ -907,11 +969,11 @@ export function Game() {
 
                           {/* Player Live Clock */}
                           <div className={`p-3 rounded-xl border transition-all flex items-center justify-between ${
-                            humanToMove ? "bg-[#1f2a14] border-[#81b64c] shadow-md shadow-[#81b64c]/20" : "bg-[#171614] border-[#36322d]"
+                            humanToMove ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-md shadow-[var(--primary)]/20" : "bg-[var(--background)] border-[var(--border)]"
                           }`}>
                             <div>
                               <span className="text-xs font-bold text-neutral-300 block">Anda (Player)</span>
-                              {humanToMove && <span className="text-[10px] text-[#81b64c] font-black animate-pulse">Giliran Anda Melangkah</span>}
+                              {humanToMove && <span className="text-[10px] text-[var(--primary)] font-black animate-pulse">Giliran Anda Melangkah</span>}
                             </div>
                             <div className="font-mono font-black text-2xl text-white">
                               {humanSide === "white" ? formattedWhiteTime : formattedBlackTime}
@@ -919,7 +981,7 @@ export function Game() {
                           </div>
 
                           {/* In-Game Actions */}
-                          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#36322d]">
+                          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--border)]">
                             <button
                               onClick={() => {
                                 setCustomOutcome({
@@ -930,7 +992,7 @@ export function Game() {
                                 });
                                 setShowGameOverModal(true);
                               }}
-                              className="btn-chess-dark py-2 px-3 rounded-xl text-xs font-bold text-neutral-300 hover:text-white"
+                              className="ctl ctl-sm ctl-quiet"
                             >
                               Tawarkan Remis
                             </button>
@@ -944,7 +1006,7 @@ export function Game() {
                                 });
                                 setShowGameOverModal(true);
                               }}
-                              className="btn-chess-dark py-2 px-3 rounded-xl text-xs font-bold text-red-400 hover:text-red-300"
+                              className="ctl ctl-sm ctl-danger"
                             >
                               Menyerah
                             </button>
@@ -952,132 +1014,132 @@ export function Game() {
 
                           <button
                             onClick={resetGame}
-                            className="w-full py-2.5 rounded-xl text-xs font-bold border border-[#81b64c]/40 text-emerald-400 hover:text-white hover:bg-[#81b64c]/20 transition-all bg-[#171614] flex items-center justify-center gap-2"
+                            className="w-full py-2.5 rounded-xl text-xs font-bold border border-[var(--primary)]/40 text-emerald-400 hover:text-white hover:bg-[var(--primary)]/20 transition-all bg-[var(--background)] flex items-center justify-center gap-2"
                           >
                             <IconSwap3D size={15} />
                             <span>Reset Permainan</span>
                           </button>
                         </div>
                       ) : (
-                        /* WHEN NO GAME IS RUNNING: SHOW SETUP CONTROLS */
-                        <div className="space-y-3.5">
-                          {/* 1. SELECT OPPONENT ENGINE */}
-                          <div>
-                            <label className="text-xs font-bold text-neutral-400 block mb-1.5 uppercase tracking-wider">
-                              Pilih Lawan Bertanding:
-                            </label>
+                        /* SETUP — satu design system, satu sumber kebenaran sisi. */
+                        <div className="stack">
+                          <div className="stack-tight">
+                            <span className="label">Lawan</span>
                             <div className="grid grid-cols-2 gap-2">
                               {[
                                 { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine 3550+" },
-                                { id: "jev-fly", label: "Jev + Fly Brain", sub: "Hybrid Neuro-Connectome" },
-                                { id: "jev", label: "Jev System One", sub: "Semantic Reasoning" },
-                                { id: "fly", label: "Fruit Fly Brain", sub: "Drosophila 134k" },
-                              ].map(eng => (
+                                { id: "jev-fly", label: "Jev + Fly Brain", sub: "Hybrid" },
+                                { id: "jev", label: "Jev System One", sub: "Semantik" },
+                                { id: "fly", label: "Fruit Fly Brain", sub: "134k neuron" },
+                              ].map((eng) => (
                                 <button
                                   key={eng.id}
                                   onClick={() => { setPlayMode("ai"); setSelectedAiOpponent(eng.id as any); }}
-                                  className={`p-2 rounded-xl text-left border transition-all ${
-                                    playMode === "ai" && selectedAiOpponent === eng.id
-                                      ? "bg-[#3d3a37] border-[#81b64c] text-white shadow-sm"
-                                      : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
-                                  }`}
+                                  className={`ctl ctl-tile ${playMode === "ai" && selectedAiOpponent === eng.id ? "ctl-active" : ""}`}
+                                  aria-pressed={playMode === "ai" && selectedAiOpponent === eng.id}
                                 >
-                                  <div className="text-xs font-bold truncate">{eng.label}</div>
-                                  <div className="text-[10px] text-neutral-500 truncate">{eng.sub}</div>
+                                  <span className="ctl-tile-title">{eng.label}</span>
+                                  <span className="ctl-tile-sub">{eng.sub}</span>
                                 </button>
                               ))}
                             </div>
                             <button
                               onClick={() => setPlayMode("pvp")}
-                              className={`w-full mt-2 py-1.5 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-                                playMode === "pvp"
-                                  ? "bg-[#3d3a37] border-[#81b64c] text-white shadow"
-                                  : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
-                              }`}
+                              className={`ctl ctl-tile ctl-tile-wide ${playMode === "pvp" ? "ctl-active" : ""}`}
+                              aria-pressed={playMode === "pvp"}
                             >
                               <IconCommunity3D size={16} />
-                              <span>Lawan Pemain Nyata (PvP Online)</span>
+                              <span className="ctl-tile-title">Lawan Pemain Nyata (PvP Online)</span>
                             </button>
                           </div>
 
-                          {/* 2. DIFFICULTY */}
-                          {playMode === "ai" && (
-                            <div>
-                              <label className="text-xs font-bold text-neutral-400 block mb-1.5 uppercase tracking-wider">
-                                Tingkat Kesulitan AI:
-                              </label>
-                              <div className="grid grid-cols-3 gap-2 mb-2">
-                                {[
-                                  { depth: 3, label: "Mudah", elo: "~800" },
-                                  { depth: 8, label: "Sedang", elo: "~1600" },
-                                  { depth: 14, label: "Expert", elo: "3550+" },
-                                ].map(lvl => (
-                                  <button
-                                    key={lvl.depth}
-                                    onClick={() => setAiDepth(lvl.depth)}
-                                    className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
-                                      aiDepth === lvl.depth
-                                        ? "bg-[#3d3a37] border-[#81b64c] text-white shadow-sm"
-                                        : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
-                                    }`}
-                                  >
-                                    <div>{lvl.label}</div>
-                                    <div className="text-[10px] text-neutral-500">{lvl.elo}</div>
-                                  </button>
-                                ))}
-                              </div>
+                          {/* Sisi: dipilih sekali, dipakai AI dan PvP alike. */}
+                          <div className="stack-tight">
+                            <span className="label">Sisi kamu</span>
+                            <div className="row" style={{ gap: "0.5rem" }}>
+                              {([
+                                { id: "white", label: "Putih" },
+                                { id: "random", label: "Acak" },
+                                { id: "black", label: "Hitam" },
+                              ] as const).map((sc) => (
+                                <button
+                                  key={sc.id}
+                                  onClick={() => setSideChoice(sc.id)}
+                                  className={`ctl ctl-sm ctl-choice ${sideChoice === sc.id ? "ctl-active" : ""}`}
+                                  aria-pressed={sideChoice === sc.id}
+                                >
+                                  {sc.label}
+                                </button>
+                              ))}
                             </div>
-                          )}
+                            <p className="prose-note" style={{ fontSize: "var(--text-xs)" }}>
+                              Sisi yang kamu pilih di sini yang diletakkan di bawah bidak. Berlaku sama di duel
+                              engine maupun PvP.
+                            </p>
+                          </div>
 
-                          {/* 3. TIME CONTROL */}
-                          {playMode === "ai" && (
-                            <div>
-                              <label className="text-xs font-bold text-neutral-400 block mb-1.5 uppercase tracking-wider">
-                                Kontrol Waktu Permainan:
-                              </label>
-                              <div className="grid grid-cols-3 gap-1.5">
-                                {[
-                                  { id: "5m", label: "5 Menit" },
-                                  { id: "10m", label: "10 Menit" },
-                                  { id: "30m", label: "30 Menit" },
-                                  { id: "60m", label: "1 Jam" },
-                                  { id: "120m", label: "2 Jam" },
-                                  { id: "unlimited", label: "Tanpa Batas" },
-                                ].map((t) => (
-                                  <button
-                                    key={t.id}
-                                    onClick={() => setTimeMode(t.id)}
-                                    className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
-                                      timeMode === t.id
-                                        ? "bg-[#3d3a37] border-[#81b64c] text-white shadow-sm"
-                                        : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
-                                    }`}
-                                  >
-                                    {t.label}
-                                  </button>
-                                ))}
+                          {playMode === "pvp" ? (
+                            <PvpPanel
+                              user={currentUser}
+                              room={pvpRoom}
+                              yourSide={pvpRoom ? humanSide : null}
+                              token={pvpToken}
+                              onRoom={onPvpRoom}
+                              onLeave={leavePvpRoom}
+                            />
+                          ) : (
+                            <>
+                              <div className="stack-tight">
+                                <span className="label">Tingkat kesulitan</span>
+                                <div className="row" style={{ gap: "0.5rem" }}>
+                                  {[
+                                    { depth: 3, label: "Mudah", elo: "~800" },
+                                    { depth: 8, label: "Sedang", elo: "~1600" },
+                                    { depth: 14, label: "Expert", elo: "3550+" },
+                                  ].map((lvl) => (
+                                    <button
+                                      key={lvl.depth}
+                                      onClick={() => setAiDepth(lvl.depth)}
+                                      className={`ctl ctl-sm ctl-choice ${aiDepth === lvl.depth ? "ctl-active" : ""}`}
+                                      aria-pressed={aiDepth === lvl.depth}
+                                    >
+                                      {lvl.label}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
 
-                          {/* 4. BIG START MATCH BUTTON */}
-                          {playMode === "ai" && (
-                            <div className="space-y-2 pt-1">
+                              <div className="stack-tight">
+                                <span className="label">Kontrol waktu</span>
+                                <div className="row" style={{ gap: "0.5rem" }}>
+                                  {[
+                                    { id: "5m", label: "5 mnt" },
+                                    { id: "10m", label: "10 mnt" },
+                                    { id: "30m", label: "30 mnt" },
+                                    { id: "60m", label: "1 jam" },
+                                    { id: "120m", label: "2 jam" },
+                                    { id: "unlimited", label: "Tanpa batas" },
+                                  ].map((t) => (
+                                    <button
+                                      key={t.id}
+                                      onClick={() => setTimeMode(t.id)}
+                                      className={`ctl ctl-xs ctl-choice ${timeMode === t.id ? "ctl-active" : ""}`}
+                                      aria-pressed={timeMode === t.id}
+                                    >
+                                      {t.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
                               <button
-                                onClick={() => startGame("white")}
-                                className="btn-chess-green w-full py-3 rounded-xl font-black text-sm md:text-base tracking-wider shadow-lg uppercase cursor-pointer flex items-center justify-center gap-2"
+                                onClick={() => startGame(sideChoice === "random" ? "white" : sideChoice)}
+                                className="ctl ctl-lg ctl-primary"
                               >
-                                <IconPlay3D size={20} />
-                                <span>Mulai Sebagai Putih</span>
+                                <IconPlay3D size={18} />
+                                <span>Mulai sebagai {sideChoice === "random" ? "sisi acak" : sideChoice === "white" ? "Putih" : "Hitam"}</span>
                               </button>
-                              <button
-                                onClick={() => startGame("black")}
-                                className="btn-chess-dark w-full py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5"
-                              >
-                                <IconSwap3D size={14} />
-                                <span>Main Sebagai Hitam</span>
-                              </button>
-                            </div>
+                            </>
                           )}
                         </div>
                       )}
@@ -1112,7 +1174,7 @@ export function Game() {
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#262421]/95 backdrop-blur-md border-t border-[#36322d] shadow-2xl overflow-x-auto">
+      <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--border)] shadow-2xl overflow-x-auto">
         <div className="flex justify-around items-center py-2 px-1 gap-1 min-w-full">
           {[
             { id: "play", icon: IconPlay3D, labelId: "Bermain", labelEn: "Play" },
@@ -1129,7 +1191,7 @@ export function Game() {
                 navTab === tab.id ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
               }`}
             >
-              <div className={`p-1 rounded-lg ${navTab === tab.id ? "bg-[#3d3a37] text-white" : ""}`}>
+              <div className={`p-1 rounded-lg ${navTab === tab.id ? "bg-[var(--muted)] text-white" : ""}`}>
                 <tab.icon size={20} />
               </div>
               <span className="text-[10px] leading-none">{lang === "id" ? tab.labelId : tab.labelEn}</span>
@@ -1138,65 +1200,15 @@ export function Game() {
         </div>
       </nav>
 
-      {/* MODAL USER PROFILE / LOGIN / DAFTAR */}
       {showAuthModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-[#262421] border border-[#36322d] rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex justify-between items-center border-b border-[#36322d] pb-3">
-              <h3 className="font-bold text-base text-white">Akun Pemain & Profil Tel-U</h3>
-              <button
-                onClick={() => setShowAuthModal(false)}
-                className="text-neutral-400 hover:text-white text-sm"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-3 bg-[#191816] rounded-xl border border-[#36322d] space-y-1">
-              <div className="text-xs text-neutral-400">Akun Aktif:</div>
-              <div className="font-bold text-white text-sm">{currentUser.fullName}</div>
-              <div className="text-xs text-emerald-400">{currentUser.role} — Rating {currentUser.elo} ELO</div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="text-xs font-bold text-neutral-300">Daftar Akun Baru / Ganti Pengguna:</div>
-              <input
-                type="text"
-                placeholder="Nama Lengkap (misal: Budi Santoso)"
-                value={authInputName}
-                onChange={(e) => setAuthInputName(e.target.value)}
-                className="w-full bg-[#191816] border border-[#36322d] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#81b64c]"
-              />
-              <input
-                type="text"
-                placeholder="Username (misal: budisantoso)"
-                value={authInputUsername}
-                onChange={(e) => setAuthInputUsername(e.target.value)}
-                className="w-full bg-[#191816] border border-[#36322d] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#81b64c]"
-              />
-              <input
-                type="text"
-                placeholder="Fakultas / Kelas (misal: S1 IF-45-02)"
-                value={authInputRole}
-                onChange={(e) => setAuthInputRole(e.target.value)}
-                className="w-full bg-[#191816] border border-[#36322d] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#81b64c]"
-              />
-
-              <Button
-                onClick={() => {
-                  if (!authInputUsername.trim() || !authInputName.trim()) return;
-                  const u = registerUser(authInputUsername, authInputName, authInputRole);
-                  setCurrentUser(u);
-                  setShowAuthModal(false);
-                  setAuthInputName("");
-                  setAuthInputUsername("");
-                }}
-                className="w-full bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-xs py-2.5"
-              >
-                Simpan & Masuk Akun
-              </Button>
-            </div>
-          </div>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+          <AuthPanel
+            user={currentUser}
+            onClose={() => setShowAuthModal(false)}
+            onLogin={login}
+            onRegister={register}
+            onLogout={logout}
+          />
         </div>
       )}
 

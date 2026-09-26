@@ -12,7 +12,7 @@ function apiKey(): string | undefined {
 }
 
 export async function POST(request: Request) {
-  if (!gateConfigured() || !sessionValid(readCookie(request, GATE_COOKIE))) {
+  if (gateConfigured() && !sessionValid(readCookie(request, GATE_COOKIE))) {
     return NextResponse.json(
       { error: "Unlock the board before Jev will play.", retryable: false },
       { status: 401 },

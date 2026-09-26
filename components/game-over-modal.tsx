@@ -125,7 +125,7 @@ export function GameOverModal({
                 onClose();
                 onNewGame();
               }}
-              className="btn-chess-green flex-1 py-3 text-sm font-bold uppercase tracking-wider"
+              className="ctl ctl-primary flex-1"
             >
               {lang === "id" ? "Main Lagi" : "Play Again"}
             </Button>

@@ -3,6 +3,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+# .env tidak boleh masuk image; secret lewat docker compose environment.
+RUN find . -name '.env*' ! -name '.env.example' -delete
 RUN npm run build
 
 FROM node:20-slim AS runner
@@ -16,6 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends stockfish && rm
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/models ./models
+
+# Standalone occasionally carries .env through; strip it from the runtime image.
+RUN rm -f /app/.env
 
 EXPOSE 43173
 CMD ["node", "server.js"]

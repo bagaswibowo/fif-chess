@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+data/
+models/*.bin
+*.log
+tsconfig.tsbuildinfo
+package-lock.json
