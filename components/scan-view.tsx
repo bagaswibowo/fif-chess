@@ -33,13 +33,52 @@ type EngineType = "stockfish" | "jev-fly" | "jev" | "fly";
 type ViewTab = "solver" | "reference" | "compare";
 
 const PRESET_POSITIONS = [
+  { name: "Giuoco Piano: Idealzentrum (C53)", fen: "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/2P2N2/PP1P1PPP/RNBQK2R b KQkq - 0 4" },
+  { name: "Evans Gambit: Serangan Sayap (C51)", fen: "r1bqk1nr/pppp1ppp/2n5/2b5/1PB1P3/5N2/P1PP1PPP/RNBQK2R b KQkq b3 0 4" },
+  { name: "Giuoco Piano: Serangan Greco f7 (C54)", fen: "r1bqk2r/pppp1ppp/2n5/4p3/2B1n3/2P2N2/PPP2PPP/R1BQK2R w KQkq - 0 6" },
   { name: "Foto Papan Fisik (Elephant Gambit)", fen: "rnbqkbnr/ppp2ppp/8/3pp3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3" },
   { name: "Foto Endgame Rd7 (User)", fen: "7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1" },
-  { name: "Taktik 16 Bidak", fen: "1R6/1bP2pk1/p3p3/4n2p/7P/8/BKP1n1p1/5R2 w - - 0 1" },
   { name: "Sicilian Najdorf", fen: "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6" },
 ];
 
 
+
+
+function cropImageDataUrl(dataUrl: string, mode: "center" | "square" | "full"): Promise<string> {
+  return new Promise((resolve) => {
+    if (mode === "full" || typeof window === "undefined") return resolve(dataUrl);
+    const img = new Image();
+    img.onload = () => {
+      const w = img.width;
+      const h = img.height;
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(dataUrl);
+
+      let sx = 0, sy = 0, sw = w, sh = h;
+      if (mode === "center") {
+        const size = Math.round(Math.min(w, h) * 0.82);
+        sx = Math.round((w - size) / 2);
+        sy = Math.round((h - size) / 2);
+        sw = size;
+        sh = size;
+      } else if (mode === "square") {
+        const size = Math.min(w, h);
+        sx = Math.round((w - size) / 2);
+        sy = Math.round((h - size) / 2);
+        sw = size;
+        sh = size;
+      }
+
+      canvas.width = 800;
+      canvas.height = 800;
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 800, 800);
+      resolve(canvas.toDataURL("image/jpeg", 0.88));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
 
 function sanitizeAndRepairFen(rawFen: string): string | null {
   if (!rawFen || typeof rawFen !== "string") return null;
@@ -168,6 +207,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
   const [activeTab, setActiveTab] = useState<ViewTab>("solver");
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [pendingCropImage, setPendingCropImage] = useState<string | null>(null);
+  const [cropRatioMode, setCropRatioMode] = useState<"center" | "square" | "full">("center");
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [selectedPieceTool, setSelectedPieceTool] = useState<string | null>(null);
   const [scanSuccessMessage, setScanSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState<{ percent: number; stage: string } | null>(null);
@@ -370,13 +413,21 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async (event) => {
+    reader.onload = (event) => {
       const base64Url = event.target?.result as string;
       if (base64Url) {
-        await processAndScanImage(base64Url);
+        setPendingCropImage(base64Url);
+        setIsCropModalOpen(true);
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleConfirmCropAndScan = async () => {
+    if (!pendingCropImage) return;
+    setIsCropModalOpen(false);
+    const cropped = await cropImageDataUrl(pendingCropImage, cropRatioMode);
+    await processAndScanImage(cropped);
   };
 
   const handleBoard1Drop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
@@ -508,6 +559,102 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       <div className="w-full max-w-4xl mx-auto space-y-4 pb-8">
         <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageFile} />
 
+              {/* CROP MODAL PREVIEW */}
+      {isCropModalOpen && pendingCropImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-md bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden stack p-4">
+            <div className="row-between items-center pb-2 border-b border-[var(--border)]">
+              <div className="font-bold text-white text-sm">
+                {lang === "id" ? "Sesuaikan & Crop Papan Catur" : "Crop Chessboard Area"}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCropModalOpen(false)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white"
+              >
+                <IconClose3D size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-[var(--muted-foreground)] leading-relaxed m-0">
+              {lang === "id"
+                ? "Foto miring/3D paling akurat jika dipotong pas di 64 petak catur tanpa tepi meja."
+                : "Photos with margins or 3D angles are recognized best when cropped tightly to the 64 squares."}
+            </p>
+
+            {/* PREVIEW CONTAINER */}
+            <div className="relative w-full aspect-square max-h-64 mx-auto rounded-xl overflow-hidden border border-[var(--border)] bg-black/40 flex items-center justify-center">
+              <img
+                src={pendingCropImage}
+                alt="Pratinjau Board"
+                className="max-h-full max-w-full object-contain"
+              />
+              {cropRatioMode === "center" && (
+                <div className="absolute inset-[9%] border-2 border-emerald-400 bg-emerald-500/10 pointer-events-none rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-emerald-300 bg-black/60 px-2 py-0.5 rounded">
+                    Area Crop Papan (82%)
+                  </span>
+                </div>
+              )}
+              {cropRatioMode === "square" && (
+                <div className="absolute inset-0 border-2 border-blue-400 bg-blue-500/10 pointer-events-none rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-blue-300 bg-black/60 px-2 py-0.5 rounded">
+                    Kotak Penuh 1:1
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* RATIO SELECTORS */}
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setCropRatioMode("center")}
+                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "center" ? "bg-emerald-950/80 border-emerald-500 text-emerald-200 font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}`}
+              >
+                <span>🎯 Papan Tengah</span>
+                <span className="text-[9px] opacity-75">Fokus 82%</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCropRatioMode("square")}
+                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "square" ? "bg-blue-950/80 border-blue-500 text-blue-200 font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}`}
+              >
+                <span>⏹ Kotak 1:1</span>
+                <span className="text-[9px] opacity-75">Persegi</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCropRatioMode("full")}
+                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "full" ? "bg-neutral-800 border-neutral-500 text-white font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}` }
+              >
+                <span>🖼 Asli</span>
+                <span className="text-[9px] opacity-75">Tanpa Potong</span>
+              </button>
+            </div>
+
+            {/* ACTION BUTTONS */}
+            <div className="row gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsCropModalOpen(false)}
+                className="ctl ctl-sm flex-1 font-medium"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCropAndScan}
+                className="ctl ctl-sm flex-1 font-bold bg-[var(--primary)] text-white hover:brightness-110"
+              >
+                ✂ Potong & Pindai AI
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
         {/* NOTIFICATIONS */}
         {/* SCAN PROGRESS BAR WITH CANCEL BUTTON */}
       {scanProgress && (
@@ -730,6 +877,102 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     <div className="w-full max-w-6xl mx-auto space-y-3 pb-6">
       <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageFile} />
 
+            {/* CROP MODAL PREVIEW */}
+      {isCropModalOpen && pendingCropImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-md bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden stack p-4">
+            <div className="row-between items-center pb-2 border-b border-[var(--border)]">
+              <div className="font-bold text-white text-sm">
+                {lang === "id" ? "Sesuaikan & Crop Papan Catur" : "Crop Chessboard Area"}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCropModalOpen(false)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white"
+              >
+                <IconClose3D size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-[var(--muted-foreground)] leading-relaxed m-0">
+              {lang === "id"
+                ? "Foto miring/3D paling akurat jika dipotong pas di 64 petak catur tanpa tepi meja."
+                : "Photos with margins or 3D angles are recognized best when cropped tightly to the 64 squares."}
+            </p>
+
+            {/* PREVIEW CONTAINER */}
+            <div className="relative w-full aspect-square max-h-64 mx-auto rounded-xl overflow-hidden border border-[var(--border)] bg-black/40 flex items-center justify-center">
+              <img
+                src={pendingCropImage}
+                alt="Pratinjau Board"
+                className="max-h-full max-w-full object-contain"
+              />
+              {cropRatioMode === "center" && (
+                <div className="absolute inset-[9%] border-2 border-emerald-400 bg-emerald-500/10 pointer-events-none rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-emerald-300 bg-black/60 px-2 py-0.5 rounded">
+                    Area Crop Papan (82%)
+                  </span>
+                </div>
+              )}
+              {cropRatioMode === "square" && (
+                <div className="absolute inset-0 border-2 border-blue-400 bg-blue-500/10 pointer-events-none rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-blue-300 bg-black/60 px-2 py-0.5 rounded">
+                    Kotak Penuh 1:1
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* RATIO SELECTORS */}
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setCropRatioMode("center")}
+                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "center" ? "bg-emerald-950/80 border-emerald-500 text-emerald-200 font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}`}
+              >
+                <span>🎯 Papan Tengah</span>
+                <span className="text-[9px] opacity-75">Fokus 82%</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCropRatioMode("square")}
+                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "square" ? "bg-blue-950/80 border-blue-500 text-blue-200 font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}`}
+              >
+                <span>⏹ Kotak 1:1</span>
+                <span className="text-[9px] opacity-75">Persegi</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCropRatioMode("full")}
+                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "full" ? "bg-neutral-800 border-neutral-500 text-white font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}` }
+              >
+                <span>🖼 Asli</span>
+                <span className="text-[9px] opacity-75">Tanpa Potong</span>
+              </button>
+            </div>
+
+            {/* ACTION BUTTONS */}
+            <div className="row gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsCropModalOpen(false)}
+                className="ctl ctl-sm flex-1 font-medium"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCropAndScan}
+                className="ctl ctl-sm flex-1 font-bold bg-[var(--primary)] text-white hover:brightness-110"
+              >
+                ✂ Potong & Pindai AI
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* TOP CONTROL BAR */}
       <div className="panel px-3.5 py-2.5 row-between flex-wrap gap-2.5" style={{ background: "var(--card)" }}>
         <div className="row items-center gap-2">

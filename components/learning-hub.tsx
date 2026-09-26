@@ -157,6 +157,57 @@ export function LearningHub({ lang = "id" }: Props) {
 
   return (
     <div className="stack" style={{ maxWidth: "70rem", margin: "0 auto" }}>
+      {/* MASTERCLASS GIUOCO PIANO (ITALIAN GAME C50-C54) */}
+      <div className="panel p-3 stack" style={{ border: "1px solid var(--border)", background: "var(--card)" }}>
+        <div className="row-between flex-wrap gap-2">
+          <div className="row items-center gap-2">
+            <span style={{ fontSize: "1.25rem" }}>🏛</span>
+            <div>
+              <div className="font-bold" style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-sm)" }}>
+                {lang === "id" ? "Tips & Trik Taktik Italia: Masterclass Giuoco Piano (C50-C54)" : "Italian Game Tactics: Giuoco Piano Masterclass"}
+              </div>
+              <div className="prose-note" style={{ fontSize: "var(--text-xs)" }}>
+                {lang === "id" ? "Berdasarkan studi arsip Gioachino Greco (1619) & Formasi Idealzentrum" : "Based on Gioachino Greco (1619) manuscripts & Ideal Centre strategy"}
+              </div>
+            </div>
+          </div>
+          <span className="label" style={{ padding: "0.15rem 0.5rem", background: "var(--surface)", border: "1px solid var(--border)" }}>
+            C50–C54
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1" style={{ fontSize: "var(--text-xs)" }}>
+          <div className="panel p-2 stack-tight" style={{ background: "var(--surface)" }}>
+            <div className="font-bold text-amber-400">1. Titik Lemah Abadi f7 (Greco Motif)</div>
+            <p className="prose-note m-0" style={{ fontSize: "var(--text-xs)" }}>
+              Sebelum Raja Hitam rokade, petak f7 adalah petak paling rentan karena hanya dikawal oleh Raja.
+              Gajah c4 dan Kuda g5 dapat melancarkan kombinasi serangan garpu atau pengorbanan langsung untuk merusak hak rokade lawan.
+            </p>
+          </div>
+
+          <div className="panel p-2 stack-tight" style={{ background: "var(--surface)" }}>
+            <div className="font-bold text-blue-400">2. Idealzentrum: Formasi d4 + e4</div>
+            <p className="prose-note m-0" style={{ fontSize: "var(--text-xs)" }}>
+              Langkah 4. c3 disiapkan untuk mendirikan dua pion sentral berdampingan (d4 & e4). Formasi ini mendominasi petak pusat c5, d5, e5, f5 dan memaksa perwira hitam mundur tanpa ruang gerak.
+            </p>
+          </div>
+
+          <div className="panel p-2 stack-tight" style={{ background: "var(--surface)" }}>
+            <div className="font-bold text-emerald-400">3. Evans Gambit (C51 - 4. b4!?)</div>
+            <p className="prose-note m-0" style={{ fontSize: "var(--text-xs)" }}>
+              Pengorbanan pion sayap b4 untuk mengalihkan Gajah Hitam dari diagonal aktif, memenangkan dua tempo pengembangan lewat c3 dan d4, serta membuka diagonal serang Ba3 menekan sayap raja.
+            </p>
+          </div>
+
+          <div className="panel p-2 stack-tight" style={{ background: "var(--surface)" }}>
+            <div className="font-bold text-purple-400">4. Filosofi Bidak Bebas (Free Pieces)</div>
+            <p className="prose-note m-0" style={{ fontSize: "var(--text-xs)" }}>
+              Dikutip dari catatan taktik Italia kuno: "Free pieces will win: free diagonals for the bishops, free files for the rooks!" Jangan takut mengorbankan 1-2 pion asalkan perwira memiliki lajur terbuka bebas.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="row-between">
         <h2 className="section-title">{lang === "id" ? "Belajar & Quest" : "Learn & Quest"}</h2>
         <span className="prose-note clock">
