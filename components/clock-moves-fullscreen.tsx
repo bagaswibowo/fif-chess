@@ -157,7 +157,7 @@ export function ClockMovesFullscreen({
       <div className="flex-1 flex flex-col lg:flex-row items-center justify-center p-2 sm:p-4 gap-3 lg:gap-6 max-w-7xl mx-auto w-full overflow-hidden">
         
         {/* LEFT / CENTER: EVAL BAR + BOARD + PLAYER CARDS */}
-        <div className="flex flex-col items-center justify-center w-full max-w-[min(96vw,84vh)] flex-shrink-0">
+        <div className="flex flex-col items-center justify-center w-full max-w-[min(98vw,calc(100vh-125px))] flex-shrink-0">
           
           {/* TOP PLAYER CARD (OPPONENT) */}
           <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] mb-1.5 shadow-sm">
@@ -212,6 +212,9 @@ export function ClockMovesFullscreen({
                   boardOrientation: currentOrientation,
                   allowDragging: isHumanTurn,
                   onPieceDrop: onPieceDrop ?? (() => false),
+                  boardStyle: {
+                    backgroundColor: "var(--board-dark)",
+                  },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                 }}
@@ -247,7 +250,7 @@ export function ClockMovesFullscreen({
         </div>
 
         {/* RIGHT SIDE: LIVE COMMENTARY & BLUNDER DETECTOR + COMPACT MOVES LOG */}
-        <div className="flex-1 flex flex-col gap-2.5 w-full max-w-md h-full max-h-[66vh] overflow-hidden">
+        <div className="flex-1 flex flex-col gap-2.5 w-full max-w-md h-full max-h-[min(90vh,calc(100vh-125px))] overflow-hidden">
           
           {/* LIVE STOCKFISH COMMENTATOR CARD */}
           {showCommentary && (

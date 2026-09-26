@@ -872,7 +872,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               </div>
 
               {/* Chessboard (Responsive to Viewport Width) */}
-              <div className="w-full max-w-[min(94vw,65vh)] lg:max-w-none aspect-square mx-auto relative shadow-2xl rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)]">
+              <div className="w-full max-w-[min(94vw,65vh)] lg:max-w-none aspect-square mx-auto relative shadow-2xl rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)]">
                 <Chessboard
                   options={{
                     id: "fif-chess-main",
@@ -881,6 +881,9 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                     allowDragging: humanToMove,
                     canDragPiece,
                     onPieceDrop,
+                    boardStyle: {
+                      backgroundColor: "var(--board-dark)",
+                    },
                     onSquareClick: ({ square }) => {
                       if (!humanToMove) return;
                       if (selectedSquare) {
@@ -970,14 +973,14 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                   moves={moves}
                   whiteName={
                     humanSide === "white"
-                      ? `${currentUser?.fullName ?? "Kamu"} (kamu)`
+                      ? (currentUser?.fullName ?? "Anda")
                       : playMode === "ai"
                         ? AI_LABEL[selectedAiOpponent]
                         : pvpOpponentName
                   }
                   blackName={
                     humanSide === "black"
-                      ? `${currentUser?.fullName ?? "Kamu"} (kamu)`
+                      ? (currentUser?.fullName ?? "Anda")
                       : playMode === "ai"
                         ? AI_LABEL[selectedAiOpponent]
                         : pvpOpponentName
