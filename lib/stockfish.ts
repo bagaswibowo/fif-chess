@@ -225,6 +225,64 @@ export async function guardJevMove(
   }
 
   const bestScore = sf.bestScore;
+
+  // 1. ENDGAME PAWN PROMOTION BOOST (Pion bebas promosi ke Menteri =Q)
+  const legals = chess.moves({ verbose: true });
+  const promoMove = legals.find(
+    (m) => m.promotion === "q" || (m.piece === "p" && (m.to.endsWith("8") || m.to.endsWith("1")))
+  );
+  if (promoMove) {
+    const promoUci = promoMove.lan ? promoMove.lan.slice(0, 5) : (promoMove.from + promoMove.to + "q");
+    let promoScore = sf.candidateScores.get(promoUci);
+    if (promoScore === undefined) {
+      promoScore = (await evalSingleMove(fen, promoUci, Math.max(8, guardDepth - 2))) ?? undefined;
+    }
+    if (promoScore !== undefined && (promoScore > 100 || (bestScore - promoScore <= 50))) {
+      try {
+        const applied = applyUci(chess, promoUci);
+        return {
+          uci: promoUci,
+          san: applied.san,
+          fen: chess.fen(),
+          probabilities: { [promoUci]: 0.99, ...jevResult.probabilities },
+          confidence: 0.99,
+          droppedMoveCount: 0,
+          outcome: describeOutcome(chess),
+          scoreCp: promoScore,
+        };
+      } catch {}
+    }
+  }
+
+  // 2. PASSED PAWN ADVANCE BOOST (Mendorong pion bebas menuju promosi)
+  const isWhiteTurn = chess.turn() === "w";
+  const pushMove = legals.find((m) => {
+    if (m.piece !== "p") return false;
+    return isWhiteTurn ? (m.from.endsWith("6") && m.to.endsWith("7")) : (m.from.endsWith("3") && m.to.endsWith("2"));
+  });
+  if (pushMove) {
+    const pushUci = pushMove.from + pushMove.to;
+    let pushScore = sf.candidateScores.get(pushUci);
+    if (pushScore === undefined) {
+      pushScore = (await evalSingleMove(fen, pushUci, Math.max(8, guardDepth - 2))) ?? undefined;
+    }
+    if (pushScore !== undefined && pushScore > 150 && (bestScore - pushScore <= 40)) {
+      try {
+        const applied = applyUci(chess, pushUci);
+        return {
+          uci: pushUci,
+          san: applied.san,
+          fen: chess.fen(),
+          probabilities: { [pushUci]: 0.95, ...jevResult.probabilities },
+          confidence: 0.95,
+          droppedMoveCount: 0,
+          outcome: describeOutcome(chess),
+          scoreCp: pushScore,
+        };
+      } catch {}
+    }
+  }
+
   const delta = jevScore !== undefined ? bestScore - jevScore : 9999;
   const isSafe = jevScore !== undefined && delta <= 25 && jevScore > -20000;
 
