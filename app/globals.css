@@ -82,6 +82,10 @@
   --board-mark: #81b64c;
 
   /* Sizing tokens */
+  --gap-1: 0.5rem;
+  --gap-2: 1rem;
+  --gap-3: 1.5rem;
+
   --ctl-h-xs: 32px;
   --ctl-h-sm: 40px;
   --ctl-h-md: 46px;

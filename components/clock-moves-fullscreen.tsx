@@ -1,8 +1,7 @@
 "use client";
 
-// Layar fullscreen khusus untuk proyek ini: jam kedua sisi + riwayat langkah.
-// Sengaja tidak ada papan di sini — ini tampilan "jam & log", bukan papan
-// kedua, supaya tidak ada dua sumber kebenaran posisi.
+// Tampilan Fullscreen Mode Fokus: Jam Digital + Riwayat Langkah.
+// Tanpa elemen pengalih fokus, dirancang khusus untuk pertandingan konsentrasi tinggi.
 import { useEffect, useRef } from "react";
 
 type Props = {
@@ -13,20 +12,51 @@ type Props = {
   blackTime: string;
   activeSide: "white" | "black" | null;
   moves: { san: string }[];
-  fen: string;
+  fen?: string;
 };
 
-export function ClockMovesFullscreen({ onClose, whiteName, blackName, whiteTime, blackTime, activeSide, moves, fen }: Props) {
+export function ClockMovesFullscreen({
+  onClose,
+  whiteName,
+  blackName,
+  whiteTime,
+  blackTime,
+  activeSide,
+  moves,
+}: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const scrollBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     closeRef.current?.focus();
+
+    // Coba aktifkan browser fullscreen jika didukung
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch {}
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" || e.key === "f" || e.key === "F") {
+        onClose();
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } catch {}
+    };
   }, [onClose]);
+
+  // Auto scroll riwayat langkah ke bawah saat langkah bertambah
+  useEffect(() => {
+    scrollBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [moves.length]);
 
   const rows: { n: number; white?: string; black?: string }[] = [];
   moves.forEach((m, i) => {
@@ -36,81 +66,157 @@ export function ClockMovesFullscreen({ onClose, whiteName, blackName, whiteTime,
     else rows[n - 1].black = m.san;
   });
 
-  const clock = (name: string, time: string, side: "white" | "black") => (
-    <div
-      className="panel p-4 stack-tight"
-      style={{
-        borderColor: activeSide === side ? "var(--primary)" : "var(--border)",
-        background: activeSide === side ? "color-mix(in srgb, var(--primary) 12%, var(--card))" : "var(--card)",
-      }}
-    >
-      <div className="label">
-        {side === "white" ? "Putih" : "Hitam"} · {name}
+  const renderClockCard = (name: string, time: string, side: "white" | "black") => {
+    const isActive = activeSide === side;
+    return (
+      <div
+        className="panel p-4 md:p-6 stack-tight text-center transition-all"
+        style={{
+          borderColor: isActive ? "var(--primary)" : "var(--border)",
+          background: isActive
+            ? "color-mix(in srgb, var(--primary) 14%, var(--card))"
+            : "var(--card)",
+          boxShadow: isActive ? "0 0 24px color-mix(in srgb, var(--primary) 20%, transparent)" : "none",
+        }}
+      >
+        <div className="row-between" style={{ marginBottom: "0.25rem" }}>
+          <span className="label flex items-center gap-1.5">
+            <span
+              style={{
+                width: "0.5rem",
+                height: "0.5rem",
+                borderRadius: "9999px",
+                background: side === "white" ? "var(--foreground)" : "var(--muted-foreground)",
+                display: "inline-block",
+              }}
+            />
+            {side === "white" ? "Putih" : "Hitam"} · {name}
+          </span>
+          {isActive && (
+            <span
+              className="label"
+              style={{
+                color: "var(--primary)",
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+              }}
+            >
+              ● Giliran Melangkah
+            </span>
+          )}
+        </div>
+        <div
+          className="clock"
+          style={{
+            fontSize: "clamp(2.5rem, 10vw, 4.5rem)",
+            lineHeight: 1,
+            letterSpacing: "-0.02em",
+            fontVariantNumeric: "tabular-nums",
+            color: isActive ? "var(--primary)" : "var(--foreground)",
+          }}
+        >
+          {time}
+        </div>
       </div>
-      <div className="clock" style={{ fontSize: "clamp(2rem, 8vw, 3.5rem)", lineHeight: 1 }}>
-        {time}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Jam dan riwayat langkah"
-      className="fixed inset-0 z-50 overflow-y-auto"
-      style={{ background: "color-mix(in srgb, var(--background) 96%, transparent)" }}
+      aria-label="Mode Fokus: Jam dan Riwayat Langkah"
+      className="fixed inset-0 z-50 overflow-y-auto flex flex-col justify-between"
+      style={{
+        background: "color-mix(in srgb, var(--background) 98%, transparent)",
+        backdropFilter: "blur(8px)",
+      }}
     >
-      <div className="stack" style={{ maxWidth: "56rem", margin: "0 auto", padding: "1rem" }}>
-        <div className="row-between">
-          <h2 className="section-title">Jam &amp; Riwayat Langkah</h2>
-          <button ref={closeRef} className="ctl ctl-sm" onClick={onClose}>
-            Tutup (Esc)
+      <div className="stack" style={{ maxWidth: "56rem", margin: "0 auto", padding: "1.25rem", width: "100%" }}>
+        {/* Header Bar */}
+        <div className="row-between" style={{ borderBottom: "1px solid var(--border)", paddingBottom: "0.75rem" }}>
+          <div>
+            <h2 className="section-title" style={{ margin: 0, fontSize: "var(--text-base)" }}>
+              Mode Fokus Pertandingan
+            </h2>
+            <p className="prose-note" style={{ margin: 0, fontSize: "var(--text-xs)" }}>
+              Tampilan minimalis: waktu &amp; riwayat langkah untuk konsentrasi penuh
+            </p>
+          </div>
+          <button ref={closeRef} className="ctl ctl-sm ctl-quiet" onClick={onClose} title="Tekan Escape atau F untuk keluar">
+            ✕ Tutup Fokus (Esc / F)
           </button>
         </div>
 
-        <div className="row" style={{ gap: "0.75rem", alignItems: "stretch" }}>
-          <div style={{ flex: "1 1 12rem" }}>{clock(whiteName, whiteTime, "white")}</div>
-          <div style={{ flex: "1 1 12rem" }}>{clock(blackName, blackTime, "black")}</div>
+        {/* 2-Player Digital Clocks */}
+        <div className="row" style={{ gap: "1rem", alignItems: "stretch", marginTop: "0.5rem" }}>
+          <div style={{ flex: "1 1 14rem" }}>{renderClockCard(whiteName, whiteTime, "white")}</div>
+          <div style={{ flex: "1 1 14rem" }}>{renderClockCard(blackName, blackTime, "black")}</div>
         </div>
 
-        <div className="panel p-3">
-          <div className="label" style={{ marginBottom: "0.5rem" }}>
-            FEN
+        {/* Move History Table */}
+        <div className="panel p-4" style={{ marginTop: "0.75rem" }}>
+          <div className="row-between" style={{ marginBottom: "0.75rem" }}>
+            <div className="label" style={{ fontSize: "var(--text-xs)", fontWeight: 700 }}>
+              Riwayat Langkah ({moves.length} total)
+            </div>
+            {moves.length > 0 && (
+              <span className="label" style={{ color: "var(--muted-foreground)" }}>
+                Langkah terakhir: <strong style={{ color: "var(--foreground)" }}>{moves[moves.length - 1]?.san}</strong>
+              </span>
+            )}
           </div>
-          <p className="clock wrap-anywhere" style={{ fontSize: "var(--text-xs)", fontWeight: 400 }}>
-            {fen}
-          </p>
-        </div>
 
-        <div className="panel p-3">
-          <div className="label" style={{ marginBottom: "0.5rem" }}>
-            {moves.length} langkah
-          </div>
           {rows.length === 0 ? (
-            <p className="prose-note">Belum ada langkah.</p>
+            <p className="prose-note text-center py-8">Belum ada langkah yang dimainkan.</p>
           ) : (
-            <div className="table-wrap">
+            <div className="table-wrap" style={{ maxHeight: "45vh", overflowY: "auto" }}>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "3rem" }}>#</th>
+                    <th style={{ width: "3.5rem", textAlign: "center" }}>#</th>
                     <th>Putih</th>
                     <th>Hitam</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.n}>
-                      <td className="num" style={{ color: "var(--muted-foreground)" }}>
-                        {r.n}.
-                      </td>
-                      <td className="num">{r.white ?? "—"}</td>
-                      <td className="num">{r.black ?? "—"}</td>
-                    </tr>
-                  ))}
+                  {rows.map((r, idx) => {
+                    const isLatestRow = idx === rows.length - 1;
+                    return (
+                      <tr
+                        key={r.n}
+                        style={{
+                          background: isLatestRow
+                            ? "color-mix(in srgb, var(--primary) 8%, transparent)"
+                            : undefined,
+                        }}
+                      >
+                        <td className="num" style={{ color: "var(--muted-foreground)", textAlign: "center" }}>
+                          {r.n}.
+                        </td>
+                        <td
+                          className="num font-bold"
+                          style={{
+                            color: !r.black && isLatestRow ? "var(--primary)" : "var(--foreground)",
+                          }}
+                        >
+                          {r.white ?? "—"}
+                        </td>
+                        <td
+                          className="num font-bold"
+                          style={{
+                            color: r.black && isLatestRow ? "var(--primary)" : "var(--foreground)",
+                          }}
+                        >
+                          {r.black ?? "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <div ref={scrollBottomRef} />
             </div>
           )}
         </div>

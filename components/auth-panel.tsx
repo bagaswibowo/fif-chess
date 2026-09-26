@@ -80,11 +80,11 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
         : 0;
 
     return (
-      <div className="bg-[#211e19] border border-[#38322a] rounded-2xl p-5 md:p-6 w-full max-w-[420px] shadow-2xl space-y-4 text-white relative animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-[var(--background)] border border-[var(--border)] rounded-2xl p-5 md:p-6 w-full max-w-[420px] shadow-2xl space-y-4 text-white relative animate-in fade-in zoom-in-95 duration-200">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#2b2721] hover:bg-[#38322a] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold"
           aria-label="Tutup"
         >
           ✕
@@ -92,7 +92,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
 
         {/* Profile Header */}
         <div className="flex items-center gap-3.5 pr-8">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#81b64c] to-[#334621] border-2 border-[#81b64c] flex items-center justify-center text-base font-black text-white shadow-md shrink-0">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary-strong)] border-2 border-[var(--primary)] flex items-center justify-center text-base font-black text-white shadow-md shrink-0">
             {user.username.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
@@ -111,10 +111,10 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-2 bg-[#1a1714] p-3 rounded-xl border border-[#38322a] text-center">
+        <div className="grid grid-cols-3 gap-2 bg-[var(--background)] p-3 rounded-xl border border-[var(--border)] text-center">
           <div>
             <span className="block text-[10px] uppercase font-bold text-neutral-400">Rating ELO</span>
-            <span className="font-mono font-black text-lg text-[#81b64c]">{user.elo}</span>
+            <span className="font-mono font-black text-lg text-[var(--primary)]">{user.elo}</span>
           </div>
           <div>
             <span className="block text-[10px] uppercase font-bold text-neutral-400">Menang/Kalah</span>
@@ -137,10 +137,10 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
         )}
 
         {/* Actions */}
-        <div className="flex gap-2.5 pt-2 border-t border-[#38322a]">
+        <div className="flex gap-2.5 pt-2 border-t border-[var(--border)]">
           <button
             onClick={onClose}
-            className="flex-1 h-10 px-4 rounded-xl border border-[#38322a] bg-[#2b2721] hover:bg-[#38322a] text-neutral-200 font-bold text-sm transition-all"
+            className="flex-1 h-10 px-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-200 font-bold text-sm transition-all"
           >
             Tutup
           </button>
@@ -157,11 +157,11 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
 
   // NOT LOGGED IN: Tabbed Login / Signup Modal
   return (
-    <div className="bg-[#211e19] border border-[#38322a] rounded-2xl p-5 md:p-6 w-full max-w-[420px] shadow-2xl space-y-4 text-white relative animate-in fade-in zoom-in-95 duration-200">
+    <div className="bg-[var(--background)] border border-[var(--border)] rounded-2xl p-5 md:p-6 w-full max-w-[420px] shadow-2xl space-y-4 text-white relative animate-in fade-in zoom-in-95 duration-200">
       {/* Close Button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#2b2721] hover:bg-[#38322a] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold cursor-pointer"
+        className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold cursor-pointer"
         aria-label="Tutup"
       >
         ✕
@@ -169,19 +169,19 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
 
       {/* Modal Branding Header */}
       <div className="flex items-center gap-2.5 pr-8">
-        <div className="w-8 h-8 rounded-lg bg-[#2b2721] border border-[#38322a] flex items-center justify-center text-[#81b64c]">
+        <div className="w-8 h-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center text-[var(--primary)]">
           <IconPawn3D size={20} />
         </div>
         <div>
           <h2 className="text-base font-black text-white tracking-wide uppercase leading-tight">
-            FIF <span className="text-[#81b64c]">CHESS</span>
+            FIF <span className="text-[var(--primary)]">CHESS</span>
           </h2>
           <p className="text-[11px] text-neutral-400">Platform Catur Civitas Telkom University</p>
         </div>
       </div>
 
       {/* Mode Switcher Tabs */}
-      <div className="flex bg-[#1a1714] p-1 rounded-xl border border-[#38322a]">
+      <div className="flex bg-[var(--background)] p-1 rounded-xl border border-[var(--border)]">
         <button
           type="button"
           onClick={() => {
@@ -190,7 +190,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
           }}
           className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
             mode === "login"
-              ? "bg-[#81b64c] text-white shadow-md"
+              ? "bg-[var(--primary)] text-white shadow-md"
               : "text-neutral-400 hover:text-white"
           }`}
         >
@@ -204,7 +204,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
           }}
           className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
             mode === "register"
-              ? "bg-[#81b64c] text-white shadow-md"
+              ? "bg-[var(--primary)] text-white shadow-md"
               : "text-neutral-400 hover:text-white"
           }`}
         >
@@ -224,7 +224,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
           </label>
           <input
             id="auth-username"
-            className="w-full h-11 px-3.5 rounded-xl border border-[#38322a] bg-[#1a1714] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#81b64c] focus:ring-1 focus:ring-[#81b64c] text-sm transition-all"
+            className="w-full h-11 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
@@ -250,7 +250,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
               </label>
               <input
                 id="auth-fullname"
-                className="w-full h-11 px-3.5 rounded-xl border border-[#38322a] bg-[#1a1714] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#81b64c] focus:ring-1 focus:ring-[#81b64c] text-sm transition-all"
+                className="w-full h-11 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 autoComplete="name"
@@ -268,7 +268,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
               </label>
               <select
                 id="auth-role"
-                className="w-full h-11 px-3.5 rounded-xl border border-[#38322a] bg-[#1a1714] text-white focus:outline-none focus:border-[#81b64c] text-sm transition-all cursor-pointer"
+                className="w-full h-11 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white focus:outline-none focus:border-[var(--primary)] text-sm transition-all cursor-pointer"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
               >
@@ -296,14 +296,14 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-[11px] text-[#81b64c] hover:underline cursor-pointer"
+              className="text-[11px] text-[var(--primary)] hover:underline cursor-pointer"
             >
               {showPassword ? "Sembunyikan" : "Lihat Sandi"}
             </button>
           </div>
           <input
             id="auth-password"
-            className="w-full h-11 px-3.5 rounded-xl border border-[#38322a] bg-[#1a1714] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#81b64c] focus:ring-1 focus:ring-[#81b64c] text-sm transition-all"
+            className="w-full h-11 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -325,7 +325,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
             </label>
             <input
               id="auth-confirm-password"
-              className="w-full h-11 px-3.5 rounded-xl border border-[#38322a] bg-[#1a1714] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#81b64c] focus:ring-1 focus:ring-[#81b64c] text-sm transition-all"
+              className="w-full h-11 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
               type={showPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -344,7 +344,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
               type="checkbox"
               checked={agreeTerms}
               onChange={(e) => setAgreeTerms(e.target.checked)}
-              className="w-4 h-4 mt-0.5 rounded bg-[#1a1714] border-[#38322a] text-[#81b64c] focus:ring-[#81b64c] accent-[#81b64c]"
+              className="w-4 h-4 mt-0.5 rounded bg-[var(--background)] border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)] accent-[var(--primary)]"
               required
             />
             <span>Saya menyetujui aturan fair-play dan ketentuan komunitas catur Telkom University.</span>
@@ -359,7 +359,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
               message.tone === "err"
                 ? "bg-red-950/50 border-red-500/50 text-red-200"
                 : message.tone === "info"
-                ? "bg-[#81b64c]/15 border-[#81b64c]/40 text-[#81b64c]"
+                ? "bg-[var(--primary)]/15 border-[var(--primary)]/40 text-[var(--primary)]"
                 : "bg-emerald-950/50 border-emerald-500/50 text-emerald-200"
             }`}
           >
@@ -369,7 +369,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
 
         {/* Submit Button */}
         <button
-          className="w-full h-11 rounded-xl bg-[#81b64c] hover:bg-[#72a342] active:translate-y-[1px] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full h-11 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:translate-y-[1px] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           type="submit"
           disabled={busy}
         >
@@ -387,7 +387,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
       </form>
 
       {/* Info Footnote */}
-      <div className="pt-2 border-t border-[#38322a] text-[11px] text-neutral-400 space-y-1 text-center">
+      <div className="pt-2 border-t border-[var(--border)] text-[11px] text-neutral-400 space-y-1 text-center">
         {mode === "login" ? (
           <p>
             Belum punya akun?{" "}
@@ -397,7 +397,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
                 setMode("register");
                 setMessage(null);
               }}
-              className="text-[#81b64c] font-bold hover:underline cursor-pointer"
+              className="text-[var(--primary)] font-bold hover:underline cursor-pointer"
             >
               Daftar di sini
             </button>

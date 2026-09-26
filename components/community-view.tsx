@@ -308,9 +308,9 @@ export function CommunityView({ user, lang = "id" }: Props) {
             /* ================= VIEW 1: FORUM CATEGORIES INDEX ================= */
             <div className="space-y-6">
               {/* Header Forum Index */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] flex items-center justify-between shadow-lg">
+              <div className="p-4 sm:p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#1a1714] border border-[#383530] flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-center">
                     <IconMessages3D size={24} />
                   </div>
                   <div>
@@ -324,7 +324,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 <button
                   type="button"
                   onClick={() => setShowNewTopicModal(true)}
-                  className="lg:hidden px-3.5 py-2 rounded-xl bg-[#81b64c] text-white text-xs font-bold transition-all shadow flex items-center gap-1"
+                  className="lg:hidden px-3.5 py-2 rounded-xl bg-[var(--primary)] text-white text-xs font-bold transition-all shadow flex items-center gap-1"
                 >
                   <IconPencil3D size={14} />
                   <span>Topik</span>
@@ -338,19 +338,19 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   return (
                     <div
                       key={cat.id}
-                      className="p-4 sm:p-5 rounded-2xl bg-[#211f1d] border border-[#3d3a34] space-y-3.5 shadow-md"
+                      className="p-4 sm:p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] space-y-3.5 shadow-md"
                     >
-                      <div className="flex items-center justify-between border-b border-[#312e2b] pb-2.5">
+                      <div className="flex items-center justify-between border-b border-[var(--muted)] pb-2.5">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h2 className="text-base font-black text-white hover:text-[#81b64c] cursor-pointer transition-colors">
+                            <h2 className="text-base font-black text-white hover:text-[var(--primary)] cursor-pointer transition-colors">
                               {cat.name}
                             </h2>
                             <span className="text-xs text-neutral-500 font-bold">›</span>
                           </div>
                           <p className="text-[11px] text-neutral-400 mt-0.5">{cat.description}</p>
                         </div>
-                        <span className="px-2.5 py-1 rounded-full bg-[#1a1714] text-[10px] font-mono font-bold text-neutral-400">
+                        <span className="px-2.5 py-1 rounded-full bg-[var(--background)] text-[10px] font-mono font-bold text-neutral-400">
                           {catThreads.length} Topik
                         </span>
                       </div>
@@ -367,13 +367,13 @@ export function CommunityView({ user, lang = "id" }: Props) {
                                 setViewMode("thread");
                                 window.scrollTo({ top: 0, behavior: "smooth" });
                               }}
-                              className="p-3 rounded-xl bg-[#262421] border border-[#312e2b] hover:border-neutral-400 flex items-center justify-between gap-3 cursor-pointer transition-all hover:bg-[#2b2926]"
+                              className="p-3 rounded-xl bg-[var(--card)] border border-[var(--muted)] hover:border-neutral-400 flex items-center justify-between gap-3 cursor-pointer transition-all hover:bg-[var(--secondary)]"
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 {t.isPinned && <IconPin3D size={16} className="shrink-0" />}
                                 {t.isHot && <IconFire3D size={16} className="shrink-0" />}
                                 <div className="min-w-0">
-                                  <div className="text-xs sm:text-sm font-bold text-white hover:text-[#81b64c] truncate transition-colors">
+                                  <div className="text-xs sm:text-sm font-bold text-white hover:text-[var(--primary)] truncate transition-colors">
                                     {t.title}
                                   </div>
                                   <div className="text-[10px] text-neutral-400 flex items-center gap-1.5 mt-0.5">
@@ -404,7 +404,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 <button
                   type="button"
                   onClick={() => setViewMode("index")}
-                  className="px-3.5 py-2 rounded-xl bg-[#211f1d] hover:bg-[#302e2b] border border-[#3d3a34] text-xs font-bold text-neutral-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  className="px-3.5 py-2 rounded-xl bg-[var(--surface)] hover:bg-[var(--muted)] border border-[var(--border)] text-xs font-bold text-neutral-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <span>‹</span>
                   <span>Kembali ke Semua Forum</span>
@@ -416,9 +416,9 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-2 shadow-lg">
+              <div className="p-4 sm:p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-2 shadow-lg">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#1a1714] text-[10px] font-bold text-[#81b64c] border border-[#3d3a34]">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[var(--background)] text-[10px] font-bold text-[var(--primary)] border border-[var(--border)]">
                     {activeThread.categoryName}
                   </span>
                   {activeThread.isPinned && (
@@ -445,19 +445,19 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 {activeThread.posts.map((post) => (
                   <div
                     key={post.id}
-                    className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3.5 shadow-sm transition-all hover:border-neutral-400"
+                    className="p-4 sm:p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3.5 shadow-sm transition-all hover:border-neutral-400"
                   >
-                    <div className="flex items-start justify-between gap-3 border-b border-[#312e2b] pb-3">
+                    <div className="flex items-start justify-between gap-3 border-b border-[var(--muted)] pb-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#81b64c] to-[#457524] flex items-center justify-center font-bold text-sm text-white shrink-0 shadow">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary-strong)] flex items-center justify-center font-bold text-sm text-white shrink-0 shadow">
                           {post.avatarInitials}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-sm text-white">{post.authorName}</span>
-                            <span className="text-xs text-[#81b64c] font-semibold">@{post.authorUsername}</span>
+                            <span className="text-xs text-[var(--primary)] font-semibold">@{post.authorUsername}</span>
                             {post.authorTitle && (
-                              <span className="px-2 py-0.5 rounded-full bg-[#1a1714] border border-[#3d3a34] text-[10px] font-black text-amber-400">
+                              <span className="px-2 py-0.5 rounded-full bg-[var(--background)] border border-[var(--border)] text-[10px] font-black text-amber-400">
                                 {post.authorTitle}
                               </span>
                             )}
@@ -476,7 +476,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                       {post.content}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-[#312e2b] text-xs text-neutral-400">
+                    <div className="flex items-center justify-between pt-2 border-t border-[var(--muted)] text-xs text-neutral-400">
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
@@ -494,9 +494,9 @@ export function CommunityView({ user, lang = "id" }: Props) {
                               )
                             );
                           }}
-                          className="px-2.5 py-1 rounded-lg bg-[#1a1714] hover:bg-[#302e2b] border border-[#3d3a34] flex items-center gap-1.5 font-bold hover:text-white transition-all cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] flex items-center gap-1.5 font-bold hover:text-white transition-all cursor-pointer"
                         >
-                          <span className="text-[#81b64c]">↑</span>
+                          <span className="text-[var(--primary)]">↑</span>
                           <span>{post.likes}</span>
                           <span className="text-neutral-500">↓</span>
                         </button>
@@ -517,17 +517,17 @@ export function CommunityView({ user, lang = "id" }: Props) {
               </div>
 
               {/* REPLY FORM */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-[#211f1d] border border-[#3d3a34] space-y-3.5 shadow-md">
+              <div className="p-4 sm:p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] space-y-3.5 shadow-md">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Tulis Balasan</span>
                   <span className="text-xs text-neutral-400 font-mono">Karakter: {replyText.length}</span>
                 </div>
 
-                <div className="flex items-center gap-1 p-1.5 rounded-xl bg-[#1a1714] border border-[#312e2b] flex-wrap">
+                <div className="flex items-center gap-1 p-1.5 rounded-xl bg-[var(--background)] border border-[var(--muted)] flex-wrap">
                   <button
                     type="button"
                     onClick={() => setReplyText((prev) => prev + " **teks tebal** ")}
-                    className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
+                    className="w-8 h-8 rounded-lg hover:bg-[var(--muted)] text-sm font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
                     title="Tebal"
                   >
                     B
@@ -535,7 +535,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   <button
                     type="button"
                     onClick={() => setReplyText((prev) => prev + " *teks miring* ")}
-                    className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm italic font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
+                    className="w-8 h-8 rounded-lg hover:bg-[var(--muted)] text-sm italic font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
                     title="Miring"
                   >
                     I
@@ -543,7 +543,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   <button
                     type="button"
                     onClick={() => setReplyText((prev) => prev + "\n> Kutipan teks...\n")}
-                    className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
+                    className="w-8 h-8 rounded-lg hover:bg-[var(--muted)] text-sm font-bold text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
                     title="Kutipan"
                   >
                     ”
@@ -551,7 +551,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   <button
                     type="button"
                     onClick={() => setReplyText((prev) => prev + " `1.e4 e5 2.Nf3` ")}
-                    className="w-8 h-8 rounded-lg hover:bg-[#302e2b] text-sm font-mono text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
+                    className="w-8 h-8 rounded-lg hover:bg-[var(--muted)] text-sm font-mono text-neutral-300 hover:text-white flex items-center justify-center cursor-pointer"
                     title="Notasi"
                   >
                     #
@@ -559,7 +559,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   <button
                     type="button"
                     onClick={() => setReplyText((prev) => prev + " [FEN: r1bqkb1r/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 4] ")}
-                    className="px-2.5 h-8 rounded-lg hover:bg-[#302e2b] text-xs font-bold text-[#81b64c] hover:text-white flex items-center gap-1.5 cursor-pointer"
+                    className="px-2.5 h-8 rounded-lg hover:bg-[var(--muted)] text-xs font-bold text-[var(--primary)] hover:text-white flex items-center gap-1.5 cursor-pointer"
                     title="Sisipkan Diagram Papan"
                   >
                     <IconPawn3D size={16} />
@@ -574,7 +574,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                     placeholder={user ? "Ketik tanggapan atau analisis Anda..." : "Silakan masuk untuk menulis tanggapan..."}
                     disabled={!user}
                     rows={4}
-                    className="w-full p-3.5 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[#81b64c] leading-relaxed"
+                    className="w-full p-3.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[var(--primary)] leading-relaxed"
                   />
 
                   <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
@@ -583,7 +583,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                         type="checkbox"
                         checked={followThread}
                         onChange={(e) => setFollowThread(e.target.checked)}
-                        className="w-4 h-4 accent-[#81b64c] rounded cursor-pointer"
+                        className="w-4 h-4 accent-[var(--primary)] rounded cursor-pointer"
                       />
                       <span>Ikuti pembaruan utas ini (Notifikasi)</span>
                     </label>
@@ -591,7 +591,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                     <button
                       type="submit"
                       disabled={!user || !replyText.trim()}
-                      className="px-6 py-2.5 rounded-xl bg-[#81b64c] hover:bg-[#72a342] disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-sm transition-all shadow-[0_3px_0_#4d7a27] cursor-pointer"
+                      className="px-6 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-sm transition-all shadow-[0_3px_0_var(--primary-strong)] cursor-pointer"
                     >
                       Tulisan (Kirim)
                     </button>
@@ -607,13 +607,13 @@ export function CommunityView({ user, lang = "id" }: Props) {
           <button
             type="button"
             onClick={() => setShowNewTopicModal(true)}
-            className="w-full h-12 rounded-xl bg-[#81b64c] hover:bg-[#72a342] text-white font-black text-sm transition-all shadow-[0_4px_0_#4d7a27,0_4px_16px_rgba(129,182,76,0.3)] flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full h-12 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-black text-sm transition-all shadow-[0_4px_0_var(--primary-strong),0_4px_16px_rgba(129,182,76,0.3)] flex items-center justify-center gap-2 cursor-pointer"
           >
             <IconPencil3D size={18} />
             <span>Topik Baru</span>
           </button>
 
-          <div className="p-4 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3 shadow-md">
+          <div className="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3 shadow-md">
             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
               <IconSearch3D size={14} />
               <span>Cari & Saring</span>
@@ -624,13 +624,13 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 placeholder="Cari topik forum..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#81b64c]"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[var(--primary)]"
               />
 
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-xs text-neutral-300 focus:outline-none focus:border-[#81b64c]"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-neutral-300 focus:outline-none focus:border-[var(--primary)]"
               >
                 <option value="all">-- Semua Kategori --</option>
                 {categories.map((c) => (
@@ -643,10 +643,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
           </div>
 
           {/* TERBARU */}
-          <div className="p-4 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3 shadow-md">
-            <div className="flex items-center justify-between border-b border-[#312e2b] pb-2.5">
+          <div className="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3 shadow-md">
+            <div className="flex items-center justify-between border-b border-[var(--muted)] pb-2.5">
               <span className="text-xs font-bold text-white uppercase tracking-wider">Terbaru</span>
-              <span className="text-[10px] text-[#81b64c] font-bold">Aktivitas Live</span>
+              <span className="text-[10px] text-[var(--primary)] font-bold">Aktivitas Live</span>
             </div>
             <div className="space-y-2.5">
               {threads.slice(0, 5).map((t) => (
@@ -657,9 +657,9 @@ export function CommunityView({ user, lang = "id" }: Props) {
                     setViewMode("thread");
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
-                  className="p-2.5 rounded-xl bg-[#1a1714] border border-[#312e2b] hover:border-neutral-500 transition-all cursor-pointer space-y-1"
+                  className="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--muted)] hover:border-neutral-500 transition-all cursor-pointer space-y-1"
                 >
-                  <div className="text-xs font-bold text-white hover:text-[#81b64c] line-clamp-2 transition-colors">
+                  <div className="text-xs font-bold text-white hover:text-[var(--primary)] line-clamp-2 transition-colors">
                     {t.title}
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-neutral-400">
@@ -673,8 +673,8 @@ export function CommunityView({ user, lang = "id" }: Props) {
           </div>
 
           {/* KETERANGAN FORUM */}
-          <div className="p-4 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3 shadow-md text-xs">
-            <div className="border-b border-[#312e2b] pb-2">
+          <div className="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3 shadow-md text-xs">
+            <div className="border-b border-[var(--muted)] pb-2">
               <span className="font-bold text-white uppercase tracking-wider text-xs">Keterangan Forum</span>
             </div>
             <div className="space-y-2 text-neutral-300">
@@ -703,8 +703,8 @@ export function CommunityView({ user, lang = "id" }: Props) {
             if (e.target === e.currentTarget) setShowNewTopicModal(false);
           }}
         >
-          <div className="w-full max-w-lg bg-[#211f1d] border border-[#3d3a34] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden text-white flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#312e2b] bg-[#262421]">
+          <div className="w-full max-w-lg bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden text-white flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--muted)] bg-[var(--card)]">
               <div className="flex items-center gap-2">
                 <IconPencil3D size={20} />
                 <span className="font-bold text-base">Buat Topik Diskusi Baru</span>
@@ -712,7 +712,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
               <button
                 type="button"
                 onClick={() => setShowNewTopicModal(false)}
-                className="w-8 h-8 rounded-lg bg-[#302e2b] hover:bg-[#3d3a34] text-neutral-400 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold"
+                className="w-8 h-8 rounded-lg bg-[var(--muted)] hover:bg-[var(--border)] text-neutral-400 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold"
               >
                 ✕
               </button>
@@ -724,7 +724,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 <select
                   value={newTopicCategory}
                   onChange={(e) => setNewTopicCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-sm text-white focus:outline-none focus:border-[#81b64c]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-sm text-white focus:outline-none focus:border-[var(--primary)]"
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -743,7 +743,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   onChange={(e) => setNewTopicTitle(e.target.value)}
                   maxLength={120}
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-sm text-white focus:outline-none focus:border-[#81b64c]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-sm text-white focus:outline-none focus:border-[var(--primary)]"
                 />
               </div>
 
@@ -755,7 +755,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   onChange={(e) => setNewTopicContent(e.target.value)}
                   rows={5}
                   required
-                  className="w-full p-3.5 rounded-xl bg-[#1a1714] border border-[#3d3a34] text-sm text-white focus:outline-none focus:border-[#81b64c] leading-relaxed"
+                  className="w-full p-3.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-sm text-white focus:outline-none focus:border-[var(--primary)] leading-relaxed"
                 />
               </div>
 
@@ -763,14 +763,14 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 <button
                   type="button"
                   onClick={() => setShowNewTopicModal(false)}
-                  className="px-4 py-2.5 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] text-neutral-300 text-sm font-bold transition-all cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] text-neutral-300 text-sm font-bold transition-all cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={!user || !newTopicTitle.trim() || !newTopicContent.trim()}
-                  className="px-6 py-2.5 rounded-xl bg-[#81b64c] hover:bg-[#72a342] disabled:opacity-50 text-white font-bold text-sm transition-all shadow-[0_3px_0_#4d7a27] cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 text-white font-bold text-sm transition-all shadow-[0_3px_0_var(--primary-strong)] cursor-pointer"
                 >
                   Publikasikan Topik
                 </button>

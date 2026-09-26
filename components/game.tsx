@@ -692,22 +692,22 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               placeholder="🔍 Cari pemain, taktik..."
               onClick={() => setActiveDockModal("friends")}
               readOnly
-              className="w-full px-3 py-1.5 rounded-xl bg-[#1a1714] border border-[#383530] text-xs text-neutral-300 placeholder-neutral-500 hover:border-neutral-400 cursor-pointer transition-all"
+              className="w-full px-3 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-neutral-300 placeholder-neutral-500 hover:border-neutral-400 cursor-pointer transition-all"
             />
           </div>
 
           {/* User Profile Card */}
           <div
             onClick={() => setShowAuthModal(true)}
-            className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[#211f1d] border border-[#383530] cursor-pointer hover:border-[#81b64c] transition-all shadow-sm"
+            className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)] transition-all shadow-sm"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#81b64c] to-[#457524] font-bold flex items-center justify-center text-xs text-white shadow shrink-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow shrink-0">
               {me.initials}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-bold truncate text-white">{me.name}</div>
               <div className="text-[11px] text-neutral-400 flex items-center gap-1.5 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#81b64c] inline-block"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] inline-block"></span>
                 <span className="truncate">{currentUser ? `${currentUser.role} (${currentUser.elo})` : "Masuk untuk rating"}</span>
               </div>
             </div>
@@ -719,18 +719,18 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               type="button"
               onClick={() => setActiveDockModal("friends")}
               title="Teman & Civitas"
-              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
+              className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
               <IconFriends3D size={18} />
               <span className="text-[9px] font-bold text-neutral-400">Teman</span>
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#81b64c]"></span>
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--primary)]"></span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveDockModal("messages")}
               title="Pesan Masuk"
-              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
+              className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
               <IconMessages3D size={18} />
               <span className="text-[9px] font-bold text-neutral-400">Pesan</span>
@@ -740,7 +740,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               type="button"
               onClick={() => setActiveDockModal("notifications")}
               title="Pemberitahuan"
-              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
+              className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
               <IconBell3D size={18} />
               <span className="text-[9px] font-bold text-neutral-400">Notif</span>
@@ -751,7 +751,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               type="button"
               onClick={() => setActiveDockModal("settings")}
               title="Pengaturan"
-              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
+              className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
               <IconSettings3D size={18} />
               <span className="text-[9px] font-bold text-neutral-400">Atur</span>
@@ -1073,7 +1073,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                           <div className="space-y-1.5">
                             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center justify-between">
                               <span>Format Waktu</span>
-                              <span className="text-xs text-[#81b64c] font-black font-mono">
+                              <span className="text-xs text-[var(--primary)] font-black font-mono">
                                 {timeMode === "unlimited" ? "Tanpa Batas ♾️" : `⚡ ${timeMode}`}
                               </span>
                             </div>
@@ -1092,8 +1092,8 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                                   onClick={() => setTimeMode(t.id)}
                                   className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
                                     timeMode === t.id
-                                      ? "bg-[#273815] border-[#81b64c] text-white shadow-sm ring-1 ring-[#81b64c]"
-                                      : "bg-[#1a1714] border-[#383530] text-neutral-400 hover:border-neutral-500 hover:text-white"
+                                      ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white shadow-sm ring-1 ring-[var(--primary)]"
+                                      : "bg-[var(--background)] border-[var(--border)] text-neutral-400 hover:border-neutral-500 hover:text-white"
                                   }`}
                                 >
                                   <div className="text-xs font-black leading-tight text-white">{t.label}</div>
@@ -1112,8 +1112,8 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                                 onClick={() => setSideChoice("white")}
                                 className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                                   sideChoice === "white"
-                                    ? "bg-[#273815] border-[#81b64c] shadow-sm ring-1 ring-[#81b64c]"
-                                    : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
+                                    ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
+                                    : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
                                 }`}
                               >
                                 <IconKingWhite3D size={26} />
@@ -1125,8 +1125,8 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                                 onClick={() => setSideChoice("random")}
                                 className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                                   sideChoice === "random"
-                                    ? "bg-[#273815] border-[#81b64c] shadow-sm ring-1 ring-[#81b64c]"
-                                    : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
+                                    ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
+                                    : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
                                 }`}
                               >
                                 <IconDice3D size={26} />
@@ -1138,8 +1138,8 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                                 onClick={() => setSideChoice("black")}
                                 className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                                   sideChoice === "black"
-                                    ? "bg-[#273815] border-[#81b64c] shadow-sm ring-1 ring-[#81b64c]"
-                                    : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
+                                    ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
+                                    : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
                                 }`}
                               >
                                 <IconKingBlack3D size={26} />
@@ -1165,8 +1165,8 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                                   onClick={() => { setPlayMode("ai"); setSelectedAiOpponent(eng.id as any); }}
                                   className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                                     playMode === "ai" && selectedAiOpponent === eng.id
-                                      ? "bg-[#273815] border-[#81b64c] text-white shadow-sm ring-1 ring-[#81b64c]"
-                                      : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
+                                      ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white shadow-sm ring-1 ring-[var(--primary)]"
+                                      : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
                                   }`}
                                 >
                                   <span className="text-xs font-bold text-white leading-snug">{eng.label}</span>
@@ -1179,15 +1179,15 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                               onClick={() => setPlayMode("pvp")}
                               className={`w-full p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
                                 playMode === "pvp"
-                                  ? "bg-[#273815] border-[#81b64c] text-white shadow-sm ring-1 ring-[#81b64c]"
-                                  : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
+                                  ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white shadow-sm ring-1 ring-[var(--primary)]"
+                                  : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
                               }`}
                             >
                               <div className="flex items-center gap-2">
                                 <IconCommunity3D size={18} />
                                 <span className="text-xs font-bold text-white">Lawan Pemain Nyata (PvP Online)</span>
                               </div>
-                              <span className="text-[10px] text-[#81b64c] font-bold">Multiplayer</span>
+                              <span className="text-[10px] text-[var(--primary)] font-bold">Multiplayer</span>
                             </button>
                           </div>
 
@@ -1217,8 +1217,8 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                                       onClick={() => setAiDepth(lvl.depth)}
                                       className={`p-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                                         aiDepth === lvl.depth
-                                          ? "bg-[#273815] border-[#81b64c] text-white ring-1 ring-[#81b64c]"
-                                          : "bg-[#1a1714] border-[#383530] text-neutral-400 hover:text-white"
+                                          ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white ring-1 ring-[var(--primary)]"
+                                          : "bg-[var(--background)] border-[var(--border)] text-neutral-400 hover:text-white"
                                       }`}
                                     >
                                       <div className="text-xs font-bold text-white">{lvl.label}</div>
@@ -1232,7 +1232,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                               <button
                                 type="button"
                                 onClick={() => startGame(sideChoice === "random" ? "white" : sideChoice)}
-                                className="w-full h-14 rounded-2xl bg-[#81b64c] hover:bg-[#8ec357] active:translate-y-[2px] text-white font-black text-lg shadow-[0_4px_0_#4d7a27,0_6px_20px_rgba(129,182,76,0.4)] transition-all flex items-center justify-center gap-3 cursor-pointer"
+                                className="w-full h-14 rounded-2xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:translate-y-[2px] text-white font-black text-lg shadow-lg transition-all flex items-center justify-center gap-3 cursor-pointer"
                               >
                                 <IconPlay3D size={24} />
                                 <span>Mulai Permainan</span>
