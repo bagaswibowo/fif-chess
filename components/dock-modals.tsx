@@ -84,8 +84,8 @@ export function DockModals({
     setMessages([
       {
         id: "m1",
-        sender: "bagaswibowo",
-        senderName: "Pak Bagas Wibowo",
+        sender: "admin",
+        senderName: "Admin Komunitas",
         text: "Selamat datang di Arena Catur FIF Telkom University!",
         createdAt: "10 mnt lalu",
       },

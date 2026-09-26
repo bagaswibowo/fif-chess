@@ -94,6 +94,12 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const users = loadUsers();
+
+  // Direktori lawan: daftar user approved (dapat diakses publik untuk melihat civitas)
+  if (url.searchParams.has("directory")) {
+    return NextResponse.json({ success: true, players: onlineUsernames(users) });
+  }
+
   const me = currentUser(req, users);
   if (!me) return NextResponse.json({ error: "Login dulu untuk memakai PvP." }, { status: 401 });
 
@@ -117,10 +123,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: true, invites, online: onlineUsernames(users) });
   }
 
-  // Direktori lawan: hanya user approved.
-  if (url.searchParams.has("directory")) {
-    return NextResponse.json({ success: true, players: onlineUsernames(users) });
-  }
+
 
   const code = String(url.searchParams.get("room") || "").toUpperCase();
   // Token pemain lewat header, bukan query string: query masuk access log, proxy

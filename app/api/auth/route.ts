@@ -115,7 +115,7 @@ export async function POST(req: Request) {
       success: true,
       pending: true,
       user: publicUser(created),
-      message: "Pendaftaran terkirim. Menunggu persetujuan Pak Bagas Wibowo sebelum bisa login.",
+      message: "Pendaftaran terkirim. Menunggu persetujuan Admin Komunitas sebelum bisa login.",
     });
   }
 

@@ -57,7 +57,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
       } else if (mode === "register") {
         setMessage({
           tone: "info",
-          text: data?.message || "Pendaftaran berhasil dikirim! Menunggu persetujuan Pak Bagas Wibowo sebelum bisa login.",
+          text: data?.message || "Pendaftaran berhasil dikirim! Menunggu persetujuan Admin Komunitas sebelum bisa login.",
         });
         setMode("login");
         setPassword("");
@@ -228,7 +228,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
-            placeholder="misal: bagaswibowo"
+            placeholder="misal: master_catur"
             required
           />
           {mode === "register" && (
@@ -254,7 +254,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 autoComplete="name"
-                placeholder="misal: Pak Bagas Wibowo / Budi Santoso"
+                placeholder="misal: Admin Komunitas / Budi Santoso"
                 required
               />
             </div>
@@ -405,7 +405,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
         ) : (
           <p className="text-neutral-400 leading-normal">
             ℹ️ Akun baru diverifikasi dan disetujui oleh{" "}
-            <strong className="text-white">Pak Bagas Wibowo</strong> sebelum dapat login.
+            <strong className="text-white">Admin Komunitas</strong> sebelum dapat login.
           </p>
         )}
       </div>
