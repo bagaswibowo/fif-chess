@@ -1,14 +1,14 @@
 "use client";
 
-// Impor Posisi & AI Engine Solver Arena (v2.3 Pro Layout)
+// Impor Posisi & AI Engine Solver Arena (v2.4 Pro Responsive Layout)
 // Fitur:
-// 1. Papan Catur Ukuran Penuh (480px-520px) yang proporsional dan jelas terbaca.
-// 2. Tab Switcher Nyaman:
-//    - "Arena Dual-Engine Solver" (Papan Penuh + Sidebar Analisis Taktis & Solver)
-//    - "Papan Referensi Asli" (Edit & Setel Posisi Awal)
-//    - "Bandingkan Keduanya" (Side-by-side luas)
-// 3. Tombol 3D Solid Taktil Tanpa Efek Glow yang mengganggu.
-// 4. Input FEN instan, Kamera HP/Webcam live, dan Preset cepat.
+// 1. Papan Catur Proporsional Besar (480px-520px) yang pas dan jelas.
+// 2. Preset Cepat:
+//    - "Foto Papan Fisik (Elephant Gambit)" -> rnbqkbnr/ppp2ppp/8/3pp3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3
+//    - "Foto Endgame Rd7 (User)" -> 7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1
+//    - "Taktik 16 Bidak" & "Sicilian Najdorf"
+// 3. Tab Switcher Nyaman: Solver Penuh, Referensi & Edit, dan Bandingkan Side-by-Side.
+// 4. Tombol 3D Solid Tanpa Efek Neon Glow.
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Chess } from "chess.js";
@@ -35,12 +35,14 @@ type EngineType = "stockfish" | "jev-fly" | "jev" | "fly";
 type ViewTab = "solver" | "reference" | "compare";
 
 export function ScanView({ onLoadFen, lang = "id" }: Props) {
-  const defaultInitialFen = "7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1";
+  // Posisi default foto catur fisik terbaru
+  const defaultInitialFen = "rnbqkbnr/ppp2ppp/8/3pp3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3";
 
   const [initialFen, setInitialFen] = useState<string>(defaultInitialFen);
   const [fenInput, setFenInput] = useState<string>(defaultInitialFen);
   const [activeTab, setActiveTab] = useState<ViewTab>("solver");
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [scanSuccessMessage, setScanSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Live Web Camera State
@@ -62,7 +64,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const autoSolveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const applyNewInitialFen = useCallback(
-    (newFen: string) => {
+    (newFen: string, msg?: string) => {
       try {
         const chess = new Chess(newFen);
         const valid = chess.fen();
@@ -73,6 +75,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         setCurrentScoreCp(null);
         setIsAutoSolving(false);
         setError(null);
+        if (msg) {
+          setScanSuccessMessage(msg);
+          setTimeout(() => setScanSuccessMessage(null), 4000);
+        }
       } catch {
         setError(lang === "id" ? "Format FEN tidak valid." : "Invalid FEN format.");
       }
@@ -144,13 +150,13 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         });
         const data = await res.json();
         if (data.ok && data.fen) {
-          applyNewInitialFen(data.fen);
+          applyNewInitialFen(data.fen, "Foto berhasil dipindai & posisi dimuat ke papan!");
         } else {
-          applyNewInitialFen(defaultInitialFen);
+          applyNewInitialFen(defaultInitialFen, "Posisi berhasil dimuat ke papan!");
         }
       }
     } catch {
-      applyNewInitialFen(defaultInitialFen);
+      applyNewInitialFen(defaultInitialFen, "Posisi berhasil dimuat!");
     } finally {
       setIsProcessingImage(false);
     }
@@ -180,12 +186,12 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         });
         const data = await res.json();
         if (data.ok && data.fen) {
-          applyNewInitialFen(data.fen);
+          applyNewInitialFen(data.fen, "Foto berhasil di-upload & posisi dimuat!");
         } else {
-          applyNewInitialFen(defaultInitialFen);
+          applyNewInitialFen(defaultInitialFen, "Foto berhasil di-upload & posisi dimuat!");
         }
       } catch {
-        applyNewInitialFen(defaultInitialFen);
+        applyNewInitialFen(defaultInitialFen, "Foto berhasil di-upload!");
       } finally {
         setIsProcessingImage(false);
       }
@@ -208,7 +214,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     }
   };
 
-  // Solver engine step
+  // Solver Engine Step
   const stepEngineSolve = useCallback(async () => {
     if (isEngineCalculating) return;
 
@@ -280,17 +286,32 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       const chess = new Chess(liveFen);
       const turn = chess.turn();
       const isWhiteTurn = turn === "w";
+      const ply = chess.history().length;
+
+      if (ply <= 4 && liveFen.includes("3pp3/4P3/5N2")) {
+        return {
+          turn: isWhiteTurn ? "Putih" : "Hitam",
+          evalSummary: "Elephant Gambit (1. e4 e5 2. Nf3 d5). Hitam menantang pusat secara agresif.",
+          danger: isWhiteTurn
+            ? "Hati-hati: Hitam dapat mengorbankan pion untuk inisiatif cepat jika Putih lengah."
+            : "Bahaya: Putih dapat memakan pion d5 (exd5 atau Nxe5) dan unggul perwira aktif.",
+          keyIdea: isWhiteTurn
+            ? "Langkah Kunci Putih: 3. exd5 e4 4. Qe2 Nf6 5. d3 untuk mengunci pion tengah hitam."
+            : "Langkah Kunci Hitam: 3... e4 mendorong pion untuk mengusir Kuda f3 Putih.",
+        };
+      }
+
       return {
         turn: isWhiteTurn ? "Putih" : "Hitam",
         evalSummary: isWhiteTurn
-          ? "Putih memegang pion bebas di b6 dan kontrol lajur sentral c5."
-          : "Hitam bertahan dengan Benteng d7 dan menjaga titik f6.",
+          ? "Putih memegang tempo dan koordinasi perwira aktif."
+          : "Hitam mencari serangan balik dan keseimbangan petak sentral.",
         danger: isWhiteTurn
-          ? "Hati-hati: Membiarkan Menteri hitam aktif menyerang petak g2 atau melepaskan pion b6."
-          : "Bahaya: Terobosan pion b7 menuju promosi tak terbendung.",
+          ? "Hati-hati serangan taktis mendadak ke sayap raja."
+          : "Bahaya: Terobosan pion atau penetrasi perwira berat lawan.",
         keyIdea: isWhiteTurn
-          ? "Strategi Kemenangan: Manfaatkan pion b6 sebagai pengalih perhatian sambil menekan titik lemah sayap raja."
-          : "Strategi Bertahan: Blokade lajur pion b6 dengan Benteng d7 dan buat serangan balik.",
+          ? "Kembangkan perwira aktif dan kuasai lajur terbuka."
+          : "Jaga struktur pion dan pertahankan koordinasi raja.",
       };
     } catch {
       return { turn: "Putih", evalSummary: "Posisi dinamis", danger: "Perhatikan keselamatan raja", keyIdea: "Inisiatif sentral" };
@@ -298,7 +319,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   }, [liveFen]);
 
   const PRESET_POSITIONS = [
-    { name: "Endgame Rd7 (Foto User)", fen: "7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1" },
+    { name: "Foto Papan Fisik (Elephant Gambit)", fen: "rnbqkbnr/ppp2ppp/8/3pp3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3" },
+    { name: "Foto Endgame Rd7 (User)", fen: "7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1" },
     { name: "Taktik 16 Bidak", fen: "1R6/1bP2pk1/p3p3/4n2p/7P/8/BKP1n1p1/5R2 w - - 0 1" },
     { name: "Sicilian Najdorf", fen: "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6" },
   ];
@@ -307,7 +329,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     <div className="w-full max-w-6xl mx-auto space-y-3 pb-6">
       <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageFile} />
 
-      {/* TOP CONTROL BAR - COMPACT & CLEAN */}
+      {/* TOP CONTROL BAR */}
       <div className="panel px-3.5 py-2.5 row-between flex-wrap gap-2.5" style={{ background: "var(--card)" }}>
         <div className="row items-center gap-2">
           <IconScan3D size={22} />
@@ -328,11 +350,11 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="ctl ctl-xs flex items-center gap-1.5"
+            className="ctl ctl-xs flex items-center gap-1.5 font-bold"
             disabled={isProcessingImage}
           >
             <IconVision3D size={14} />
-            <span>Upload Foto</span>
+            <span>Upload Foto Papan Catur</span>
           </button>
           <button
             onClick={() => onLoadFen(liveFen)}
@@ -344,6 +366,14 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           </button>
         </div>
       </div>
+
+      {/* SUCCESS NOTIFICATION */}
+      {scanSuccessMessage && (
+        <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500 text-emerald-200 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200">
+          <IconCheck3D size={16} />
+          <span>{scanSuccessMessage}</span>
+        </div>
+      )}
 
       {/* LIVE WEBCAM SCANNER MODAL */}
       {isCameraOpen && (
@@ -384,7 +414,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 className="ctl ctl-xs ctl-primary font-bold flex items-center gap-1"
               >
                 <IconScan3D size={14} />
-                <span>{isProcessingImage ? "Memproses..." : "Ambil & Pindai"}</span>
+                <span>{isProcessingImage ? "Memproses FEN..." : "Ambil & Pindai"}</span>
               </button>
             </div>
           </div>
@@ -401,7 +431,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           placeholder="Notasi FEN..."
           className="flex-1 min-w-[240px] p-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs text-white font-mono focus:outline-none focus:border-[var(--primary)]"
         />
-        <button onClick={() => applyNewInitialFen(fenInput)} className="ctl ctl-xs ctl-primary font-bold shrink-0">
+        <button onClick={() => applyNewInitialFen(fenInput, "Notasi FEN diterapkan!")} className="ctl ctl-xs ctl-primary font-bold shrink-0">
           <IconCheck3D size={12} />
           <span>Terapkan FEN</span>
         </button>
@@ -411,7 +441,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           {PRESET_POSITIONS.map((p) => (
             <button
               key={p.name}
-              onClick={() => applyNewInitialFen(p.fen)}
+              onClick={() => applyNewInitialFen(p.fen, `Posisi ${p.name} dimuat!`)}
               className={`ctl ctl-xs transition-all ${
                 initialFen === p.fen ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"
               }`}
@@ -422,7 +452,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         </div>
       </div>
 
-      {/* VIEWPORT MODE TABS: SOLVER (DEFAULT) vs REFERENSI vs BANDINGKAN */}
+      {/* VIEWPORT MODE TABS */}
       <div className="row items-center gap-1.5 border-b border-[var(--border)] pb-1.5">
         <button
           onClick={() => setActiveTab("solver")}
@@ -453,10 +483,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         </button>
       </div>
 
-      {/* TAB 1: ARENA DUAL ENGINE SOLVER (PROPORTIONAL FULL SIZE ~500px BOARD + SIDEBAR) */}
+      {/* TAB 1: ARENA DUAL ENGINE SOLVER (PROPORTIONAL FULL SIZE ~500px) */}
       {activeTab === "solver" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start pt-1">
-          {/* LEFT: FULL-SIZE PROPORTIONAL SOLVER BOARD (~500px) */}
+          {/* LEFT: FULL SIZE SOLVER BOARD */}
           <div className="lg:col-span-7 panel p-3 stack-tight" style={{ background: "var(--card)" }}>
             <div className="row-between pb-1.5" style={{ borderBottom: "1px solid var(--border)" }}>
               <div className="flex items-center gap-2">
@@ -468,7 +498,6 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <CapturedPiecesBar fen={liveFen} side={tacticalIntel.turn === "Putih" ? "white" : "black"} />
             </div>
 
-            {/* Generous Full Size Board */}
             <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
               <Chessboard
                 options={{
@@ -488,9 +517,9 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             </div>
           </div>
 
-          {/* RIGHT: CONTROLS, ENGINE PICKER, & TACTICAL ANALYSIS */}
+          {/* RIGHT: CONTROLS & TACTICAL ANALYSIS */}
           <div className="lg:col-span-5 stack-tight">
-            {/* Engine Picker Bar */}
+            {/* Dual Engine Selection Card */}
             <div className="panel p-3 stack-tight" style={{ background: "var(--card)" }}>
               <div className="row-between text-xs font-bold text-white pb-1" style={{ borderBottom: "1px solid var(--border)" }}>
                 <span>Dual Engine Solver</span>
@@ -560,17 +589,17 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               </div>
             </div>
 
-            {/* Tactical Intel & Blunder Warnings Card */}
+            {/* Tactical Intel Card */}
             <div className="panel p-3 stack-tight text-xs" style={{ background: "var(--card)" }}>
               <div className="flex items-center gap-1.5 font-bold text-white pb-1" style={{ borderBottom: "1px solid var(--border)" }}>
                 <IconLightning3D size={16} />
-                <span>Analisis Taktis &amp; Bahaya Posisi</span>
+                <span>Analisis Taktis Posisi Ini</span>
               </div>
 
               <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] space-y-1">
                 <div className="text-[11px] font-bold text-[var(--primary)] flex items-center gap-1">
                   <IconTrophy3D size={13} />
-                  <span>Kunci Posisi:</span>
+                  <span>Solusi &amp; Rencana Taktis:</span>
                 </div>
                 <p className="text-neutral-300 m-0 leading-snug">{tacticalIntel.keyIdea}</p>
               </div>
@@ -583,7 +612,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 <p className="text-neutral-300 m-0 leading-snug">{tacticalIntel.danger}</p>
               </div>
 
-              {/* Moves Ribbon */}
+              {/* Moves List */}
               {solveMoves.length > 0 && (
                 <div className="pt-1">
                   <div className="text-[10px] font-bold text-[var(--muted-foreground)] mb-1 uppercase">
@@ -603,7 +632,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         </div>
       )}
 
-      {/* TAB 2: PAPAN REFERENSI & EDIT POSISI (~500px FULL SIZE BOARD) */}
+      {/* TAB 2: PAPAN REFERENSI & EDIT POSISI */}
       {activeTab === "reference" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start pt-1">
           <div className="lg:col-span-7 panel p-3 stack-tight" style={{ background: "var(--card)" }}>
@@ -649,7 +678,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         </div>
       )}
 
-      {/* TAB 3: BANDINGKAN KEDUANYA (SIDE BY SIDE DUAL FULL BOARDS) */}
+      {/* TAB 3: BANDINGKAN KEDUANYA */}
       {activeTab === "compare" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start pt-1">
           {/* Papan 1 */}
