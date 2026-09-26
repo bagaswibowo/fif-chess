@@ -152,7 +152,7 @@ export function ClockMovesFullscreen({
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col lg:flex-row items-center justify-center p-2 sm:p-3 gap-2.5 lg:gap-5 max-w-7xl mx-auto w-full overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row items-center justify-center p-2 sm:p-3 gap-2.5 lg:gap-5 max-w-7xl mx-auto w-full overflow-y-auto lg:overflow-hidden min-h-0">
         
         {/* KOLOM KIRI: EVAL BAR + PAPAN CATUR + KARTU PEMAIN (100% Anti-Clipping) */}
         <div className="flex flex-col items-center justify-center w-full max-w-[min(94vw,calc(100dvh-150px))] shrink-0 min-h-0">
@@ -253,7 +253,7 @@ export function ClockMovesFullscreen({
         </div>
 
         {/* KOLOM KANAN: KOMENTAR TAKTIS & SCORESHEET NOTASI */}
-        <div className="flex-1 flex flex-col gap-2 w-full max-w-md h-full max-h-[min(88vh,calc(100dvh-150px))] overflow-hidden min-h-0">
+        <div className="flex-1 flex flex-col gap-2 w-full max-w-md lg:h-full lg:max-h-[min(88vh,calc(100dvh-150px))] overflow-hidden min-h-0">
           
           {/* LIVE STOCKFISH & AI COACH COMMENTATOR CARD */}
           {showCommentary && (

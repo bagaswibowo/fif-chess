@@ -455,13 +455,14 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
             </span>
           </div>
 
-          <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full min-w-[320px]">
+          <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full bg-[var(--board-dark)]">
             <Chessboard
               options={{
                 id: "guided-board",
                 position: fen,
                 boardOrientation: playerSide,
                 allowDragging: false,
+                boardStyle: { backgroundColor: "var(--board-dark)" },
                 onSquareClick: ({ square }) => {
                   if (selectedSquare) {
                     void tryMove(selectedSquare, square);

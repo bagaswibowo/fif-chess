@@ -421,7 +421,7 @@ export function CoachModeView({ lang = "id" }: Props) {
           </div>
 
           {/* Chessboard: Fixed Aspect Square with key=playerSide to force board orientation rotation */}
-          <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full bg-[#262421]">
+          <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full bg-[var(--board-dark)]">
             <Chessboard
               key={`coach-board-${playerSide}`}
               options={{
@@ -440,8 +440,9 @@ export function CoachModeView({ lang = "id" }: Props) {
                 },
                 squareStyles,
                 arrows,
-                darkSquareStyle: { backgroundColor: "#b58863" },
-                lightSquareStyle: { backgroundColor: "#f0d9b5" },
+                boardStyle: { backgroundColor: "var(--board-dark)" },
+                darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                lightSquareStyle: { backgroundColor: "var(--board-light)" },
               }}
             />
           </div>
@@ -637,6 +638,51 @@ export function CoachModeView({ lang = "id" }: Props) {
           )}
         </div>
       </div>
+
+      {fullscreenCoach && (
+        <ClockMovesFullscreen
+          fen={fen}
+          moves={history.map((san, i) => ({
+            san,
+            uci: "",
+            by: i % 2 === (playerSide === "white" ? 0 : 1) ? "human" : "stockfish",
+            ply: i + 1,
+          }))}
+          whiteName={playerSide === "white" ? "Anda (Player)" : "Stockfish 15"}
+          blackName={playerSide === "black" ? "Anda (Player)" : "Stockfish 15"}
+          whiteTime="—"
+          blackTime="—"
+          activeSide={outcome.over ? null : (chess.turn() === "w" ? "white" : "black")}
+          onClose={() => setFullscreenCoach(false)}
+          boardOrientation={playerSide}
+          onPieceDrop={handlePieceDrop}
+          onSquareClick={({ square }) => {
+            if (selected) {
+              void tryMove(selected, square);
+              setSelected(null);
+            } else {
+              setSelected(square);
+            }
+          }}
+          squareStyles={squareStyles}
+          scoreCp={evalCp}
+          coachCommentary={
+            feedback
+              ? {
+                  headline: feedback.headline,
+                  reason: feedback.reason,
+                  tactic: feedback.tactic,
+                }
+              : hint
+              ? {
+                  headline: `Saran: ${hint.san}`,
+                  reason: hint.reason || "Langkah terbaik pilihan AI Coach",
+                  tactic: principle || undefined,
+                }
+              : null
+          }
+        />
+      )}
     </div>
   );
 }

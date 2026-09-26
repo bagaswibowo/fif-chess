@@ -891,6 +891,11 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                           setSelectedSquare(null);
                           return;
                         }
+                        if (isPromotionAttempt(chess, selectedSquare, square)) {
+                          setPendingPromotion({ from: selectedSquare, to: square });
+                          setSelectedSquare(null);
+                          return;
+                        }
                         if (tryHumanMove(selectedSquare, square)) return;
                       }
                       const piece = chess.get(square as Square);
@@ -935,7 +940,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               </div>
 
               {/* ACTION: fullscreen jam + log, dan simpan trik lawan */}
-              <div className="w-full flex items-center gap-2">
+              <div className="w-full flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setHumanSide((s) => (s === "white" ? "black" : "white"))}
@@ -995,6 +1000,11 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                     if (!humanToMove) return;
                     if (selectedSquare) {
                       if (selectedSquare === square) {
+                        setSelectedSquare(null);
+                        return;
+                      }
+                      if (isPromotionAttempt(chess, selectedSquare, square)) {
+                        setPendingPromotion({ from: selectedSquare, to: square });
                         setSelectedSquare(null);
                         return;
                       }
@@ -1378,8 +1388,9 @@ const [showAuthModal, setShowAuthModal] = useState(false);
           {[
             { id: "play", icon: IconPlay3D, labelId: "Bermain", labelEn: "Play" },
             { id: "coach", icon: IconCoach3D, labelId: "Latih", labelEn: "Train" },
-            { id: "scan", icon: IconScan3D, labelId: "Scan", labelEn: "Scan" },
+            { id: "vision", icon: IconVision3D, labelId: "Quest", labelEn: "Quest" },
             { id: "puzzle", icon: IconPuzzle3D, labelId: "Puzzle", labelEn: "Puzzle" },
+            { id: "scan", icon: IconScan3D, labelId: "Scan", labelEn: "Scan" },
             { id: "review", icon: IconMedal3D, labelId: "Review", labelEn: "Review" },
             { id: "community", icon: IconCommunity3D, labelId: "Klub", labelEn: "Club" },
           ].map(tab => (

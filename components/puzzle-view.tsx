@@ -89,6 +89,31 @@ export function PuzzleView({ lang = "id" }: Props) {
     }
   };
 
+  const handlePieceDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }): boolean => {
+    if (!puzzle || !targetSquare || status === "correct") return false;
+    const c = new Chess(fen);
+    const from = sourceSquare.toLowerCase() as Square;
+    const to = targetSquare.toLowerCase() as Square;
+    let m = null;
+    try {
+      m = c.move({ from, to, promotion: puzzle.solutionUci[4] || "q" });
+    } catch {
+      m = null;
+    }
+    if (!m) return false;
+    if (m.san === puzzle.solutionSan) {
+      setFen(c.fen());
+      setStatus("correct");
+      setSelected(null);
+      setSolved((prev) => new Set(prev).add(puzzle.id));
+      return true;
+    } else {
+      setStatus("wrong");
+      setSelected(null);
+      return false;
+    }
+  };
+
   if (!puzzle) {
     return <p className="prose-note">Belum ada teka-teki.</p>;
   }
@@ -201,7 +226,9 @@ export function PuzzleView({ lang = "id" }: Props) {
                 id: `puzzle-${puzzle.id}`,
                 position: fen,
                 boardOrientation: puzzle.turn === "w" ? "white" : "black",
-                allowDragging: false,
+                allowDragging: status !== "correct",
+                canDragPiece: ({ piece }) => (puzzle.turn === "w" ? piece.pieceType.startsWith("w") : piece.pieceType.startsWith("b")),
+                onPieceDrop: handlePieceDrop,
                 squareStyles,
                 onSquareClick,
                 boardStyle: {

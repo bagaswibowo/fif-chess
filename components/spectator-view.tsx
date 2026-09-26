@@ -542,7 +542,7 @@ export function SpectatorView({
             </div>
 
             {/* Chessboard */}
-            <div className="flex-1 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--card)] aspect-square max-w-[540px] mx-auto w-full">
+            <div className="flex-1 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] aspect-square max-w-[540px] mx-auto w-full">
               <Chessboard
                 options={{
                   id: "spectator-board",
@@ -551,6 +551,7 @@ export function SpectatorView({
                   allowDragging: false,
                   arrows,
                   squareStyles,
+                  boardStyle: { backgroundColor: "var(--board-dark)" },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                   animationDurationInMs: 300,

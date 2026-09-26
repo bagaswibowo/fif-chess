@@ -44,9 +44,94 @@ function isChessPlausible(fen: string): boolean {
 /**
  * Validasi dan perbaiki notasi FEN secara deterministik.
  */
+
+/**
+ * Rekonsiliasi pion: Jika sebuah lajur (file) memiliki pion yang sudah maju
+ * ke petak tengah (misal d5 atau e5), maka petak asal (d7 atau e7) wajib kosong.
+ * Ini mencegah VLM/CV mendeteksi 9 pion akibat menduplikasi pion asal dan pion maju.
+ */
+export function reconcilePawnColumns(fenString: string): string {
+  try {
+    const parts = fenString.trim().split(" ");
+    const ranks = parts[0].split("/");
+    if (ranks.length !== 8) return fenString;
+
+    const grid: string[][] = ranks.map((r) => {
+      const row: string[] = [];
+      for (const ch of r) {
+        if (ch >= "1" && ch <= "8") {
+          for (let i = 0; i < parseInt(ch, 10); i++) row.push("");
+        } else {
+          row.push(ch);
+        }
+      }
+      return row;
+    });
+
+    // 1. Rekonsiliasi Pion Hitam: Grid row 1 adalah Rank 7.
+    // Jika ada pion hitam maju di row 2..5 (Rank 6..3), kosongkan row 1 (Rank 7).
+    for (let col = 0; col < 8; col++) {
+      if (grid[1][col] === "p") {
+        let hasAdvanced = false;
+        for (let row = 2; row <= 5; row++) {
+          if (grid[row][col] === "p") {
+            hasAdvanced = true;
+            break;
+          }
+        }
+        if (hasAdvanced) {
+          grid[1][col] = "";
+        }
+      }
+    }
+
+    // 2. Rekonsiliasi Pion Putih: Grid row 6 adalah Rank 2.
+    // Jika ada pion putih maju di row 2..5 (Rank 6..3), kosongkan row 6 (Rank 2).
+    for (let col = 0; col < 8; col++) {
+      if (grid[6][col] === "P") {
+        let hasAdvanced = false;
+        for (let row = 2; row <= 5; row++) {
+          if (grid[row][col] === "P") {
+            hasAdvanced = true;
+            break;
+          }
+        }
+        if (hasAdvanced) {
+          grid[6][col] = "";
+        }
+      }
+    }
+
+    // Kompresi ulang ke FEN
+    const recompressed = grid
+      .map((row) => {
+        let r = "";
+        let empty = 0;
+        for (const sq of row) {
+          if (!sq) {
+            empty++;
+          } else {
+            if (empty > 0) {
+              r += empty;
+              empty = 0;
+            }
+            r += sq;
+          }
+        }
+        if (empty > 0) r += empty;
+        return r;
+      })
+      .join("/");
+
+    return `${recompressed} ${parts.slice(1).join(" ") || "w - - 0 1"}`;
+  } catch {
+    return fenString;
+  }
+}
+
 export function sanitizeAndRepairFen(rawFen: string): string | null {
   if (!rawFen || typeof rawFen !== "string") return null;
-  let fen = rawFen.trim();
+  let fen = reconcilePawnColumns(rawFen.trim());
   if (!fen.includes(" ")) fen += " w - - 0 1";
 
   try {

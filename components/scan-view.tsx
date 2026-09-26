@@ -1187,12 +1187,13 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <CapturedPiecesBar fen={liveFen} side={tacticalIntel.turn === "Putih" ? "white" : "black"} />
             </div>
 
-            <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
+            <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--board-dark)]">
               <Chessboard
                 options={{
                   id: "board-solver-full",
                   position: liveFen,
                   allowDragging: false,
+                  boardStyle: { backgroundColor: "var(--board-dark)" },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                   animationDurationInMs: 250,
@@ -1332,13 +1333,14 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <CapturedPiecesBar fen={initialFen} side="white" />
             </div>
 
-            <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
+            <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--board-dark)]">
               <Chessboard
                 options={{
                   id: "board-ref-full",
                   position: initialFen,
                   allowDragging: true,
                   onPieceDrop: handleBoard1Drop,
+                  boardStyle: { backgroundColor: "var(--board-dark)" },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                 }}
@@ -1376,13 +1378,14 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <span className="font-bold text-xs text-white">Papan 1: Referensi Asli</span>
               <CapturedPiecesBar fen={initialFen} side="white" />
             </div>
-            <div className="w-full aspect-square rounded-xl overflow-hidden border border-[var(--border)]">
+            <div className="w-full aspect-square rounded-xl overflow-hidden border border-[var(--border)] bg-[var(--board-dark)]">
               <Chessboard
                 options={{
                   id: "board-compare-1",
                   position: initialFen,
                   allowDragging: true,
                   onPieceDrop: handleBoard1Drop,
+                  boardStyle: { backgroundColor: "var(--board-dark)" },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                 }}
@@ -1398,12 +1401,13 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 Eval: {currentScoreCp !== null ? `${currentScoreCp > 0 ? "+" : ""}${(currentScoreCp / 100).toFixed(1)}` : "+0.0"}
               </span>
             </div>
-            <div className="w-full aspect-square rounded-xl overflow-hidden border border-[var(--primary)]">
+            <div className="w-full aspect-square rounded-xl overflow-hidden border border-[var(--primary)] bg-[var(--board-dark)]">
               <Chessboard
                 options={{
                   id: "board-compare-2",
                   position: liveFen,
                   allowDragging: false,
+                  boardStyle: { backgroundColor: "var(--board-dark)" },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                 }}

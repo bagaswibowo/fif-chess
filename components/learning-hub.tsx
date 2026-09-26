@@ -142,6 +142,31 @@ export function LearningHub({ lang = "id" }: Props) {
     }
   };
 
+  const handlePieceDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }): boolean => {
+    if (!chapter || !targetSquare || status === "correct") return false;
+    const c = new Chess(fen);
+    const from = sourceSquare.toLowerCase() as Square;
+    const to = targetSquare.toLowerCase() as Square;
+    let m = null;
+    try {
+      m = c.move({ from, to, promotion: chapter.solutionUci[4] || "q" });
+    } catch {
+      m = null;
+    }
+    if (!m) return false;
+    if (m.san === chapter.solutionSan) {
+      setFen(c.fen());
+      setStatus("correct");
+      setSelected(null);
+      complete(chapter.id, chapter.xp);
+      return true;
+    } else {
+      setStatus("wrong");
+      setSelected(null);
+      return false;
+    }
+  };
+
   if (!chapter) return <p className="prose-note">Belum ada bab.</p>;
 
   const squareStyles: Record<string, React.CSSProperties> = {};
@@ -240,7 +265,9 @@ export function LearningHub({ lang = "id" }: Props) {
                 id: `quest-${chapter.id}`,
                 position: fen,
                 boardOrientation: boardSide,
-                allowDragging: false,
+                allowDragging: status !== "correct",
+                canDragPiece: ({ piece }) => (chapter.turn === "w" ? piece.pieceType.startsWith("w") : piece.pieceType.startsWith("b")),
+                onPieceDrop: handlePieceDrop,
                 squareStyles,
                 onSquareClick,
                 boardStyle: {

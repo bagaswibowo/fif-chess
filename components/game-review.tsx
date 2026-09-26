@@ -438,6 +438,44 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 >
                   Maju →
                 </button>
+                <button
+                  className="ctl ctl-sm text-xs font-bold border-amber-500/40 text-amber-300 hover:bg-amber-950/30"
+                  onClick={() => {
+                    setPlaying(false);
+                    // Jump to previous tactical moment or capture/check
+                    for (let i = moveIndex - 2; i >= 0; i--) {
+                      const m = played[i];
+                      if (m && (m.san.includes("x") || m.san.includes("+") || m.san.includes("#"))) {
+                        setMoveIndex(i + 1);
+                        return;
+                      }
+                    }
+                    setMoveIndex(0);
+                  }}
+                  disabled={moveIndex <= 1}
+                  title="Lompat ke Momen Kritis/Taktis Sebelumnya"
+                >
+                  ⏮ Blunder Prev
+                </button>
+                <button
+                  className="ctl ctl-sm text-xs font-bold border-amber-500/40 text-amber-300 hover:bg-amber-950/30"
+                  onClick={() => {
+                    setPlaying(false);
+                    // Jump to next tactical moment or capture/check
+                    for (let i = moveIndex; i < played.length; i++) {
+                      const m = played[i];
+                      if (m && (m.san.includes("x") || m.san.includes("+") || m.san.includes("#"))) {
+                        setMoveIndex(i + 1);
+                        return;
+                      }
+                    }
+                    setMoveIndex(fenList.length - 1);
+                  }}
+                  disabled={moveIndex >= fenList.length - 1}
+                  title="Lompat ke Momen Kritis/Taktis Berikutnya"
+                >
+                  ⏭ Blunder Next
+                </button>
               </div>
 
               <div className="row items-center gap-2">
@@ -458,13 +496,14 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
               
               {/* LEFT: BOARD WITH DUAL ARROWS */}
               <div className="panel p-3 stack-tight items-center rounded-2xl" style={{ background: "var(--card)" }}>
-                <div className="w-full max-w-[min(90vw,54vh)] aspect-square rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-xl relative">
+                <div className="w-full max-w-[min(90vw,54vh)] aspect-square rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]">
                   <Chessboard
                     options={{
                       id: `review-${active.id}`,
                       position: currentFen,
                       boardOrientation: active.humanSide,
                       allowDragging: false,
+                      boardStyle: { backgroundColor: "var(--board-dark)" },
                       darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                       lightSquareStyle: { backgroundColor: "var(--board-light)" },
                       arrows: [
