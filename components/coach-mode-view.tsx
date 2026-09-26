@@ -1,5 +1,7 @@
 "use client";
 
+import { ClockMovesFullscreen } from "@/components/clock-moves-fullscreen";
+
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
@@ -45,6 +47,7 @@ export function CoachModeView({ lang = "id" }: Props) {
   const [playerSide, setPlayerSide] = useState<"white" | "black">("white");
   const [outcome, setOutcome] = useState<GameOutcome>(() => describeOutcome(new Chess()));
   const [showConfetti, setShowConfetti] = useState(false);
+  const [fullscreenCoach, setFullscreenCoach] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [thinking, setThinking] = useState(false);
   const [evalCp, setEvalCp] = useState<number | null>(null);
@@ -389,6 +392,17 @@ export function CoachModeView({ lang = "id" }: Props) {
             <span className="hidden sm:inline">Hitam</span>
           </button>
         </div>
+
+        {/* Tombol Layar Penuh Fokus */}
+        <button
+          type="button"
+          onClick={() => setFullscreenCoach(true)}
+          className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-[#81b64c] text-white hover:brightness-110 flex items-center gap-1.5 shadow-sm transition-all shrink-0"
+          title="Buka Mode Fokus Layar Penuh (1 Layar)"
+        >
+          <span>⛶</span>
+          <span className="hidden sm:inline">Fokus 1 Layar</span>
+        </button>
       </div>
 {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
       <div className="grid lg:grid-cols-[1fr_380px] gap-4 items-start">

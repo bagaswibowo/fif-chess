@@ -991,6 +991,24 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                   onClose={() => setFullscreenClocks(false)}
                   boardOrientation={humanSide === "black" ? "black" : "white"}
                   onPieceDrop={onPieceDrop}
+                  onSquareClick={({ square }) => {
+                    if (!humanToMove) return;
+                    if (selectedSquare) {
+                      if (selectedSquare === square) {
+                        setSelectedSquare(null);
+                        return;
+                      }
+                      if (tryHumanMove(selectedSquare, square)) return;
+                    }
+                    const piece = chess.get(square as Square);
+                    const isHumanPiece =
+                      piece &&
+                      ((humanSide === "white" && piece.color === "w") ||
+                        (humanSide === "black" && piece.color === "b"));
+                    setSelectedSquare(isHumanPiece ? square : null);
+                  }}
+                  squareStyles={squareStyles}
+                  canDragPiece={canDragPiece}
                   scoreCp={(analysis as any)?.scoreCp ?? 0}
                 />
               )}
@@ -1035,6 +1053,41 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                       {/* WHEN MATCH IS ACTIVE: HIDE SETUP BUTTONS AND SHOW LIVE CLOCKS & IN-GAME CONTROLS */}
                       {gameActive && !effectiveOutcome.over ? (
                         <div className="space-y-3">
+                          {/* LIVE STOCKFISH COMMENTATOR CARD (Active in Normal Mode as well) */}
+                          {(() => {
+                            const lastM = moves.length > 0 ? moves[moves.length - 1] : null;
+                            const evalVal = typeof (analysis as any)?.scoreCp === "number" ? ((analysis as any).scoreCp / 100) : 0;
+                            return (
+                              <div className="p-3 bg-[var(--surface)] rounded-xl border border-[var(--border)] shadow-sm space-y-1.5 animate-in fade-in">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <IconBot3D size={18} />
+                                    <span className="text-xs font-bold text-white">Analisis Komentator Stockfish</span>
+                                  </div>
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--background)] border border-[var(--border)] text-emerald-400 font-bold">
+                                    Eval: {evalVal > 0 ? "+" + evalVal.toFixed(2) : evalVal.toFixed(2)}
+                                  </span>
+                                </div>
+                                <div className="text-xs leading-relaxed text-neutral-300">
+                                  {lastM ? (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-bold text-white">Langkah {lastM.san}:</span>
+                                      {Math.abs(evalVal) < 0.8 ? (
+                                        <span className="text-emerald-400 font-bold">● Posisi seimbang &amp; terkontrol</span>
+                                      ) : (evalVal > 1.5 && humanSide === "white") || (evalVal < -1.5 && humanSide === "black") ? (
+                                        <span className="text-blue-400 font-bold">● Posisi Anda sangat unggul!</span>
+                                      ) : (
+                                        <span className="text-amber-400 font-bold">● Lawan menekan, pertahankan petak sentral</span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-neutral-400">Pertandingan dimulai. Tekan atau seret bidak untuk melangkah.</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
+
                           <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex justify-between items-center">
                             <span>Jam Catur Pertandingan</span>
                             <Badge className="bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/40 text-[10px]">
