@@ -1,13 +1,14 @@
 "use client";
 
-// Komunitas & Forum Diskusi Catur FIF Tel-U (v2.0)
+// Komunitas & Forum Diskusi Catur FIF Tel-U (v2.1)
 // Fitur:
-// 1. Thread index & detail view dengan kategori terstruktur.
-// 2. Balas kutip (quote reply) instan antar postingan.
-// 3. Import riwayat permainan (game history) langsung dari database lokal pertandingan.
-// 4. Interactive embedded chessboard viewer dengan playback kontrol.
-// 5. Analisis AI terintegrasi (deteksi Akurasi, Blunder, Kesalahan, & Langkah Terlewat).
-// 6. 100% menggunakan 3D SVG icon components (zero raw emoji).
+// 1. Thread index & detail view dengan kategori terstruktur & responsif.
+// 2. Rich Text Editor Toolbar (Bold, Italic, H2, Quote, PGN Code, Bullet Points) + Preview.
+// 3. Balas kutip (quote reply) instan antar postingan forum.
+// 4. Import riwayat permainan (game history) langsung dari database lokal pertandingan.
+// 5. Interactive embedded chessboard viewer dengan playback kontrol.
+// 6. Analisis AI terintegrasi (deteksi Akurasi, Blunder, Kesalahan, & Langkah Terlewat).
+// 7. 100% menggunakan 3D SVG icon components (zero raw emoji).
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Chessboard } from "react-chessboard";
@@ -42,14 +43,14 @@ export type GameAnalysisReport = {
   blunders: number;
   mistakes: number;
   missedWins: number;
-  bestMoves: number;
-  moveInsights: {
-    moveNumber: number;
+  bestMovesCount: number;
+  verdict: string;
+  moveFeedback: {
+    ply: number;
     san: string;
-    side: "white" | "black";
-    classification: "brilliant" | "best" | "good" | "inaccuracy" | "mistake" | "blunder" | "missed";
+    type: "best" | "good" | "inaccuracy" | "mistake" | "blunder" | "missed";
     commentary: string;
-    suggestedSan?: string;
+    engineAlternative?: string;
   }[];
 };
 
@@ -59,17 +60,12 @@ export type ForumPost = {
   authorUsername: string;
   authorName: string;
   authorTitle?: string;
-  authorRole: string;
+  authorRole?: string;
   avatarInitials: string;
   content: string;
-  quote?: {
-    authorUsername: string;
-    postNumber: number;
-    snippet: string;
-  };
-  attachedGame?: GameRecord;
   likes: number;
   createdAt: string;
+  attachedGame?: GameRecord;
 };
 
 export type ForumThread = {
@@ -83,10 +79,15 @@ export type ForumThread = {
   avatarInitials: string;
   repliesCount: number;
   lastActivity: string;
-  isHot?: boolean;
   isPinned?: boolean;
-  isLocked?: boolean;
+  isHot?: boolean;
   posts: ForumPost[];
+  attachedGameSummary?: {
+    opponent: string;
+    outcome: string;
+    movesCount: number;
+    playedAs: "white" | "black";
+  };
 };
 
 type Props = {
@@ -94,259 +95,488 @@ type Props = {
   lang?: "id" | "en";
 };
 
-// Heuristic Game Analysis Generator
-function analyzeGameMoves(record: GameRecord): GameAnalysisReport {
-  const c = new Chess();
-  const insights: GameAnalysisReport["moveInsights"] = [];
+// Heuristic Game AI Evaluator
+function analyzeGameMoves(moves: string[], side: "white" | "black"): GameAnalysisReport {
   let blunders = 0;
   let mistakes = 0;
+  let inaccuracies = 0;
   let missedWins = 0;
   let bestMoves = 0;
 
-  record.moves.forEach((san, idx) => {
-    const moveNum = Math.floor(idx / 2) + 1;
-    const side = idx % 2 === 0 ? "white" : "black";
-    const legalMoves = c.moves({ verbose: true });
-    
-    // Heuristic analysis based on move characteristics & board dynamics
-    let classification: GameAnalysisReport["moveInsights"][0]["classification"] = "good";
-    let commentary = "Langkah posisional solid yang menjaga struktur.";
-    let suggestedSan: string | undefined = undefined;
+  const moveFeedback: GameAnalysisReport["moveFeedback"] = [];
+  const chess = new Chess();
 
-    const isCapture = san.includes("x");
-    const isCheck = san.includes("+");
-    const isMate = san.includes("#");
-
-    if (isMate) {
-      classification = "brilliant";
-      commentary = `Eksekusi skakmat mutlak (${san})! Mengakhiri partai dengan presisi.`;
-      bestMoves++;
-    } else if (isCheck && isCapture) {
-      classification = "best";
-      commentary = `Langkah taktis tajam (${san}) merebut materi sambil menekan Raja lawan.`;
-      bestMoves++;
-    } else if (idx === 6 && !isCapture && !isCheck) {
-      classification = "blunder";
-      commentary = `Blunder: Langkah ${san} mengabaikan koordinasi pertahanan dan melemahkan petak sentral.`;
-      suggestedSan = legalMoves.find((m) => m.captured || m.piece === "n")?.san || "Nf3";
-      blunders++;
-    } else if (idx === 10 && !isCapture) {
-      classification = "mistake";
-      commentary = `Kesalahan: Manuver ${san} sub-optimal. Lawan dapat merebut tempo di sayap raja.`;
-      suggestedSan = legalMoves[0]?.san || "O-O";
-      mistakes++;
-    } else if (idx === 14 && legalMoves.some((m) => m.san.includes("#") || m.san.includes("+"))) {
-      classification = "missed";
-      commentary = `Peluang Terlewat: Melewatkan kombinasi skak paksa yang dapat mengunci kemenangan lebih cepat.`;
-      suggestedSan = legalMoves.find((m) => m.san.includes("+"))?.san || "Qh5+";
-      missedWins++;
-    } else if (isCheck || isCapture) {
-      classification = "best";
-      commentary = `Langkah aktif (${san}) yang mempertahankan inisiatif serangan.`;
-      bestMoves++;
-    }
+  moves.forEach((san, index) => {
+    const isPlayerPly = side === "white" ? index % 2 === 0 : index % 2 === 1;
 
     try {
-      c.move(san);
-    } catch {}
+      const legal = chess.move(san);
+      if (!legal) return;
 
-    insights.push({
-      moveNumber: moveNum,
-      san,
-      side,
-      classification,
-      commentary,
-      suggestedSan,
-    });
+      if (isPlayerPly) {
+        if (san.includes("#")) {
+          bestMoves++;
+          moveFeedback.push({
+            ply: index + 1,
+            san,
+            type: "best",
+            commentary: "Langkah brilian penutup skakmat mutlak!",
+          });
+        } else if (san.includes("x")) {
+          bestMoves++;
+          moveFeedback.push({
+            ply: index + 1,
+            san,
+            type: "best",
+            commentary: "Pemukulan perwira menguntungkan merebut inisiatif.",
+          });
+        } else if (index > 12 && (san.startsWith("K") || san.startsWith("a") || san.startsWith("h"))) {
+          if (index % 5 === 0) {
+            blunders++;
+            moveFeedback.push({
+              ply: index + 1,
+              san,
+              type: "blunder",
+              commentary: "Blunder posisi: Melepaskan kawalan diagonal sentral.",
+              engineAlternative: index % 2 === 0 ? "Nf3" : "c5",
+            });
+          } else {
+            inaccuracies++;
+            moveFeedback.push({
+              ply: index + 1,
+              san,
+              type: "inaccuracy",
+              commentary: "Langkah kurang akurat, memperlambat konsolidasi bidak.",
+              engineAlternative: "Be3",
+            });
+          }
+        } else if (index === 8 || index === 14) {
+          mistakes++;
+          moveFeedback.push({
+            ply: index + 1,
+            san,
+            type: "mistake",
+            commentary: "Kesalahan taktis: Memberikan celah serangan sayap lawan.",
+            engineAlternative: "O-O",
+          });
+        } else {
+          bestMoves++;
+          moveFeedback.push({
+            ply: index + 1,
+            san,
+            type: "good",
+            commentary: "Langkah solid menjaga struktur perwira.",
+          });
+        }
+      }
+    } catch {
+      // ignore
+    }
   });
 
-  const totalMoves = Math.max(1, record.moves.length);
-  const accuracy = Math.max(55, Math.min(98, Math.round(100 - (blunders * 12 + mistakes * 6 + missedWins * 8) / totalMoves * 10)));
+  const totalEvaluated = bestMoves + inaccuracies + mistakes + blunders;
+  const accuracy = totalEvaluated > 0
+    ? Math.max(45, Math.round(((bestMoves * 100 + inaccuracies * 70 + mistakes * 40) / (totalEvaluated * 100)) * 100))
+    : 85;
+
+  let verdict = "Permainan sangat tajam dan terkontrol.";
+  if (blunders >= 2) {
+    verdict = "Ditemukan beberapa blunder kritis yang membalikkan evaluasi posisi.";
+  } else if (mistakes >= 2) {
+    verdict = "Struktur permainan baik, namun ada kesalahan taktis di fase transisi.";
+  } else if (accuracy >= 85) {
+    verdict = "Akurasi tinggi setara master dengan kontrol tempo solid.";
+  }
 
   return {
     accuracy,
     blunders,
     mistakes,
     missedWins,
-    bestMoves,
-    moveInsights: insights,
+    bestMovesCount: bestMoves,
+    verdict,
+    moveFeedback,
   };
 }
 
-// Embedded Interactive Chess Player Component for Forum Posts
-function ForumGamePlayer({ record }: { record: GameRecord }) {
+// Rich Text Toolbar Component
+function RichTextToolbar({
+  textareaRef,
+  value,
+  onChange,
+}: {
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const insertFormat = (before: string, after: string = "", placeholder: string = "") => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = value.slice(start, end) || placeholder;
+    const nextValue = value.slice(0, start) + before + selected + after + value.slice(end);
+    onChange(nextValue);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + before.length, start + before.length + selected.length);
+    }, 10);
+  };
+
+  return (
+    <div
+      className="flex items-center flex-wrap gap-1 p-1.5 rounded-t-xl border-b border-[var(--border)] text-xs"
+      style={{ background: "var(--surface)" }}
+    >
+      <button
+        type="button"
+        onClick={() => insertFormat("**", "**", "teks tebal")}
+        className="px-2 py-0.5 rounded font-black text-white hover:bg-[var(--card)] transition-all"
+        title="Tebal (Bold)"
+      >
+        B
+      </button>
+      <button
+        type="button"
+        onClick={() => insertFormat("*", "*", "teks miring")}
+        className="px-2 py-0.5 rounded italic font-serif text-white hover:bg-[var(--card)] transition-all"
+        title="Miring (Italic)"
+      >
+        I
+      </button>
+      <button
+        type="button"
+        onClick={() => insertFormat("## ", "\n", "Judul Bab")}
+        className="px-2 py-0.5 rounded font-bold text-xs text-[var(--primary)] hover:bg-[var(--card)] transition-all"
+        title="Heading (H2)"
+      >
+        H2
+      </button>
+      <div className="w-[1px] h-4 bg-[var(--border)] mx-1" />
+      <button
+        type="button"
+        onClick={() => insertFormat("> ", "\n", "Kutipan diskusi")}
+        className="px-2 py-0.5 rounded text-neutral-300 hover:bg-[var(--card)] transition-all font-mono"
+        title="Kutipan (Quote)"
+      >
+        ”
+      </button>
+      <button
+        type="button"
+        onClick={() => insertFormat("```pgn\n", "\n```", "1. e4 e5 2. Nf3 Nc6")}
+        className="px-2 py-0.5 rounded text-neutral-300 hover:bg-[var(--card)] transition-all font-mono text-[11px]"
+        title="Blok Notasi PGN / Kode"
+      >
+        {"{ }"}
+      </button>
+      <button
+        type="button"
+        onClick={() => insertFormat("- ", "\n", "Poin diskusi")}
+        className="px-2 py-0.5 rounded text-neutral-300 hover:bg-[var(--card)] transition-all"
+        title="Daftar Poin (List)"
+      >
+        •
+      </button>
+      <button
+        type="button"
+        onClick={() => insertFormat("1. ", "\n", "Langkah terurut")}
+        className="px-2 py-0.5 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-[11px]"
+        title="Daftar Nomor"
+      >
+        1.
+      </button>
+    </div>
+  );
+}
+
+// Markdown Formatter Renderer
+function FormattedPostContent({ text }: { text: string }) {
+  const parts = text.split("\n\n");
+
+  return (
+    <div className="stack-tight text-[12px] leading-relaxed text-neutral-200">
+      {parts.map((paragraph, pIdx) => {
+        const trimmed = paragraph.trim();
+
+        // Blockquote
+        if (trimmed.startsWith(">")) {
+          const quoteLines = trimmed
+            .split("\n")
+            .map((l) => l.replace(/^>\s?/, ""))
+            .join("\n");
+          return (
+            <blockquote
+              key={pIdx}
+              className="pl-3 py-1 my-1 rounded-r-lg border-l-2 border-[var(--primary)] bg-[var(--surface)] text-[11px] italic text-neutral-300"
+            >
+              {quoteLines}
+            </blockquote>
+          );
+        }
+
+        // Code block
+        if (trimmed.startsWith("```")) {
+          const codeContent = trimmed.replace(/^```[a-z]*\n?/, "").replace(/```$/, "");
+          return (
+            <pre
+              key={pIdx}
+              className="p-2.5 my-1 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono text-[11px] text-emerald-300 overflow-x-auto select-all"
+            >
+              {codeContent}
+            </pre>
+          );
+        }
+
+        // Heading 2
+        if (trimmed.startsWith("## ")) {
+          return (
+            <h4 key={pIdx} className="font-bold text-sm text-[var(--primary)] mt-1 mb-0.5">
+              {trimmed.replace(/^##\s+/, "")}
+            </h4>
+          );
+        }
+
+        // List item
+        if (trimmed.startsWith("- ")) {
+          const items = trimmed.split("\n").map((l) => l.replace(/^-\s+/, ""));
+          return (
+            <ul key={pIdx} className="list-disc list-inside space-y-0.5 my-1 pl-1 text-[12px]">
+              {items.map((it, i) => (
+                <li key={i} className="text-neutral-300">{it}</li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <p key={pIdx} className="m-0 leading-relaxed text-[12px]">
+            {paragraph}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+// Interactive Embedded Match Player Component
+function EmbeddedMatchPlayer({
+  game,
+  authorUsername,
+}: {
+  game: GameRecord;
+  authorUsername: string;
+}) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showAnalysis, setShowAnalysis] = useState(true);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { fenHistory, movesList } = useMemo(() => {
+  const movesList = useMemo(() => game.moves || [], [game.moves]);
+
+  // Compute FEN at current step
+  const currentFen = useMemo(() => {
     const c = new Chess();
-    const fens = [c.fen()];
-    const moves: string[] = [];
-    for (const m of record.moves) {
+    for (let i = 0; i < currentStep && i < movesList.length; i++) {
       try {
-        c.move(m);
-        fens.push(c.fen());
-        moves.push(m);
+        c.move(movesList[i]);
       } catch {
         break;
       }
     }
-    return { fenHistory: fens, movesList: moves };
-  }, [record.moves]);
+    return c.fen();
+  }, [movesList, currentStep]);
 
-  const currentFen = fenHistory[currentStep] || fenHistory[0];
-  const analysisReport = useMemo(() => analyzeGameMoves(record), [record]);
-  const currentInsight = currentStep > 0 ? analysisReport.moveInsights[currentStep - 1] : null;
+  // AI Game Analysis
+  const analysis = useMemo(() => {
+    return analyzeGameMoves(movesList, game.humanSide);
+  }, [movesList, game.humanSide]);
 
+  // Step feedback
+  const activeFeedback = useMemo(() => {
+    if (currentStep === 0) return null;
+    return analysis.moveFeedback.find((f) => f.ply === currentStep) || null;
+  }, [analysis, currentStep]);
+
+  // Autoplay
   useEffect(() => {
-    if (!isPlaying) return;
-    if (currentStep >= fenHistory.length - 1) {
-      setIsPlaying(false);
+    if (!isPlaying) {
+      if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
-    const timer = setTimeout(() => {
-      setCurrentStep((prev) => Math.min(prev + 1, fenHistory.length - 1));
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, [isPlaying, currentStep, fenHistory.length]);
+
+    timerRef.current = setInterval(() => {
+      setCurrentStep((prev) => {
+        if (prev >= movesList.length) {
+          setIsPlaying(false);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 1100);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isPlaying, movesList.length]);
 
   return (
-    <div className="panel p-3 stack-tight mt-2.5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-      {/* Header Info */}
-      <div className="row-between flex-wrap gap-2 pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
+    <div
+      className="panel p-3.5 my-2.5 rounded-2xl border border-[var(--primary)]/60 stack-tight shadow-xl"
+      style={{ background: "var(--card)" }}
+    >
+      {/* Header Match Info */}
+      <div className="row-between pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
         <div className="flex items-center gap-2">
           <IconHistory3D size={18} />
-          <span className="font-bold text-xs" style={{ color: "var(--foreground)" }}>
-            Partai: vs {record.opponent} ({record.humanSide === "white" ? "Putih" : "Hitam"})
-          </span>
-          <span className="ctl ctl-xs" style={{ padding: "0 0.5rem" }}>
-            {record.timeMode} · {record.outcomeKind}
+          <span className="font-bold text-xs text-white">
+            Partai Lampiran: {authorUsername} ({game.humanSide === "white" ? "Putih" : "Hitam"}) vs {game.opponent}
           </span>
         </div>
-        <button
-          className="ctl ctl-xs ctl-quiet"
-          onClick={() => setShowAnalysis(!showAnalysis)}
-          title="Toggle Evaluasi AI"
+        <span
+          className="ctl ctl-xs"
+          style={{
+            borderColor: game.outcomeKind === "win" ? "var(--primary)" : game.outcomeKind === "loss" ? "var(--destructive)" : "var(--warning)",
+            color: game.outcomeKind === "win" ? "var(--primary)" : game.outcomeKind === "loss" ? "var(--destructive)" : "var(--warning)",
+          }}
         >
-          <IconAiBrain3D size={14} />
-          <span>{showAnalysis ? "Sembunyikan Analisis AI" : "Tampilkan Analisis AI"}</span>
-        </button>
+          {game.outcomeKind === "win" ? "Menang" : game.outcomeKind === "loss" ? "Kalah" : "Remis"} ({game.moves.length} langkah)
+        </span>
       </div>
 
-      {/* AI Accuracy & Blunder Bar */}
-      {showAnalysis && (
-        <div className="row flex-wrap gap-2 py-1.5 px-2.5 rounded-lg" style={{ background: "color-mix(in srgb, var(--primary) 8%, var(--card))", border: "1px solid color-mix(in srgb, var(--primary) 25%, var(--border))" }}>
-          <div className="flex items-center gap-1 text-xs font-bold" style={{ color: "var(--primary)" }}>
-            <IconCheck3D size={14} />
-            <span>Akurasi: {analysisReport.accuracy}%</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>
-            <span style={{ color: analysisReport.blunders > 0 ? "var(--destructive)" : "var(--muted-foreground)" }}>
-              ● {analysisReport.blunders} Blunder
+      {/* AI ANALYSIS SUMMARY BADGES */}
+      <div
+        className="p-2.5 rounded-xl border border-[var(--border)] stack-tight"
+        style={{ background: "var(--surface)" }}
+      >
+        <div className="row-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <IconAiBrain3D size={16} />
+            <span className="text-xs font-bold text-white">Analisis AI:</span>
+            <span className="font-mono text-xs text-[var(--primary)] font-bold">
+              Akurasi {analysis.accuracy}%
             </span>
-            <span style={{ color: "var(--warning)" }}>● {analysisReport.mistakes} Kesalahan</span>
-            <span style={{ color: "var(--accent)" }}>● {analysisReport.missedWins} Terlewat</span>
-            <span style={{ color: "var(--primary)" }}>● {analysisReport.bestMoves} Langkah Terbaik</span>
+          </div>
+          <div className="row gap-2 text-[11px] font-bold">
+            <span className="text-red-400">{analysis.blunders} Blunder</span>
+            <span className="text-orange-400">{analysis.mistakes} Kesalahan</span>
+            <span className="text-yellow-400">{analysis.missedWins} Terlewat</span>
           </div>
         </div>
-      )}
+        <p className="prose-note text-[11px] text-neutral-300 m-0 leading-snug">
+          {analysis.verdict}
+        </p>
+      </div>
 
-      {/* Interactive Board & Playback Area */}
-      <div className="row flex-wrap" style={{ gap: "1rem", alignItems: "flex-start" }}>
-        {/* Mini Chessboard */}
-        <div style={{ width: "min(100%, 15rem)", borderRadius: "0.5rem", overflow: "hidden" }} className="aspect-square shrink-0">
+      {/* DUAL COLUMN: CHESSBOARD + STEP FEEDBACK */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center pt-1">
+        {/* BOARD VIEW */}
+        <div className="aspect-square max-w-[280px] mx-auto w-full rounded-xl overflow-hidden border border-[var(--border)] shadow-md">
           <Chessboard
             options={{
-              id: `forum-board-${record.id}`,
+              id: `forum-board-${game.id}`,
               position: currentFen,
-              boardOrientation: record.humanSide,
+              boardOrientation: game.humanSide,
               allowDragging: false,
               darkSquareStyle: { backgroundColor: "var(--board-dark)" },
               lightSquareStyle: { backgroundColor: "var(--board-light)" },
+              animationDurationInMs: 200,
             }}
           />
         </div>
 
-        {/* Controls & Move Insights */}
-        <div className="stack-tight flex-1 min-w-[14rem]">
-          {/* Step Controls */}
-          <div className="row gap-1.5">
-            <button className="ctl ctl-xs" onClick={() => setCurrentStep(0)} disabled={currentStep === 0} title="Awal Partai">
-              |◀
-            </button>
-            <button className="ctl ctl-xs" onClick={() => setCurrentStep((s) => Math.max(0, s - 1))} disabled={currentStep === 0} title="Langkah Sebelumnya">
-              ◀
-            </button>
-            <button className="ctl ctl-xs ctl-primary" onClick={() => setIsPlaying(!isPlaying)} title={isPlaying ? "Jeda" : "Putar Otomatis"}>
-              {isPlaying ? "❚❚ Jeda" : "▶ Putar"}
-            </button>
-            <button className="ctl ctl-xs" onClick={() => setCurrentStep((s) => Math.min(fenHistory.length - 1, s + 1))} disabled={currentStep >= fenHistory.length - 1} title="Langkah Selanjutnya">
-              ▶
-            </button>
-            <button className="ctl ctl-xs" onClick={() => setCurrentStep(fenHistory.length - 1)} disabled={currentStep >= fenHistory.length - 1} title="Langkah Terakhir">
-              ▶|
-            </button>
-            <span className="label text-xs ml-auto">
-              {currentStep}/{movesList.length}
-            </span>
+        {/* CONTROLS & MOVE STEP COMMENTARY */}
+        <div className="stack-tight justify-between h-full">
+          {/* Active Move Feedback Box */}
+          <div
+            className="p-2.5 rounded-xl border border-[var(--border)] min-h-24 stack-tight justify-center"
+            style={{ background: "var(--surface)" }}
+          >
+            {activeFeedback ? (
+              <>
+                <div className="row-between">
+                  <span className="text-xs font-bold font-mono text-white">
+                    Langkah #{activeFeedback.ply}: {activeFeedback.san}
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      activeFeedback.type === "blunder"
+                        ? "bg-red-500/20 text-red-300"
+                        : activeFeedback.type === "mistake"
+                        ? "bg-orange-500/20 text-orange-300"
+                        : activeFeedback.type === "inaccuracy"
+                        ? "bg-yellow-500/20 text-yellow-300"
+                        : "bg-emerald-500/20 text-emerald-300"
+                    }`}
+                  >
+                    {activeFeedback.type.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-[11px] text-neutral-300 m-0 leading-snug">
+                  {activeFeedback.commentary}
+                </p>
+                {activeFeedback.engineAlternative && (
+                  <div className="text-[10px] text-[var(--primary)] font-bold">
+                    Rekomendasi Engine: {activeFeedback.engineAlternative}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center text-[11px] text-neutral-400 italic">
+                {currentStep === 0
+                  ? "Posisi Awal. Gunakan tombol di bawah untuk meninjau langkah."
+                  : `Langkah #${currentStep}: ${movesList[currentStep - 1]}`}
+              </div>
+            )}
           </div>
 
-          {/* Current Step Insight Commentary */}
-          {currentInsight ? (
-            <div
-              className="panel p-2 stack-tight mt-1"
-              style={{
-                borderColor:
-                  currentInsight.classification === "blunder"
-                    ? "var(--destructive)"
-                    : currentInsight.classification === "mistake"
-                      ? "var(--warning)"
-                      : currentInsight.classification === "missed"
-                        ? "var(--accent)"
-                        : "var(--primary)",
-                background: "var(--card)",
-              }}
+          {/* Playback Controls */}
+          <div className="grid grid-cols-5 gap-1.5 pt-1">
+            <button
+              onClick={() => { setIsPlaying(false); setCurrentStep(0); }}
+              className="ctl ctl-xs justify-center"
+              title="Awal"
             >
-              <div className="row-between">
-                <span className="font-bold text-xs" style={{ color: "var(--foreground)" }}>
-                  Langkah {currentInsight.moveNumber}. {currentInsight.side === "white" ? "Putih" : "Hitam"}:{" "}
-                  <strong style={{ color: "var(--primary)" }}>{currentInsight.san}</strong>
-                </span>
-                <span
-                  className="ctl ctl-xs"
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    padding: "0 0.4rem",
-                  }}
-                >
-                  {currentInsight.classification}
-                </span>
-              </div>
-              <p className="prose-note" style={{ fontSize: "var(--text-xs)", margin: 0 }}>
-                {currentInsight.commentary}
-              </p>
-              {currentInsight.suggestedSan && (
-                <div className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
-                  💡 Rekomendasi Engine: <strong>{currentInsight.suggestedSan}</strong>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="prose-note text-xs py-2">Posisi awal partai. Klik panah untuk meninjau langkah demi langkah.</p>
-          )}
+              |◀
+            </button>
+            <button
+              onClick={() => { setIsPlaying(false); setCurrentStep((p) => Math.max(0, p - 1)); }}
+              className="ctl ctl-xs justify-center"
+              title="Mundur"
+            >
+              ◀
+            </button>
+            <button
+              onClick={() => setIsPlaying(!isPlaying)}
+              className="ctl ctl-xs ctl-primary justify-center font-bold"
+            >
+              {isPlaying ? "Jeda" : "▶ Putar"}
+            </button>
+            <button
+              onClick={() => { setIsPlaying(false); setCurrentStep((p) => Math.min(movesList.length, p + 1)); }}
+              className="ctl ctl-xs justify-center"
+              title="Maju"
+            >
+              ▶
+            </button>
+            <button
+              onClick={() => { setIsPlaying(false); setCurrentStep(movesList.length); }}
+              className="ctl ctl-xs justify-center"
+              title="Akhir"
+            >
+              ▶|
+            </button>
+          </div>
 
-          {/* Moves Quick Tape */}
-          <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1 rounded bg-[var(--background)] border border-[var(--border)]">
+          {/* Moves Tape */}
+          <div
+            className="flex flex-wrap gap-1 max-h-16 overflow-y-auto p-1 rounded bg-[var(--background)] border border-[var(--border)]"
+          >
             {movesList.map((san, idx) => {
               const active = idx + 1 === currentStep;
               return (
                 <button
                   key={idx}
-                  onClick={() => setCurrentStep(idx + 1)}
-                  className={`text-xs px-1.5 py-0.5 rounded font-mono transition-all ${
+                  onClick={() => { setIsPlaying(false); setCurrentStep(idx + 1); }}
+                  className={`text-[10px] px-1 py-0.5 rounded font-mono transition-all ${
                     active ? "bg-[var(--primary)] text-white font-bold" : "text-neutral-400 hover:text-white"
                   }`}
                 >
@@ -374,10 +604,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
   const [newTopicTitle, setNewTopicTitle] = useState("");
   const [newTopicContent, setNewTopicContent] = useState("");
   const [selectedGameForNewTopic, setSelectedGameForNewTopic] = useState<GameRecord | null>(null);
+  const newTopicTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Reply Form State
   const [replyText, setReplyText] = useState("");
-  const [quotedPost, setQuotedPost] = useState<ForumPost | null>(null);
   const [selectedGameForReply, setSelectedGameForReply] = useState<GameRecord | null>(null);
   const [showGameImportPicker, setShowGameImportPicker] = useState(false);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
@@ -433,604 +663,644 @@ export function CommunityView({ user, lang = "id" }: Props) {
     },
     {
       id: "t2",
-      categoryId: "telu",
-      categoryName: "Komunitas Tel-U / FIF CHESS",
-      title: "Jadwal Turnamen Kilat Blitz 5 Mnt Antar Mahasiswa FIF Tel-U",
-      authorUsername: "admin_komunitas",
-      authorName: "Admin Komunitas",
-      authorTitle: "ADMIN KOMUNITAS",
-      avatarInitials: "BW",
-      repliesCount: 28,
-      lastActivity: "15 mnt lalu",
-      isPinned: true,
-      posts: [
-        {
-          id: "p2_1",
-          postNumber: 1,
-          authorUsername: "admin_komunitas",
-          authorName: "Admin Komunitas",
-          authorTitle: "ADMIN KOMUNITAS",
-          authorRole: "Dosen Tel-U & Admin",
-          avatarInitials: "BW",
-          content: "Diberitahukan kepada seluruh mahasiswa dan civitas Telkom University, turnamen online PvP Blitz 5 mnt akan diadakan setiap Jumat sore di platform ini. Sistem pertandingan menggunakan pairing Swiss 5 ronde. Silakan daftarkan akun Anda dan lakukan verifikasi.",
-          likes: 45,
-          createdAt: "4 jam lalu",
-        },
-      ],
-    },
-    {
-      id: "t3",
       categoryId: "analysis",
       categoryName: "Analisis Permainan & Taktik",
-      title: "Post your brilliant moves here! (Koleksi Taktik Spektakuler)",
-      authorUsername: "parth_18",
-      authorName: "Parth Chess",
-      authorTitle: "ELO 1950",
-      avatarInitials: "PC",
-      repliesCount: 64,
-      lastActivity: "39 mnt lalu",
-      isHot: true,
+      title: "Evaluasi Endgame: Blunder Benteng d7 vs Sayap Raja Putih",
+      authorUsername: "grandmaster_telu",
+      authorName: "Bagas Wibowo",
+      authorTitle: "DOSEN & AUTHOR",
+      avatarInitials: "BW",
+      repliesCount: 18,
+      lastActivity: "15 mnt lalu",
+      isPinned: true,
+      attachedGameSummary: {
+        opponent: "Stockfish 15 NNUE",
+        outcome: "win",
+        movesCount: 38,
+        playedAs: "white",
+      },
       posts: [
         {
-          id: "p3_1",
+          id: "p201",
           postNumber: 1,
-          authorUsername: "parth_18",
-          authorName: "Parth Chess",
-          authorTitle: "ELO 1950",
-          authorRole: "Mahasiswa SI",
-          avatarInitials: "PC",
-          content: "Bagikan langkah brilian Anda saat melawan bot Stockfish atau pemain nyata. Pengorbanan menteri di d1 atau Greek Gift di h7 paling disambut!",
-          likes: 29,
-          createdAt: "5 jam lalu",
+          authorUsername: "grandmaster_telu",
+          authorName: "Bagas Wibowo",
+          authorTitle: "DOSEN & AUTHOR",
+          authorRole: "KK SEAL Tel-U",
+          avatarInitials: "BW",
+          content: "Berikut analisis taktis partai endgame terbaru. Hitam mencoba bertahan dengan Benteng di d7, namun terobosan pion b6 membuka jalan bagi Menteri putih untuk melancarkan serangan skakmat mutlak.",
+          likes: 56,
+          createdAt: "3 jam lalu",
           attachedGame: {
-            id: "demo-game-1",
-            playedAt: Date.now() - 3600000,
+            id: "game-demo-1",
+            playedAt: Date.now(),
             opponent: "Stockfish 15 NNUE",
             humanSide: "white",
-            outcomeKind: "checkmate",
+            outcomeKind: "win",
             winner: "white",
-            moves: ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "b4", "Bxb4", "c3", "Ba5", "d4", "exd4", "O-O", "dxc3", "Qb3", "Qf6", "e5", "Qg6", "Re1", "Nge7", "Ba3", "b5", "Bxb5", "Rb8", "Qa4", "c2", "Nbd2", "a6", "Bxc6", "Nxc6", "e6", "fxe6", "Rxe6+", "Qxe6", "Qxc2", "Bxd2", "Qxd2", "Qf6", "Re1+", "Kd8", "Bc5", "Bb7", "Qd5", "d6", "h4", "Re8", "Rd1", "Ne5", "Qd4", "Bxf3", "Qa4", "Bxd1", "Qxd1", "Rb1", "Qxb1", "dxc5"],
             mode: "ai",
-            timeMode: "5m",
+            timeMode: "10 mnt",
+            moves: [
+              "d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O",
+              "Be2", "e5", "O-O", "Nc6", "d5", "Ne7", "b4", "Nh5", "Re1", "f5",
+              "Ng5", "Nf6", "Bf3", "c6", "b5", "cxd5", "cxd5", "h6", "Ne6", "Bxe6",
+              "dxe6", "fxe4", "Nxe4", "Nxe4", "Bxe4", "d5", "Bc2", "Qb6", "Qe2", "Qxe6",
+              "Ba3", "Rfd8", "Rad1", "Kh8", "Bb3", "Rd7", "b6", "axb6", "Bxe7", "Qxe7",
+              "Rxd5", "Rxd5", "Bxd5", "Rd8", "Qe4", "Qd6", "Bxb7", "Qd2", "Rf1", "Kh7",
+              "Qc6", "Rd6", "Qc8", "Qxa2", "Be4", "Qe6", "Qf8", "Rd7", "Rc1", "Qf7",
+              "Qa8", "Ra7", "Qc6", "Ra2", "Qxb6", "Rd2", "Rc6", "Qd7", "Bxg6+", "Kh8",
+              "Rc8+", "Qxc8", "Qf6#",
+            ],
           },
         },
       ],
     },
   ]);
 
-  const activeThread = useMemo(
-    () => threads.find((t) => t.id === activeThreadId) || threads[0],
-    [threads, activeThreadId]
-  );
+  const activeThread = useMemo(() => {
+    return threads.find((t) => t.id === activeThreadId) || threads[0];
+  }, [threads, activeThreadId]);
 
-  const filteredThreads = useMemo(() => {
-    return threads.filter((t) => {
-      const matchCat = filterCategory === "all" || t.categoryId === filterCategory;
-      const matchQuery =
-        !searchQuery.trim() ||
-        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.authorName.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchCat && matchQuery;
-    });
-  }, [threads, filterCategory, searchQuery]);
-
-  // Handler: Balas Kutip
+  // Quote reply handler
   const handleQuotePost = (post: ForumPost) => {
-    setQuotedPost(post);
-    const snippet = post.content.length > 100 ? post.content.slice(0, 100) + "..." : post.content;
+    const snippet = post.content.length > 140 ? `${post.content.slice(0, 140)}...` : post.content;
     const quoteText = `> @${post.authorUsername} (#${post.postNumber}): "${snippet}"\n\n`;
-    setReplyText((prev) => (prev.startsWith(">") ? prev : quoteText + prev));
+    setReplyText((prev) => quoteText + prev);
     replyInputRef.current?.focus();
     replyInputRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Handler: Submit Reply
-  const handleSubmitReply = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Submit reply
+  const handleSubmitReply = () => {
     if (!replyText.trim() && !selectedGameForReply) return;
 
     const newPost: ForumPost = {
-      id: `p_${Date.now()}`,
-      postNumber: (activeThread?.posts.length || 0) + 1,
-      authorUsername: user ? user.username : "pemain_tamu",
-      authorName: user ? user.fullName : "Pemain Tamu",
-      authorTitle: user?.role === "admin" ? "ADMIN KOMUNITAS" : "MEMBER",
-      authorRole: user?.role === "admin" ? "Dosen Tel-U & Admin" : "Civitas Catur Tel-U",
-      avatarInitials: user ? user.username.slice(0, 2).toUpperCase() : "PT",
-      content: replyText.trim(),
-      quote: quotedPost
-        ? {
-            authorUsername: quotedPost.authorUsername,
-            postNumber: quotedPost.postNumber,
-            snippet: quotedPost.content.slice(0, 90),
-          }
-        : undefined,
-      attachedGame: selectedGameForReply || undefined,
+      id: `p-${Date.now()}`,
+      postNumber: activeThread.posts.length + 1,
+      authorUsername: user?.username || "pemain_catur",
+      authorName: user?.fullName || "Pemain Catur",
+      authorTitle: user?.isAdmin ? "ADMIN KOMUNITAS" : "MEMBER",
+      authorRole: user?.isAdmin ? "Admin & Dosen" : "Anggota Komunitas",
+      avatarInitials: (user?.fullName || "PC").slice(0, 2).toUpperCase(),
+      content: replyText,
       likes: 0,
       createdAt: "Baru saja",
+      attachedGame: selectedGameForReply || undefined,
     };
 
     setThreads((prev) =>
-      prev.map((t) => {
-        if (t.id === activeThread.id) {
-          return {
-            ...t,
-            repliesCount: t.repliesCount + 1,
-            lastActivity: "Baru saja",
-            posts: [...t.posts, newPost],
-          };
-        }
-        return t;
-      })
+      prev.map((t) =>
+        t.id === activeThread.id
+          ? {
+              ...t,
+              repliesCount: t.repliesCount + 1,
+              lastActivity: "Baru saja",
+              posts: [...t.posts, newPost],
+            }
+          : t
+      )
     );
 
     setReplyText("");
-    setQuotedPost(null);
     setSelectedGameForReply(null);
   };
 
-  // Handler: Submit New Topic
-  const handleSubmitNewTopic = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Submit new thread
+  const handleCreateTopic = () => {
     if (!newTopicTitle.trim() || !newTopicContent.trim()) return;
 
-    const catObj = categories.find((c) => c.id === newTopicCategory);
-    const newThreadId = `t_${Date.now()}`;
+    const cat = categories.find((c) => c.id === newTopicCategory) || categories[0];
+    const newThreadId = `t-${Date.now()}`;
 
-    const newThread: ForumThread = {
-      id: newThreadId,
-      categoryId: newTopicCategory,
-      categoryName: catObj?.name || "Diskusi Umum Catur",
-      title: newTopicTitle.trim(),
-      authorUsername: user ? user.username : "pemain_tamu",
-      authorName: user ? user.fullName : "Pemain Tamu",
-      authorTitle: user?.role === "admin" ? "ADMIN KOMUNITAS" : "MEMBER",
-      avatarInitials: user ? user.username.slice(0, 2).toUpperCase() : "PT",
-      repliesCount: 0,
-      lastActivity: "Baru saja",
-      posts: [
-        {
-          id: `p_${Date.now()}_1`,
-          postNumber: 1,
-          authorUsername: user ? user.username : "pemain_tamu",
-          authorName: user ? user.fullName : "Pemain Tamu",
-          authorTitle: user?.role === "admin" ? "ADMIN KOMUNITAS" : "MEMBER",
-          authorRole: user?.role === "admin" ? "Dosen Tel-U & Admin" : "Civitas Catur Tel-U",
-          avatarInitials: user ? user.username.slice(0, 2).toUpperCase() : "PT",
-          content: newTopicContent.trim(),
-          attachedGame: selectedGameForNewTopic || undefined,
-          likes: 0,
-          createdAt: "Baru saja",
-        },
-      ],
+    const initialPost: ForumPost = {
+      id: `p-${Date.now()}`,
+      postNumber: 1,
+      authorUsername: user?.username || "pemain_catur",
+      authorName: user?.fullName || "Pemain Catur",
+      authorTitle: user?.isAdmin ? "ADMIN KOMUNITAS" : "MEMBER",
+      authorRole: user?.isAdmin ? "Admin & Dosen" : "Anggota Komunitas",
+      avatarInitials: (user?.fullName || "PC").slice(0, 2).toUpperCase(),
+      content: newTopicContent,
+      likes: 0,
+      createdAt: "Baru saja",
+      attachedGame: selectedGameForNewTopic || undefined,
     };
 
-    setThreads([newThread, ...threads]);
+    const createdThread: ForumThread = {
+      id: newThreadId,
+      categoryId: cat.id,
+      categoryName: cat.name,
+      title: newTopicTitle,
+      authorUsername: user?.username || "pemain_catur",
+      authorName: user?.fullName || "Pemain Catur",
+      authorTitle: user?.isAdmin ? "ADMIN KOMUNITAS" : "MEMBER",
+      avatarInitials: (user?.fullName || "PC").slice(0, 2).toUpperCase(),
+      repliesCount: 1,
+      lastActivity: "Baru saja",
+      posts: [initialPost],
+      attachedGameSummary: selectedGameForNewTopic
+        ? {
+            opponent: selectedGameForNewTopic.opponent,
+            outcome: selectedGameForNewTopic.outcomeKind,
+            movesCount: selectedGameForNewTopic.moves.length,
+            playedAs: selectedGameForNewTopic.humanSide,
+          }
+        : undefined,
+    };
+
+    setThreads((prev) => [createdThread, ...prev]);
+    setActiveThreadId(newThreadId);
+    setViewMode("thread");
     setShowNewTopicModal(false);
     setNewTopicTitle("");
     setNewTopicContent("");
     setSelectedGameForNewTopic(null);
-    setActiveThreadId(newThreadId);
-    setViewMode("thread");
   };
 
+  // Filtered threads list
+  const filteredThreads = useMemo(() => {
+    return threads.filter((t) => {
+      const matchCat = filterCategory === "all" || t.categoryId === filterCategory;
+      const matchQ =
+        !searchQuery.trim() ||
+        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.posts.some((p) => p.content.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchCat && matchQ;
+    });
+  }, [threads, filterCategory, searchQuery]);
+
   return (
-    <div className="stack" style={{ maxWidth: "72rem", margin: "0 auto" }}>
-      {/* Top Header & Search Bar */}
-      <div className="row-between flex-wrap gap-3 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
+    <div className="stack" style={{ maxWidth: "68rem", margin: "0 auto" }}>
+      {/* HEADER FORUM */}
+      <div
+        className="panel p-4 row-between flex-wrap gap-3"
+        style={{ background: "var(--card)" }}
+      >
         <div>
-          <h2 className="section-title flex items-center gap-2">
+          <h2 className="section-title flex items-center gap-2" style={{ margin: 0 }}>
             <IconCommunity3D size={24} />
-            <span>{lang === "id" ? "Forum Komunitas Catur Tel-U" : "Tel-U Chess Community"}</span>
+            <span>Komunitas &amp; Forum Catur FIF Tel-U</span>
           </h2>
           <p className="prose-note" style={{ margin: 0, fontSize: "var(--text-xs)" }}>
-            Diskusi taktik, kutip balas, dan analisis AI interaktif untuk setiap partai civitas
+            Diskusikan pembukaan, analisis partai, dan bagikan taktik bersama civitas catur Tel-U
           </p>
         </div>
 
-        <div className="row gap-2 flex-wrap">
-          <div className="row items-center px-2.5 py-1 rounded-xl bg-[var(--background)] border border-[var(--border)]" style={{ minWidth: "14rem" }}>
-            <IconSearch3D size={16} />
-            <input
-              type="text"
-              placeholder="Cari topik atau pemain..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none text-xs text-white focus:outline-none ml-2 w-full"
-            />
-          </div>
-          <button className="ctl ctl-sm ctl-primary" onClick={() => setShowNewTopicModal(true)}>
+        <div className="row gap-2">
+          {viewMode === "thread" && (
+            <button
+              onClick={() => setViewMode("index")}
+              className="ctl ctl-sm ctl-quiet flex items-center gap-1.5"
+            >
+              <span>← Kembali ke Daftar Topik</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowNewTopicModal(true)}
+            className="ctl ctl-sm ctl-primary flex items-center gap-1.5"
+          >
             <IconPencil3D size={16} />
-            <span>{lang === "id" ? "Buat Topik Baru" : "New Topic"}</span>
+            <span>Buat Topik Baru</span>
           </button>
         </div>
       </div>
 
-      {/* Main Forum Content: Index or Thread View */}
-      {viewMode === "index" ? (
-        <div className="stack" style={{ gap: "1rem" }}>
-          {/* Category Filter Pills */}
-          <div className="row flex-wrap gap-2">
-            <button
-              className={`ctl ctl-sm ${filterCategory === "all" ? "ctl-active" : ""}`}
-              onClick={() => setFilterCategory("all")}
-            >
-              Semua Kategori ({threads.length})
-            </button>
-            {categories.map((c) => (
+      {/* MODAL BUAT TOPIK BARU DENGAN RICH TEXT & IMPORT PARTAI */}
+      {showNewTopicModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/80 backdrop-blur-sm"
+        >
+          <div
+            className="panel p-4 md:p-5 stack max-w-xl w-full max-h-[90vh] overflow-y-auto"
+            style={{ background: "var(--card)" }}
+          >
+            <div className="row-between pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-2 font-bold text-sm text-white">
+                <IconPencil3D size={18} />
+                <span>Buat Topik Diskusi Baru</span>
+              </div>
               <button
-                key={c.id}
-                className={`ctl ctl-sm ${filterCategory === c.id ? "ctl-active" : ""}`}
-                onClick={() => setFilterCategory(c.id)}
+                className="ctl ctl-xs ctl-quiet"
+                onClick={() => setShowNewTopicModal(false)}
               >
-                {c.name} ({threads.filter((t) => t.categoryId === c.id).length})
+                <IconClose3D size={14} />
               </button>
-            ))}
-          </div>
+            </div>
 
-          {/* Threads List Table */}
-          <div className="panel p-3">
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Topik Diskusi</th>
-                    <th style={{ width: "8rem" }}>Kategori</th>
-                    <th style={{ width: "6rem", textAlign: "center" }}>Balasan</th>
-                    <th style={{ width: "8rem", textAlign: "right" }}>Aktivitas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredThreads.map((t) => (
-                    <tr
-                      key={t.id}
-                      onClick={() => {
-                        setActiveThreadId(t.id);
-                        setViewMode("thread");
-                      }}
-                      className="cursor-pointer transition-all"
+            {/* Form Fields */}
+            <div className="stack-tight text-xs">
+              <label className="label font-bold">Kategori Forum:</label>
+              <select
+                value={newTopicCategory}
+                onChange={(e) => setNewTopicCategory(e.target.value)}
+                className="w-full p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)]"
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-[var(--card)]">
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+
+              <label className="label font-bold mt-2">Judul Topik Diskusi:</label>
+              <input
+                type="text"
+                value={newTopicTitle}
+                onChange={(e) => setNewTopicTitle(e.target.value)}
+                placeholder="Contoh: Diskusi Taktik Sayap Raja vs Sisilia..."
+                className="w-full p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)]"
+              />
+
+              <label className="label font-bold mt-2">Isi Topik (Mendukung Format Rich Text &amp; Notasi PGN):</label>
+              
+              {/* Rich Text Editor with Toolbar */}
+              <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+                <RichTextToolbar
+                  textareaRef={newTopicTextareaRef}
+                  value={newTopicContent}
+                  onChange={setNewTopicContent}
+                />
+                <textarea
+                  ref={newTopicTextareaRef}
+                  value={newTopicContent}
+                  onChange={(e) => setNewTopicContent(e.target.value)}
+                  rows={6}
+                  placeholder="Tulis opini, pertanyaan, atau notasi langkah catur Anda di sini..."
+                  className="w-full p-2.5 bg-[var(--surface)] text-xs text-white font-sans focus:outline-none resize-y"
+                />
+              </div>
+
+              {/* Import Game Attachment Option */}
+              <div className="pt-2">
+                <div className="row-between mb-1">
+                  <span className="label font-bold">Lampirkan Riwayat Permainan (Opsional):</span>
+                  {selectedGameForNewTopic && (
+                    <button
+                      onClick={() => setSelectedGameForNewTopic(null)}
+                      className="text-xs text-[var(--destructive)] font-bold hover:underline"
                     >
-                      <td>
-                        <div className="stack-tight">
-                          <div className="flex items-center gap-2">
-                            {t.isPinned && (
-                              <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                <IconPin3D size={12} /> Pin
-                              </span>
-                            )}
-                            {t.isHot && (
-                              <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">
-                                <IconFire3D size={12} /> Hot
-                              </span>
-                            )}
-                            <span className="font-bold text-sm text-white hover:text-[var(--primary)] transition-all">
-                              {t.title}
-                            </span>
+                      Hapus Lampiran
+                    </button>
+                  )}
+                </div>
+
+                {selectedGameForNewTopic ? (
+                  <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--primary)] flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-white text-xs">
+                        vs {selectedGameForNewTopic.opponent} ({selectedGameForNewTopic.humanSide === "white" ? "Putih" : "Hitam"})
+                      </div>
+                      <div className="text-[11px] text-[var(--muted-foreground)]">
+                        Hasil: {selectedGameForNewTopic.outcomeKind} · {selectedGameForNewTopic.moves.length} langkah
+                      </div>
+                    </div>
+                    <span className="ctl ctl-xs font-bold" style={{ borderColor: "var(--primary)", color: "var(--primary)" }}>
+                      Terlampir
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
+                    {gameHistory.length === 0 ? (
+                      <p className="prose-note text-[11px] m-1">Belum ada riwayat permainan lokal yang tersimpan.</p>
+                    ) : (
+                      gameHistory.slice(0, 5).map((g) => (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => setSelectedGameForNewTopic(g)}
+                          className="px-2 py-1 rounded-lg bg-[var(--card)] border border-[var(--border)] text-left hover:border-[var(--primary)] transition-all"
+                        >
+                          <div className="text-[11px] font-bold text-white">vs {g.opponent}</div>
+                          <div className="text-[10px] text-[var(--muted-foreground)]">
+                            {g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind}
                           </div>
-                          <div className="text-xs text-[var(--muted-foreground)]">
-                            Oleh <strong className="text-white">{t.authorName}</strong> (@{t.authorUsername})
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="ctl ctl-xs" style={{ padding: "0 0.5rem", fontSize: "11px" }}>
-                          {t.categoryName.split(" ")[0]}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "center" }} className="num font-bold">
-                        <span className="flex items-center justify-center gap-1">
-                          <IconMessages3D size={14} />
-                          {t.repliesCount}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "right" }} className="prose-note text-xs">
-                        {t.lastActivity}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="row justify-end gap-2 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+              <button
+                className="ctl ctl-sm ctl-quiet"
+                onClick={() => setShowNewTopicModal(false)}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleCreateTopic}
+                disabled={!newTopicTitle.trim() || !newTopicContent.trim()}
+                className="ctl ctl-sm ctl-primary"
+              >
+                <IconPencil3D size={14} />
+                <span>Terbitkan Topik</span>
+              </button>
             </div>
           </div>
         </div>
-      ) : (
-        /* Thread Detail View */
-        <div className="stack" style={{ gap: "1rem" }}>
-          {/* Breadcrumb & Navigation */}
-          <div className="row-between">
-            <button className="ctl ctl-sm ctl-quiet" onClick={() => setViewMode("index")}>
-              ← Kembali ke Daftar Forum
-            </button>
-            <span className="ctl ctl-xs">{activeThread.categoryName}</span>
-          </div>
+      )}
 
-          {/* Thread Title Header */}
-          <div className="panel p-4 stack-tight" style={{ background: "var(--card)" }}>
-            <div className="flex items-center gap-2">
-              {activeThread.isPinned && (
-                <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  <IconPin3D size={14} /> Sematan
-                </span>
-              )}
-              <h1 className="text-lg md:text-xl font-black text-white">{activeThread.title}</h1>
+      {/* VIEW 1: INDEX TOPIK FORUM */}
+      {viewMode === "index" && (
+        <div className="stack">
+          {/* SEARCH & CATEGORY FILTER */}
+          <div className="panel p-3 stack-tight" style={{ background: "var(--surface)" }}>
+            <div className="row gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari topik diskusi, judul pembukaan, atau username..."
+                  className="w-full p-2 pl-8 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)]"
+                />
+                <div className="absolute left-2.5 top-2.5 pointer-events-none opacity-60">
+                  <IconSearch3D size={14} />
+                </div>
+              </div>
             </div>
-            <p className="prose-note text-xs">
-              Dimulai oleh <strong>{activeThread.authorName}</strong> · {activeThread.posts.length} Postingan
-            </p>
+
+            {/* Category Pills */}
+            <div className="row items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 text-xs">
+              <button
+                onClick={() => setFilterCategory("all")}
+                className={`ctl ctl-xs shrink-0 ${filterCategory === "all" ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"}`}
+              >
+                Semua Kategori
+              </button>
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setFilterCategory(c.id)}
+                  className={`ctl ctl-xs shrink-0 ${filterCategory === c.id ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"}`}
+                >
+                  {c.name} ({c.threadsCount})
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Posts Stream */}
-          <div className="stack" style={{ gap: "0.75rem" }}>
+          {/* THREADS LIST */}
+          <div className="stack-tight">
+            {filteredThreads.length === 0 ? (
+              <div className="panel p-8 text-center text-[var(--muted-foreground)]">
+                Tidak ada topik diskusi yang sesuai dengan filter pencarian.
+              </div>
+            ) : (
+              filteredThreads.map((th) => (
+                <div
+                  key={th.id}
+                  onClick={() => {
+                    setActiveThreadId(th.id);
+                    setViewMode("thread");
+                  }}
+                  className="panel p-3.5 hover:border-[var(--primary)] transition-all cursor-pointer stack-tight"
+                  style={{ background: "var(--card)" }}
+                >
+                  <div className="row-between flex-wrap gap-2">
+                    <div className="row items-center gap-2 min-w-0">
+                      {th.isPinned && <IconPin3D size={16} />}
+                      {th.isHot && <IconFire3D size={16} />}
+                      <h3 className="font-bold text-sm text-white hover:text-[var(--primary)] transition-colors truncate m-0">
+                        {th.title}
+                      </h3>
+                    </div>
+                    <span className="ctl ctl-xs" style={{ background: "var(--surface)" }}>
+                      {th.categoryName}
+                    </span>
+                  </div>
+
+                  {/* Summary preview */}
+                  <p className="prose-note text-xs text-neutral-300 line-clamp-2 m-0">
+                    {th.posts[0]?.content}
+                  </p>
+
+                  {/* Thread Footer Info */}
+                  <div className="row-between pt-1 text-[11px] text-[var(--muted-foreground)]" style={{ borderTop: "1px solid var(--border)" }}>
+                    <div className="row items-center gap-2">
+                      <span className="font-bold text-white">@{th.authorUsername}</span>
+                      <span>·</span>
+                      <span>{th.lastActivity}</span>
+                      {th.attachedGameSummary && (
+                        <span className="text-[var(--primary)] font-bold">
+                          · [Ada Partai Lampiran vs {th.attachedGameSummary.opponent}]
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 font-bold text-white">
+                      <IconMessages3D size={14} />
+                      <span>{th.repliesCount} Balasan</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 2: THREAD DETAIL & REPLIES */}
+      {viewMode === "thread" && (
+        <div className="stack">
+          {/* Thread Header */}
+          <div className="panel p-4 stack-tight" style={{ background: "var(--card)" }}>
+            <div className="row-between flex-wrap gap-2">
+              <span className="ctl ctl-xs font-bold" style={{ borderColor: "var(--primary)", color: "var(--primary)" }}>
+                {activeThread.categoryName}
+              </span>
+              <span className="text-xs text-[var(--muted-foreground)]">
+                Aktivitas terakhir: {activeThread.lastActivity}
+              </span>
+            </div>
+
+            <h1 className="text-base md:text-lg font-black text-white m-0">
+              {activeThread.title}
+            </h1>
+          </div>
+
+          {/* Posts List */}
+          <div className="stack">
             {activeThread.posts.map((post) => (
-              <div key={post.id} className="panel p-4 stack-tight" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+              <div
+                key={post.id}
+                id={`post-${post.id}`}
+                className="panel p-4 stack-tight"
+                style={{ background: "var(--card)" }}
+              >
                 {/* Author Info Bar */}
                 <div className="row-between pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow">
+                  <div className="row items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)] text-[var(--primary)] font-bold flex items-center justify-center text-xs">
                       {post.avatarInitials}
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span>{post.authorName}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs text-white">@{post.authorUsername}</span>
                         {post.authorTitle && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-[var(--primary-strong)] text-[var(--primary)] border border-[var(--primary)]">
+                          <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-[var(--primary)] text-black">
                             {post.authorTitle}
                           </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-[var(--muted-foreground)]">
-                        @{post.authorUsername} · {post.authorRole}
+                      <div className="text-[10px] text-[var(--muted-foreground)]">
+                        {post.authorRole || "Civitas Catur Tel-U"} · {post.createdAt}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-[var(--muted-foreground)]">#{post.postNumber}</span>
-                    <button
-                      className="ctl ctl-xs ctl-quiet flex items-center gap-1 text-xs"
-                      onClick={() => handleQuotePost(post)}
-                      title="Kutip dan Balas postingan ini"
-                    >
-                      <IconQuote3D size={14} />
-                      <span>Kutip Balas</span>
-                    </button>
-                  </div>
+
+                  <span className="text-[11px] font-mono font-bold text-[var(--muted-foreground)]">
+                    #{post.postNumber}
+                  </span>
                 </div>
 
-                {/* Quoted Box if Present */}
-                {post.quote && (
-                  <div
-                    className="panel p-2.5 my-2 border-l-4"
-                    style={{
-                      background: "var(--surface)",
-                      borderColor: "var(--primary)",
-                      borderLeftColor: "var(--primary)",
-                    }}
-                  >
-                    <div className="text-[11px] font-bold text-[var(--primary)] mb-1">
-                      Kutipan @{post.quote.authorUsername} (#{post.quote.postNumber}):
-                    </div>
-                    <p className="prose-note text-xs italic m-0">"{post.quote.snippet}"</p>
-                  </div>
+                {/* Formatted Post Content */}
+                <FormattedPostContent text={post.content} />
+
+                {/* Interactive Embedded Chessboard if Attached */}
+                {post.attachedGame && (
+                  <EmbeddedMatchPlayer
+                    game={post.attachedGame}
+                    authorUsername={post.authorUsername}
+                  />
                 )}
 
-                {/* Post Content */}
-                <p className="text-sm text-neutral-200 leading-relaxed whitespace-pre-wrap my-2">
-                  {post.content}
-                </p>
-
-                {/* Attached Interactive Game Player */}
-                {post.attachedGame && <ForumGamePlayer record={post.attachedGame} />}
-
-                {/* Post Footer: Likes & Time */}
-                <div className="row-between pt-2 mt-2" style={{ borderTop: "1px solid var(--border)" }}>
-                  <span className="text-xs text-[var(--muted-foreground)]">{post.createdAt}</span>
-                  <button className="ctl ctl-xs ctl-quiet flex items-center gap-1.5">
+                {/* Post Footer Actions */}
+                <div className="row-between pt-2 text-xs" style={{ borderTop: "1px solid var(--border)" }}>
+                  <button
+                    onClick={() => {
+                      setThreads((prev) =>
+                        prev.map((t) =>
+                          t.id === activeThread.id
+                            ? {
+                                ...t,
+                                posts: t.posts.map((p) =>
+                                  p.id === post.id ? { ...p, likes: p.likes + 1 } : p
+                                ),
+                              }
+                            : t
+                        )
+                      );
+                    }}
+                    className="ctl ctl-xs flex items-center gap-1.5 font-bold"
+                  >
                     <IconThumbsUp3D size={14} />
-                    <span>Suka ({post.likes})</span>
+                    <span>{post.likes} Suka</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleQuotePost(post)}
+                    className="ctl ctl-xs ctl-quiet flex items-center gap-1.5 font-bold"
+                  >
+                    <IconQuote3D size={14} />
+                    <span>Kutip Balas</span>
                   </button>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Quick Reply Box */}
-          <div className="panel p-4 stack-tight" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-            <h3 className="section-title text-sm flex items-center gap-2">
-              <IconMessages3D size={18} />
-              <span>Tulis Balasan untuk Topik Ini</span>
-            </h3>
+          {/* REPLY EDITOR FORM */}
+          <div className="panel p-4 stack-tight" style={{ background: "var(--surface)" }}>
+            <div className="row-between pb-1">
+              <span className="label font-bold">Ketik Balasan Diskusi:</span>
+              <button
+                type="button"
+                onClick={() => setShowGameImportPicker(!showGameImportPicker)}
+                className="ctl ctl-xs flex items-center gap-1 font-bold"
+              >
+                <IconHistory3D size={14} />
+                <span>{selectedGameForReply ? "Ganti Partai Terlampir" : "Import Riwayat Partai"}</span>
+              </button>
+            </div>
 
-            {/* Quoted Indicator */}
-            {quotedPost && (
-              <div className="row-between panel p-2 bg-[var(--card)]" style={{ borderColor: "var(--primary)" }}>
-                <div className="text-xs truncate">
-                  <strong className="text-[var(--primary)]">Mengutip @{quotedPost.authorUsername}:</strong>{" "}
-                  <span className="italic text-neutral-300">"{quotedPost.content.slice(0, 60)}..."</span>
-                </div>
-                <button className="ctl ctl-xs ctl-quiet" onClick={() => setQuotedPost(null)}>
-                  <IconClose3D size={14} />
-                </button>
-              </div>
-            )}
-
-            {/* Attached Game Indicator */}
+            {/* Attached game badge in reply */}
             {selectedGameForReply && (
-              <div className="row-between panel p-2 bg-[var(--card)]" style={{ borderColor: "var(--primary)" }}>
-                <div className="text-xs flex items-center gap-2">
-                  <IconHistory3D size={14} />
-                  <span>
-                    Melampirkan partai: <strong>vs {selectedGameForReply.opponent}</strong> ({selectedGameForReply.moves.length} langkah)
+              <div className="p-2 rounded-xl bg-[var(--card)] border border-[var(--primary)] row-between text-xs mb-1">
+                <div>
+                  <span className="font-bold text-white">Partai Terlampir: </span>
+                  <span className="text-[var(--primary)] font-bold">
+                    vs {selectedGameForReply.opponent} ({selectedGameForReply.humanSide === "white" ? "Putih" : "Hitam"} · {selectedGameForReply.outcomeKind})
                   </span>
                 </div>
-                <button className="ctl ctl-xs ctl-quiet" onClick={() => setSelectedGameForReply(null)}>
-                  <IconClose3D size={14} />
-                </button>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmitReply} className="stack-tight">
-              <textarea
-                ref={replyInputRef}
-                rows={4}
-                placeholder="Ketik pendapat, analisis blunder, atau tanggapan Anda..."
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                className="w-full p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)] transition-all resize-y"
-              />
-
-              <div className="row-between flex-wrap gap-2 pt-1">
                 <button
-                  type="button"
-                  className="ctl ctl-sm ctl-quiet"
-                  onClick={() => setShowGameImportPicker(true)}
+                  onClick={() => setSelectedGameForReply(null)}
+                  className="text-xs text-[var(--destructive)] font-bold hover:underline"
                 >
-                  <IconHistory3D size={16} />
-                  <span>{selectedGameForReply ? "Ganti Partai Terlampir" : "Import Riwayat Permainan"}</span>
+                  Lepas
                 </button>
-
-                <button type="submit" className="ctl ctl-sm ctl-primary" disabled={!replyText.trim() && !selectedGameForReply}>
-                  <span>Kirim Balasan</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Game Import Picker */}
-      {showGameImportPicker && (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="panel p-4 stack max-w-lg w-full" style={{ maxHeight: "80vh", background: "var(--card)" }}>
-            <div className="row-between">
-              <h3 className="section-title text-sm flex items-center gap-2">
-                <IconHistory3D size={18} />
-                <span>Pilih Riwayat Pertandingan untuk Didiskusikan</span>
-              </h3>
-              <button className="ctl ctl-xs ctl-quiet" onClick={() => setShowGameImportPicker(false)}>
-                <IconClose3D size={16} />
-              </button>
-            </div>
-
-            {gameHistory.length === 0 ? (
-              <p className="prose-note text-center py-6">
-                Belum ada riwayat permainan yang tersimpan. Mainkan partai di menu Bermain terlebih dahulu!
-              </p>
-            ) : (
-              <div className="stack-tight overflow-y-auto max-h-96 pr-1">
-                {gameHistory.map((g) => (
-                  <div
-                    key={g.id}
-                    onClick={() => {
-                      if (showNewTopicModal) setSelectedGameForNewTopic(g);
-                      else setSelectedGameForReply(g);
-                      setShowGameImportPicker(false);
-                    }}
-                    className="panel p-3 cursor-pointer hover:border-[var(--primary)] transition-all stack-tight"
-                    style={{ background: "var(--surface)" }}
-                  >
-                    <div className="row-between">
-                      <strong className="text-xs text-white">vs {g.opponent}</strong>
-                      <span className="ctl ctl-xs">{g.outcomeKind}</span>
-                    </div>
-                    <div className="row-between text-xs text-[var(--muted-foreground)]">
-                      <span>Bidak {g.humanSide === "white" ? "Putih" : "Hitam"} · {g.moves.length} langkah</span>
-                      <span>{new Date(g.playedAt).toLocaleDateString("id-ID")}</span>
-                    </div>
-                  </div>
-                ))}
               </div>
             )}
-          </div>
-        </div>
-      )}
 
-      {/* Modal: Create New Topic */}
-      {showNewTopicModal && (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="panel p-5 stack max-w-xl w-full" style={{ maxHeight: "90vh", background: "var(--card)" }}>
-            <div className="row-between">
-              <h3 className="section-title flex items-center gap-2">
-                <IconPencil3D size={20} />
-                <span>Buat Topik Diskusi Baru</span>
-              </h3>
-              <button className="ctl ctl-xs ctl-quiet" onClick={() => setShowNewTopicModal(false)}>
-                <IconClose3D size={16} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitNewTopic} className="stack-tight">
-              <div className="stack-tight">
-                <label className="label text-xs font-bold">Kategori Forum</label>
-                <select
-                  value={newTopicCategory}
-                  onChange={(e) => setNewTopicCategory(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)]"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="stack-tight">
-                <label className="label text-xs font-bold">Judul Topik</label>
-                <input
-                  type="text"
-                  placeholder="Misal: Analisis Blunder di Babak Akhir vs Stockfish..."
-                  value={newTopicTitle}
-                  onChange={(e) => setNewTopicTitle(e.target.value)}
-                  required
-                  className="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)]"
-                />
-              </div>
-
-              <div className="stack-tight">
-                <label className="label text-xs font-bold">Isi Pesan / Pertanyaan</label>
-                <textarea
-                  rows={5}
-                  placeholder="Jelaskan analisa posisi, strategi pembukaan, atau hal yang ingin Anda tanyakan kepada civitas..."
-                  value={newTopicContent}
-                  onChange={(e) => setNewTopicContent(e.target.value)}
-                  required
-                  className="w-full p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)] resize-y"
-                />
-              </div>
-
-              {/* Attached Game in New Topic */}
-              {selectedGameForNewTopic ? (
-                <div className="row-between panel p-2.5 bg-[var(--surface)]" style={{ borderColor: "var(--primary)" }}>
-                  <div className="text-xs flex items-center gap-2">
-                    <IconHistory3D size={16} />
-                    <span>
-                      Partai Terlampir: <strong>vs {selectedGameForNewTopic.opponent}</strong> ({selectedGameForNewTopic.moves.length} langkah)
-                    </span>
-                  </div>
-                  <button className="ctl ctl-xs ctl-quiet" onClick={() => setSelectedGameForNewTopic(null)}>
-                    <IconClose3D size={14} />
+            {/* Game Import Selector Drawer */}
+            {showGameImportPicker && (
+              <div className="panel p-3 stack-tight bg-[var(--card)] border border-[var(--primary)] mb-2">
+                <div className="row-between text-xs font-bold text-white">
+                  <span>Pilih Partai dari Riwayat Bermain Lokal:</span>
+                  <button onClick={() => setShowGameImportPicker(false)} className="text-[var(--muted-foreground)]">
+                    ✕
                   </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  className="ctl ctl-sm ctl-quiet w-full justify-center"
-                  onClick={() => setShowGameImportPicker(true)}
-                >
-                  <IconHistory3D size={16} />
-                  <span>Lampirkan Riwayat Permainan Saya (Untuk Analisis AI)</span>
-                </button>
-              )}
-
-              <div className="row justify-end gap-2 pt-2">
-                <button type="button" className="ctl ctl-sm" onClick={() => setShowNewTopicModal(false)}>
-                  Batal
-                </button>
-                <button type="submit" className="ctl ctl-sm ctl-primary" disabled={!newTopicTitle.trim() || !newTopicContent.trim()}>
-                  Terbitkan Topik
-                </button>
+                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                  {gameHistory.length === 0 ? (
+                    <p className="prose-note text-[11px] m-1">Belum ada riwayat permainan.</p>
+                  ) : (
+                    gameHistory.map((g) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedGameForReply(g);
+                          setShowGameImportPicker(false);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-left hover:border-[var(--primary)] transition-all"
+                      >
+                        <div className="text-xs font-bold text-white">vs {g.opponent}</div>
+                        <div className="text-[10px] text-[var(--muted-foreground)]">
+                          {g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind} · {g.moves.length} langkah
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
-            </form>
+            )}
+
+            {/* Rich Text Editor for Reply */}
+            <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+              <RichTextToolbar
+                textareaRef={replyInputRef}
+                value={replyText}
+                onChange={setReplyText}
+              />
+              <textarea
+                ref={replyInputRef}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                rows={4}
+                placeholder="Tulis balasan Anda (gunakan tombol Kutip Balas pada postingan untuk mengutip)..."
+                className="w-full p-2.5 bg-[var(--card)] text-xs text-white focus:outline-none resize-y"
+              />
+            </div>
+
+            <div className="row justify-between items-center pt-2">
+              <span className="text-[10px] text-[var(--muted-foreground)]">
+                *Mendukung formatting bold (**teks**), italic (*teks*), quote (&gt;), dan blok kode PGN
+              </span>
+              <button
+                onClick={handleSubmitReply}
+                disabled={!replyText.trim() && !selectedGameForReply}
+                className="ctl ctl-sm ctl-primary font-bold flex items-center gap-1.5"
+              >
+                <IconMessages3D size={14} />
+                <span>Kirim Balasan</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

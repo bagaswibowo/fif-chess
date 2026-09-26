@@ -946,6 +946,8 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                   blackTime={formattedBlackTime}
                   activeSide={effectiveOutcome.over ? null : turn}
                   onClose={() => setFullscreenClocks(false)}
+                  boardOrientation={humanSide === "black" ? "black" : "white"}
+                  onPieceDrop={onPieceDrop}
                 />
               )}
             </div>

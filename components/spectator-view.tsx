@@ -1,5 +1,13 @@
 "use client";
 
+// AI vs Engine Catur Arena (v2.0)
+// Fitur:
+// 1. Label resmi "AI vs Engine Catur" dengan pemilih engine cepat.
+// 2. Deteksi taktik eksplisit dengan nama motif (Skakmat Tangga, Skewer, Pin, Fork, dll.).
+// 3. Tipografi 12px terstruktur rapi dengan penekanan bold & italic.
+// 4. Notasi langkah dalam tabel 2-kolom terpisah (Langkah Putih vs Langkah Hitam) berlabel nama engine.
+// 5. Layout compact & minimalis tanpa membuang ruang layar.
+
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Chessboard } from "react-chessboard";
@@ -39,7 +47,13 @@ type Commentary = {
   tektokkan?: TektokkanPrediction | null;
 };
 
-const MOVE_DELAY_MS = 900;
+const MOVE_DELAY_MS = 850;
+
+const ENGINE_LABELS: Record<EngineType, string> = {
+  stockfish: "Stockfish 15 NNUE",
+  jev: "Jev AI Connectome",
+  fly: "Fruit Fly Brain",
+};
 
 function getAttackedSquares(chess: Chess, sq: string): string[] {
   const piece = chess.get(sq as any);
@@ -110,8 +124,8 @@ export function SpectatorView({
   lang?: "id" | "en";
   onTryPosition?: (fen: string, moves: string[]) => void;
 }) {
-  const [whiteEngine, setWhiteEngine] = useState<EngineType>("jev");
-  const [blackEngine, setBlackEngine] = useState<EngineType>("stockfish");
+  const [whiteEngine, setWhiteEngine] = useState<EngineType>("stockfish");
+  const [blackEngine, setBlackEngine] = useState<EngineType>("jev");
   const [jevDepth, setJevDepth] = useState(10);
   const [sfDepth, setSfDepth] = useState(10);
 
@@ -121,7 +135,6 @@ export function SpectatorView({
   const [outcome, setOutcome] = useState<GameOutcome | null>(null);
   const [seed, setSeed] = useState(1);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [showReviewModal, setShowReviewModal] = useState(false);
 
   const [lastMoveUci, setLastMoveUci] = useState<string | null>(null);
   const [threatInfo, setThreatInfo] = useState<{ from: string; to: string; sq: string } | null>(null);
@@ -136,7 +149,6 @@ export function SpectatorView({
     setShowConfetti(false);
 
     const chess = new Chess(currentFen);
-    let prevCp: number | null = null;
 
     while (!abortRef.current) {
       const isWhiteTurn = chess.turn() === "w";
@@ -175,14 +187,14 @@ export function SpectatorView({
       }
 
       if (!res.ok || abortRef.current) break;
-      const data = await res.json() as { uci: string; san: string; scoreCp: number | null };
+      const data = (await res.json()) as { uci: string; san: string; scoreCp: number | null };
       if (!data.uci) break;
 
       const move = findLegalMove(
         chess,
         data.uci.slice(0, 2) as Square,
         data.uci.slice(2, 4) as Square,
-        data.uci.length > 4 ? (data.uci[4] as "q") : undefined,
+        data.uci.length > 4 ? (data.uci[4] as "q") : undefined
       );
       if (!move) break;
 
@@ -197,9 +209,8 @@ export function SpectatorView({
         fen,
         scoreCp: data.scoreCp,
       };
-      setMoves(prev => [...prev, newMove]);
+      setMoves((prev) => [...prev, newMove]);
 
-      const fromSq = data.uci.slice(0, 2);
       const toSq = data.uci.slice(2, 4);
       setLastMoveUci(data.uci);
 
@@ -237,17 +248,19 @@ export function SpectatorView({
         chosenPred = { from: tektokkan.defenderFrom, to: tektokkan.targetSq, san: `x${tektokkan.targetSq}` };
         predDesc = tektokkan.explanation || "";
       } else if (legals.length > 0) {
-        const recapture = legals.find(m => m.to === toSq && m.captured);
+        const recapture = legals.find((m) => m.to === toSq && m.captured);
         if (recapture) {
           chosenPred = { from: recapture.from, to: recapture.to, san: recapture.san };
           predDesc = `Lawan diprediksi membalas memakan ${data.san} di ${toSq} via ${recapture.san}!`;
         } else if (chess.isCheck()) {
-          const escape = legals.find(m => m.piece === "k") || legals[0];
+          const escape = legals.find((m) => m.piece === "k") || legals[0];
           chosenPred = { from: escape.from, to: escape.to, san: escape.san };
           predDesc = `Raja lawan terpaksa menghindar atau menutup skak via ${escape.san}.`;
         } else {
-          const captures = legals.filter(m => m.captured).sort((a,b) => (valMap[b.captured || "p"] || 0) - (valMap[a.captured || "p"] || 0));
-          const bestMove = captures[0] || legals.find(m => m.san.includes("+")) || legals[0];
+          const captures = legals
+            .filter((m) => m.captured)
+            .sort((a, b) => (valMap[b.captured || "p"] || 0) - (valMap[a.captured || "p"] || 0));
+          const bestMove = captures[0] || legals.find((m) => m.san.includes("+")) || legals[0];
           chosenPred = { from: bestMove.from, to: bestMove.to, san: bestMove.san };
           predDesc = `Ditebak lawan merespons dengan ${bestMove.san} untuk mengimbangi posisi.`;
         }
@@ -255,28 +268,56 @@ export function SpectatorView({
 
       setPredictedMove(chosenPred ? { from: chosenPred.from, to: chosenPred.to } : null);
 
-      // Recognize Tactics (John A. Bain Ch. 1-13) or Openings (only during early opening moves)
+      // Recognize Tactics with Explicit Named Motifs
       const plyCount = chess.history().length;
       const isEarlyOpening = plyCount <= 10;
-      const tactic = identifyBainTactics(chess, data.uci);
+      let tactic = identifyBainTactics(chess, data.uci);
       const opening = isEarlyOpening ? identifyOpeningOrGambit(chess.history()) : null;
-      // If a real tactic appears, prioritize tactic. If in early opening, show opening. Otherwise null (do not show stale badge).
-      const activeConcept = tactic || (isEarlyOpening ? opening : null);
 
-      const actorLabel = actor === "jev" ? "Jev AI" : actor === "fly" ? "Fruit Fly" : "Stockfish 15";
+      // Ensure explicit tactic name when checkmate or sharp tactic happens
+      if (!tactic && data.san.includes("#")) {
+        const isDoubleQueenOrRook = chess.board().flat().filter((p) => p && p.color === (isWhiteTurn ? "w" : "b") && (p.type === "q" || p.type === "r")).length >= 2;
+        tactic = {
+          name: isDoubleQueenOrRook ? "Taktik: Skakmat Tangga (Ladder Mate)" : "Taktik: Skakmat Mutlak (Checkmate)",
+          category: "tactic",
+          description: isDoubleQueenOrRook
+            ? "Pemanfaatan koordinasi dua perwira berat (Menteri/Benteng) untuk membatasi ruang gerak raja di tepi papan hingga skakmat."
+            : "Kombinasi taktis yang mengunci seluruh petak pelarian raja lawan.",
+          badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+        };
+      } else if (!tactic && data.san.includes("+")) {
+        tactic = {
+          name: "Taktik: Skak Tekanan Raja (King Check)",
+          category: "tactic",
+          description: "Serangan langsung terhadap Raja lawan yang memaksa respon defensif seketika.",
+          badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+        };
+      } else if (!tactic && data.san.includes("=")) {
+        tactic = {
+          name: "Taktik: Promosi Bidak Bebas (Pawn Promotion)",
+          category: "tactic",
+          description: "Keberhasilan meloloskan pion ke baris akhir untuk bertransformasi menjadi Menteri baru.",
+          badgeColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+        };
+      }
+
+      const activeConcept = tactic || (isEarlyOpening ? opening : null);
+      const actorLabel = ENGINE_LABELS[actor];
+
       let summaryText = "";
       if (data.san.includes("#")) {
-        summaryText = `SKAKMAT! ${actorLabel} mengunci kemenangan mutlak!`;
+        summaryText = `SKAKMAT! ${actorLabel} mengunci kemenangan mutlak.`;
       } else if (data.san.includes("+")) {
-        summaryText = `Skak tajam! ${actorLabel} menekan raja musuh (${data.san}).`;
+        summaryText = `Skak tajam! ${actorLabel} menekan raja lawan (${data.san}).`;
       } else if (data.san.includes("x")) {
-        summaryText = `${actorLabel} melancarkan pemukulan perwira di ${toSq}!`;
+        summaryText = `${actorLabel} melancarkan pemukulan perwira di ${toSq}.`;
       } else {
         summaryText = `${actorLabel} bermanuver (${data.san}) memperkuat kendali posisi.`;
       }
 
       const oppKingSq = isWhiteTurn ? "sayap raja hitam" : "sayap raja putih";
-      const targetText = threatDesc || (data.san.includes("+") ? `Mengancam Raja lawan (${oppKingSq})!` : `Mengontrol petak strategis ${toSq}.`);
+      const targetText =
+        threatDesc || (data.san.includes("+") ? `Mengancam Raja lawan (${oppKingSq})!` : `Mengontrol petak strategis ${toSq}.`);
 
       setCommentary({
         moveSan: data.san,
@@ -296,14 +337,14 @@ export function SpectatorView({
         return;
       }
 
-      await new Promise<void>(res => setTimeout(res, MOVE_DELAY_MS));
+      await new Promise<void>((res) => setTimeout(res, MOVE_DELAY_MS));
       if (abortRef.current) break;
     }
 
     if (!abortRef.current) setStatus("finished");
   }, [whiteEngine, blackEngine, jevDepth, sfDepth, seed, currentFen]);
 
-    const swapSides = () => {
+  const swapSides = () => {
     if (status === "running") stopMatch();
     const prevWhite = whiteEngine;
     const prevBlack = blackEngine;
@@ -328,14 +369,14 @@ export function SpectatorView({
     setThreatInfo(null);
     setPredictedMove(null);
     setCommentary(null);
-    setSeed(s => s + 1);
+    setSeed((s) => s + 1);
   };
 
   const lastMove = moves[moves.length - 1] ?? null;
   const lastCp = lastMove?.scoreCp ?? null;
   const isLastMoveWhite = moves.length % 2 === 1;
   const whiteCp = lastCp !== null ? (isLastMoveWhite ? -lastCp : lastCp) : null;
-  const barPct = whiteCp !== null ? Math.round((Math.tanh(whiteCp / 400) + 1) / 2 * 100) : 50;
+  const barPct = whiteCp !== null ? Math.round(((Math.tanh(whiteCp / 400) + 1) / 2) * 100) : 50;
 
   const arrows = useMemo(() => {
     const list: { startSquare: string; endSquare: string; color: string }[] = [];
@@ -370,34 +411,46 @@ export function SpectatorView({
     return styles;
   }, [threatInfo, predictedMove]);
 
+  // 2-column move table rows
+  const moveRows = useMemo(() => {
+    const rows: { n: number; white?: MatchMove; black?: MatchMove }[] = [];
+    moves.forEach((m, idx) => {
+      const rowIdx = Math.floor(idx / 2);
+      if (!rows[rowIdx]) rows[rowIdx] = { n: rowIdx + 1 };
+      if (idx % 2 === 0) rows[rowIdx].white = m;
+      else rows[rowIdx].black = m;
+    });
+    return rows;
+  }, [moves]);
+
   return (
     <div className="max-w-6xl mx-auto space-y-3 pb-8 px-1 md:px-0">
       {showConfetti && <Confetti />}
 
-      {/* TOP HEADER BAR - Compact & Streamlined */}
-      <div className="bg-[#262421] px-3.5 py-2.5 rounded-xl border border-[#36322d] shadow-sm flex items-center justify-between gap-3">
+      {/* TOP HEADER BAR - AI vs Engine Catur */}
+      <div className="panel px-3.5 py-2.5 rounded-xl border border-[var(--border)] flex items-center justify-between gap-3" style={{ background: "var(--card)" }}>
         <div className="flex items-center gap-2.5 min-w-0">
           <IconLightning3D size={22} className="shrink-0" />
           <div className="min-w-0">
-            <h2 className="text-xs md:text-sm font-black text-white truncate flex items-center gap-1.5">
-              <span>Jev AI vs Stockfish</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#81b64c]/20 text-[#81b64c] border border-[#81b64c]/40">
-                Live Broadcast
+            <h2 className="text-xs md:text-sm font-black text-white truncate flex items-center gap-1.5" style={{ margin: 0 }}>
+              <span>AI vs Engine Catur</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/40">
+                Live Arena
               </span>
             </h2>
-            <div className="text-[10px] text-neutral-400 truncate">
-              {status === "running" ? "Pertandingan Sedang Berlangsung..." : status === "finished" ? `Selesai (${moves.length} langkah)` : "Siap Dimulai"}
+            <div className="text-[10px] text-[var(--muted-foreground)] truncate">
+              {status === "running" ? "Pertandingan Berlangsung..." : status === "finished" ? `Selesai (${moves.length} langkah)` : "Siap Dimulai"}
             </div>
           </div>
         </div>
 
-        {/* Action Controls & Settings Toggle */}
+        {/* Action Controls */}
         <div className="flex items-center gap-1.5 shrink-0">
           {status === "idle" || status === "paused" || status === "finished" ? (
             <Button
               onClick={runMatch}
               size="sm"
-              className="bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-xs h-7 px-2.5 shadow-sm active:translate-y-[1px]"
+              className="bg-[var(--primary)] hover:opacity-90 text-white font-bold text-xs h-7 px-2.5 shadow-sm active:translate-y-[1px]"
             >
               {status === "idle" ? "Mulai" : "Lanjutkan"}
             </Button>
@@ -417,7 +470,7 @@ export function SpectatorView({
               onClick={resetMatch}
               size="sm"
               variant="outline"
-              className="border-[#36322d] text-neutral-300 font-bold text-xs h-7 px-2 active:translate-y-[1px]"
+              className="border-[var(--border)] text-neutral-300 font-bold text-xs h-7 px-2 active:translate-y-[1px]"
             >
               Reset
             </Button>
@@ -427,39 +480,28 @@ export function SpectatorView({
             onClick={swapSides}
             size="sm"
             variant="outline"
-            className="border-[#81b64c]/60 text-[#81b64c] hover:bg-[#81b64c]/10 font-bold text-xs h-7 px-2.5 flex items-center gap-1.5 active:translate-y-[1px]"
+            className="border-[var(--primary)]/60 text-[var(--primary)] hover:bg-[var(--primary)]/10 font-bold text-xs h-7 px-2.5 flex items-center gap-1.5 active:translate-y-[1px]"
             title="Tukar posisi Putih dan Hitam"
           >
             <IconSwap3D size={14} />
             <span>Tukar Sisi</span>
           </Button>
 
-          {/* Depth Quick Selector */}
-          <div className="flex items-center gap-1 bg-[#171614] p-0.5 rounded-lg border border-[#36322d]">
-            <span className="text-[10px] text-neutral-400 font-bold px-1">Depth:</span>
+          {/* Depth Selector */}
+          <div className="flex items-center gap-1 bg-[var(--background)] p-0.5 rounded-lg border border-[var(--border)]">
+            <span className="text-[10px] text-[var(--muted-foreground)] font-bold px-1">Depth:</span>
             {[6, 10, 14].map((d) => (
               <button
                 key={d}
                 onClick={() => { setJevDepth(d); setSfDepth(d); }}
                 className={`px-1.5 py-0.5 rounded text-[11px] font-bold transition-all ${
-                  jevDepth === d ? "bg-[#81b64c] text-white shadow-sm" : "text-neutral-400 hover:text-white"
+                  jevDepth === d ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"
                 }`}
-                title={`Kedalaman kalkulasi ${d}`}
               >
                 {d}
               </button>
             ))}
           </div>
-
-          {(status === "finished" || moves.length >= 10) && (
-            <Button
-              onClick={() => setShowReviewModal(true)}
-              size="sm"
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs h-7 px-2.5 shadow-sm active:translate-y-[1px]"
-            >
-              Review
-            </Button>
-          )}
         </div>
       </div>
 
@@ -470,19 +512,19 @@ export function SpectatorView({
         <div className="lg:col-span-7 space-y-2">
           
           {/* Top Player (Black) with 1-Click Engine Selector & Captured Pieces */}
-          <div className="bg-[#1c1a18] px-3 py-2 rounded-xl border border-[#36322d] flex items-center justify-between gap-2 shadow-sm">
+          <div className="panel px-3 py-2 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm" style={{ background: "var(--card)" }}>
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-4 h-4 rounded-full bg-neutral-900 border-2 border-neutral-600 shrink-0" />
+              <div className="w-3.5 h-3.5 rounded-full bg-neutral-900 border-2 border-neutral-600 shrink-0" />
               <select
                 value={blackEngine}
                 onChange={(e) => { setBlackEngine(e.target.value as any); if (status !== "idle") resetMatch(); }}
-                className="bg-[#262421] text-xs md:text-sm font-black text-white border border-[#36322d] rounded-lg px-2 py-1 focus:outline-none focus:border-[#81b64c] cursor-pointer"
+                className="bg-[var(--surface)] text-[12px] font-bold text-white border border-[var(--border)] rounded-lg px-2 py-1 focus:outline-none focus:border-[var(--primary)] cursor-pointer"
               >
-                <option value="stockfish">Stockfish 15 NNUE (Hitam)</option>
                 <option value="jev">Jev AI Connectome (Hitam)</option>
+                <option value="stockfish">Stockfish 15 NNUE (Hitam)</option>
                 <option value="fly">Fruit Fly Brain (Hitam)</option>
               </select>
-              <span className="text-xs text-neutral-400 font-mono font-bold">
+              <span className="text-[11px] text-neutral-400 font-mono font-bold">
                 {whiteCp !== null ? (whiteCp < 0 ? `+${(-whiteCp/100).toFixed(1)}` : `-${(whiteCp/100).toFixed(1)}`) : "="}
               </span>
             </div>
@@ -492,7 +534,7 @@ export function SpectatorView({
           {/* Board Container with Sleek Vertical Eval Bar */}
           <div className="flex gap-2 items-stretch">
             {/* Slim Vertical Eval Bar */}
-            <div className="w-2.5 md:w-3 bg-[#171614] rounded-full overflow-hidden border border-[#36322d] flex flex-col justify-end shrink-0 shadow-inner">
+            <div className="w-2.5 md:w-3 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)] flex flex-col justify-end shrink-0 shadow-inner">
               <div
                 className="w-full bg-neutral-200 transition-all duration-500 rounded-b-full"
                 style={{ height: `${barPct}%` }}
@@ -500,7 +542,7 @@ export function SpectatorView({
             </div>
 
             {/* Chessboard */}
-            <div className="flex-1 rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl bg-[#262421] aspect-square max-w-[540px] mx-auto w-full">
+            <div className="flex-1 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--card)] aspect-square max-w-[540px] mx-auto w-full">
               <Chessboard
                 options={{
                   id: "spectator-board",
@@ -509,114 +551,114 @@ export function SpectatorView({
                   allowDragging: false,
                   arrows,
                   squareStyles,
-                  darkSquareStyle: { backgroundColor: "#b58863" },
-                  lightSquareStyle: { backgroundColor: "#f0d9b5" },
-                  animationDurationInMs: 350,
+                  darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                  lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                  animationDurationInMs: 300,
                 }}
               />
             </div>
           </div>
 
           {/* Bottom Player (White) with 1-Click Engine Selector & Captured Pieces */}
-          <div className="bg-[#1c1a18] px-3 py-2 rounded-xl border border-[#36322d] flex items-center justify-between gap-2 shadow-sm">
+          <div className="panel px-3 py-2 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm" style={{ background: "var(--card)" }}>
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-4 h-4 rounded-full bg-white border-2 border-neutral-300 shrink-0" />
+              <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-neutral-300 shrink-0" />
               <select
                 value={whiteEngine}
                 onChange={(e) => { setWhiteEngine(e.target.value as any); if (status !== "idle") resetMatch(); }}
-                className="bg-[#262421] text-xs md:text-sm font-black text-white border border-[#36322d] rounded-lg px-2 py-1 focus:outline-none focus:border-[#81b64c] cursor-pointer"
+                className="bg-[var(--surface)] text-[12px] font-bold text-white border border-[var(--border)] rounded-lg px-2 py-1 focus:outline-none focus:border-[var(--primary)] cursor-pointer"
               >
-                <option value="jev">Jev AI Connectome (Putih)</option>
                 <option value="stockfish">Stockfish 15 NNUE (Putih)</option>
+                <option value="jev">Jev AI Connectome (Putih)</option>
                 <option value="fly">Fruit Fly Brain (Putih)</option>
               </select>
-              <span className="text-xs text-emerald-400 font-mono font-bold">
+              <span className="text-[11px] text-emerald-400 font-mono font-bold">
                 {whiteCp !== null ? (whiteCp > 0 ? `+${(whiteCp/100).toFixed(1)}` : (whiteCp/100).toFixed(1)) : "="}
               </span>
             </div>
             <CapturedPiecesBar fen={currentFen} side="white" />
           </div>
 
-          {/* Visual Arrows Legend - Besar & Jelas Terbaca */}
-          <div className="bg-[#191816] px-3.5 py-2.5 rounded-xl border border-[#36322d] flex items-center justify-around text-xs md:text-sm font-bold text-neutral-300 shadow-sm">
-            <span className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 rounded bg-yellow-500 border border-yellow-300" />
-              <span>Langkah Terkini</span>
+          {/* Visual Arrows Legend */}
+          <div className="panel px-3 py-2 rounded-xl border border-[var(--border)] flex items-center justify-around text-[12px] font-bold text-neutral-300 shadow-sm" style={{ background: "var(--surface)" }}>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300" />
+              <span className="font-semibold text-neutral-300">Langkah Terkini</span>
             </span>
-            <span className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 rounded bg-red-500 border border-red-300" />
-              <span className="text-red-400">Target Diancam</span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded bg-red-500 border border-red-300" />
+              <span className="font-bold text-red-400">Target Diancam</span>
             </span>
-            <span className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 rounded bg-sky-400 border border-sky-300" />
-              <span className="text-sky-400 font-bold">Prediksi Balasan</span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded bg-sky-400 border border-sky-300" />
+              <span className="font-bold text-sky-400">Prediksi Balasan</span>
             </span>
           </div>
         </div>
 
-        {/* RIGHT COLUMN (5 Cols): Live AI Commentary & Move History */}
+        {/* RIGHT COLUMN (5 Cols): Live AI Commentary & 2-Column Move History */}
         <div className="lg:col-span-5 space-y-3">
           
-          {/* LIVE AI COMMENTATOR & TACTICS CARD - Tipografi Besar & Kontras Jelas */}
-          <Card className="bg-[#262421] border-[#36322d] text-white shadow-xl overflow-hidden">
-            <CardHeader className="py-3 px-4 border-b border-[#36322d] bg-[#1e1c19] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <CardTitle className="text-sm md:text-base font-black uppercase tracking-wider text-white flex items-center gap-2">
-                <IconBot3D size={20} className="shrink-0" />
-                <span>Komentator & Taktik AI</span>
+          {/* LIVE AI COMMENTATOR & TACTICS CARD - Typography 12px with bold & italic */}
+          <Card className="panel border-[var(--border)] text-white shadow-xl overflow-hidden" style={{ background: "var(--card)" }}>
+            <CardHeader className="py-2.5 px-3.5 border-b border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-2" style={{ background: "var(--surface)" }}>
+              <CardTitle className="text-xs md:text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+                <IconBot3D size={18} className="shrink-0" />
+                <span>Komentator &amp; Taktik AI</span>
               </CardTitle>
               {commentary?.tacticalBadge && (
                 <div className="self-start sm:self-auto shrink-0">
-                  <span className={`text-xs md:text-sm font-black px-3 py-1 rounded-full border shadow-sm inline-block ${commentary.tacticalBadge.badgeColor}`}>
+                  <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-sm inline-block ${commentary.tacticalBadge.badgeColor}`}>
                     {commentary.tacticalBadge.name}
                   </span>
                 </div>
               )}
             </CardHeader>
 
-            <CardContent className="p-4 space-y-3.5 text-sm md:text-base">
+            <CardContent className="p-3.5 space-y-2.5 text-[12px] leading-relaxed">
               {commentary ? (
                 <>
-                  {/* Tactical Concept Explanation if detected */}
+                  {/* Tactical Concept Explanation with Explicit Name */}
                   {commentary.tacticalBadge && (
-                    <div className="p-3 rounded-xl bg-[#171614] border-2 border-amber-500/30 text-xs md:text-sm text-neutral-200 leading-relaxed">
-                      <span className="font-black text-amber-400 text-sm">Konsep Taktis: </span>
-                      {commentary.tacticalBadge.description}
+                    <div className="p-2.5 rounded-xl border border-amber-500/40 text-[12px] text-neutral-200 leading-relaxed" style={{ background: "var(--surface)" }}>
+                      <span className="font-black text-amber-400">{commentary.tacticalBadge.name}: </span>
+                      <span className="italic text-neutral-300">{commentary.tacticalBadge.description}</span>
                     </div>
                   )}
 
                   {/* Summary of current move */}
-                  <div className="flex items-start gap-2.5">
-                    <span className="text-neutral-400 font-black shrink-0 text-sm">Langkah:</span>
+                  <div className="flex items-start gap-2 text-[12px]">
+                    <span className="text-[var(--muted-foreground)] font-bold shrink-0">Langkah:</span>
                     <span className="text-white font-bold leading-snug">{commentary.summary}</span>
                   </div>
 
                   {/* Target & Threat */}
-                  <div className="flex items-start gap-2.5">
-                    <span className="text-red-400 font-black shrink-0 text-sm">Ancaman:</span>
-                    <span className="text-neutral-200 font-semibold leading-snug">{commentary.target}</span>
+                  <div className="flex items-start gap-2 text-[12px]">
+                    <span className="text-red-400 font-bold shrink-0">Ancaman:</span>
+                    <span className="text-neutral-200 font-medium leading-snug">{commentary.target}</span>
                   </div>
 
-                  {/* Tektokkan Recapture or Next Move Prediction */}
-                  <div className="p-3 rounded-xl bg-[#14232c] border-2 border-sky-500/40 text-xs md:text-sm shadow-inner">
-                    <div className="font-black text-sky-400 text-sm flex items-center gap-1.5 mb-1">
+                  {/* Prediction */}
+                  <div className="p-2.5 rounded-xl border border-sky-500/40 text-[12px] shadow-inner" style={{ background: "rgba(14, 34, 48, 0.7)" }}>
+                    <div className="font-bold text-sky-400 text-[11px] flex items-center gap-1 mb-0.5">
                       <span>Prediksi Respons Lawan:</span>
                     </div>
-                    <div className="text-sky-100 font-bold leading-relaxed">
+                    <div className="text-sky-100 italic font-medium leading-relaxed">
                       {commentary.prediction}
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="text-center py-6 text-neutral-400 font-medium italic text-sm">
-                  Tekan "Mulai" untuk mengaktifkan analisis taktik dan prediksi langkah secara langsung.
+                <div className="text-center py-6 text-neutral-400 font-medium italic text-[12px]">
+                  Tekan "Mulai" untuk mengaktifkan analisis taktik dan prediksi langkah AI.
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* MOVE HISTORY TABLE - Compact & Scrollable */}
-          <Card className="bg-[#262421] border-[#36322d] text-white shadow-lg overflow-hidden">
-            <CardHeader className="py-2 px-3.5 border-b border-[#36322d] bg-[#1e1c19] flex flex-row items-center justify-between">
+          {/* 2-COLUMN MOVE HISTORY TABLE - White Engine vs Black Engine */}
+          <Card className="panel border-[var(--border)] text-white shadow-lg overflow-hidden" style={{ background: "var(--card)" }}>
+            <CardHeader className="py-2 px-3.5 border-b border-[var(--border)] flex flex-row items-center justify-between" style={{ background: "var(--surface)" }}>
               <CardTitle className="text-xs font-black uppercase tracking-wider text-neutral-300">
                 Notasi Langkah ({moves.length})
               </CardTitle>
@@ -628,56 +670,75 @@ export function SpectatorView({
             </CardHeader>
 
             <CardContent className="p-0">
-              <div className="h-56 overflow-y-auto divide-y divide-[#36322d]/60 font-mono text-xs">
-                {moves.length === 0 ? (
-                  <div className="text-center py-8 text-neutral-500 italic text-xs">
-                    Belum ada langkah yang dimainkan.
-                  </div>
-                ) : (
-                  Array.from({ length: Math.ceil(moves.length / 2) }).map((_, i) => {
-                    const whiteM = moves[i * 2];
-                    const blackM = moves[i * 2 + 1];
-                    return (
-                      <div key={i} className="flex items-center px-3 py-1 text-[11px] hover:bg-neutral-800/40">
-                        <span className="w-8 text-neutral-500 font-bold shrink-0">{i + 1}.</span>
-                        <div className="flex-1 flex items-center justify-between pr-2">
-                          <span className="text-white font-bold">{whiteM.san}</span>
-                          <span className="text-[10px] text-neutral-400">
-                            {whiteM.scoreCp !== null ? (whiteM.scoreCp > 0 ? `+${(whiteM.scoreCp/100).toFixed(1)}` : (whiteM.scoreCp/100).toFixed(1)) : ""}
-                          </span>
-                        </div>
-                        <div className="flex-1 flex items-center justify-between pl-2 border-l border-[#36322d]">
-                          {blackM ? (
-                            <>
-                              <span className="text-neutral-300 font-bold">{blackM.san}</span>
-                              <span className="text-[10px] text-neutral-400">
-                                {blackM.scoreCp !== null ? (blackM.scoreCp > 0 ? `+${(blackM.scoreCp/100).toFixed(1)}` : (blackM.scoreCp/100).toFixed(1)) : ""}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-neutral-600">-</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+              <div className="h-56 overflow-y-auto font-mono text-[12px]">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] text-neutral-400 font-sans uppercase tracking-wider">
+                      <th className="py-1 px-2 text-center w-8">#</th>
+                      <th className="py-1 px-2.5 text-left border-r border-[var(--border)]">
+                        Putih: <strong className="text-white">{ENGINE_LABELS[whiteEngine]}</strong>
+                      </th>
+                      <th className="py-1 px-2.5 text-left">
+                        Hitam: <strong className="text-white">{ENGINE_LABELS[blackEngine]}</strong>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)]/60 text-[11px]">
+                    {moveRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="text-center py-8 text-neutral-500 italic text-[11px]">
+                          Belum ada langkah yang dimainkan.
+                        </td>
+                      </tr>
+                    ) : (
+                      moveRows.map((r, i) => (
+                        <tr key={i} className="hover:bg-neutral-800/40 transition-colors">
+                          <td className="py-1 px-2 text-center text-neutral-500 font-bold">{r.n}.</td>
+                          <td className="py-1 px-2.5 border-r border-[var(--border)]">
+                            {r.white ? (
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-white">{r.white.san}</span>
+                                <span className="text-[10px] text-neutral-400 font-mono">
+                                  {r.white.scoreCp !== null ? `${r.white.scoreCp > 0 ? "+" : ""}${(r.white.scoreCp / 100).toFixed(1)}` : ""}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-neutral-600">—</span>
+                            )}
+                          </td>
+                          <td className="py-1 px-2.5">
+                            {r.black ? (
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-neutral-300">{r.black.san}</span>
+                                <span className="text-[10px] text-neutral-400 font-mono">
+                                  {r.black.scoreCp !== null ? `${r.black.scoreCp > 0 ? "+" : ""}${(r.black.scoreCp / 100).toFixed(1)}` : ""}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-neutral-600">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
 
           {/* Outcome Result Card if Over */}
           {outcome && outcome.over && (
-            <div className="p-3 rounded-xl bg-[#1f2a17] border border-[#81b64c] text-center space-y-1 shadow-md">
-              <div className="font-black text-white text-sm flex items-center justify-center gap-1.5">
-                <IconTrophy3D size={18} />
+            <div className="p-3 rounded-xl border border-[var(--primary)] text-center space-y-1 shadow-md" style={{ background: "color-mix(in srgb, var(--primary) 15%, var(--card))" }}>
+              <div className="font-black text-white text-xs flex items-center justify-center gap-1.5">
+                <IconTrophy3D size={16} />
                 <span>{outcome.label}</span>
               </div>
-              <div className="text-xs text-neutral-300">
+              <div className="text-[11px] text-neutral-300">
                 {outcome.winner === "white"
-                  ? `${whiteEngine === "jev" ? "Jev AI" : whiteEngine === "fly" ? "Fruit Fly" : "Stockfish"} Menang!`
+                  ? `${ENGINE_LABELS[whiteEngine]} (Putih) Menang Mutlak!`
                   : outcome.winner === "black"
-                  ? `${blackEngine === "jev" ? "Jev AI" : blackEngine === "fly" ? "Fruit Fly" : "Stockfish"} Menang!`
+                  ? `${ENGINE_LABELS[blackEngine]} (Hitam) Menang Mutlak!`
                   : "Remis (Draw)!"}
               </div>
             </div>
