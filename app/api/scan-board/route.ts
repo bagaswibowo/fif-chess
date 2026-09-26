@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
           temperature: 0.1,
           max_tokens: 100,
         }),
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(45000),
       });
 
       if (visionRes.ok) {

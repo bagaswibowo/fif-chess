@@ -106,7 +106,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
     const timer = setTimeout(() => {
       controller.abort();
-    }, 16000);
+    }, 45000);
 
     try {
       const compressed = await compressImage(rawBase64, 800);
