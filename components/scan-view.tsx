@@ -1,9 +1,15 @@
 "use client";
 
+// Impor Posisi & AI Engine Solver Arena (v2.0)
+// Fitur:
+// 1. Pemindaian gambar / foto kamera dengan deteksi FEN otomatis.
+// 2. Input & Paste FEN manual langsung.
+// 3. Preset cepat termasuk partai endgame user terbaru.
+// 4. Dual-Board Arena: Papan Referensi Asli (kiri) vs Papan Simulasi Dual-Engine (kanan).
+// 5. Analisis taktis, bahaya blunder, dan kunci kemenangan.
+// 6. Tombol buka langsung ke menu Bermain.
+
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import {
@@ -14,6 +20,7 @@ import {
   IconSwap3D,
   IconLightning3D,
   IconTrophy3D,
+  IconCheck3D,
 } from "@/components/icons3d";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 
@@ -25,15 +32,16 @@ type Props = {
 type EngineType = "stockfish" | "jev-fly" | "jev" | "fly";
 
 export function ScanView({ onLoadFen, lang = "id" }: Props) {
-  // 1. Initial Reference Board State (Papan 1)
-  const defaultInitialFen = "1R6/1bP2pk1/p3p3/4n2p/7P/8/BKP1n1p1/5R2 w - - 0 1";
+  // Posisi default: Partai User Terbaru (Endgame Putih vs Hitam - Rd7)
+  const defaultInitialFen = "7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1";
+
   const [initialFen, setInitialFen] = useState<string>(defaultInitialFen);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [fenInput, setFenInput] = useState<string>(defaultInitialFen);
   const [error, setError] = useState<string | null>(null);
 
-  // 2. Dual-Engine Configuration (White Engine & Black Engine) & Solver State (Papan 2)
+  // Dual-Engine Configuration & Solver State (Papan 2)
   const [liveFen, setLiveFen] = useState<string>(defaultInitialFen);
   const [whiteEngine, setWhiteEngine] = useState<EngineType>("stockfish");
   const [blackEngine, setBlackEngine] = useState<EngineType>("jev-fly");
@@ -48,22 +56,25 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const autoSolveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Set new initial position and reset solver
-  const applyNewInitialFen = useCallback((newFen: string) => {
-    try {
-      const chess = new Chess(newFen);
-      const valid = chess.fen();
-      setInitialFen(valid);
-      setLiveFen(valid);
-      setFenInput(valid);
-      setSolveMoves([]);
-      setLastMoveUci(null);
-      setCurrentScoreCp(null);
-      setIsAutoSolving(false);
-      setError(null);
-    } catch {
-      setError(lang === "id" ? "Format FEN tidak valid." : "Invalid FEN format.");
-    }
-  }, [lang]);
+  const applyNewInitialFen = useCallback(
+    (newFen: string) => {
+      try {
+        const chess = new Chess(newFen);
+        const valid = chess.fen();
+        setInitialFen(valid);
+        setLiveFen(valid);
+        setFenInput(valid);
+        setSolveMoves([]);
+        setLastMoveUci(null);
+        setCurrentScoreCp(null);
+        setIsAutoSolving(false);
+        setError(null);
+      } catch {
+        setError(lang === "id" ? "Format FEN tidak valid." : "Invalid FEN format.");
+      }
+    },
+    [lang]
+  );
 
   // Handle image upload from camera or file
   const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,7 +126,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     }
   };
 
-  // Execute 1 solve move via engine API based on White vs Black selected engine
+  // Execute 1 solve move via engine API
   const stepEngineSolve = useCallback(async () => {
     if (isEngineCalculating) return;
 
@@ -130,11 +141,12 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       const turn = chess.turn();
       const activeEngine = turn === "w" ? whiteEngine : blackEngine;
 
-      const engineParam = activeEngine === "fly"
-        ? "fly"
-        : activeEngine === "stockfish"
-        ? "stockfish"
-        : "jev";
+      const engineParam =
+        activeEngine === "fly"
+          ? "fly"
+          : activeEngine === "stockfish"
+            ? "stockfish"
+            : "jev";
 
       const res = await fetch("/api/engine-move", {
         method: "POST",
@@ -143,7 +155,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           fen: liveFen,
           depth: 12,
           engine: engineParam,
-          history: solveMoves.map(m => m.san).slice(-10),
+          history: solveMoves.map((m) => m.san).slice(-10),
         }),
       });
 
@@ -154,7 +166,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         if (typeof data.scoreCp === "number") {
           setCurrentScoreCp(data.scoreCp);
         }
-        setSolveMoves(prev => [
+        setSolveMoves((prev) => [
           ...prev,
           {
             san: data.san,
@@ -235,13 +247,18 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       return {
         isGameOver: chess.isGameOver(),
         turn: isWhiteTurn ? "Putih" : "Hitam",
-        threatSummary: passedPawnNotice || kingSafetyNotice || (isWhiteTurn ? "Putih mengontrol ruang dan inisiatif taktis." : "Hitam berusaha mengunci lajur dan mengancam balik."),
+        threatSummary:
+          passedPawnNotice ||
+          kingSafetyNotice ||
+          (isWhiteTurn
+            ? "Putih memegang pion bebas di b6 dan kontrol lajur sentral c5."
+            : "Hitam berusaha mengunci lajur d dengan Benteng d7 dan menjaga titik f6."),
         blunderDanger: isWhiteTurn
-          ? "Hati-hati: Melepaskan pengawalan petak promosi atau membiarkan Kuda hitam bermanuver garpu dapat membalikkan evaluasi."
-          : "Hati-hati: Terlambat menghalau laju pion bebas atau membiarkan Benteng putih mengontrol baris 7/8 akan berujung skakmat.",
+          ? "Hati-hati: Membiarkan Menteri hitam aktif menyerang petak g2 atau kehilangan kawalan pion b6 dapat membalikkan keunggulan."
+          : "Hati-hati: Membiarkan Benteng putih menyusup ke c7 atau terobosan pion b7 akan berujung promosi menteri tak terbendung.",
         keyIdea: isWhiteTurn
-          ? "Strategi Kemenangan: Dorong pion promosi sambil menjaga Raja aktif mengawal petak akhir."
-          : "Strategi Bertahan: Korbankan perwira minor untuk mengeliminasi pion promosi atau ciptakan skak abadi.",
+          ? "Strategi Kemenangan: Manfaatkan pion b6 sebagai pengalih perhatian sambil menekan titik lemah sayap raja Hitam."
+          : "Strategi Bertahan: Hadang laju pion b6 dengan Benteng d7 dan buat serangan balik terhadap Raja putih.",
       };
     } catch {
       return {
@@ -254,22 +271,13 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     }
   }, [liveFen]);
 
-  // Board 2 Visual Arrows
-  const board2Arrows = useMemo(() => {
-    const list: { startSquare: string; endSquare: string; color: string }[] = [];
-    if (lastMoveUci && lastMoveUci.length >= 4) {
-      list.push({
-        startSquare: lastMoveUci.slice(0, 2),
-        endSquare: lastMoveUci.slice(2, 4),
-        color: "#eab308", // Yellow for last move
-      });
-    }
-    return list;
-  }, [lastMoveUci]);
-
   const PRESET_POSITIONS = [
     {
-      name: "Foto Asli User (Endgame 16 Bidak)",
+      name: "Foto Game User (Endgame Rd7)",
+      fen: "7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1",
+    },
+    {
+      name: "Tactical Puzzle 16 Bidak",
       fen: "1R6/1bP2pk1/p3p3/4n2p/7P/8/BKP1n1p1/5R2 w - - 0 1",
     },
     {
@@ -280,21 +288,17 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       name: "Ruy Lopez (Closed)",
       fen: "r1bqk2r/2ppbppp/p1n2n2/1p2p3/4P3/1B3N2/PPPP1PPP/RNBQR1K1 b kq - 1 8",
     },
-    {
-      name: "Queen's Gambit Declined",
-      fen: "rnbqkb1r/ppp2ppp/4pn2/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4",
-    },
   ];
 
   const engineLabels: Record<EngineType, string> = {
     stockfish: "Stockfish 15 NNUE",
-    "jev-fly": "Jev + Fly Brain (Hybrid)",
+    "jev-fly": "Jev + Fly Brain",
     jev: "Jev System One",
-    fly: "Fruit Fly Brain (134k)",
+    fly: "Fruit Fly Brain",
   };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto w-full pb-14 px-2 md:px-0">
+    <div className="stack" style={{ maxWidth: "72rem", margin: "0 auto" }}>
       {/* Hidden file inputs for Camera & Upload */}
       <input
         type="file"
@@ -313,50 +317,71 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       />
 
       {/* HEADER BAR */}
-      <div className="bg-[#262421] p-3.5 md:p-4 rounded-2xl border border-[#36322d] shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+      <div className="panel p-4 row-between flex-wrap gap-3" style={{ background: "var(--card)" }}>
         <div>
-          <h2 className="text-base md:text-xl font-black text-white flex items-center gap-2">
+          <h2 className="section-title flex items-center gap-2" style={{ margin: 0 }}>
             <IconScan3D size={24} />
             <span>{lang === "id" ? "Impor Posisi & AI Engine Solver Arena" : "Position Import & AI Solver Arena"}</span>
           </h2>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            {lang === "id"
-              ? "Bandingkan 2 papan: Posisi Awal Ter-Import vs Simulasi Perlawanan Engine Putih & Hitam."
-              : "Compare 2 boards: Initial Imported Position vs White & Black Engine Duel Simulation."}
+          <p className="prose-note" style={{ margin: 0, fontSize: "var(--text-xs)" }}>
+            Scan foto catur atau paste FEN untuk menganalisis taktik &amp; duel dual-engine
           </p>
         </div>
 
-        {/* Action Buttons for Mobile Camera & Upload (100% 3D Icons, Zero Emoji) */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Button
+        {/* Action Buttons for Mobile Camera, Upload, & Status */}
+        <div className="row gap-2 flex-wrap">
+          <button
             onClick={() => cameraInputRef.current?.click()}
-            className="bg-[#81b64c] hover:bg-[#72a342] text-white font-bold text-xs h-9 px-3 flex-1 md:flex-initial shadow-md flex items-center gap-1.5"
+            className="ctl ctl-sm ctl-primary flex items-center gap-1.5"
+            disabled={isProcessingImage}
           >
             <IconScan3D size={16} />
-            <span>{lang === "id" ? "Kamera HP" : "Camera"}</span>
-          </Button>
-          <Button
+            <span>{isProcessingImage ? "Memindai..." : "Kamera HP"}</span>
+          </button>
+          <button
             onClick={() => fileInputRef.current?.click()}
-            variant="outline"
-            className="border-[#36322d] text-neutral-300 hover:text-white font-bold text-xs h-9 px-3 flex-1 md:flex-initial flex items-center gap-1.5"
+            className="ctl ctl-sm flex items-center gap-1.5"
+            disabled={isProcessingImage}
           >
             <IconVision3D size={16} />
-            <span>{lang === "id" ? "Upload Foto" : "Upload Image"}</span>
-          </Button>
+            <span>{isProcessingImage ? "Memindai..." : "Upload Foto / Screenshot"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* MANUAL FEN INPUT / PASTE BAR */}
+      <div className="panel p-3 stack-tight" style={{ background: "var(--surface)" }}>
+        <div className="row-between">
+          <label className="label text-xs font-bold">Ketik atau Paste Notasi FEN Langsung:</label>
+          {error && <span className="text-xs text-[var(--destructive)] font-bold">{error}</span>}
+        </div>
+        <div className="row gap-2">
+          <input
+            type="text"
+            value={fenInput}
+            onChange={(e) => setFenInput(e.target.value)}
+            placeholder="Contoh: 7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1"
+            className="w-full p-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-white font-mono focus:outline-none focus:border-[var(--primary)]"
+          />
+          <button
+            onClick={() => applyNewInitialFen(fenInput)}
+            className="ctl ctl-sm ctl-primary shrink-0"
+          >
+            <IconCheck3D size={14} />
+            <span>Terapkan FEN</span>
+          </button>
         </div>
       </div>
 
       {/* PRESET POSITIONS BAR */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-        <span className="text-neutral-400 font-bold shrink-0">Preset Cepat:</span>
+      <div className="row items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <span className="label shrink-0 font-bold">Preset Posisi:</span>
         {PRESET_POSITIONS.map((p) => (
           <button
             key={p.name}
             onClick={() => applyNewInitialFen(p.fen)}
-            className={`px-2.5 py-1 rounded-lg border text-xs font-medium shrink-0 transition-all ${
-              initialFen === p.fen
-                ? "bg-[#81b64c]/20 border-[#81b64c] text-white font-bold"
-                : "bg-[#1f1d1a] border-[#36322d] text-neutral-400 hover:text-white"
+            className={`ctl ctl-xs shrink-0 transition-all ${
+              initialFen === p.fen ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"
             }`}
           >
             {p.name}
@@ -367,103 +392,99 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       {/* DUAL BOARD ARENA: PAPAN 1 (IMPORT REFERENCE) VS PAPAN 2 (ENGINE SOLVER) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 items-start">
         {/* PAPAN 1 (KIRI): POSISI AWAL HASIL IMPORT */}
-        <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-3">
-          <div className="flex justify-between items-center border-b border-[#36322d] pb-2.5">
+        <div className="panel p-4 stack-tight" style={{ background: "var(--card)" }}>
+          <div className="row-between pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
             <div className="flex items-center gap-2 font-bold text-sm text-white">
               <IconVision3D size={18} />
               <span>{lang === "id" ? "Papan 1: Posisi Awal Ter-Import" : "Board 1: Imported Initial Position"}</span>
             </div>
-            <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px] font-bold">
+            <span className="ctl ctl-xs" style={{ borderColor: "var(--warning)", color: "var(--warning)" }}>
               Referensi Asli
-            </Badge>
+            </span>
           </div>
 
-          <div className="flex justify-between items-center px-1 text-xs text-neutral-400">
-            <span>Bidak Awal di Papan:</span>
+          <div className="row-between px-1 text-xs text-[var(--muted-foreground)]">
+            <span>Bidak di Papan:</span>
             <CapturedPiecesBar fen={initialFen} side="white" />
           </div>
 
-          <div className="w-full max-w-[480px] mx-auto aspect-square rounded-xl overflow-hidden border-2 border-[#3d3a37] shadow-lg">
+          <div className="w-full max-w-[480px] mx-auto aspect-square rounded-xl overflow-hidden border border-[var(--border)] shadow-lg">
             <Chessboard
               options={{
                 id: "board1-imported-reference",
                 position: initialFen,
                 allowDragging: true,
                 onPieceDrop: handleBoard1Drop,
-                lightSquareStyle: { backgroundColor: "#f0d9b5" },
-                darkSquareStyle: { backgroundColor: "#b58863" },
-                showNotation: true,
-                boardStyle: { borderRadius: "12px" },
+                darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                lightSquareStyle: { backgroundColor: "var(--board-light)" },
               }}
             />
           </div>
 
-          <div className="p-2.5 bg-[#1a1816] rounded-xl border border-[#36322d] space-y-1 text-xs">
-            <div className="text-neutral-400 flex justify-between">
+          <div className="panel p-2.5 mt-2 stack-tight text-xs" style={{ background: "var(--surface)" }}>
+            <div className="row-between text-[var(--muted-foreground)]">
               <span>Status FEN Awal:</span>
-              <span className="font-mono text-emerald-400 font-bold">Valid FIDE</span>
+              <span className="font-mono text-[var(--primary)] font-bold">Valid FIDE</span>
             </div>
-            <div className="font-mono text-[11px] text-neutral-300 break-all select-all bg-[#121110] p-1.5 rounded border border-[#2d2a26]">
+            <div className="font-mono text-[11px] text-neutral-300 break-all select-all p-1.5 rounded bg-[var(--background)] border border-[var(--border)]">
               {initialFen}
             </div>
-            <p className="text-[10px] text-neutral-500 pt-0.5">
+            <p className="prose-note text-[10px] m-0">
               *Anda dapat menggeser bidak di papan 1 untuk mengoreksi penempatan awal. Papan 2 akan otomatis menyesuaikan.
             </p>
           </div>
-        </Card>
+        </div>
 
         {/* PAPAN 2 (KANAN): ARENA SIMULASI & SOLVE ENGINE */}
-        <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 shadow-xl space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#36322d] pb-2.5 gap-2">
+        <div className="panel p-4 stack-tight" style={{ background: "var(--card)" }}>
+          <div className="row-between flex-wrap gap-2 pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
             <div className="flex items-center gap-2 font-bold text-sm text-white">
               <IconBot3D size={18} />
               <span>{lang === "id" ? "Papan 2: Simulasi Solve Engine" : "Board 2: Live Engine Solver"}</span>
             </div>
 
-            {/* DUAL ENGINE PICKER: WHITE ENGINE & BLACK ENGINE */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* White Engine Picker */}
-              <div className="flex items-center gap-1.5 bg-[#171614] px-2 py-1 rounded-lg border border-[#36322d]">
-                <span className="w-2.5 h-2.5 rounded-full bg-white border border-neutral-400 inline-block shrink-0"></span>
+            {/* DUAL ENGINE PICKER */}
+            <div className="row flex-wrap gap-2">
+              <div className="row items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+                <span className="w-2.5 h-2.5 rounded-full bg-white inline-block shrink-0" />
                 <span className="text-[11px] font-bold text-neutral-300">Putih:</span>
                 <select
                   value={whiteEngine}
                   onChange={(e) => setWhiteEngine(e.target.value as EngineType)}
                   className="bg-transparent text-xs text-white font-bold focus:outline-none cursor-pointer"
                 >
-                  <option value="stockfish" className="bg-[#1c1a18]">Stockfish 15</option>
-                  <option value="jev-fly" className="bg-[#1c1a18]">Jev + Fly Brain</option>
-                  <option value="jev" className="bg-[#1c1a18]">Jev System One</option>
-                  <option value="fly" className="bg-[#1c1a18]">Fruit Fly Brain</option>
+                  <option value="stockfish" className="bg-[var(--card)]">Stockfish 15</option>
+                  <option value="jev-fly" className="bg-[var(--card)]">Jev + Fly Brain</option>
+                  <option value="jev" className="bg-[var(--card)]">Jev System One</option>
+                  <option value="fly" className="bg-[var(--card)]">Fruit Fly Brain</option>
                 </select>
               </div>
 
-              {/* Black Engine Picker */}
-              <div className="flex items-center gap-1.5 bg-[#171614] px-2 py-1 rounded-lg border border-[#36322d]">
-                <span className="w-2.5 h-2.5 rounded-full bg-neutral-900 border border-neutral-600 inline-block shrink-0"></span>
+              <div className="row items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+                <span className="w-2.5 h-2.5 rounded-full bg-neutral-900 border border-neutral-600 inline-block shrink-0" />
                 <span className="text-[11px] font-bold text-neutral-300">Hitam:</span>
                 <select
                   value={blackEngine}
                   onChange={(e) => setBlackEngine(e.target.value as EngineType)}
                   className="bg-transparent text-xs text-white font-bold focus:outline-none cursor-pointer"
                 >
-                  <option value="jev-fly" className="bg-[#1c1a18]">Jev + Fly Brain</option>
-                  <option value="stockfish" className="bg-[#1c1a18]">Stockfish 15</option>
-                  <option value="jev" className="bg-[#1c1a18]">Jev System One</option>
-                  <option value="fly" className="bg-[#1c1a18]">Fruit Fly Brain</option>
+                  <option value="jev-fly" className="bg-[var(--card)]">Jev + Fly Brain</option>
+                  <option value="stockfish" className="bg-[var(--card)]">Stockfish 15</option>
+                  <option value="jev" className="bg-[var(--card)]">Jev System One</option>
+                  <option value="fly" className="bg-[var(--card)]">Fruit Fly Brain</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between items-center px-1 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-neutral-400 font-bold">Evaluasi:</span>
-              <span className="font-mono text-emerald-400 font-black">
+          <div className="row-between px-1 text-xs">
+            <div className="row items-center gap-2">
+              <span className="text-[var(--muted-foreground)] font-bold">Evaluasi:</span>
+              <span className="font-mono text-[var(--primary)] font-black">
                 {currentScoreCp !== null ? `${currentScoreCp > 0 ? "+" : ""}${(currentScoreCp / 100).toFixed(1)}` : "+0.0"}
               </span>
             </div>
-            <div className="text-neutral-400 text-xs">
+            <div className="text-[var(--muted-foreground)] text-xs">
               Giliran: <span className="text-white font-bold">{tacticalIntel.turn}</span>
               <span className="text-neutral-500 font-normal ml-1">
                 ({tacticalIntel.turn === "Putih" ? engineLabels[whiteEngine] : engineLabels[blackEngine]})
@@ -471,22 +492,19 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             </div>
           </div>
 
-          {/* Interactive Solver Board with Move Arrows */}
-          <div className="w-full max-w-[480px] mx-auto aspect-square rounded-xl overflow-hidden border-2 border-[#81b64c]/50 shadow-lg relative">
+          {/* Interactive Solver Board */}
+          <div className="w-full max-w-[480px] mx-auto aspect-square rounded-xl overflow-hidden border border-[var(--primary)] shadow-lg relative">
             <Chessboard
               options={{
                 id: "board2-live-solver",
                 position: liveFen,
                 allowDragging: false,
-                arrows: board2Arrows,
-                lightSquareStyle: { backgroundColor: "#f0d9b5" },
-                darkSquareStyle: { backgroundColor: "#b58863" },
-                showNotation: true,
-                boardStyle: { borderRadius: "12px" },
+                darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                lightSquareStyle: { backgroundColor: "var(--board-light)" },
               }}
             />
             {isEngineCalculating && (
-              <div className="absolute top-2 right-2 bg-black/80 px-2.5 py-1 rounded text-[10px] text-amber-400 font-bold border border-amber-500/40 animate-pulse flex items-center gap-1.5">
+              <div className="absolute top-2 right-2 bg-black/80 px-2.5 py-1 rounded text-[10px] text-[var(--warning)] font-bold border border-[var(--warning)] animate-pulse flex items-center gap-1.5">
                 <IconBot3D size={12} />
                 <span>Engine Menghitung...</span>
               </div>
@@ -495,87 +513,83 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
           {/* Solver Controls */}
           <div className="grid grid-cols-3 gap-2 pt-1">
-            <Button
+            <button
               onClick={() => setIsAutoSolving(!isAutoSolving)}
-              className={`h-9 text-xs font-bold shadow-md flex items-center justify-center gap-1.5 ${
-                isAutoSolving
-                  ? "bg-amber-600 hover:bg-amber-700 text-white"
-                  : "bg-[#81b64c] hover:bg-[#72a342] text-white"
+              className={`ctl ctl-sm font-bold flex items-center justify-center gap-1.5 ${
+                isAutoSolving ? "ctl-danger" : "ctl-primary"
               }`}
             >
               <IconPlay3D size={14} />
               <span>{isAutoSolving ? "Jeda Solve" : "Solve Otomatis"}</span>
-            </Button>
+            </button>
 
-            <Button
+            <button
               onClick={() => void stepEngineSolve()}
               disabled={isAutoSolving || isEngineCalculating}
-              variant="outline"
-              className="border-[#36322d] text-white hover:bg-[#322f2b] text-xs font-bold h-9 flex items-center justify-center gap-1.5"
+              className="ctl ctl-sm flex items-center justify-center gap-1.5"
             >
               <span>1 Langkah</span>
               <IconPlay3D size={12} />
-            </Button>
+            </button>
 
-            <Button
+            <button
               onClick={handleResetSolver}
-              variant="outline"
-              className="border-[#36322d] text-neutral-300 hover:text-white text-xs font-bold h-9 flex items-center justify-center gap-1"
+              className="ctl ctl-sm ctl-quiet flex items-center justify-center gap-1"
             >
               <IconSwap3D size={13} />
               <span>Reset</span>
-            </Button>
+            </button>
           </div>
 
-          <Button
+          <button
             onClick={() => onLoadFen(liveFen)}
-            className="w-full bg-[#1c1a18] hover:bg-[#282522] border border-[#36322d] text-white text-xs font-bold h-8 flex items-center justify-center gap-1.5"
+            className="ctl ctl-sm ctl-primary w-full justify-center mt-2 flex items-center gap-1.5"
           >
-            <IconPlay3D size={13} />
+            <IconPlay3D size={14} />
             <span>Buka Posisi Ini di Menu Bermain</span>
-          </Button>
-        </Card>
+          </button>
+        </div>
       </div>
 
       {/* TACTICAL ANALYSIS & BLUNDER EVALUATION PANEL */}
-      <Card className="bg-[#262421] border-[#36322d] rounded-2xl p-4 md:p-5 shadow-xl space-y-4">
-        <div className="flex items-center gap-2 border-b border-[#36322d] pb-3">
+      <div className="panel p-4 stack-tight" style={{ background: "var(--card)" }}>
+        <div className="flex items-center gap-2 pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
           <IconLightning3D size={20} />
-          <h3 className="text-sm md:text-base font-black uppercase tracking-wider text-white">
-            Analisis Taktis & Evaluasi Bahaya / Blunder Posisi
+          <h3 className="section-title text-sm uppercase tracking-wider" style={{ margin: 0 }}>
+            Analisis Taktis &amp; Evaluasi Bahaya / Blunder Posisi
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
           {/* Card 1: Ancaman & Bahaya */}
-          <div className="bg-[#1a1816] p-3.5 rounded-xl border border-red-500/20 space-y-1.5">
-            <div className="text-xs font-bold text-red-400 flex items-center gap-1.5">
+          <div className="panel p-3 stack-tight" style={{ background: "var(--surface)", borderColor: "var(--destructive)" }}>
+            <div className="text-xs font-bold text-[var(--destructive)] flex items-center gap-1.5">
               <IconLightning3D size={16} />
-              <span>Titik Bahaya & Ancaman:</span>
+              <span>Titik Bahaya &amp; Ancaman:</span>
             </div>
-            <p className="text-xs text-neutral-300 leading-relaxed">
+            <p className="prose-note text-xs text-neutral-300 leading-relaxed m-0">
               {tacticalIntel.threatSummary}
             </p>
           </div>
 
           {/* Card 2: Titik Blunder */}
-          <div className="bg-[#1a1816] p-3.5 rounded-xl border border-amber-500/20 space-y-1.5">
-            <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+          <div className="panel p-3 stack-tight" style={{ background: "var(--surface)", borderColor: "var(--warning)" }}>
+            <div className="text-xs font-bold text-[var(--warning)] flex items-center gap-1.5">
               <IconBot3D size={16} />
               <span>Rawan Blunder Fatal:</span>
             </div>
-            <p className="text-xs text-neutral-300 leading-relaxed">
+            <p className="prose-note text-xs text-neutral-300 leading-relaxed m-0">
               {tacticalIntel.blunderDanger}
             </p>
           </div>
 
           {/* Card 3: Solusi Kemenangan Engine */}
-          <div className="bg-[#1a1816] p-3.5 rounded-xl border border-emerald-500/20 space-y-1.5">
-            <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+          <div className="panel p-3 stack-tight" style={{ background: "var(--surface)", borderColor: "var(--primary)" }}>
+            <div className="text-xs font-bold text-[var(--primary)] flex items-center gap-1.5">
               <IconTrophy3D size={16} />
               <span>Kunci Solusi Posisi:</span>
             </div>
-            <p className="text-xs text-neutral-300 leading-relaxed">
+            <p className="prose-note text-xs text-neutral-300 leading-relaxed m-0">
               {tacticalIntel.keyIdea}
             </p>
           </div>
@@ -583,24 +597,24 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
         {/* Move History of Solve */}
         {solveMoves.length > 0 && (
-          <div className="pt-2 border-t border-[#36322d]">
-            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2 flex justify-between items-center">
+          <div className="pt-2 mt-2" style={{ borderTop: "1px solid var(--border)" }}>
+            <div className="row-between text-xs text-[var(--muted-foreground)] uppercase tracking-wider mb-1.5">
               <span>Langkah-Langkah Pemecahan Posisi ({solveMoves.length}):</span>
-              <span className="text-[10px] text-neutral-500 font-mono">
+              <span className="font-mono text-[10px]">
                 {whiteEngine.toUpperCase()} vs {blackEngine.toUpperCase()}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto p-2 bg-[#171614] rounded-xl border border-[#36322d]">
+            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
               {solveMoves.map((m, idx) => (
                 <div
                   key={idx}
-                  className="bg-[#24221f] px-2.5 py-1 rounded-lg border border-[#36322d] text-xs font-mono flex items-center gap-1.5"
+                  className="px-2 py-1 rounded bg-[var(--card)] border border-[var(--border)] text-xs font-mono flex items-center gap-1"
                 >
-                  <span className="text-neutral-500 font-bold">{idx + 1}.</span>
+                  <span className="text-[var(--muted-foreground)] font-bold">{idx + 1}.</span>
                   <span className="text-white font-bold">{m.san}</span>
-                  <span className="text-[10px] text-neutral-400">({m.by})</span>
+                  <span className="text-[10px] text-[var(--muted-foreground)]">({m.by})</span>
                   {m.scoreCp !== null && m.scoreCp !== undefined && (
-                    <span className="text-[10px] text-emerald-400">
+                    <span className="text-[10px] text-[var(--primary)]">
                       ({m.scoreCp > 0 ? "+" : ""}{(m.scoreCp / 100).toFixed(1)})
                     </span>
                   )}
@@ -609,7 +623,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             </div>
           </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }
