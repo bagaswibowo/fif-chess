@@ -1021,61 +1021,128 @@ export function Game() {
                           </button>
                         </div>
                       ) : (
-                        /* SETUP — satu design system, satu sumber kebenaran sisi. */
-                        <div className="stack">
-                          <div className="stack-tight">
-                            <span className="label">Lawan</span>
+                        /* SETUP — Chess.com Dark Interface */
+                        <div className="space-y-3.5">
+                          {/* Format Waktu (Time Control Pills) */}
+                          <div className="space-y-1.5">
+                            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center justify-between">
+                              <span>Format Waktu</span>
+                              <span className="text-xs text-[#81b64c] font-black font-mono">
+                                {timeMode === "unlimited" ? "Tanpa Batas ♾️" : `⚡ ${timeMode}`}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {[
+                                { id: "5m", label: "5 mnt", sub: "Kilat ⚡" },
+                                { id: "10m", label: "10 mnt", sub: "Cepat ⏱" },
+                                { id: "3m", label: "3 mnt", sub: "Kilat ⚡" },
+                                { id: "1m", label: "1 mnt", sub: "Peluru 🚀" },
+                                { id: "30m", label: "30 mnt", sub: "Klasik ⏳" },
+                                { id: "unlimited", label: "Bebas", sub: "Tanpa Batas ♾️" },
+                              ].map((t) => (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => setTimeMode(t.id)}
+                                  className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                                    timeMode === t.id
+                                      ? "bg-[#273815] border-[#81b64c] text-white shadow-sm ring-1 ring-[#81b64c]"
+                                      : "bg-[#1a1714] border-[#383530] text-neutral-400 hover:border-neutral-500 hover:text-white"
+                                  }`}
+                                >
+                                  <div className="text-xs font-black leading-tight text-white">{t.label}</div>
+                                  <div className="text-[10px] text-neutral-400 font-medium">{t.sub}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Sisi Bidak (Chess.com 3-Card Visual Selector) */}
+                          <div className="space-y-1.5">
+                            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Pilih Sisi Bidak</div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setSideChoice("white")}
+                                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                                  sideChoice === "white"
+                                    ? "bg-[#273815] border-[#81b64c] shadow-sm ring-1 ring-[#81b64c]"
+                                    : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
+                                }`}
+                              >
+                                <span className="text-2xl text-amber-100">♔</span>
+                                <span className="text-xs font-bold text-white">Putih</span>
+                                <span className="text-[9px] text-neutral-400 font-medium">Main Pertama</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSideChoice("random")}
+                                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                                  sideChoice === "random"
+                                    ? "bg-[#273815] border-[#81b64c] shadow-sm ring-1 ring-[#81b64c]"
+                                    : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
+                                }`}
+                              >
+                                <span className="text-2xl text-[#81b64c]">🎲</span>
+                                <span className="text-xs font-bold text-white">Acak</span>
+                                <span className="text-[9px] text-neutral-400 font-medium">Otomatis</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSideChoice("black")}
+                                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                                  sideChoice === "black"
+                                    ? "bg-[#273815] border-[#81b64c] shadow-sm ring-1 ring-[#81b64c]"
+                                    : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
+                                }`}
+                              >
+                                <span className="text-2xl text-neutral-300">♚</span>
+                                <span className="text-xs font-bold text-white">Hitam</span>
+                                <span className="text-[9px] text-neutral-400 font-medium">Main Kedua</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Pilihan Lawan */}
+                          <div className="space-y-1.5">
+                            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Mode Lawan</div>
                             <div className="grid grid-cols-2 gap-2">
                               {[
-                                { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine 3550+" },
-                                { id: "jev-fly", label: "Jev + Fly Brain", sub: "Hybrid" },
-                                { id: "jev", label: "Jev System One", sub: "Semantik" },
-                                { id: "fly", label: "Fruit Fly Brain", sub: "134k neuron" },
+                                { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine Elo 3550+" },
+                                { id: "jev-fly", label: "Jev + Fly Brain", sub: "Hybrid Connectome" },
+                                { id: "jev", label: "Jev System One", sub: "Semantik Posisi" },
+                                { id: "fly", label: "Fruit Fly Brain", sub: "134k Neuron Biologis" },
                               ].map((eng) => (
                                 <button
                                   key={eng.id}
+                                  type="button"
                                   onClick={() => { setPlayMode("ai"); setSelectedAiOpponent(eng.id as any); }}
-                                  className={`ctl ctl-tile ${playMode === "ai" && selectedAiOpponent === eng.id ? "ctl-active" : ""}`}
-                                  aria-pressed={playMode === "ai" && selectedAiOpponent === eng.id}
+                                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                    playMode === "ai" && selectedAiOpponent === eng.id
+                                      ? "bg-[#273815] border-[#81b64c] text-white shadow-sm ring-1 ring-[#81b64c]"
+                                      : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
+                                  }`}
                                 >
-                                  <span className="ctl-tile-title">{eng.label}</span>
-                                  <span className="ctl-tile-sub">{eng.sub}</span>
+                                  <span className="text-xs font-bold text-white leading-snug">{eng.label}</span>
+                                  <span className="text-[10px] text-neutral-400">{eng.sub}</span>
                                 </button>
                               ))}
                             </div>
                             <button
+                              type="button"
                               onClick={() => setPlayMode("pvp")}
-                              className={`ctl ctl-tile ctl-tile-wide ${playMode === "pvp" ? "ctl-active" : ""}`}
-                              aria-pressed={playMode === "pvp"}
+                              className={`w-full p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                                playMode === "pvp"
+                                  ? "bg-[#273815] border-[#81b64c] text-white shadow-sm ring-1 ring-[#81b64c]"
+                                  : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
+                              }`}
                             >
-                              <IconCommunity3D size={16} />
-                              <span className="ctl-tile-title">Lawan Pemain Nyata (PvP Online)</span>
+                              <div className="flex items-center gap-2">
+                                <IconCommunity3D size={18} />
+                                <span className="text-xs font-bold text-white">Lawan Pemain Nyata (PvP Online)</span>
+                              </div>
+                              <span className="text-[10px] text-[#81b64c] font-bold">Multiplayer</span>
                             </button>
-                          </div>
-
-                          {/* Sisi: dipilih sekali, dipakai AI dan PvP alike. */}
-                          <div className="stack-tight">
-                            <span className="label">Sisi kamu</span>
-                            <div className="row" style={{ gap: "0.5rem" }}>
-                              {([
-                                { id: "white", label: "Putih" },
-                                { id: "random", label: "Acak" },
-                                { id: "black", label: "Hitam" },
-                              ] as const).map((sc) => (
-                                <button
-                                  key={sc.id}
-                                  onClick={() => setSideChoice(sc.id)}
-                                  className={`ctl ctl-sm ctl-choice ${sideChoice === sc.id ? "ctl-active" : ""}`}
-                                  aria-pressed={sideChoice === sc.id}
-                                >
-                                  {sc.label}
-                                </button>
-                              ))}
-                            </div>
-                            <p className="prose-note" style={{ fontSize: "var(--text-xs)" }}>
-                              Sisi yang kamu pilih di sini yang diletakkan di bawah bidak. Berlaku sama di duel
-                              engine maupun PvP.
-                            </p>
                           </div>
 
                           {playMode === "pvp" ? (
@@ -1089,9 +1156,10 @@ export function Game() {
                             />
                           ) : (
                             <>
-                              <div className="stack-tight">
-                                <span className="label">Tingkat kesulitan</span>
-                                <div className="row" style={{ gap: "0.5rem" }}>
+                              {/* Tingkat Kesulitan AI */}
+                              <div className="space-y-1.5">
+                                <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Kedalaman Mesin</div>
+                                <div className="grid grid-cols-3 gap-1.5">
                                   {[
                                     { depth: 3, label: "Mudah", elo: "~800" },
                                     { depth: 8, label: "Sedang", elo: "~1600" },
@@ -1099,45 +1167,29 @@ export function Game() {
                                   ].map((lvl) => (
                                     <button
                                       key={lvl.depth}
+                                      type="button"
                                       onClick={() => setAiDepth(lvl.depth)}
-                                      className={`ctl ctl-sm ctl-choice ${aiDepth === lvl.depth ? "ctl-active" : ""}`}
-                                      aria-pressed={aiDepth === lvl.depth}
+                                      className={`p-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                                        aiDepth === lvl.depth
+                                          ? "bg-[#273815] border-[#81b64c] text-white ring-1 ring-[#81b64c]"
+                                          : "bg-[#1a1714] border-[#383530] text-neutral-400 hover:text-white"
+                                      }`}
                                     >
-                                      {lvl.label}
+                                      <div className="text-xs font-bold text-white">{lvl.label}</div>
+                                      <div className="text-[10px] text-neutral-400">{lvl.elo}</div>
                                     </button>
                                   ))}
                                 </div>
                               </div>
 
-                              <div className="stack-tight">
-                                <span className="label">Kontrol waktu</span>
-                                <div className="row" style={{ gap: "0.5rem" }}>
-                                  {[
-                                    { id: "5m", label: "5 mnt" },
-                                    { id: "10m", label: "10 mnt" },
-                                    { id: "30m", label: "30 mnt" },
-                                    { id: "60m", label: "1 jam" },
-                                    { id: "120m", label: "2 jam" },
-                                    { id: "unlimited", label: "Tanpa batas" },
-                                  ].map((t) => (
-                                    <button
-                                      key={t.id}
-                                      onClick={() => setTimeMode(t.id)}
-                                      className={`ctl ctl-xs ctl-choice ${timeMode === t.id ? "ctl-active" : ""}`}
-                                      aria-pressed={timeMode === t.id}
-                                    >
-                                      {t.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
+                              {/* GIANT CHESS.COM GREEN CTA BUTTON */}
                               <button
+                                type="button"
                                 onClick={() => startGame(sideChoice === "random" ? "white" : sideChoice)}
-                                className="ctl ctl-lg ctl-primary"
+                                className="w-full h-14 rounded-2xl bg-[#81b64c] hover:bg-[#8ec357] active:translate-y-[2px] text-white font-black text-lg shadow-[0_4px_0_#4d7a27,0_6px_20px_rgba(129,182,76,0.4)] transition-all flex items-center justify-center gap-3 cursor-pointer"
                               >
-                                <IconPlay3D size={18} />
-                                <span>Mulai sebagai {sideChoice === "random" ? "sisi acak" : sideChoice === "white" ? "Putih" : "Hitam"}</span>
+                                <IconPlay3D size={24} />
+                                <span>Mulai Permainan</span>
                               </button>
                             </>
                           )}

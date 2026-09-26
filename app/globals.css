@@ -7,12 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* Nama variabel ini milik next/font di app/layout.tsx. Kalau nama di sini
-     tidak sama, font fallback diam-diam ke system-ui. */
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-display: var(--font-instrument-serif), var(--font-geist-sans), sans-serif;
-  --font-heading: var(--font-instrument-serif), var(--font-geist-sans), sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -30,192 +28,210 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
 }
 
 /*
-  Tokens. Satu sumber untuk semua halaman: tidak ada lagi hex yang disalin
-  ke tiap komponen. Palet diambil dari dunia nyatanya — kayu meja catur, bidak
-  gading, dan gading lantai UK seperti papan gotong royong era lama.
+  Design System: Chess.com Dark Mode Standards (v1.1)
+  Deep charcoal background, vibrant Chess green (#81b64c), clean typography,
+  and tournament-standard wooden board colors (#f0d9b5 / #b58863).
 */
 :root {
   --radius: 0.75rem;
 
-  /* Permukaan: kayu meja, makin dalam makin gelap */
-  --background: #14120f;
-  --surface: #1e1b17;
-  --card: #211e19;
-  --foreground: #f4efe4;
-  --card-foreground: #f4efe4;
-  --muted: #2b2721;
-  --muted-foreground: #a49a89;
-  --secondary: #262219;
-  --secondary-foreground: #f4efe4;
-  --popover: #211e19;
-  --popover-foreground: #f4efe4;
+  /* Backgrounds: Chess.com Charcoal & Slate */
+  --background: #1a1714;
+  --surface: #211f1d;
+  --card: #262421;
+  --foreground: #ffffff;
+  --card-foreground: #ffffff;
+  --muted: #302e2b;
+  --muted-foreground: #9e9b97;
+  --secondary: #2b2926;
+  --secondary-foreground: #ffffff;
+  --popover: #262421;
+  --popover-foreground: #ffffff;
 
-  /* Aksen: gading lantai UK yang masih berkilau, bukan hijau neon */
-  --primary: #c69a4b;
-  /* Warna lama #81b64c dipetakan ke primary-strong supaya tidak ada dua
-     hijau berbeda di satu layar. */
-  --primary-strong: #334621;
-  --primary-foreground: #1a1610;
-  --accent: #7fa8b8;
-  --accent-foreground: #10202a;
-  --ring: #d9b06a;
+  /* Primary Action: Vibrant Chess Green */
+  --primary: #81b64c;
+  --primary-hover: #72a342;
+  --primary-active: #6fa03d;
+  --primary-strong: #273815;
+  --primary-foreground: #ffffff;
 
-  --border: #38322a;
-  --border-strong: #45423e;
-  --input: #38322a;
-  --destructive: #d0574a;
-  --destructive-foreground: #fdf6ef;
+  /* Accents & Status */
+  --accent: #3893e8;
+  --accent-foreground: #ffffff;
+  --success: #52c41a;
+  --warning: #faad14;
+  --destructive: #f5222d;
+  --destructive-foreground: #ffffff;
+  --ring: #81b64c;
 
-  /* Papan catur: colours standar Tournament Director */
-  --board-light: #e8d5b0;
-  --board-dark: #a4714a;
-  --board-mark: #d9b06a;
+  --border: #3d3a34;
+  --border-strong: #4a4740;
+  --input: #383530;
 
-  --chart-1: #c69a4b;
-  --chart-2: #7fa8b8;
-  --chart-3: #d0574a;
-  --chart-4: #8f9b6e;
-  --chart-5: #b0899c;
-}
+  /* Papan catur: Chess.com Wood Standard */
+  --board-light: #f0d9b5;
+  --board-dark: #b58863;
+  --board-mark: #81b64c;
 
-/*
-  Design system: satu skala untuk control, teks, dan jarak.
-  Setiap control wajib memakai kelas .ctl* sehingga tinggi tombol di HP dan
-  desktop identik, dan tidak ada lagi tombol 20px di sebelah tombol 60px.
-*/
-:root {
-  --ctl-h-xs: 30px;
-  --ctl-h-sm: 38px;
-  --ctl-h-md: 44px;
-  --ctl-h-lg: 52px;
+  /* Sizing tokens */
+  --ctl-h-xs: 32px;
+  --ctl-h-sm: 40px;
+  --ctl-h-md: 46px;
+  --ctl-h-lg: 54px;
 
   --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
   --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
 
-  --gap-1: 0.375rem;
-  --gap-2: 0.75rem;
-  --gap-3: 1.25rem;
-
-  --tap: 44px; /* target sentuh minimum sesuai platform guidelines */
-}
-
-/* Papan catur: satu definisi untuk semua view (main, puzzle, quest, review) */
-.board-light { background-color: var(--board-light) !important; }
-.board-dark { background-color: var(--board-dark) !important; }
-
-/*
-  Papan mengikuti lebar viewport DAN tinggi viewport, supaya di HP portrait
-  papan selalu utuh dan tidak memaksa scroll, dan di laptop tidak raksasa.
-*/
-.board-frame {
-  width: min(100%, 92vw, 62vh, 640px);
-  margin-inline: auto;
+  --tap: 44px;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: var(--text-base);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Cegah zoom tidak sengaja di iOS: input minimal 16px. */
 }
 
-/* ---- Control system ---- */
+/* Papan catur */
+.board-light { background-color: var(--board-light) !important; }
+.board-dark { background-color: var(--board-dark) !important; }
+
+.board-frame {
+  width: min(100%, 94vw, 68vh, 600px);
+  margin-inline: auto;
+}
+
+/* Controls */
 .ctl {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   min-height: var(--ctl-h-md);
-  padding: 0 1rem;
-  border-radius: calc(var(--radius) - 2px);
+  padding: 0 1.25rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--foreground);
   font-family: inherit;
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
   text-align: center;
   cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  transition: all 150ms ease;
 }
 
-.ctl:hover:not(:disabled) { background: var(--muted); }
-.ctl:active:not(:disabled) { transform: translateY(1px); }
-.ctl:disabled { opacity: 0.45; cursor: not-allowed; }
+.ctl:hover:not(:disabled) {
+  background: var(--muted);
+  border-color: #524e47;
+}
+
+.ctl:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ctl:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 .ctl:focus-visible {
-  outline: 2px solid var(--ring);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
-.ctl-xs { min-height: var(--ctl-h-xs); padding: 0 0.5rem; font-size: var(--text-xs); }
-.ctl-sm { min-height: var(--ctl-h-sm); padding: 0 0.75rem; }
-.ctl-lg { min-height: var(--ctl-h-lg); padding: 0 1.5rem; font-size: var(--text-base); font-weight: 700; }
+.ctl-xs { min-height: var(--ctl-h-xs); padding: 0 0.6rem; font-size: var(--text-xs); border-radius: 0.5rem; }
+.ctl-sm { min-height: var(--ctl-h-sm); padding: 0 0.9rem; font-size: var(--text-sm); border-radius: 0.6rem; }
+.ctl-lg { min-height: var(--ctl-h-lg); padding: 0 1.75rem; font-size: var(--text-base); font-weight: 800; border-radius: 0.85rem; }
 
+/* Primary Button: Chess.com Big Green CTA with Shadow */
 .ctl-primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--primary-foreground);
+  background: #81b64c;
+  border-color: #689938;
+  color: #ffffff;
+  box-shadow: 0 4px 0 #4d7a27, 0 6px 16px rgba(129, 182, 76, 0.35);
 }
-.ctl-primary:hover:not(:disabled) { background: #d6ab5c; border-color: #d6ab5c; }
 
-.ctl-quiet { background: transparent; border-color: transparent; color: var(--muted-foreground); }
-.ctl-quiet:hover:not(:disabled) { background: var(--muted); color: var(--foreground); }
+.ctl-primary:hover:not(:disabled) {
+  background: #8ec357;
+  border-color: #72a342;
+  box-shadow: 0 4px 0 #4d7a27, 0 8px 20px rgba(129, 182, 76, 0.45);
+}
 
-.ctl-danger { background: transparent; border-color: var(--destructive); color: var(--destructive); }
-.ctl-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--destructive) 18%, transparent); color: var(--foreground); }
+.ctl-primary:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #4d7a27;
+}
 
-.ctl-active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 22%, var(--card)); color: var(--foreground); }
+.ctl-quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted-foreground);
+}
+.ctl-quiet:hover:not(:disabled) {
+  background: var(--muted);
+  color: var(--foreground);
+}
 
-/* Tile: tombol pilihan bertingkat (mesin lawan, kartu PvP). Butuh title +
-   sub yang rata vertikal, bukan satu baris panjang. */
+.ctl-danger {
+  background: transparent;
+  border-color: var(--destructive);
+  color: var(--destructive);
+}
+.ctl-danger:hover:not(:disabled) {
+  background: rgba(245, 34, 45, 0.15);
+  color: #ff7875;
+}
+
+.ctl-active {
+  border-color: var(--primary) !important;
+  background: var(--primary-strong) !important;
+  color: #ffffff !important;
+}
+
 .ctl-tile {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.15rem;
   height: auto;
   min-height: var(--ctl-h-lg);
-  padding: 0.6rem 0.75rem;
+  padding: 0.75rem 1rem;
   text-align: left;
   white-space: normal;
 }
 .ctl-tile-wide { width: 100%; }
-.ctl-tile-title { font-weight: 700; line-height: 1.25; }
+.ctl-tile-title { font-weight: 700; font-size: var(--text-sm); line-height: 1.25; }
 .ctl-tile-sub { color: var(--muted-foreground); font-size: var(--text-xs); font-weight: 500; }
 .ctl-tile[aria-pressed="true"] .ctl-tile-sub,
-.ctl-tile.ctl-active .ctl-tile-sub { color: var(--primary-foreground); opacity: 0.8; }
+.ctl-tile.ctl-active .ctl-tile-sub { color: #d4e8b8; }
 
-/* Group of mutually exclusive choices (engine, difficulty, side, time control) */
 .ctl-choice { flex: 1 1 0; min-width: 0; }
-.ctl-choice[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 24%, var(--card)); color: var(--foreground); }
+.ctl-choice[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--primary-strong);
+  color: #ffffff;
+}
 
-/* ---- Layout helpers ---- */
-.stack { display: flex; flex-direction: column; gap: var(--gap-2); }
-.stack-tight { display: flex; flex-direction: column; gap: var(--gap-1); }
-.row { display: flex; align-items: center; gap: var(--gap-1); flex-wrap: wrap; }
-.row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-1); flex-wrap: wrap; }
+/* Layout helpers */
+.stack { display: flex; flex-direction: column; gap: 0.75rem; }
+.stack-tight { display: flex; flex-direction: column; gap: 0.375rem; }
+.row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
 
 .panel {
   background: var(--card);
@@ -224,9 +240,8 @@ body {
 }
 
 .section-title {
-  font-family: var(--font-display);
   font-size: var(--text-lg);
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.01em;
   line-height: 1.25;
   color: var(--foreground);
@@ -234,47 +249,51 @@ body {
 
 .label {
   font-size: var(--text-xs);
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted-foreground);
 }
 
-.prose-note { font-size: var(--text-sm); color: var(--muted-foreground); line-height: 1.6; }
+.prose-note {
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
 
-/* Jam dan notasi catur selalu mono supaya tidak bergeser tiap digit. */
 .clock {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 800;
 }
 
-/* Input & select: minimal 16px agar iOS tidak auto-zoom. */
 .field {
   width: 100%;
   min-height: var(--ctl-h-md);
-  padding: 0 0.75rem;
+  padding: 0 0.85rem;
   border-radius: calc(var(--radius) - 2px);
   border: 1px solid var(--input);
   background: var(--surface);
   color: var(--foreground);
   font-family: inherit;
   font-size: max(16px, var(--text-sm));
+  transition: border-color 150ms ease;
 }
-.field:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.field:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
 select.field { padding-right: 2rem; }
 
-/* Tabel riwayat: tidak pernah lebih lebar dari layar. */
+/* Table */
 .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .data-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
-.data-table th, .data-table td { padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; }
-.data-table th { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-foreground); border-bottom: 1px solid var(--border); }
-.data-table tbody tr { border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.data-table th, .data-table td { padding: 0.65rem 0.85rem; text-align: left; white-space: nowrap; }
+.data-table th { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-foreground); border-bottom: 1px solid var(--border); }
+.data-table tbody tr { border-bottom: 1px solid #33302b; }
 .data-table tbody tr:hover { background: var(--muted); }
 .data-table td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
-/* Konten panjang (artikel komunitas, notasi) boleh membungkus. */
 .wrap-anywhere { overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -287,5 +306,5 @@ select.field { padding-right: 2rem; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #4d453a; }
+::-webkit-scrollbar-thumb { background: #3d3a34; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #524e47; }
