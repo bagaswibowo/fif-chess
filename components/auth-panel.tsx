@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { SessionUser } from "@/lib/use-session";
-import { IconPawn3D } from "@/components/icons3d";
+import { IconPawn3D, IconShield3D } from "@/components/icons3d";
 
 type Props = {
   user: SessionUser | null;
@@ -131,7 +131,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
         {/* Admin Quick Action */}
         {user.isAdmin && (
           <div className="bg-amber-950/40 border border-amber-500/40 p-3 rounded-xl text-xs text-amber-200 flex items-center gap-2">
-            <span>🛡️</span>
+            <IconShield3D size={18} />
             <span className="font-medium">Akses Admin aktif untuk moderasi & persetujuan user.</span>
           </div>
         )}

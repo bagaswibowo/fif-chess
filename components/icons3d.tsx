@@ -31,7 +31,7 @@ export function IconPlay3D({ size = 24, className = "" }: IconProps) {
         </filter>
       </defs>
       <g filter={`url(#${playShadow})`}>
-        <rect x="6" y="6" width="52" height="52" rx="16" fill="url(#rimGrad)" />
+        <rect x="6" y="6" width="52" height="52" rx="16" fill={`url(#${rimGrad})`} />
         <rect x="8" y="8" width="48" height="48" rx="14" fill={`url(#${playGrad})`} stroke="#86efac" strokeWidth="1" />
         <ellipse cx="24" cy="16" rx="14" ry="5" fill="#ffffff" opacity="0.35" transform="rotate(-15 24 16)" />
         <polygon points="26,20 44,32 26,44" fill="#ffffff" filter="drop-shadow(0 2px 2px rgba(0,0,0,0.3))" />
@@ -685,6 +685,176 @@ export function IconCoach3D({ size = 24, className = "" }: IconProps) {
       <circle cx="32" cy="43" r="3" fill="#38bdf8" opacity="0.6" />
       <circle cx="38" cy="43" r="3" fill="#f97316" opacity="0.6" />
       <path d="M32 32 L32 40" stroke="#36322d" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 3D Quote Reply Icon
+export function IconQuote3D({ size = 18, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const quoteGrad = `quoteGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <linearGradient id={quoteGrad} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#93c5fd" />
+          <stop offset="50%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#1d4ed8" />
+        </linearGradient>
+      </defs>
+      <path d="M10 28 C10 20, 14 14, 22 10 L24 13 C18 16, 16 19, 16 23 H22 V36 H10 Z" fill={`url(#${quoteGrad})`} />
+      <path d="M26 28 C26 20, 30 14, 38 10 L40 13 C34 16, 32 19, 32 23 H38 V36 H26 Z" fill={`url(#${quoteGrad})`} />
+    </svg>
+  );
+}
+
+// 3D History / Import Game Icon
+export function IconHistory3D({ size = 18, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const histGrad = `histGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id={histGrad} cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#fde047" />
+          <stop offset="40%" stopColor="#eab308" />
+          <stop offset="100%" stopColor="#854d0e" />
+        </radialGradient>
+      </defs>
+      <circle cx="24" cy="24" r="18" stroke={`url(#${histGrad})`} strokeWidth="4" fill="none" />
+      <path d="M24 12 V24 L32 28" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+      <polygon points="12,18 6,24 12,30" fill={`url(#${histGrad})`} />
+    </svg>
+  );
+}
+
+// 3D Green Check Success Icon
+export function IconCheck3D({ size = 18, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const checkGrad = `checkGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id={checkGrad} cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#86efac" />
+          <stop offset="45%" stopColor="#22c55e" />
+          <stop offset="100%" stopColor="#15803d" />
+        </radialGradient>
+      </defs>
+      <circle cx="24" cy="24" r="20" fill={`url(#${checkGrad})`} />
+      <path d="M14 24 L21 31 L34 17" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// 3D Shield Icon
+export function IconShield3D({ size = 18, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const shieldGrad = `shieldGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <linearGradient id={shieldGrad} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#60a5fa" />
+          <stop offset="50%" stopColor="#2563eb" />
+          <stop offset="100%" stopColor="#1e3a8a" />
+        </linearGradient>
+      </defs>
+      <path d="M24 4 L8 10 V22 C8 32, 15 41, 24 44 C33 41, 40 32, 40 22 V10 Z" fill={`url(#${shieldGrad})`} stroke="#93c5fd" strokeWidth="1.5" />
+      <path d="M24 14 V34 M16 22 L24 14 L32 22" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 3D Thumbs Up / Like Icon
+export function IconThumbsUp3D({ size = 18, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const thumbGrad = `thumbGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id={thumbGrad} cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#f472b6" />
+          <stop offset="50%" stopColor="#db2777" />
+          <stop offset="100%" stopColor="#9d174d" />
+        </radialGradient>
+      </defs>
+      <path d="M8 20 H14 V40 H8 Z M16 40 H34 C36 40, 38 38, 38 36 L40 26 C40.5 23.5, 38.5 21, 36 21 H27 L28.5 13 C29 10, 27 7, 24 8 L16 20 Z" fill={`url(#${thumbGrad})`} />
+    </svg>
+  );
+}
+
+// 3D AI Brain / Analysis Icon
+export function IconAiBrain3D({ size = 20, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const brainGrad = `brainGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id={brainGrad} cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#c084fc" />
+          <stop offset="50%" stopColor="#9333ea" />
+          <stop offset="100%" stopColor="#581c87" />
+        </radialGradient>
+      </defs>
+      <circle cx="24" cy="24" r="20" fill={`url(#${brainGrad})`} />
+      <circle cx="17" cy="19" r="4" fill="#ffffff" opacity="0.9" />
+      <circle cx="31" cy="19" r="4" fill="#ffffff" opacity="0.9" />
+      <circle cx="24" cy="31" r="4" fill="#ffffff" opacity="0.9" />
+      <path d="M17 19 L31 19 M17 19 L24 31 M31 19 L24 31" stroke="#ffffff" strokeWidth="2" />
+    </svg>
+  );
+}
+
+// 3D Rocket Icon
+export function IconRocket3D({ size = 18, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const rockGrad = `rockGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id={rockGrad} cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#f87171" />
+          <stop offset="50%" stopColor="#ef4444" />
+          <stop offset="100%" stopColor="#991b1b" />
+        </radialGradient>
+      </defs>
+      <path d="M24 4 C32 10, 36 22, 34 32 L24 38 L14 32 C12 22, 16 10, 24 4 Z" fill={`url(#${rockGrad})`} />
+      <circle cx="24" cy="18" r="4" fill="#ffffff" />
+      <path d="M14 32 L6 36 L10 26 Z M34 32 L42 36 L38 26 Z" fill="#f59e0b" />
+      <polygon points="20,38 28,38 24,46" fill="#facc15" />
+    </svg>
+  );
+}
+
+// 3D Infinity Icon
+export function IconInfinity3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path
+        d="M14 16 C8 16, 4 20, 4 24 C4 28, 8 32, 14 32 C20 32, 24 24, 24 24 C24 24, 28 32, 34 32 C40 32, 44 28, 44 24 C44 20, 40 16, 34 16 C28 16, 24 24, 24 24 C24 24, 20 16, 14 16 Z"
+        stroke="#81b64c"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// 3D Close / Cross Icon
+export function IconClose3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="12" cy="12" r="10" fill="#ef4444" opacity="0.2" />
+      <path d="M8 8 L16 16 M16 8 L8 16" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   );
 }

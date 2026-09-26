@@ -689,7 +689,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
           <div className="px-1">
             <input
               type="text"
-              placeholder="🔍 Cari pemain, taktik..."
+              placeholder="Cari pemain, taktik..."
               onClick={() => setActiveDockModal("friends")}
               readOnly
               className="w-full px-3 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-neutral-300 placeholder-neutral-500 hover:border-neutral-400 cursor-pointer transition-all"
@@ -920,7 +920,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                         : "bg-[var(--card)] border-[var(--border)] text-neutral-300 hover:text-white hover:border-[var(--primary)]"
                     }`}
                   >
-                    <span>{opponentTacticSaved ? "✓ Trik Lawan Berhasil Disimpan ke Teka-Teki!" : "Simpan Trik Lawan Ini Jadi Teka-Teki"}</span>
+                    <span>{opponentTacticSaved ? "Trik Lawan Berhasil Disimpan ke Teka-Teki!" : "Simpan Trik Lawan Ini Jadi Teka-Teki"}</span>
                 </button>
                 )}
               </div>
@@ -1074,17 +1074,17 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center justify-between">
                               <span>Format Waktu</span>
                               <span className="text-xs text-[var(--primary)] font-black font-mono">
-                                {timeMode === "unlimited" ? "Tanpa Batas ♾️" : `⚡ ${timeMode}`}
+                                {timeMode === "unlimited" ? "Tanpa Batas" : `${timeMode}`}
                               </span>
                             </div>
                             <div className="grid grid-cols-3 gap-1.5">
                               {[
-                                { id: "5m", label: "5 mnt", sub: "Kilat ⚡" },
+                                { id: "5m", label: "5 mnt", sub: "Kilat" },
                                 { id: "10m", label: "10 mnt", sub: "Cepat ⏱" },
-                                { id: "3m", label: "3 mnt", sub: "Kilat ⚡" },
-                                { id: "1m", label: "1 mnt", sub: "Peluru 🚀" },
+                                { id: "3m", label: "3 mnt", sub: "Kilat" },
+                                { id: "1m", label: "1 mnt", sub: "Peluru" },
                                 { id: "30m", label: "30 mnt", sub: "Klasik ⏳" },
-                                { id: "unlimited", label: "Bebas", sub: "Tanpa Batas ♾️" },
+                                { id: "unlimited", label: "Bebas", sub: "Tanpa Batas" },
                               ].map((t) => (
                                 <button
                                   key={t.id}

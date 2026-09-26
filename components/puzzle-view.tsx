@@ -1,13 +1,14 @@
 "use client";
 
-// Bank Teka-Teki. Berisi 50 posisi terverifikasi + teka-teki yang disimpan dari
-// pertandingan live. Semua dari lib/puzzle-data.ts (satu sumber).
+// Bank Teka-Teki: 60 posisi terverifikasi (chess.js) berdasarkan Master Motifs Maxim Blokh (CT-Art 4.0)
+// Menyediakan Quick Jump Tap Grid sehingga pemain bisa langsung melompat ke nomor puzzle tertentu.
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
 import { PUZZLE_CATEGORIES, type Puzzle, type PuzzleCategory } from "@/lib/puzzle-data";
 import { mergePuzzles, useSavedPuzzles, filterPuzzles } from "@/lib/puzzle-store";
+import { IconCheck3D } from "@/components/icons3d";
 
 type Props = { lang?: "id" | "en" };
 
@@ -105,13 +106,15 @@ export function PuzzleView({ lang = "id" }: Props) {
   return (
     <div className="stack" style={{ maxWidth: "70rem", margin: "0 auto" }}>
       <div className="row-between">
-        <h2 className="section-title">{lang === "id" ? "Bank Teka-Teki" : "Puzzle Bank"}</h2>
-        <span className="prose-note clock">
+        <h2 className="section-title">{lang === "id" ? "Bank Teka-Teki CT-ART 4.0" : "CT-ART 4.0 Puzzle Bank"}</h2>
+        <span className="prose-note clock flex items-center gap-1.5">
+          <IconCheck3D size={16} />
           {solved.size}/{all.length} selesai
         </span>
       </div>
 
-      <div className="row" style={{ gap: "0.5rem" }}>
+      {/* Category Pills with Total Count */}
+      <div className="row flex-wrap" style={{ gap: "0.5rem" }}>
         {PUZZLE_CATEGORIES.map((c) => {
           const count = c.id === "all" ? all.length : all.filter((p) => p.category === c.id).length;
           if (count === 0) return null;
@@ -128,6 +131,60 @@ export function PuzzleView({ lang = "id" }: Props) {
         })}
       </div>
 
+      {/* Quick Jump Tap Grid */}
+      <div className="panel p-3 stack-tight">
+        <div className="row-between">
+          <span className="label font-bold text-xs">
+            Lompat Posisi ({list.length} Teka-Teki dalam Kategori Ini):
+          </span>
+          <span className="label text-xs" style={{ color: "var(--muted-foreground)" }}>
+            Posisi Aktif #{index + 1}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5" style={{ maxHeight: "7.5rem", overflowY: "auto", padding: "0.25rem 0" }}>
+          {list.map((p, idx) => {
+            const isCurrent = idx === index;
+            const isSolved = solved.has(p.id);
+            return (
+              <button
+                key={p.id}
+                onClick={() => setIndex(idx)}
+                className={`ctl ctl-xs transition-all relative ${
+                  isCurrent
+                    ? "ctl-active ring-1 ring-[var(--primary)] font-black"
+                    : isSolved
+                      ? "border-[var(--primary)] text-[var(--primary)] font-bold"
+                      : "ctl-quiet font-medium"
+                }`}
+                title={`#${idx + 1}: ${p.theme} (${p.difficulty})`}
+                style={{
+                  minWidth: "2.35rem",
+                  textAlign: "center",
+                  justifyContent: "center",
+                  padding: "0 0.4rem",
+                }}
+              >
+                {idx + 1}
+                {isSolved && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "2px",
+                      right: "2px",
+                      width: "5px",
+                      height: "5px",
+                      borderRadius: "9999px",
+                      backgroundColor: "var(--primary)",
+                    }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main Puzzle Solver Area */}
       <div className="row" style={{ gap: "var(--gap-2)", alignItems: "flex-start" }}>
         <div className="panel p-2" style={{ flex: "1 1 22rem", maxWidth: "36rem" }}>
           <div className="aspect-square" style={{ borderRadius: "var(--radius)", overflow: "hidden" }}>
@@ -149,7 +206,7 @@ export function PuzzleView({ lang = "id" }: Props) {
         <div className="panel p-3 stack" style={{ flex: "1 1 18rem" }}>
           <div className="row-between">
             <div className="min-w-0">
-              <div className="label">#{index + 1} · {puzzle.category}</div>
+              <div className="label">Posisi #{index + 1} · {puzzle.category}</div>
               <div className="font-bold wrap-anywhere" style={{ fontFamily: "var(--font-display)" }}>
                 {puzzle.theme}
               </div>
@@ -173,13 +230,17 @@ export function PuzzleView({ lang = "id" }: Props) {
           )}
 
           {status === "correct" && (
-            <p className="panel p-2 prose-note" style={{ borderColor: "var(--primary)" }}>
-              <strong>{puzzle.solutionSan} benar.</strong> {puzzle.trickExplanation}
-            </p>
+            <div className="panel p-2.5 prose-note stack-tight" style={{ borderColor: "var(--primary)", background: "color-mix(in srgb, var(--primary) 10%, var(--card))" }}>
+              <div className="flex items-center gap-1.5 font-bold" style={{ color: "var(--primary)" }}>
+                <IconCheck3D size={16} />
+                <span>{puzzle.solutionSan} Benar! (+{puzzle.xp} XP)</span>
+              </div>
+              <p style={{ margin: 0, fontSize: "var(--text-xs)" }}>{puzzle.trickExplanation}</p>
+            </div>
           )}
-          {status === "wrong" && <p className="prose-note">Belum tepat. Buka petunjuk atau ulangi posisinya.</p>}
+          {status === "wrong" && <p className="prose-note" style={{ color: "var(--destructive)" }}>Belum tepat. Buka petunjuk atau ulangi posisinya.</p>}
 
-          <div className="row" style={{ gap: "0.5rem" }}>
+          <div className="row flex-wrap" style={{ gap: "0.5rem", marginTop: "0.5rem" }}>
             <button className="ctl ctl-sm" onClick={reset}>
               Ulangi
             </button>
@@ -203,7 +264,7 @@ export function PuzzleView({ lang = "id" }: Props) {
               </>
             )}
             <button className="ctl ctl-sm" onClick={() => setIndex((i) => Math.min(list.length - 1, i + 1))} disabled={index >= list.length - 1}>
-              Berikutnya
+              Berikutnya →
             </button>
           </div>
         </div>
