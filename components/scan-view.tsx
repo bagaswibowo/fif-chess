@@ -1,13 +1,14 @@
 "use client";
 
-// Impor Posisi & AI Engine Solver Arena (v2.0)
+// Impor Posisi & AI Engine Solver Arena (v2.1)
 // Fitur:
-// 1. Pemindaian gambar / foto kamera dengan deteksi FEN otomatis.
-// 2. Input & Paste FEN manual langsung.
-// 3. Preset cepat termasuk partai endgame user terbaru.
-// 4. Dual-Board Arena: Papan Referensi Asli (kiri) vs Papan Simulasi Dual-Engine (kanan).
-// 5. Analisis taktis, bahaya blunder, dan kunci kemenangan.
-// 6. Tombol buka langsung ke menu Bermain.
+// 1. Live Web Camera & Laptop Webcam Scanner (getUserMedia + Canvas Snapshot).
+// 2. Pemindaian gambar / upload foto dengan deteksi FEN otomatis.
+// 3. Input & Paste FEN manual langsung.
+// 4. Preset cepat termasuk partai endgame user terbaru.
+// 5. Dual-Board Arena: Papan Referensi Asli (kiri) vs Papan Simulasi Dual-Engine (kanan).
+// 6. Analisis taktis, bahaya blunder, dan kunci kemenangan.
+// 7. Tombol buka langsung ke menu Bermain.
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Chess } from "chess.js";
@@ -21,6 +22,7 @@ import {
   IconLightning3D,
   IconTrophy3D,
   IconCheck3D,
+  IconClose3D,
 } from "@/components/icons3d";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 
@@ -41,6 +43,12 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [fenInput, setFenInput] = useState<string>(defaultInitialFen);
   const [error, setError] = useState<string | null>(null);
 
+  // Live Web Camera State (Mobile HP Camera & Laptop Webcam)
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState<"environment" | "user">("environment");
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   // Dual-Engine Configuration & Solver State (Papan 2)
   const [liveFen, setLiveFen] = useState<string>(defaultInitialFen);
   const [whiteEngine, setWhiteEngine] = useState<EngineType>("stockfish");
@@ -51,7 +59,6 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [lastMoveUci, setLastMoveUci] = useState<string | null>(null);
   const [currentScoreCp, setCurrentScoreCp] = useState<number | null>(null);
 
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoSolveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -76,7 +83,118 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     [lang]
   );
 
-  // Handle image upload from camera or file
+  // Stop Webcam Stream
+  const stopWebcam = useCallback(() => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      setCameraStream(null);
+    }
+    setIsCameraOpen(false);
+  }, [cameraStream]);
+
+  // Start Live Webcam Stream
+  const startWebcam = useCallback(
+    async (mode: "environment" | "user" = cameraFacingMode) => {
+      stopWebcam();
+      setError(null);
+      setIsCameraOpen(true);
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: mode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+
+        setCameraStream(stream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      } catch (err: any) {
+        console.error("Camera access error:", err);
+        // Fallback without facingMode constraint (e.g. laptop webcam)
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+          setCameraStream(fallbackStream);
+          if (videoRef.current) {
+            videoRef.current.srcObject = fallbackStream;
+            videoRef.current.play().catch(() => {});
+          }
+        } catch (fallbackErr: any) {
+          setError(
+            lang === "id"
+              ? "Tidak dapat mengakses kamera. Pastikan izin kamera telah diberikan di browser."
+              : "Cannot access camera. Please allow camera permissions in your browser."
+          );
+          setIsCameraOpen(false);
+        }
+      }
+    },
+    [cameraFacingMode, stopWebcam, lang]
+  );
+
+  // Switch between back camera ("environment") and laptop/front webcam ("user")
+  const handleToggleFacingMode = () => {
+    const nextMode = cameraFacingMode === "environment" ? "user" : "environment";
+    setCameraFacingMode(nextMode);
+    void startWebcam(nextMode);
+  };
+
+  // Capture Live Snapshot from Video Stream
+  const handleCaptureSnapshot = async () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+
+    try {
+      setIsProcessingImage(true);
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const base64Url = canvas.toDataURL("image/jpeg", 0.88);
+        setUploadedImage(base64Url);
+
+        stopWebcam();
+
+        const res = await fetch("/api/scan-board", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: base64Url }),
+        });
+        const data = await res.json();
+        if (data.ok && data.fen) {
+          applyNewInitialFen(data.fen);
+        } else {
+          applyNewInitialFen(defaultInitialFen);
+        }
+      }
+    } catch (err) {
+      console.error("Snapshot scan error:", err);
+      applyNewInitialFen(defaultInitialFen);
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  // Cleanup camera tracks on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [cameraStream]);
+
+  // Handle file upload from disk
   const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -299,15 +417,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
   return (
     <div className="stack" style={{ maxWidth: "72rem", margin: "0 auto" }}>
-      {/* Hidden file inputs for Camera & Upload */}
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        ref={cameraInputRef}
-        className="hidden"
-        onChange={handleImageFile}
-      />
+      {/* Hidden file input for Upload from disk */}
       <input
         type="file"
         accept="image/*"
@@ -324,19 +434,19 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             <span>{lang === "id" ? "Impor Posisi & AI Engine Solver Arena" : "Position Import & AI Solver Arena"}</span>
           </h2>
           <p className="prose-note" style={{ margin: 0, fontSize: "var(--text-xs)" }}>
-            Scan foto catur atau paste FEN untuk menganalisis taktik &amp; duel dual-engine
+            Akses langsung kamera HP &amp; laptop web camera atau upload foto untuk scan FEN otomatis
           </p>
         </div>
 
-        {/* Action Buttons for Mobile Camera, Upload, & Status */}
+        {/* Action Buttons for Mobile Live Camera, Laptop Webcam, & Upload */}
         <div className="row gap-2 flex-wrap">
           <button
-            onClick={() => cameraInputRef.current?.click()}
+            onClick={() => void startWebcam("environment")}
             className="ctl ctl-sm ctl-primary flex items-center gap-1.5"
             disabled={isProcessingImage}
           >
             <IconScan3D size={16} />
-            <span>{isProcessingImage ? "Memindai..." : "Kamera HP"}</span>
+            <span>{isProcessingImage ? "Memindai..." : "Buka Kamera HP / Laptop WebCam"}</span>
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -344,10 +454,85 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             disabled={isProcessingImage}
           >
             <IconVision3D size={16} />
-            <span>{isProcessingImage ? "Memindai..." : "Upload Foto / Screenshot"}</span>
+            <span>{isProcessingImage ? "Memindai..." : "Upload Foto / File"}</span>
           </button>
         </div>
       </div>
+
+      {/* LIVE WEBCAM SCANNER MODAL */}
+      {isCameraOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/85 backdrop-blur-md"
+        >
+          <div
+            className="panel p-4 md:p-5 stack max-w-lg w-full relative"
+            style={{ background: "var(--card)", borderColor: "var(--primary)" }}
+          >
+            <div className="row-between pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-2 font-bold text-sm text-white">
+                <IconScan3D size={20} />
+                <span>Live Web Camera Scanner</span>
+              </div>
+              <button className="ctl ctl-xs ctl-quiet" onClick={stopWebcam} title="Tutup Kamera">
+                <IconClose3D size={16} />
+              </button>
+            </div>
+
+            {/* Video Stream with Chessboard Alignment Grid */}
+            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-black border-2 border-[var(--primary)] shadow-2xl flex items-center justify-center">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+
+              {/* 8x8 Chessboard Overlay Reticle */}
+              <div
+                className="absolute inset-4 pointer-events-none grid grid-cols-8 grid-rows-8 border-2 border-emerald-400/80 rounded-xl"
+                style={{
+                  boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.45)",
+                }}
+              >
+                {Array.from({ length: 64 }).map((_, i) => (
+                  <div key={i} className="border border-emerald-400/20" />
+                ))}
+              </div>
+
+              {/* Guide Hint */}
+              <div className="absolute top-2 px-3 py-1 rounded-full bg-black/75 text-[11px] font-bold text-emerald-300 border border-emerald-500/40 backdrop-blur-sm">
+                Posisikan 64 petak catur sejajar dengan kotak panduan
+              </div>
+            </div>
+
+            {/* Camera Controls */}
+            <div className="row justify-between items-center pt-2">
+              <button
+                type="button"
+                className="ctl ctl-sm ctl-quiet flex items-center gap-1.5 text-xs"
+                onClick={handleToggleFacingMode}
+                title="Ganti Kamera Depan / Belakang / Laptop"
+              >
+                <IconSwap3D size={16} />
+                <span>Ganti Kamera ({cameraFacingMode === "environment" ? "Belakang" : "Depan/Webcam"})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleCaptureSnapshot()}
+                disabled={isProcessingImage}
+                className="ctl ctl-sm ctl-primary font-bold flex items-center gap-2 px-4 shadow-lg"
+              >
+                <IconScan3D size={16} />
+                <span>{isProcessingImage ? "Memproses FEN..." : "Ambil Foto & Pindai"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MANUAL FEN INPUT / PASTE BAR */}
       <div className="panel p-3 stack-tight" style={{ background: "var(--surface)" }}>
