@@ -31,7 +31,7 @@ import { GuidedPlayView } from "@/components/guided-play-view";
 import { GameOverModal } from "@/components/game-over-modal";
 import { useChessClock } from "@/lib/use-chess-clock";
 import {
-  IconPawn3D, IconPlay3D,
+  IconPawn3D, IconKingWhite3D, IconKingBlack3D, IconDice3D, IconFriends3D, IconMessages3D, IconBell3D, IconSettings3D, IconPlay3D,
   IconPuzzle3D,
   IconVision3D,
   IconScan3D,
@@ -713,15 +713,15 @@ const [showAuthModal, setShowAuthModal] = useState(false);
             </div>
           </div>
 
-          {/* 4-Icon Bottom Utility Dock (Teman, Pesan, Pemberitahuan, Pengaturan) */}
+          {/* 4-Icon Bottom Utility Dock (3D Icons) */}
           <div className="grid grid-cols-4 gap-1 px-1">
             <button
               type="button"
               onClick={() => setActiveDockModal("friends")}
               title="Teman & Civitas"
-              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer relative"
+              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
-              <span className="text-sm">👥</span>
+              <IconFriends3D size={18} />
               <span className="text-[9px] font-bold text-neutral-400">Teman</span>
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#81b64c]"></span>
             </button>
@@ -730,9 +730,9 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               type="button"
               onClick={() => setActiveDockModal("messages")}
               title="Pesan Masuk"
-              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer relative"
+              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
-              <span className="text-sm">✉️</span>
+              <IconMessages3D size={18} />
               <span className="text-[9px] font-bold text-neutral-400">Pesan</span>
             </button>
 
@@ -740,9 +740,9 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               type="button"
               onClick={() => setActiveDockModal("notifications")}
               title="Pemberitahuan"
-              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer relative"
+              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
-              <span className="text-sm">🔔</span>
+              <IconBell3D size={18} />
               <span className="text-[9px] font-bold text-neutral-400">Notif</span>
               <span className="absolute top-1 right-1 px-1 py-0.2 rounded-full bg-red-600 text-[8px] font-black text-white">1</span>
             </button>
@@ -751,9 +751,9 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               type="button"
               onClick={() => setActiveDockModal("settings")}
               title="Pengaturan"
-              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer relative"
+              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
-              <span className="text-sm">⚙️</span>
+              <IconSettings3D size={18} />
               <span className="text-[9px] font-bold text-neutral-400">Atur</span>
             </button>
           </div>
@@ -1116,7 +1116,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                                     : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
                                 }`}
                               >
-                                <span className="text-2xl text-amber-100">♔</span>
+                                <IconKingWhite3D size={26} />
                                 <span className="text-xs font-bold text-white">Putih</span>
                                 <span className="text-[9px] text-neutral-400 font-medium">Main Pertama</span>
                               </button>
@@ -1129,7 +1129,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                                     : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
                                 }`}
                               >
-                                <span className="text-2xl text-[#81b64c]">🎲</span>
+                                <IconDice3D size={26} />
                                 <span className="text-xs font-bold text-white">Acak</span>
                                 <span className="text-[9px] text-neutral-400 font-medium">Otomatis</span>
                               </button>
@@ -1142,7 +1142,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                                     : "bg-[#1a1714] border-[#383530] hover:border-neutral-500 text-neutral-400"
                                 }`}
                               >
-                                <span className="text-2xl text-neutral-300">♚</span>
+                                <IconKingBlack3D size={26} />
                                 <span className="text-xs font-bold text-white">Hitam</span>
                                 <span className="text-[9px] text-neutral-400 font-medium">Main Kedua</span>
                               </button>
@@ -1275,7 +1275,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
       <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--border)] shadow-2xl overflow-x-auto">
         <div className="flex justify-around items-center py-2 px-1 gap-1 min-w-full">
           {[
-            { id: "play", icon: IconPlay3D, labelId: "Bermain", labelEn: "Play" },
+            { id: "play", icon: IconKingWhite3D, IconKingBlack3D, IconDice3D, IconFriends3D, IconMessages3D, IconBell3D, IconSettings3D, IconPlay3D, labelId: "Bermain", labelEn: "Play" },
             { id: "coach", icon: IconCoach3D, labelId: "Latih", labelEn: "Train" },
             { id: "puzzle", icon: IconPuzzle3D, labelId: "Puzzle", labelEn: "Puzzle" },
             { id: "vision", icon: IconVision3D, labelId: "Belajar", labelEn: "Learn" },

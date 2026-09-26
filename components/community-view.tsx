@@ -2,7 +2,17 @@
 
 import { useState } from "react";
 import type { SessionUser } from "@/lib/use-session";
-import { IconCommunity3D, IconMedal3D, IconPlay3D } from "@/components/icons3d";
+import {
+  IconCommunity3D,
+  IconMedal3D,
+  IconPlay3D,
+  IconMessages3D,
+  IconPin3D,
+  IconFire3D,
+  IconPencil3D,
+  IconPawn3D,
+  IconSearch3D,
+} from "@/components/icons3d";
 
 export type ForumCategory = {
   id: string;
@@ -48,7 +58,6 @@ type Props = {
 };
 
 export function CommunityView({ user, lang = "id" }: Props) {
-  // State for Navigation: 'index' (forum categories) or 'thread' (specific topic)
   const [viewMode, setViewMode] = useState<"index" | "thread">("index");
   const [activeThreadId, setActiveThreadId] = useState<string>("t1");
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -78,10 +87,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
       id: "t1",
       categoryId: "general",
       categoryName: "Diskusi Umum Catur",
-      title: "🤔🔥 What's your biggest chess HOT TAKE 🔥🤔",
+      title: "What's your biggest chess HOT TAKE",
       authorUsername: "smiley_face10",
       authorName: "Smiley Face",
-      authorTitle: "💎 PRO",
+      authorTitle: "PRO PLAYER",
       avatarInitials: "SF",
       repliesCount: 42,
       lastActivity: "2 mnt lalu",
@@ -92,7 +101,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
           postNumber: 1,
           authorUsername: "smiley_face10",
           authorName: "Smiley Face",
-          authorTitle: "💎 PRO",
+          authorTitle: "PRO PLAYER",
           authorRole: "Civitas Catur Tel-U",
           avatarInitials: "SF",
           content: "Tell me your chess hot takes. Mine is that chess is partially a luck based game. Hear me out: you cannot see thirty moves into the future. There are positions where making the best human move opens an emergent tactical dynamic twenty moves later that neither side could completely compute. What are your biggest hot takes?",
@@ -105,7 +114,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
           postNumber: 2,
           authorUsername: "bagaswibowo",
           authorName: "Pak Bagas Wibowo",
-          authorTitle: "👑 ADMIN",
+          authorTitle: "ADMIN KOMUNITAS",
           authorRole: "Dosen Tel-U & Admin",
           avatarInitials: "BW",
           content: "Hot take yang sangat menarik! Dari perspektif teori komputasi dan pohon pencarian Minimax/Stockfish, kompleksitas posisi catur memang memiliki branching factor ~35 per ply. Namun itulah mengapa penguasaan pola (heuristik) dan manajemen risiko waktu (time control) menjadi pembeda antara Master dan Grandmaster.",
@@ -118,7 +127,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
           postNumber: 3,
           authorUsername: "DaRonK1",
           authorName: "DaRonK1",
-          authorTitle: "♟️ 2300",
+          authorTitle: "ELO 2300",
           authorRole: "Mahasiswa Informatika",
           avatarInitials: "DR",
           content: "Saya setuju bahwa di time control kilat (Bullet / Blitz 3 mnt), elemen intuisi instan sangat dominan. Tapi di partai Klasik, kalkulasi konkret tetap menjadi penentu kemenangan utama!",
@@ -132,10 +141,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
       id: "t2",
       categoryId: "telu",
       categoryName: "Komunitas Tel-U / FIF CHESS",
-      title: "Jadwal Turnamen Kilat Blitz 5 Mnt Antar Mahasiswa FIF Tel-U 🏆",
+      title: "Jadwal Turnamen Kilat Blitz 5 Mnt Antar Mahasiswa FIF Tel-U",
       authorUsername: "bagaswibowo",
       authorName: "Pak Bagas Wibowo",
-      authorTitle: "👑 ADMIN",
+      authorTitle: "ADMIN KOMUNITAS",
       avatarInitials: "BW",
       repliesCount: 28,
       lastActivity: "15 mnt lalu",
@@ -146,7 +155,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
           postNumber: 1,
           authorUsername: "bagaswibowo",
           authorName: "Pak Bagas Wibowo",
-          authorTitle: "👑 ADMIN",
+          authorTitle: "ADMIN KOMUNITAS",
           authorRole: "Dosen Tel-U & Admin",
           avatarInitials: "BW",
           content: "Diberitahukan kepada seluruh mahasiswa dan civitas Telkom University, turnamen online PvP Blitz 5 mnt akan diadakan setiap Jumat sore di platform ini. Sistem pertandingan menggunakan pairing Swiss 5 ronde. Silakan daftarkan akun Anda dan lakukan verifikasi.",
@@ -163,7 +172,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
       title: "Post your brilliant moves here! (Koleksi Taktik Spektakuler)",
       authorUsername: "parth_18",
       authorName: "Parth Chess",
-      authorTitle: "♟️ 1950",
+      authorTitle: "ELO 1950",
       avatarInitials: "PC",
       repliesCount: 64,
       lastActivity: "39 mnt lalu",
@@ -174,10 +183,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
           postNumber: 1,
           authorUsername: "parth_18",
           authorName: "Parth Chess",
-          authorTitle: "♟️ 1950",
+          authorTitle: "ELO 1950",
           authorRole: "Mahasiswa SI",
           avatarInitials: "PC",
-          content: "Bagikan langkah brilian (!!) Anda saat melawan bot Stockfish atau pemain nyata. Pengorbanan menteri di d1 atau Greek Gift di h7 paling disambut!",
+          content: "Bagikan langkah brilian Anda saat melawan bot Stockfish atau pemain nyata. Pengorbanan menteri di d1 atau Greek Gift di h7 paling disambut!",
           likes: 29,
           dislikes: 0,
           createdAt: "5 jam lalu",
@@ -191,7 +200,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
       title: "Perbedaan Nyata Antara Pemain Rating 1200, 1600, dan 2300",
       authorUsername: "zenwisteriaclarines",
       authorName: "Zen Wisteria",
-      authorTitle: "💎 PRO",
+      authorTitle: "PRO MEMBER",
       avatarInitials: "ZW",
       repliesCount: 17,
       lastActivity: "22 mnt lalu",
@@ -201,7 +210,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
           postNumber: 1,
           authorUsername: "zenwisteriaclarines",
           authorName: "Zen Wisteria",
-          authorTitle: "💎 PRO",
+          authorTitle: "PRO MEMBER",
           authorRole: "Civitas Akademika",
           avatarInitials: "ZW",
           content: "Bagi pemula, kunci naik dari 1200 ke 1600 adalah eliminasi blunder 1-langkah dan latihan teka-teki taktis 50 posisi secara konsisten.",
@@ -215,7 +224,6 @@ export function CommunityView({ user, lang = "id" }: Props) {
 
   const activeThread = threads.find((t) => t.id === activeThreadId) || threads[0];
 
-  // Submit New Topic
   const handleCreateTopic = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTopicTitle.trim() || !newTopicContent.trim() || !user) return;
@@ -228,7 +236,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
       title: newTopicTitle.trim(),
       authorUsername: user.username,
       authorName: user.fullName,
-      authorTitle: user.isAdmin ? "👑 ADMIN" : "♟️ MEMBER",
+      authorTitle: user.isAdmin ? "ADMIN KOMUNITAS" : "MEMBER",
       avatarInitials: user.username.slice(0, 2).toUpperCase(),
       repliesCount: 0,
       lastActivity: "Baru saja",
@@ -238,7 +246,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
           postNumber: 1,
           authorUsername: user.username,
           authorName: user.fullName,
-          authorTitle: user.isAdmin ? "👑 ADMIN" : "♟️ MEMBER",
+          authorTitle: user.isAdmin ? "ADMIN KOMUNITAS" : "MEMBER",
           authorRole: user.role,
           avatarInitials: user.username.slice(0, 2).toUpperCase(),
           content: newTopicContent.trim(),
@@ -257,7 +265,6 @@ export function CommunityView({ user, lang = "id" }: Props) {
     setNewTopicContent("");
   };
 
-  // Submit Reply to Active Thread
   const handlePostReply = (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim() || !user) return;
@@ -267,7 +274,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
       postNumber: activeThread.posts.length + 1,
       authorUsername: user.username,
       authorName: user.fullName,
-      authorTitle: user.isAdmin ? "👑 ADMIN" : "♟️ MEMBER",
+      authorTitle: user.isAdmin ? "ADMIN KOMUNITAS" : "MEMBER",
       authorRole: user.role,
       avatarInitials: user.username.slice(0, 2).toUpperCase(),
       content: replyText.trim(),
@@ -294,9 +301,8 @@ export function CommunityView({ user, lang = "id" }: Props) {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
-      {/* 2-KOLOM UTAMA: KONTEN FORUM + RIGHT SIDEBAR TOOLS */}
+      {/* 2-KOLOM UTAMA */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_330px] gap-6 items-start">
-        {/* KOLOM KIRI / TENGAH: INDEX KATEGORI ATAU DETAIL UTAS */}
         <div className="space-y-6 min-w-0">
           {viewMode === "index" ? (
             /* ================= VIEW 1: FORUM CATEGORIES INDEX ================= */
@@ -304,8 +310,8 @@ export function CommunityView({ user, lang = "id" }: Props) {
               {/* Header Forum Index */}
               <div className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#1a1714] border border-[#383530] flex items-center justify-center text-xl text-[#81b64c]">
-                    💬
+                  <div className="w-10 h-10 rounded-xl bg-[#1a1714] border border-[#383530] flex items-center justify-center">
+                    <IconMessages3D size={24} />
                   </div>
                   <div>
                     <h1 className="text-xl sm:text-2xl font-black text-white leading-tight">Forum Komunitas</h1>
@@ -315,13 +321,13 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   </div>
                 </div>
 
-                {/* Mobile Button Buat Topik */}
                 <button
                   type="button"
                   onClick={() => setShowNewTopicModal(true)}
-                  className="lg:hidden px-3.5 py-2 rounded-xl bg-[#81b64c] text-white text-xs font-bold transition-all shadow"
+                  className="lg:hidden px-3.5 py-2 rounded-xl bg-[#81b64c] text-white text-xs font-bold transition-all shadow flex items-center gap-1"
                 >
-                  + Topik
+                  <IconPencil3D size={14} />
+                  <span>Topik</span>
                 </button>
               </div>
 
@@ -334,7 +340,6 @@ export function CommunityView({ user, lang = "id" }: Props) {
                       key={cat.id}
                       className="p-4 sm:p-5 rounded-2xl bg-[#211f1d] border border-[#3d3a34] space-y-3.5 shadow-md"
                     >
-                      {/* Category Header */}
                       <div className="flex items-center justify-between border-b border-[#312e2b] pb-2.5">
                         <div>
                           <div className="flex items-center gap-2">
@@ -350,7 +355,6 @@ export function CommunityView({ user, lang = "id" }: Props) {
                         </span>
                       </div>
 
-                      {/* Top Threads in this Category */}
                       <div className="space-y-2">
                         {catThreads.length === 0 ? (
                           <p className="text-xs text-neutral-500 italic py-2">Belum ada topik di kategori ini.</p>
@@ -366,8 +370,8 @@ export function CommunityView({ user, lang = "id" }: Props) {
                               className="p-3 rounded-xl bg-[#262421] border border-[#312e2b] hover:border-neutral-400 flex items-center justify-between gap-3 cursor-pointer transition-all hover:bg-[#2b2926]"
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
-                                {t.isPinned && <span className="text-sm text-amber-400 shrink-0" title="Dipin">📌</span>}
-                                {t.isHot && <span className="text-sm text-red-400 shrink-0" title="Hangat">🔥</span>}
+                                {t.isPinned && <IconPin3D size={16} className="shrink-0" />}
+                                {t.isHot && <IconFire3D size={16} className="shrink-0" />}
                                 <div className="min-w-0">
                                   <div className="text-xs sm:text-sm font-bold text-white hover:text-[#81b64c] truncate transition-colors">
                                     {t.title}
@@ -381,7 +385,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                               </div>
 
                               <div className="flex items-center gap-1.5 text-xs text-neutral-400 font-mono shrink-0">
-                                <span>💬</span>
+                                <IconMessages3D size={14} />
                                 <span className="font-bold text-white">{t.repliesCount}</span>
                               </div>
                             </div>
@@ -396,7 +400,6 @@ export function CommunityView({ user, lang = "id" }: Props) {
           ) : (
             /* ================= VIEW 2: ACTIVE THREAD DETAIL ================= */
             <div className="space-y-5">
-              {/* Back Button & Breadcrumbs */}
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <button
                   type="button"
@@ -413,20 +416,21 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 </div>
               </div>
 
-              {/* Thread Header Card */}
               <div className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-2 shadow-lg">
                 <div className="flex items-center gap-2">
                   <span className="px-2.5 py-0.5 rounded-full bg-[#1a1714] text-[10px] font-bold text-[#81b64c] border border-[#3d3a34]">
                     {activeThread.categoryName}
                   </span>
                   {activeThread.isPinned && (
-                    <span className="px-2 py-0.5 rounded-full bg-amber-950/60 text-amber-300 text-[10px] font-bold">
-                      📌 Dipin
+                    <span className="px-2 py-0.5 rounded-full bg-amber-950/60 text-amber-300 text-[10px] font-bold flex items-center gap-1">
+                      <IconPin3D size={12} />
+                      <span>Dipin</span>
                     </span>
                   )}
                   {activeThread.isHot && (
-                    <span className="px-2 py-0.5 rounded-full bg-red-950/60 text-red-300 text-[10px] font-bold">
-                      🔥 Topik Hangat
+                    <span className="px-2 py-0.5 rounded-full bg-red-950/60 text-red-300 text-[10px] font-bold flex items-center gap-1">
+                      <IconFire3D size={12} />
+                      <span>Topik Hangat</span>
                     </span>
                   )}
                 </div>
@@ -436,14 +440,13 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 </div>
               </div>
 
-              {/* POSTS LIST (Post #1, #2, #3...) */}
+              {/* POSTS LIST */}
               <div className="space-y-4">
                 {activeThread.posts.map((post) => (
                   <div
                     key={post.id}
                     className="p-4 sm:p-5 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3.5 shadow-sm transition-all hover:border-neutral-400"
                   >
-                    {/* Author Header */}
                     <div className="flex items-start justify-between gap-3 border-b border-[#312e2b] pb-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#81b64c] to-[#457524] flex items-center justify-center font-bold text-sm text-white shrink-0 shadow">
@@ -469,12 +472,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
                       <span className="text-xs font-mono font-bold text-neutral-500">#{post.postNumber}</span>
                     </div>
 
-                    {/* Post Content */}
                     <div className="text-sm text-neutral-200 leading-relaxed whitespace-pre-wrap">
                       {post.content}
                     </div>
 
-                    {/* Footer Actions */}
                     <div className="flex items-center justify-between pt-2 border-t border-[#312e2b] text-xs text-neutral-400">
                       <div className="flex items-center gap-3">
                         <button
@@ -515,14 +516,13 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 ))}
               </div>
 
-              {/* REPLY FORM / RICH TEXT EDITOR */}
+              {/* REPLY FORM */}
               <div className="p-4 sm:p-5 rounded-2xl bg-[#211f1d] border border-[#3d3a34] space-y-3.5 shadow-md">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Tulis Balasan</span>
                   <span className="text-xs text-neutral-400 font-mono">Karakter: {replyText.length}</span>
                 </div>
 
-                {/* Toolbar */}
                 <div className="flex items-center gap-1 p-1.5 rounded-xl bg-[#1a1714] border border-[#312e2b] flex-wrap">
                   <button
                     type="button"
@@ -559,15 +559,14 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   <button
                     type="button"
                     onClick={() => setReplyText((prev) => prev + " [FEN: r1bqkb1r/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 4] ")}
-                    className="px-2.5 h-8 rounded-lg hover:bg-[#302e2b] text-xs font-bold text-[#81b64c] hover:text-white flex items-center gap-1 cursor-pointer"
+                    className="px-2.5 h-8 rounded-lg hover:bg-[#302e2b] text-xs font-bold text-[#81b64c] hover:text-white flex items-center gap-1.5 cursor-pointer"
                     title="Sisipkan Diagram Papan"
                   >
-                    <span>♟️</span>
+                    <IconPawn3D size={16} />
                     <span>Papan</span>
                   </button>
                 </div>
 
-                {/* Textarea */}
                 <form onSubmit={handlePostReply} className="space-y-3">
                   <textarea
                     value={replyText}
@@ -603,21 +602,22 @@ export function CommunityView({ user, lang = "id" }: Props) {
           )}
         </div>
 
-        {/* KOLOM KANAN (RIGHT SIDEBAR TOOLS: + TOPIK BARU, SEARCH, TERBARU, LEGENDA) */}
+        {/* KOLOM KANAN */}
         <div className="space-y-5">
-          {/* TOMBOL AKBAR + TOPIK BARU */}
           <button
             type="button"
             onClick={() => setShowNewTopicModal(true)}
             className="w-full h-12 rounded-xl bg-[#81b64c] hover:bg-[#72a342] text-white font-black text-sm transition-all shadow-[0_4px_0_#4d7a27,0_4px_16px_rgba(129,182,76,0.3)] flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span className="text-lg font-bold">+</span>
+            <IconPencil3D size={18} />
             <span>Topik Baru</span>
           </button>
 
-          {/* FILTER & SEARCH WIDGET */}
           <div className="p-4 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3 shadow-md">
-            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Cari & Saring</div>
+            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+              <IconSearch3D size={14} />
+              <span>Cari & Saring</span>
+            </div>
             <div className="space-y-2">
               <input
                 type="text"
@@ -642,7 +642,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
             </div>
           </div>
 
-          {/* WIDGET: TERBARU (LATEST ACTIVITY) */}
+          {/* TERBARU */}
           <div className="p-4 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3 shadow-md">
             <div className="flex items-center justify-between border-b border-[#312e2b] pb-2.5">
               <span className="text-xs font-bold text-white uppercase tracking-wider">Terbaru</span>
@@ -672,22 +672,22 @@ export function CommunityView({ user, lang = "id" }: Props) {
             </div>
           </div>
 
-          {/* WIDGET: KETERANGAN FORUM */}
+          {/* KETERANGAN FORUM */}
           <div className="p-4 rounded-2xl bg-[#262421] border border-[#3d3a34] space-y-3 shadow-md text-xs">
             <div className="border-b border-[#312e2b] pb-2">
               <span className="font-bold text-white uppercase tracking-wider text-xs">Keterangan Forum</span>
             </div>
             <div className="space-y-2 text-neutral-300">
               <div className="flex items-center gap-2.5">
-                <span className="text-base text-[#81b64c]">💬</span>
+                <IconMessages3D size={16} />
                 <span>Mengikuti Topik</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="text-base text-amber-400">📌</span>
+                <IconPin3D size={16} />
                 <span>Topik Pilihan Civitas</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="text-base text-red-400">🔥</span>
+                <IconFire3D size={16} />
                 <span>Topik Hangat & Viral</span>
               </div>
             </div>
@@ -695,7 +695,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
         </div>
       </div>
 
-      {/* MODAL BUAT TOPIK BARU (+ TOPIK BARU) */}
+      {/* MODAL BUAT TOPIK BARU */}
       {showNewTopicModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
@@ -706,7 +706,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
           <div className="w-full max-w-lg bg-[#211f1d] border border-[#3d3a34] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden text-white flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#312e2b] bg-[#262421]">
               <div className="flex items-center gap-2">
-                <span className="text-xl">✍️</span>
+                <IconPencil3D size={20} />
                 <span className="font-bold text-base">Buat Topik Diskusi Baru</span>
               </div>
               <button

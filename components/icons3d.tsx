@@ -33,9 +33,7 @@ export function IconPlay3D({ size = 24, className = "" }: IconProps) {
       <g filter={`url(#${playShadow})`}>
         <rect x="6" y="6" width="52" height="52" rx="16" fill="url(#rimGrad)" />
         <rect x="8" y="8" width="48" height="48" rx="14" fill={`url(#${playGrad})`} stroke="#86efac" strokeWidth="1" />
-        {/* Gloss highlight */}
         <ellipse cx="24" cy="16" rx="14" ry="5" fill="#ffffff" opacity="0.35" transform="rotate(-15 24 16)" />
-        {/* Play Triangle Symbol with 3D Bevel */}
         <polygon points="26,20 44,32 26,44" fill="#ffffff" filter="drop-shadow(0 2px 2px rgba(0,0,0,0.3))" />
       </g>
     </svg>
@@ -74,19 +72,13 @@ export function IconPawn3D({ size = 28, className = "" }: IconProps) {
         </filter>
       </defs>
       <g filter={`url(#${pawnShadow})`}>
-        {/* Base */}
         <ellipse cx="24" cy="41" rx="14" ry="4.5" fill={`url(#${pawnBase})`} />
         <path d="M12 40 C12 37, 16 35, 24 35 C32 35, 36 37, 36 40 Z" fill={`url(#${pawnBody})`} />
-        {/* Collar base */}
         <ellipse cx="24" cy="35" rx="9" ry="2.5" fill="#588f37" />
-        {/* Waist & stem */}
         <path d="M18 35 C17 26, 19 22, 21 19 L27 19 C29 22, 31 26, 30 35 Z" fill={`url(#${pawnBody})`} />
-        {/* Neck collar */}
         <ellipse cx="24" cy="19" rx="6.5" ry="2" fill="#9de05d" />
         <ellipse cx="24" cy="19.5" rx="6.5" ry="1.5" fill="#45753c" opacity="0.6" />
-        {/* Head Ball */}
         <circle cx="24" cy="12" r="8" fill={`url(#${pawnHead})`} />
-        {/* Specular highlight */}
         <ellipse cx="21" cy="9.5" rx="3" ry="1.8" fill="#ffffff" opacity="0.65" transform="rotate(-20 21 9.5)" />
       </g>
     </svg>
@@ -217,16 +209,205 @@ export function IconCommunity3D({ size = 28, className = "" }: IconProps) {
         </filter>
       </defs>
       <g filter={`url(#${commShad})`}>
-        {/* Background avatars */}
         <circle cx="16" cy="18" r="5" fill="#047857" opacity="0.8" />
         <path d="M9 33 C9 28, 12 26, 16 26 C20 26, 23 28, 23 33 Z" fill="#047857" opacity="0.8" />
         <circle cx="32" cy="18" r="5" fill="#047857" opacity="0.8" />
         <path d="M25 33 C25 28, 28 26, 32 26 C36 26, 39 28, 39 33 Z" fill="#047857" opacity="0.8" />
-        {/* Main avatar */}
         <circle cx="24" cy="16" r="6.5" fill={`url(#${commGrad})`} stroke="#a7f3d0" strokeWidth="1" />
         <path d="M15 35 C15 29, 19 27, 24 27 C29 27, 33 29, 33 35 Z" fill={`url(#${commGrad})`} stroke="#a7f3d0" strokeWidth="1" />
         <ellipse cx="22" cy="13.5" rx="2.5" ry="1.2" fill="#ffffff" opacity="0.65" transform="rotate(-20 22 13.5)" />
       </g>
+    </svg>
+  );
+}
+
+// 3D Friends (Two User Silhouettes with Green Gradient)
+export function IconFriends3D({ size = 22, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const fGrad = `fGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <defs>
+        <linearGradient id={fGrad} x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#86efac" />
+          <stop offset="0.6" stopColor="#81b64c" />
+          <stop offset="1" stopColor="#3f6212" />
+        </linearGradient>
+      </defs>
+      <circle cx="9" cy="7" r="4" fill={`url(#${fGrad})`} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))" />
+      <path d="M3 19C3 15.6863 5.68629 13 9 13C12.3137 13 15 15.6863 15 19V20H3V19Z" fill={`url(#${fGrad})`} />
+      <circle cx="17" cy="9" r="3" fill="#a3e635" opacity="0.85" />
+      <path d="M15 19C15.3 16.5 17.5 15 20 15C21.2 15 22.3 15.4 23 16V19H15Z" fill="#a3e635" opacity="0.85" />
+    </svg>
+  );
+}
+
+// 3D Messages (Chat Bubble with Gloss)
+export function IconMessages3D({ size = 22, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const mGrad = `mGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <defs>
+        <radialGradient id={mGrad} cx="30%" cy="25%" r="75%">
+          <stop offset="0%" stopColor="#93c5fd" />
+          <stop offset="50%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#1e3a8a" />
+        </radialGradient>
+      </defs>
+      <path
+        d="M20 11C20 15.4183 16.4183 19 12 19C10.5 19 9.1 18.6 7.9 17.8L3 19L4.4 14.5C3.5 13.5 3 12.3 3 11C3 6.58172 6.58172 3 12 3C16.4183 3 20 6.58172 20 11Z"
+        fill={`url(#${mGrad})`}
+        filter="drop-shadow(0 3px 4px rgba(0,0,0,0.4))"
+      />
+      <circle cx="8" cy="11" r="1.5" fill="#ffffff" />
+      <circle cx="12" cy="11" r="1.5" fill="#ffffff" />
+      <circle cx="16" cy="11" r="1.5" fill="#ffffff" />
+    </svg>
+  );
+}
+
+// 3D Bell (Notification with Golden Bell)
+export function IconBell3D({ size = 22, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const bGrad = `bGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <defs>
+        <linearGradient id={bGrad} x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#fef08a" />
+          <stop offset="0.5" stopColor="#eab308" />
+          <stop offset="1" stopColor="#854d0e" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M18 8C18 4.68629 15.3137 2 12 2C8.68629 2 6 4.68629 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z"
+        fill={`url(#${bGrad})`}
+        stroke="#ca8a04"
+        strokeWidth="1"
+        filter="drop-shadow(0 3px 4px rgba(0,0,0,0.4))"
+      />
+      <path d="M10.3 20C10.6 21.2 11.2 22 12 22C12.8 22 13.4 21.2 13.7 20H10.3Z" fill="#a16207" />
+    </svg>
+  );
+}
+
+// 3D Settings Gear
+export function IconSettings3D({ size = 22, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const gGrad = `gGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <defs>
+        <linearGradient id={gGrad} x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#e2e8f0" />
+          <stop offset="0.5" stopColor="#94a3b8" />
+          <stop offset="1" stopColor="#475569" />
+        </linearGradient>
+      </defs>
+      <circle cx="12" cy="12" r="8" fill={`url(#${gGrad})`} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))" />
+      <circle cx="12" cy="12" r="3.5" fill="#1e293b" />
+      <path d="M12 1V4M12 20V23M1 12H4M20 12H23M4.2 4.2L6.3 6.3M17.7 17.7L19.8 19.8M4.2 19.8L6.3 17.7M17.7 6.3L19.8 4.2" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 3D Search Glass
+export function IconSearch3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="11" cy="11" r="7" stroke="#81b64c" strokeWidth="2.5" fill="#1a1714" />
+      <path d="M16.5 16.5L21 21" stroke="#81b64c" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 3D Pin
+export function IconPin3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M16 4L20 8L15 13L16 19L11 14L6 19L5 18L10 13L5 8L9 4L16 4Z" fill="#f59e0b" stroke="#d97706" strokeWidth="1.2" />
+      <circle cx="16" cy="6" r="1.5" fill="#ffffff" />
+    </svg>
+  );
+}
+
+// 3D White King Piece
+export function IconKingWhite3D({ size = 28, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const kwGrad = `kwGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <defs>
+        <linearGradient id={kwGrad} x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffffff" />
+          <stop offset="0.6" stopColor="#fef3c7" />
+          <stop offset="1" stopColor="#f59e0b" />
+        </linearGradient>
+      </defs>
+      <path d="M12 2V5M10.5 3.5H13.5" stroke="#ca8a04" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M7 6L12 9L17 6L16 14H8L7 6Z" fill={`url(#${kwGrad})`} stroke="#b45309" strokeWidth="1" filter="drop-shadow(0 2px 3px rgba(0,0,0,0.3))" />
+      <rect x="6" y="15" width="12" height="4" rx="1.5" fill="#fef3c7" stroke="#b45309" strokeWidth="1" />
+    </svg>
+  );
+}
+
+// 3D Black King Piece
+export function IconKingBlack3D({ size = 28, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const kbGrad = `kbGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <defs>
+        <linearGradient id={kbGrad} x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#475569" />
+          <stop offset="0.6" stopColor="#1e293b" />
+          <stop offset="1" stopColor="#0f172a" />
+        </linearGradient>
+      </defs>
+      <path d="M12 2V5M10.5 3.5H13.5" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M7 6L12 9L17 6L16 14H8L7 6Z" fill={`url(#${kbGrad})`} stroke="#64748b" strokeWidth="1" filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))" />
+      <rect x="6" y="15" width="12" height="4" rx="1.5" fill="#1e293b" stroke="#64748b" strokeWidth="1" />
+    </svg>
+  );
+}
+
+// 3D Dice (Random side)
+export function IconDice3D({ size = 26, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const dGrad = `dGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <defs>
+        <linearGradient id={dGrad} x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#86efac" />
+          <stop offset="0.5" stopColor="#81b64c" />
+          <stop offset="1" stopColor="#365314" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="3" width="18" height="18" rx="4" fill={`url(#${dGrad})`} stroke="#86efac" strokeWidth="1" filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))" />
+      <circle cx="8" cy="8" r="1.5" fill="#ffffff" />
+      <circle cx="16" cy="8" r="1.5" fill="#ffffff" />
+      <circle cx="12" cy="12" r="1.5" fill="#ffffff" />
+      <circle cx="8" cy="16" r="1.5" fill="#ffffff" />
+      <circle cx="16" cy="16" r="1.5" fill="#ffffff" />
+    </svg>
+  );
+}
+
+// 3D Pencil / Create Topic
+export function IconPencil3D({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M18 2L22 6L7 21H3V17L18 2Z" fill="#81b64c" stroke="#4d7c0f" strokeWidth="1.5" />
+      <path d="M15 5L19 9" stroke="#ffffff" strokeWidth="1.2" />
     </svg>
   );
 }
@@ -256,15 +437,11 @@ export function IconBot3D({ size = 28, className = "" }: IconProps) {
         </filter>
       </defs>
       <g filter={`url(#${botShad})`}>
-        {/* Antenna */}
         <circle cx="24" cy="9" r="2.5" fill="#ef4444" />
         <rect x="23" y="10" width="2" height="4" fill="#94a3b8" />
-        {/* Head */}
         <rect x="11" y="14" width="26" height="22" rx="7" fill={`url(#${botHead})`} stroke="#64748b" strokeWidth="1.5" />
-        {/* Visor */}
         <rect x="15" y="20" width="18" height="7" rx="3.5" fill="#052e16" />
         <rect x="16" y="21" width="16" height="5" rx="2.5" fill={`url(#${botVisor})`} />
-        {/* Specular */}
         <ellipse cx="18" cy="17" rx="3" ry="1.2" fill="#ffffff" opacity="0.5" />
       </g>
     </svg>
@@ -272,7 +449,7 @@ export function IconBot3D({ size = 28, className = "" }: IconProps) {
 }
 
 // 3D Fire / Streak
-export function IconFire3D({ size = 24, className = "" }: IconProps) {
+export function IconFire3D({ size = 20, className = "" }: IconProps) {
   const uid = useId().replace(/:/g, "_");
   const fireOuter = `fireOuter_${uid}`;
   const fireInner = `fireInner_${uid}`;
@@ -304,7 +481,7 @@ export function IconFire3D({ size = 24, className = "" }: IconProps) {
 }
 
 // 3D Gold Star
-export function IconStar3D({ size = 24, className = "" }: IconProps) {
+export function IconStar3D({ size = 20, className = "" }: IconProps) {
   const uid = useId().replace(/:/g, "_");
   const starGrad = `starGrad_${uid}`;
   const starShadow = `starShadow_${uid}`;
@@ -351,7 +528,7 @@ export function IconMedal3D({ size = 24, className = "" }: IconProps) {
 }
 
 // 3D Lock
-export function IconLock3D({ size = 20, className = "" }: IconProps) {
+export function IconLock3D({ size = 18, className = "" }: IconProps) {
   const uid = useId().replace(/:/g, "_");
   const shackleGrad = `shackleGrad_${uid}`;
   const lockBody = `lockBody_${uid}`;

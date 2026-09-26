@@ -2,7 +2,15 @@
 
 import { useState, useEffect } from "react";
 import type { SessionUser } from "@/lib/use-session";
-import { IconCommunity3D, IconPawn3D, IconMedal3D } from "@/components/icons3d";
+import {
+  IconFriends3D,
+  IconMessages3D,
+  IconBell3D,
+  IconSettings3D,
+  IconLightning3D,
+  IconPawn3D,
+  IconMedal3D,
+} from "@/components/icons3d";
 
 export type DockModalType = "friends" | "messages" | "notifications" | "settings" | null;
 
@@ -49,7 +57,6 @@ export function DockModals({
   const [players, setPlayers] = useState<PlayerItem[]>([]);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
   const [chatText, setChatText] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [boardTheme, setBoardTheme] = useState("walnut");
@@ -57,7 +64,6 @@ export function DockModals({
   useEffect(() => {
     if (!activeModal) return;
 
-    // Load players for Friends tab
     fetch("/api/pvp?directory=1")
       .then((res) => res.json())
       .then((data) => {
@@ -75,7 +81,6 @@ export function DockModals({
       })
       .catch(() => {});
 
-    // Demo / initial messages
     setMessages([
       {
         id: "m1",
@@ -86,7 +91,6 @@ export function DockModals({
       },
     ]);
 
-    // Demo notifications
     setNotifications([
       {
         id: "n1",
@@ -128,25 +132,25 @@ export function DockModals({
           <div className="flex items-center gap-2.5">
             {activeModal === "friends" && (
               <>
-                <span className="text-xl">👥</span>
+                <IconFriends3D size={22} />
                 <span className="font-bold text-base">Teman & Civitas Tel-U</span>
               </>
             )}
             {activeModal === "messages" && (
               <>
-                <span className="text-xl">✉️</span>
+                <IconMessages3D size={22} />
                 <span className="font-bold text-base">Pesan & Kotak Masuk</span>
               </>
             )}
             {activeModal === "notifications" && (
               <>
-                <span className="text-xl">🔔</span>
+                <IconBell3D size={22} />
                 <span className="font-bold text-base">Pemberitahuan</span>
               </>
             )}
             {activeModal === "settings" && (
               <>
-                <span className="text-xl">⚙️</span>
+                <IconSettings3D size={22} />
                 <span className="font-bold text-base">Pengaturan Akun & Papan</span>
               </>
             )}
@@ -202,9 +206,9 @@ export function DockModals({
                               onClose();
                             }
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-[#81b64c] hover:bg-[#72a342] text-white text-xs font-bold transition-all shadow cursor-pointer flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-lg bg-[#81b64c] hover:bg-[#72a342] text-white text-xs font-bold transition-all shadow cursor-pointer flex items-center gap-1.5"
                         >
-                          <span>⚡</span>
+                          <IconLightning3D size={14} />
                           <span>Tantang</span>
                         </button>
                       </div>
@@ -262,7 +266,7 @@ export function DockModals({
                   key={n.id}
                   className="p-3.5 rounded-xl bg-[#262421] border border-[#312e2b] flex items-start gap-3"
                 >
-                  <span className="text-2xl mt-0.5">🔔</span>
+                  <IconBell3D size={24} className="mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-bold text-white">{n.title}</div>
