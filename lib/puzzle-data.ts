@@ -84,11 +84,11 @@ export const QUEST_CHAPTERS: Puzzle[] = [
     "solutionUci": "f3g5",
     "solutionSan": "Ng5",
     "motif": "tactic",
-    "theme": "Serangan Hati Ayam (Fried Liver Attack)",
-    "description": "Tekan titik f7 bersama Gajah c4 sebelum Hitam menyelesaikan perkembangan perwira ringannya.",
+    "theme": "Giuoco Piano: Taktik Italia Serangan Titik Lemah f7",
+    "description": "Dalam Pembukaan Italia (Giuoco Piano C50-C54), titik f7 adalah titik terlemah Hitam sebelum rokade. Luncurkan Kuda f3 ke g5 berkolaborasi dengan Gajah c4 untuk melancarkan serangan ganda ke f7!",
     "hintPiece": "Kuda putih di f3.",
     "hintExplanation": "Langkahkan Kuda f3 ke g5 untuk menambah ancaman ganda ke petak f7.",
-    "trickExplanation": "Tips Blokh: Koordinasi dua perwira aktif (Kuda + Gajah) pada titik lemah f7 menciptakan tekanan taktis masif.",
+    "trickExplanation": "Taktik Italia (Giuoco Piano): Koordinasi Gajah c4 + Kuda g5 mengeksploitasi titik terlemah f7 sebelum Raja Hitam sempat mengamankan diri lewat rokade.",
     "xp": 100
   },
   {
@@ -390,11 +390,11 @@ export const QUEST_CHAPTERS: Puzzle[] = [
     "solutionUci": "d3h7",
     "solutionSan": "Bxh7+",
     "motif": "capture-check",
-    "theme": "Umpan Penarikan Raja (Decoy to Open File)",
-    "description": "Tarik Raja Hitam ke h7 dengan pengorbanan Gajah untuk melancarkan serangan berantai.",
+    "theme": "Colle System: Serangan Greek Gift (Bxh7+)",
+    "description": "Dalam Colle System (D05), formasi piramida d4-e3 dan dorongan e4 membuka diagonal Gajah d3 lurus ke sayap raja Hitam. Korbankan Gajah di h7 untuk membongkar pertahanan rokade lawan!",
     "hintPiece": "Gajah putih di d3.",
-    "hintExplanation": "Pukul pion h7 dengan Gajah putih.",
-    "trickExplanation": "Tips Blokh (Decoy / Attraction): Menarik Raja ke petak terbuka memungkinkan perwira berat melancarkan skak penentu.",
+    "hintExplanation": "Pukul pion h7 dengan Gajah putih untuk membuka posisi Raja lawan.",
+    "trickExplanation": "Taktik Colle System: Pengorbanan Gajah h7 (Greek Gift) adalah trik utama Colle saat Kuda lawan tak lagi mengawal petak f6.",
     "xp": 100
   },
   {
@@ -495,11 +495,11 @@ export const PUZZLES: Puzzle[] = [
     "solutionUci": "f3g5",
     "solutionSan": "Ng5",
     "motif": "tactic",
-    "theme": "Serangan Hati Ayam (Fried Liver Attack)",
-    "description": "Tekan titik f7 bersama Gajah c4 sebelum Hitam menyelesaikan perkembangan perwira ringannya.",
+    "theme": "Giuoco Piano: Taktik Italia Serangan Titik Lemah f7",
+    "description": "Dalam Pembukaan Italia (Giuoco Piano C50-C54), titik f7 adalah titik terlemah Hitam sebelum rokade. Luncurkan Kuda f3 ke g5 berkolaborasi dengan Gajah c4 untuk melancarkan serangan ganda ke f7!",
     "hintPiece": "Kuda putih di f3.",
     "hintExplanation": "Langkahkan Kuda f3 ke g5 untuk menambah ancaman ganda ke petak f7.",
-    "trickExplanation": "Tips Blokh: Koordinasi dua perwira aktif (Kuda + Gajah) pada titik lemah f7 menciptakan tekanan taktis masif.",
+    "trickExplanation": "Taktik Italia (Giuoco Piano): Koordinasi Gajah c4 + Kuda g5 mengeksploitasi titik terlemah f7 sebelum Raja Hitam sempat mengamankan diri lewat rokade.",
     "xp": 100
   },
   {
@@ -1005,11 +1005,11 @@ export const PUZZLES: Puzzle[] = [
     "solutionUci": "d3h7",
     "solutionSan": "Bxh7+",
     "motif": "capture-check",
-    "theme": "Umpan Penarikan Raja (Decoy to Open File)",
-    "description": "Tarik Raja Hitam ke h7 dengan pengorbanan Gajah untuk melancarkan serangan berantai.",
+    "theme": "Colle System: Serangan Greek Gift (Bxh7+)",
+    "description": "Dalam Colle System (D05), formasi piramida d4-e3 dan dorongan e4 membuka diagonal Gajah d3 lurus ke sayap raja Hitam. Korbankan Gajah di h7 untuk membongkar pertahanan rokade lawan!",
     "hintPiece": "Gajah putih di d3.",
-    "hintExplanation": "Pukul pion h7 dengan Gajah putih.",
-    "trickExplanation": "Tips Blokh (Decoy / Attraction): Menarik Raja ke petak terbuka memungkinkan perwira berat melancarkan skak penentu.",
+    "hintExplanation": "Pukul pion h7 dengan Gajah putih untuk membuka posisi Raja lawan.",
+    "trickExplanation": "Taktik Colle System: Pengorbanan Gajah h7 (Greek Gift) adalah trik utama Colle saat Kuda lawan tak lagi mengawal petak f6.",
     "xp": 100
   },
   {

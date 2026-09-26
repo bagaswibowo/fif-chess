@@ -113,78 +113,69 @@ export function PuzzleView({ lang = "id" }: Props) {
         </span>
       </div>
 
-      {/* Category Pills with Total Count */}
-      <div className="row flex-wrap" style={{ gap: "0.5rem" }}>
-        {PUZZLE_CATEGORIES.map((c) => {
-          const count = c.id === "all" ? all.length : all.filter((p) => p.category === c.id).length;
-          if (count === 0) return null;
-          return (
-            <button
-              key={c.id}
-              className={`ctl ctl-sm ${category === c.id ? "ctl-active" : ""}`}
-              onClick={() => setCategory(c.id as PuzzleCategory | "all")}
-              aria-pressed={category === c.id}
-            >
-              {c.label} ({count})
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Quick Jump Tap Grid */}
-      <div className="panel p-3 stack-tight">
-        <div className="row-between">
-          <span className="label font-bold text-xs">
-            Lompat Posisi ({list.length} Teka-Teki dalam Kategori Ini):
-          </span>
-          <span className="label text-xs" style={{ color: "var(--muted-foreground)" }}>
-            Posisi Aktif #{index + 1}
-          </span>
+      {/* COMPACT MINIMALIST FILTER & PUZZLE PAGER */}
+      <div className="panel px-3 py-2 row-between items-center gap-2 flex-wrap" style={{ background: "var(--card)" }}>
+        {/* Category Dropdown */}
+        <div className="row items-center gap-1.5">
+          <span className="prose-note text-xs shrink-0 font-medium">Kategori:</span>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as PuzzleCategory | "all")}
+            className="ctl ctl-sm text-xs font-bold py-1 px-2 cursor-pointer"
+            style={{ background: "var(--surface)" }}
+            aria-label="Pilih Kategori Teka-Teki"
+          >
+            {PUZZLE_CATEGORIES.map((c) => {
+              const count = c.id === "all" ? all.length : all.filter((p) => p.category === c.id).length;
+              if (count === 0) return null;
+              return (
+                <option key={c.id} value={c.id}>
+                  {c.label} ({count})
+                </option>
+              );
+            })}
+          </select>
         </div>
-        <div className="flex flex-wrap gap-1.5" style={{ maxHeight: "7.5rem", overflowY: "auto", padding: "0.25rem 0" }}>
-          {list.map((p, idx) => {
-            const isCurrent = idx === index;
-            const isSolved = solved.has(p.id);
-            return (
-              <button
-                key={p.id}
-                onClick={() => setIndex(idx)}
-                className={`ctl ctl-xs transition-all relative ${
-                  isCurrent
-                    ? "ctl-active ring-1 ring-[var(--primary)] font-black"
-                    : isSolved
-                      ? "border-[var(--primary)] text-[var(--primary)] font-bold"
-                      : "ctl-quiet font-medium"
-                }`}
-                title={`#${idx + 1}: ${p.theme} (${p.difficulty})`}
-                style={{
-                  minWidth: "2.35rem",
-                  textAlign: "center",
-                  justifyContent: "center",
-                  padding: "0 0.4rem",
-                }}
-              >
-                {idx + 1}
-                {isSolved && (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: "2px",
-                      right: "2px",
-                      width: "5px",
-                      height: "5px",
-                      borderRadius: "9999px",
-                      backgroundColor: "var(--primary)",
-                    }}
-                  />
-                )}
-              </button>
-            );
-          })}
+
+        {/* Puzzle Pager */}
+        <div className="row items-center gap-1.5">
+          <button
+            className="ctl ctl-sm px-2.5 py-1 text-xs font-bold"
+            disabled={index <= 0}
+            onClick={() => setIndex((i) => Math.max(0, i - 1))}
+            title="Teka-teki Sebelumnya"
+          >
+            ← Prev
+          </button>
+
+          <select
+            value={index}
+            onChange={(e) => setIndex(Number(e.target.value))}
+            className="ctl ctl-sm text-xs font-bold py-1 px-2 cursor-pointer truncate max-w-[150px] sm:max-w-[220px]"
+            style={{ background: "var(--surface)" }}
+            aria-label="Pilih Posisi Teka-Teki"
+          >
+            {list.map((p, idx) => {
+              const isSolved = solved.has(p.id);
+              return (
+                <option key={p.id} value={idx}>
+                  {isSolved ? "✓ " : ""}#{idx + 1}: {p.theme}
+                </option>
+              );
+            })}
+          </select>
+
+          <button
+            className="ctl ctl-sm px-2.5 py-1 text-xs font-bold"
+            disabled={index >= list.length - 1}
+            onClick={() => setIndex((i) => Math.min(list.length - 1, i + 1))}
+            title="Teka-teki Berikutnya"
+          >
+            Next →
+          </button>
         </div>
       </div>
 
-      {/* Main Puzzle Solver Area */}
       <div className="row" style={{ gap: "var(--gap-2)", alignItems: "flex-start" }}>
         <div className="panel p-2" style={{ flex: "1 1 22rem", maxWidth: "36rem" }}>
           <div className="aspect-square" style={{ borderRadius: "var(--radius)", overflow: "hidden" }}>

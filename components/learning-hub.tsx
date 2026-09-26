@@ -164,21 +164,58 @@ export function LearningHub({ lang = "id" }: Props) {
         </span>
       </div>
 
-      <div className="row" style={{ gap: "0.5rem" }}>
-        {chapters.map((c, i) => {
-          const done = progress.completed.includes(c.id);
-          return (
+      {/* COMPACT MINIMALIST CHAPTER PAGER */}
+      {(() => {
+        const curIdx = chapters.findIndex((c) => c.id === chapter?.id);
+        const currentIndex = curIdx >= 0 ? curIdx : 0;
+        return (
+          <div className="panel px-3 py-1.5 row-between items-center gap-2 flex-wrap" style={{ background: "var(--card)" }}>
             <button
-              key={c.id}
-              className={`ctl ctl-sm ${chapter.id === c.id ? "ctl-active" : ""}`}
-              onClick={() => setActiveId(c.id)}
-              aria-current={chapter.id === c.id}
+              className="ctl ctl-sm px-2.5 py-1 text-xs font-bold shrink-0"
+              disabled={currentIndex <= 0}
+              onClick={() => {
+                if (currentIndex > 0) setActiveId(chapters[currentIndex - 1].id);
+              }}
+              title={lang === "id" ? "Bab Sebelumnya" : "Previous"}
             >
-              {done ? "✓ " : ""}Bab {i + 1}
+              ← Prev
             </button>
-          );
-        })}
-      </div>
+
+            <div className="row items-center gap-2 min-w-0 flex-1 justify-center">
+              <span className="prose-note text-xs shrink-0 font-medium">
+                {progress.completed.includes(chapter?.id || "") ? "✓ " : ""}Bab {currentIndex + 1} / {chapters.length}:
+              </span>
+              <select
+                value={chapter?.id || ""}
+                onChange={(e) => setActiveId(e.target.value)}
+                className="ctl ctl-sm text-xs font-bold truncate max-w-[210px] sm:max-w-[340px] py-1 px-2 cursor-pointer"
+                style={{ background: "var(--surface)" }}
+                aria-label="Pilih Bab Quest"
+              >
+                {chapters.map((c, i) => {
+                  const isDone = progress.completed.includes(c.id);
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {isDone ? "✓ " : ""}{i + 1}. {c.theme} ({c.difficulty})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <button
+              className="ctl ctl-sm px-2.5 py-1 text-xs font-bold shrink-0"
+              disabled={currentIndex >= chapters.length - 1}
+              onClick={() => {
+                if (currentIndex < chapters.length - 1) setActiveId(chapters[currentIndex + 1].id);
+              }}
+              title={lang === "id" ? "Bab Berikutnya" : "Next"}
+            >
+              Next →
+            </button>
+          </div>
+        );
+      })()}
 
       <div className="row" style={{ gap: "var(--gap-2)", alignItems: "flex-start" }}>
         <div className="panel p-2" style={{ flex: "1 1 22rem", maxWidth: "36rem" }}>
