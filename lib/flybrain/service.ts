@@ -42,7 +42,7 @@ export type FlyMoveScore = {
 
 /**
  * Evaluates board using FlyBrain Connectome with 1-ply lookahead value search
- * (as specified in cesp99/fly-chess DIFFICULTY.fly).
+ * and active pawn-push / promotion tactical incentives.
  */
 export function evaluateWithFlyBrain(fen: string): {
   moves: FlyMoveScore[];
@@ -55,6 +55,8 @@ export function evaluateWithFlyBrain(fen: string): {
     const chess = new Chess(fen);
     if (chess.isGameOver()) return null;
 
+    const turn = chess.turn();
+    const isWhite = turn === "w";
     const planes = encodeBoard(chess);
     const { policy, value: currentPosValue } = brain.forward(planes);
 
@@ -75,28 +77,51 @@ export function evaluateWithFlyBrain(fen: string): {
       const uci = m.from + m.to + (m.promotion || "");
       let san = uci;
       let moveValue = 0;
+      let isPromotion = Boolean(m.promotion || uci.length > 4);
+      let isPawnPush = false;
+      let pawnAdvancedRank = 0;
+
+      const piece = chess.get(m.from as any);
+      if (piece && piece.type === "p") {
+        isPawnPush = true;
+        const targetRank = parseInt(m.to[1], 10);
+        pawnAdvancedRank = isWhite ? targetRank : 9 - targetRank;
+      }
 
       try {
-        const mv = chess.move({ from: m.from, to: m.to, promotion: m.promotion });
+        const mv = chess.move({ from: m.from, to: m.to, promotion: m.promotion || (isPromotion ? "q" : undefined) });
         if (mv) {
           san = mv.san;
           if (chess.isCheckmate()) {
-            moveValue = 1.0; // Checkmate delivered!
+            moveValue = 1.0; // Immediate checkmate!
           } else if (chess.isDraw()) {
             moveValue = 0.0;
           } else {
             const oppPlanes = encodeBoard(chess);
             const oppFwd = brain.forward(oppPlanes, { activity: false });
             moveValue = -oppFwd.value; // Negated opponent value
+
+            // Pawn promotion & advance bonus (aggressive promotion behavior)
+            if (mv.promotion || san.includes("=")) {
+              moveValue = Math.min(0.98, moveValue + 0.65);
+            } else if (isPawnPush && pawnAdvancedRank >= 6) {
+              moveValue = Math.min(0.92, moveValue + 0.25 * (pawnAdvancedRank - 5));
+            }
+
+            // Material capture bonus
+            if (mv.captured) {
+              const valMap: Record<string, number> = { q: 0.5, r: 0.35, b: 0.2, n: 0.2, p: 0.1 };
+              moveValue = Math.min(0.95, moveValue + (valMap[mv.captured] || 0.1));
+            }
           }
           chess.undo();
         }
       } catch {}
 
       const policyProb = sumExps > 0 ? exps[i] / sumExps : 0;
-      // Combined Lookahead Score: 50% Policy Prior + 50% Lookahead Value
+      // Combined Lookahead Score: 40% Policy Prior + 60% Lookahead Value
       const normalizedVal = (moveValue + 1) / 2; // Map [-1, 1] -> [0, 1]
-      const combinedProb = Number((0.5 * policyProb + 0.5 * normalizedVal).toFixed(4));
+      const combinedProb = Number((0.4 * policyProb + 0.6 * normalizedVal).toFixed(4));
 
       scored.push({
         uci,
@@ -118,7 +143,6 @@ export function evaluateWithFlyBrain(fen: string): {
     return null;
   }
 }
-
 
 export function playFlyBrainMove(fen: string) {
   const result = evaluateWithFlyBrain(fen);
