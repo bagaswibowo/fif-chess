@@ -12,6 +12,8 @@ export type StockfishResult = {
   confidence: number;
   droppedMoveCount: number;
   outcome: GameOutcome;
+  playedScoreCp?: number | null;
+  deltaCp?: number | null;
 };
 
 type StockfishEval = {
@@ -294,7 +296,7 @@ export async function guardJevMove(
   }
 }
 
-export async function playStockfishMove(fen: string, depth = 14): Promise<StockfishResult> {
+export async function playStockfishMove(fen: string, depth = 14, playedUci?: string): Promise<StockfishResult> {
   // Strict FEN validation to prevent UCI command injection.
   if (!/^[0-9a-zA-Z\/\s\-_]+$/.test(fen)) {
     throw new Error("Invalid FEN string format");
@@ -373,16 +375,59 @@ export async function playStockfishMove(fen: string, depth = 14): Promise<Stockf
           try {
             const applied = applyUci(chess, bestMove);
             const bestScoreCp = topScores.get(1) ?? null;
-            resolve({
-              uci: bestMove,
-              san: applied.san,
-              scoreCp: bestScoreCp,
-              fen: chess.fen(),
-              probabilities: probs,
-              confidence,
-              droppedMoveCount: 0,
-              outcome: describeOutcome(chess),
-            });
+
+            (async () => {
+              let playedScoreCp: number | null = null;
+              let deltaCp: number | null = null;
+
+              if (playedUci) {
+                if (playedUci === bestMove || bestMove.startsWith(playedUci) || playedUci.startsWith(bestMove)) {
+                  playedScoreCp = bestScoreCp;
+                  deltaCp = 0;
+                } else {
+                  let foundPv: number | null = null;
+                  for (const [pvId, uci] of topMoves.entries()) {
+                    if (uci === playedUci || uci.startsWith(playedUci) || playedUci.startsWith(uci)) {
+                      foundPv = pvId;
+                      break;
+                    }
+                  }
+                  if (foundPv !== null && topScores.has(foundPv)) {
+                    playedScoreCp = topScores.get(foundPv) ?? null;
+                    if (bestScoreCp !== null && playedScoreCp !== null) {
+                      deltaCp = Math.max(0, bestScoreCp - playedScoreCp);
+                    }
+                  } else {
+                    try {
+                      const single = await evalSingleMove(fen, playedUci, Math.min(depth, 8));
+                      if (single !== null) {
+                        playedScoreCp = single;
+                        if (bestScoreCp !== null) {
+                          deltaCp = Math.max(0, bestScoreCp - single);
+                        }
+                      }
+                    } catch (_) {}
+                    if (deltaCp === null && bestScoreCp !== null && topScores.size > 0) {
+                      const worstTop = Math.min(...Array.from(topScores.values()));
+                      deltaCp = Math.max(95, bestScoreCp - worstTop + 30);
+                    }
+                  }
+                }
+              }
+
+              resolve({
+                uci: bestMove,
+                san: applied.san,
+                scoreCp: bestScoreCp,
+                playedScoreCp,
+                deltaCp,
+                fen: chess.fen(),
+                probabilities: probs,
+                confidence,
+                droppedMoveCount: 0,
+                outcome: describeOutcome(chess),
+              });
+            })().catch((err) => reject(err));
           } catch (applyErr) {
             reject(applyErr);
           }
@@ -397,7 +442,7 @@ export async function playStockfishMove(fen: string, depth = 14): Promise<Stockf
       reject(new Error(err.toString()));
     });
 
-    p.stdin.write("setoption name MultiPV value 3\n");
+    p.stdin.write("setoption name MultiPV value 5\n");
     p.stdin.write(`position fen ${fen}\n`);
     p.stdin.write(`go depth ${depth} movetime 3000\n`);
   });

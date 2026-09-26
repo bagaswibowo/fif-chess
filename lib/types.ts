@@ -1,6 +1,6 @@
 import type { GameOutcome, PromotionPiece, Side } from "@/lib/chess";
 
-export type Player = "human" | "jev";
+export type Player = "human" | "stockfish" | "jev" | "jev-fly" | "fly";
 
 export type PlayedMove = {
   san: string;

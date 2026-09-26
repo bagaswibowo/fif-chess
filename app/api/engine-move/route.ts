@@ -75,7 +75,8 @@ export async function POST(request: Request) {
 
   if (engine === 'stockfish') {
     try {
-      const result = await playStockfishMove(fen, depth);
+      const playedUci = typeof bodyObj.playedUci === 'string' ? bodyObj.playedUci : undefined;
+      const result = await playStockfishMove(fen, depth, playedUci);
       return NextResponse.json({
         uci: result.uci,
         san: result.san,
@@ -85,6 +86,8 @@ export async function POST(request: Request) {
         droppedMoveCount: result.droppedMoveCount,
         outcome: result.outcome,
         scoreCp: (result as any).scoreCp ?? null,
+        playedScoreCp: result.playedScoreCp ?? null,
+        deltaCp: result.deltaCp ?? null,
       });
     } catch (err) {
       console.error("Stockfish fallback execution:", err);

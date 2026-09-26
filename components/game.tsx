@@ -228,7 +228,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
           {
             san: payload.san!,
             uci: payload.uci!,
-            by: "jev",
+            by: selectedAiOpponent,
             ply: current.length + 1,
           },
         ]);
@@ -934,12 +934,22 @@ const [showAuthModal, setShowAuthModal] = useState(false);
               {/* ACTION: fullscreen jam + log, dan simpan trik lawan */}
               <div className="w-full flex items-center gap-2">
                 <button
-                  onClick={() => setFullscreenClocks(true)}
-                  className="ctl ctl-sm"
-                  aria-label="Layar penuh: jam dan riwayat langkah"
+                  type="button"
+                  onClick={() => setHumanSide((s) => (s === "white" ? "black" : "white"))}
+                  className="ctl ctl-sm flex items-center gap-1.5"
+                  title="Putar Orientasi Papan Catur"
                 >
-                  <IconClock3D size={14} />
-                  <span>Jam &amp; Log</span>
+                  <IconSwap3D size={14} />
+                  <span>Putar Papan</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFullscreenClocks(true)}
+                  className="ctl ctl-sm flex items-center gap-1.5 font-bold bg-[var(--primary)] text-white hover:brightness-110"
+                  aria-label="Layar penuh: Mode Fokus Papan, Jam, Eval Bar & Notasi"
+                >
+                  <IconPlay3D size={14} />
+                  <span>Fokus 1 Layar</span>
                 </button>
                 {moves.length > 0 && (
                 <button
@@ -978,6 +988,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                   onClose={() => setFullscreenClocks(false)}
                   boardOrientation={humanSide === "black" ? "black" : "white"}
                   onPieceDrop={onPieceDrop}
+                  scoreCp={(analysis as any)?.scoreCp ?? 0}
                 />
               )}
             </div>
@@ -986,10 +997,10 @@ const [showAuthModal, setShowAuthModal] = useState(false);
             <div className="flex flex-col gap-3 md:gap-4 w-full">
               <Card className="bg-[var(--card)] border-[var(--border)] shadow-xl rounded-xl md:rounded-2xl overflow-hidden">
                 <CardHeader className="p-2.5 md:p-3 border-b border-[var(--border)] bg-[var(--muted)]">
-                  <div className="flex bg-[var(--background)] p-1 rounded-xl border border-[var(--border)]">
+                  <div className="inline-flex w-full bg-[var(--surface)] p-1 rounded-full border border-[var(--border)] gap-1">
                     <button
                       onClick={() => setRightTab("game-setup")}
-                      className={`flex-1 py-1.5 md:py-2 text-xs font-bold rounded-lg transition-all ${
+                      className={`flex-1 py-1.5 md:py-2 text-xs font-bold rounded-full transition-all ${
                         rightTab === "game-setup" ? "bg-[var(--primary)] text-white shadow-md" : "text-neutral-400 hover:text-white"
                       }`}
                     >
@@ -997,7 +1008,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                     </button>
                     <button
                       onClick={() => setRightTab("analysis")}
-                      className={`flex-1 py-1.5 md:py-2 text-xs font-bold rounded-lg transition-all ${
+                      className={`flex-1 py-1.5 md:py-2 text-xs font-bold rounded-full transition-all ${
                         rightTab === "analysis" ? "bg-[var(--primary)] text-white shadow-md" : "text-neutral-400 hover:text-white"
                       }`}
                     >
@@ -1005,7 +1016,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                     </button>
                     <button
                       onClick={() => setRightTab("moves")}
-                      className={`flex-1 py-1.5 md:py-2 text-xs font-bold rounded-lg transition-all ${
+                      className={`flex-1 py-1.5 md:py-2 text-xs font-bold rounded-full transition-all ${
                         rightTab === "moves" ? "bg-[var(--primary)] text-white shadow-md" : "text-neutral-400 hover:text-white"
                       }`}
                     >
@@ -1141,7 +1152,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                             <div className="grid grid-cols-3 gap-2">
                               <button
                                 type="button"
-                                onClick={() => setSideChoice("white")}
+                                onClick={() => { setSideChoice("white"); setHumanSide("white"); }}
                                 className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                                   sideChoice === "white"
                                     ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
@@ -1167,7 +1178,7 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setSideChoice("black")}
+                                onClick={() => { setSideChoice("black"); setHumanSide("black"); }}
                                 className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                                   sideChoice === "black"
                                     ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
