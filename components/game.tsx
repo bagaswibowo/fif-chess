@@ -1,4 +1,5 @@
 "use client";
+import { DockModals, type DockModalType } from "@/components/dock-modals";
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -95,7 +96,8 @@ export function Game() {
   // Identitas: satu session server-side (cookie httpOnly). Tidak ada lagi
   // identitas client-side yang bisa dipalsukan.
   const { user: currentUser, login, register, logout } = useSession();
-  const [showAuthModal, setShowAuthModal] = useState(false);
+    const [activeDockModal, setActiveDockModal] = useState<DockModalType>(null);
+const [showAuthModal, setShowAuthModal] = useState(false);
   const [fullscreenClocks, setFullscreenClocks] = useState(false);
 
   // Sisi yang dipilih pemain. "random" di-resolve sekali di sini lalu dipakai
@@ -681,35 +683,79 @@ export function Game() {
           </nav>
         </div>
 
-        {/* Bottom Sidebar: 3D Globe & User profile */}
-        <div className="pt-4 border-t border-[var(--border)] space-y-3">
-          <div className="flex items-center justify-between px-2">
-            <button
-              onClick={() => setLang((l) => (l === "id" ? "en" : "id"))}
-              className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300 hover:text-white bg-[var(--surface)] border border-[var(--border)] px-2.5 py-1.5 rounded-lg"
-            >
-              <IconGlobe3D size={16} />
-              <span>{lang.toUpperCase()}</span>
-            </button>
-            <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-500/30">
-              Stockfish 15 NNUE
-            </Badge>
+        {/* Bottom Sidebar: Cari, User profile, & 4-Icon Utility Dock (Chess.com Parity) */}
+        <div className="pt-3 border-t border-[var(--border)] space-y-2.5">
+          {/* Quick Search */}
+          <div className="px-1">
+            <input
+              type="text"
+              placeholder="🔍 Cari pemain, taktik..."
+              onClick={() => setActiveDockModal("friends")}
+              readOnly
+              className="w-full px-3 py-1.5 rounded-xl bg-[#1a1714] border border-[#383530] text-xs text-neutral-300 placeholder-neutral-500 hover:border-neutral-400 cursor-pointer transition-all"
+            />
           </div>
 
+          {/* User Profile Card */}
           <div
             onClick={() => setShowAuthModal(true)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)] transition-all"
+            className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[#211f1d] border border-[#383530] cursor-pointer hover:border-[#81b64c] transition-all shadow-sm"
           >
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#81b64c] to-[#457524] font-bold flex items-center justify-center text-xs text-white shadow shrink-0">
               {me.initials}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-bold truncate text-white">{me.name}</div>
-              <div className="text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow-sm"></span>
-                <span>{currentUser ? `${currentUser.role} (${currentUser.elo})` : "Masuk untuk rating"}</span>
+              <div className="text-[11px] text-neutral-400 flex items-center gap-1.5 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#81b64c] inline-block"></span>
+                <span className="truncate">{currentUser ? `${currentUser.role} (${currentUser.elo})` : "Masuk untuk rating"}</span>
               </div>
             </div>
+          </div>
+
+          {/* 4-Icon Bottom Utility Dock (Teman, Pesan, Pemberitahuan, Pengaturan) */}
+          <div className="grid grid-cols-4 gap-1 px-1">
+            <button
+              type="button"
+              onClick={() => setActiveDockModal("friends")}
+              title="Teman & Civitas"
+              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer relative"
+            >
+              <span className="text-sm">👥</span>
+              <span className="text-[9px] font-bold text-neutral-400">Teman</span>
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#81b64c]"></span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveDockModal("messages")}
+              title="Pesan Masuk"
+              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer relative"
+            >
+              <span className="text-sm">✉️</span>
+              <span className="text-[9px] font-bold text-neutral-400">Pesan</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveDockModal("notifications")}
+              title="Pemberitahuan"
+              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer relative"
+            >
+              <span className="text-sm">🔔</span>
+              <span className="text-[9px] font-bold text-neutral-400">Notif</span>
+              <span className="absolute top-1 right-1 px-1 py-0.2 rounded-full bg-red-600 text-[8px] font-black text-white">1</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveDockModal("settings")}
+              title="Pengaturan"
+              className="p-2 rounded-xl bg-[#1a1714] hover:bg-[#302e2b] border border-[#383530] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer relative"
+            >
+              <span className="text-sm">⚙️</span>
+              <span className="text-[9px] font-bold text-neutral-400">Atur</span>
+            </button>
           </div>
         </div>
       </aside>
@@ -1252,7 +1298,18 @@ export function Game() {
         </div>
       </nav>
 
-      {showAuthModal && (
+            {/* DOCK MODALS (Teman, Pesan, Pemberitahuan, Pengaturan) */}
+      <DockModals
+        activeModal={activeDockModal}
+        onClose={() => setActiveDockModal(null)}
+        user={currentUser}
+        onChallengePlayer={(uname) => {
+          setPlayMode("pvp");
+          setNavTab("play");
+        }}
+        onLogout={logout}
+      />
+{showAuthModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={(e) => {
