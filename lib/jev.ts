@@ -142,7 +142,7 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
   const isEndgame = totalQueens === 0 || ply >= 35;
 
   // 1. Fly Brain Sensory Forward Pass (134k Drosophila neurons)
-  const flyResult = evaluateWithFlyBrain(fen);
+  const flyResult = evaluateWithFlyBrain(fen, isEndgame);
   const flyMoves = flyResult?.moves ?? [];
   const flyTop3 = flyMoves.slice(0, 3);
   const flyTopUcis = new Set(flyTop3.map((m) => m.uci));
@@ -190,7 +190,7 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
     : "Position is primed. Advance tactical goals and push passed pawns!";
 
   // 3. Build rich semantic descriptions
-  const { selected, dropped } = selectMovesForChoice(getLegalMoves(chess));
+  const { selected, dropped } = selectMovesForChoice(getLegalMoves(chess), isEndgame);
   const rawMoves = chess.moves({ verbose: true });
   const rawMoveMap = new Map(rawMoves.map((m) => [m.lan, m]));
 

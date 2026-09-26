@@ -363,11 +363,15 @@ export function getLegalMoves(chess: Chess): LegalMove[] {
   }).filter((m) => m.from && m.to);
 }
 
-export function movePriority(move: LegalMove): number {
+const ENDGAME_QUEEN_PROMO_BONUS = 800;
+const ENDGAME_OTHER_PROMO_BONUS = 500;
+
+export function movePriority(move: LegalMove, isEndgame = false): number {
   if (move.isCheckmate) return 1000;
-  if (move.isPromotion) return 80 + (move.promotion === "q" ? 10 : 0);
+  const endgameBonus = isEndgame ? (move.promotion === "q" ? ENDGAME_QUEEN_PROMO_BONUS : ENDGAME_OTHER_PROMO_BONUS) : 0;
+  if (move.isPromotion) return 80 + (move.promotion === "q" ? 10 : 0) + endgameBonus;
   if (move.isCheck) return 70;
-  if (move.isCapture && move.isPromotion) return 90;
+  if (move.isCapture && move.isPromotion) return 90 + endgameBonus;
   if (move.isCapture) return 60;
   if (move.isCastle) return 50;
   if (!move.uci) return 5;
@@ -385,7 +389,7 @@ export function movePriority(move: LegalMove): number {
  * Keep every legal move unless we exceed Choice's 255-option cap.
  * Real chess never reaches 218 legal moves, so this is last-resort only.
  */
-export function selectMovesForChoice(moves: LegalMove[]): {
+export function selectMovesForChoice(moves: LegalMove[], isEndgame = false): {
   selected: LegalMove[];
   dropped: LegalMove[];
 } {
@@ -393,7 +397,7 @@ export function selectMovesForChoice(moves: LegalMove[]): {
     return { selected: moves, dropped: [] };
   }
   const ranked = [...moves].sort((a, b) => {
-    const delta = movePriority(b) - movePriority(a);
+    const delta = movePriority(b, isEndgame) - movePriority(a, isEndgame);
     return delta !== 0 ? delta : a.uci.localeCompare(b.uci);
   });
   return {

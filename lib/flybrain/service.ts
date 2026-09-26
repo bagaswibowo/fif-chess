@@ -1,3 +1,8 @@
+const ENDGAME_PROMO_BOOST = 0.95;
+const MIDGAME_PROMO_BOOST = 0.65;
+const ENDGAME_PAWN_ADVANCE_FACTOR = 0.40;
+const MIDGAME_PAWN_ADVANCE_FACTOR = 0.25;
+
 import { describeOutcome } from "@/lib/chess";
 import fs from "node:fs";
 import path from "node:path";
@@ -44,7 +49,7 @@ export type FlyMoveScore = {
  * Evaluates board using FlyBrain Connectome with 1-ply lookahead value search
  * and active pawn-push / promotion tactical incentives.
  */
-export function evaluateWithFlyBrain(fen: string): {
+export function evaluateWithFlyBrain(fen: string, isEndgame: boolean = false): {
   moves: FlyMoveScore[];
   value: number;
 } | null {
@@ -103,9 +108,11 @@ export function evaluateWithFlyBrain(fen: string): {
 
             // Pawn promotion & advance bonus (aggressive promotion behavior)
             if (mv.promotion || san.includes("=")) {
-              moveValue = Math.min(0.98, moveValue + 0.65);
+              moveValue = isEndgame ? Math.min(0.99, moveValue + ENDGAME_PROMO_BOOST) : Math.min(0.98, moveValue + MIDGAME_PROMO_BOOST);
             } else if (isPawnPush && pawnAdvancedRank >= 6) {
-              moveValue = Math.min(0.92, moveValue + 0.25 * (pawnAdvancedRank - 5));
+              moveValue = isEndgame
+                ? Math.min(0.95, moveValue + ENDGAME_PAWN_ADVANCE_FACTOR * (pawnAdvancedRank - 5))
+                : Math.min(0.92, moveValue + MIDGAME_PAWN_ADVANCE_FACTOR * (pawnAdvancedRank - 5));
             }
 
             // Material capture bonus
