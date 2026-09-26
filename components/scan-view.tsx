@@ -23,6 +23,7 @@ import {
   IconClose3D,
 } from "@/components/icons3d";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
+import { PerspectiveCropModal } from "@/components/perspective-crop-modal";
 
 type Props = {
   onLoadFen: (fen: string) => void;
@@ -38,45 +39,6 @@ const PRESET_POSITIONS = [
   { name: "Foto Endgame Rd7", fen: "7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1" },
   { name: "Sicilian Najdorf (Standar)", fen: "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6" },
 ];
-
-
-
-
-function cropImageDataUrl(dataUrl: string, mode: "center" | "square" | "full"): Promise<string> {
-  return new Promise((resolve) => {
-    if (mode === "full" || typeof window === "undefined") return resolve(dataUrl);
-    const img = new Image();
-    img.onload = () => {
-      const w = img.width;
-      const h = img.height;
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return resolve(dataUrl);
-
-      let sx = 0, sy = 0, sw = w, sh = h;
-      if (mode === "center") {
-        const size = Math.round(Math.min(w, h) * 0.82);
-        sx = Math.round((w - size) / 2);
-        sy = Math.round((h - size) / 2);
-        sw = size;
-        sh = size;
-      } else if (mode === "square") {
-        const size = Math.min(w, h);
-        sx = Math.round((w - size) / 2);
-        sy = Math.round((h - size) / 2);
-        sw = size;
-        sh = size;
-      }
-
-      canvas.width = 800;
-      canvas.height = 800;
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 800, 800);
-      resolve(canvas.toDataURL("image/jpeg", 0.88));
-    };
-    img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
-}
 
 function sanitizeAndRepairFen(rawFen: string): string | null {
   if (!rawFen || typeof rawFen !== "string") return null;
@@ -206,7 +168,6 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [activeTab, setActiveTab] = useState<ViewTab>("solver");
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [pendingCropImage, setPendingCropImage] = useState<string | null>(null);
-  const [cropRatioMode, setCropRatioMode] = useState<"center" | "square" | "full">("center");
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [selectedPieceTool, setSelectedPieceTool] = useState<string | null>(null);
   const [scanSuccessMessage, setScanSuccessMessage] = useState<string | null>(null);
@@ -391,9 +352,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const base64Url = canvas.toDataURL("image/jpeg", 0.88);
+        const base64Url = canvas.toDataURL("image/jpeg", 0.90);
         stopWebcam();
-        await processAndScanImage(base64Url);
+        setPendingCropImage(base64Url);
+        setIsCropModalOpen(true);
       }
     } catch (e: any) {
       setError(e.message || "Gagal mengambil snapshot kamera.");
@@ -421,11 +383,16 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     reader.readAsDataURL(file);
   };
 
-  const handleConfirmCropAndScan = async () => {
-    if (!pendingCropImage) return;
+  const handleConfirmCropAndScan = async (warpedBase64: string) => {
     setIsCropModalOpen(false);
-    const cropped = await cropImageDataUrl(pendingCropImage, cropRatioMode);
-    await processAndScanImage(cropped);
+    setPendingCropImage(null);
+    await processAndScanImage(warpedBase64);
+  };
+
+  const handleSkipCropAndScan = async (rawBase64: string) => {
+    setIsCropModalOpen(false);
+    setPendingCropImage(null);
+    await processAndScanImage(rawBase64);
   };
 
   const handleBoard1Drop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
@@ -557,101 +524,16 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       <div className="w-full max-w-4xl mx-auto space-y-4 pb-8">
         <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageFile} />
 
-              {/* CROP MODAL PREVIEW */}
+        {/* PERSPECTIVE CROP MODAL (OCE / CAMSCANNER) */}
       {isCropModalOpen && pendingCropImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="w-full max-w-md bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden stack p-4">
-            <div className="row-between items-center pb-2 border-b border-[var(--border)]">
-              <div className="font-bold text-white text-sm">
-                {lang === "id" ? "Sesuaikan & Crop Papan Catur" : "Crop Chessboard Area"}
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCropModalOpen(false)}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white"
-              >
-                <IconClose3D size={18} />
-              </button>
-            </div>
-
-            <p className="text-xs text-[var(--muted-foreground)] leading-relaxed m-0">
-              {lang === "id"
-                ? "Foto miring/3D paling akurat jika dipotong pas di 64 petak catur tanpa tepi meja."
-                : "Photos with margins or 3D angles are recognized best when cropped tightly to the 64 squares."}
-            </p>
-
-            {/* PREVIEW CONTAINER */}
-            <div className="relative w-full aspect-square max-h-64 mx-auto rounded-xl overflow-hidden border border-[var(--border)] bg-black/40 flex items-center justify-center">
-              <img
-                src={pendingCropImage}
-                alt="Pratinjau Board"
-                className="max-h-full max-w-full object-contain"
-              />
-              {cropRatioMode === "center" && (
-                <div className="absolute inset-[9%] border-2 border-emerald-400 bg-emerald-500/10 pointer-events-none rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-emerald-300 bg-black/60 px-2 py-0.5 rounded">
-                    Area Crop Papan (82%)
-                  </span>
-                </div>
-              )}
-              {cropRatioMode === "square" && (
-                <div className="absolute inset-0 border-2 border-blue-400 bg-blue-500/10 pointer-events-none rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-blue-300 bg-black/60 px-2 py-0.5 rounded">
-                    Kotak Penuh 1:1
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* RATIO SELECTORS */}
-            <div className="grid grid-cols-3 gap-1.5 pt-1">
-              <button
-                type="button"
-                onClick={() => setCropRatioMode("center")}
-                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "center" ? "bg-emerald-950/80 border-emerald-500 text-emerald-200 font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}`}
-              >
-                <span>🎯 Papan Tengah</span>
-                <span className="text-[9px] opacity-75">Fokus 82%</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCropRatioMode("square")}
-                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "square" ? "bg-blue-950/80 border-blue-500 text-blue-200 font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}`}
-              >
-                <span>⏹ Kotak 1:1</span>
-                <span className="text-[9px] opacity-75">Persegi</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCropRatioMode("full")}
-                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "full" ? "bg-neutral-800 border-neutral-500 text-white font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}` }
-              >
-                <span>🖼 Asli</span>
-                <span className="text-[9px] opacity-75">Tanpa Potong</span>
-              </button>
-            </div>
-
-            {/* ACTION BUTTONS */}
-            <div className="row gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsCropModalOpen(false)}
-                className="ctl ctl-sm flex-1 font-medium"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmCropAndScan}
-                className="ctl ctl-sm flex-1 font-bold bg-[var(--primary)] text-white hover:brightness-110"
-              >
-                ✂ Potong & Pindai AI
-              </button>
-            </div>
-          </div>
-        </div>
+        <PerspectiveCropModal
+          imageUrl={pendingCropImage}
+          isOpen={isCropModalOpen}
+          onClose={() => setIsCropModalOpen(false)}
+          onConfirm={handleConfirmCropAndScan}
+          onSkip={handleSkipCropAndScan}
+          lang={lang}
+        />
       )}
         {/* NOTIFICATIONS */}
         {/* SCAN PROGRESS BAR WITH CANCEL BUTTON */}
@@ -875,101 +757,16 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     <div className="w-full max-w-6xl mx-auto space-y-3 pb-6">
       <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageFile} />
 
-            {/* CROP MODAL PREVIEW */}
+      {/* PERSPECTIVE CROP MODAL (OCE / CAMSCANNER) */}
       {isCropModalOpen && pendingCropImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="w-full max-w-md bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden stack p-4">
-            <div className="row-between items-center pb-2 border-b border-[var(--border)]">
-              <div className="font-bold text-white text-sm">
-                {lang === "id" ? "Sesuaikan & Crop Papan Catur" : "Crop Chessboard Area"}
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCropModalOpen(false)}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white"
-              >
-                <IconClose3D size={18} />
-              </button>
-            </div>
-
-            <p className="text-xs text-[var(--muted-foreground)] leading-relaxed m-0">
-              {lang === "id"
-                ? "Foto miring/3D paling akurat jika dipotong pas di 64 petak catur tanpa tepi meja."
-                : "Photos with margins or 3D angles are recognized best when cropped tightly to the 64 squares."}
-            </p>
-
-            {/* PREVIEW CONTAINER */}
-            <div className="relative w-full aspect-square max-h-64 mx-auto rounded-xl overflow-hidden border border-[var(--border)] bg-black/40 flex items-center justify-center">
-              <img
-                src={pendingCropImage}
-                alt="Pratinjau Board"
-                className="max-h-full max-w-full object-contain"
-              />
-              {cropRatioMode === "center" && (
-                <div className="absolute inset-[9%] border-2 border-emerald-400 bg-emerald-500/10 pointer-events-none rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-emerald-300 bg-black/60 px-2 py-0.5 rounded">
-                    Area Crop Papan (82%)
-                  </span>
-                </div>
-              )}
-              {cropRatioMode === "square" && (
-                <div className="absolute inset-0 border-2 border-blue-400 bg-blue-500/10 pointer-events-none rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-blue-300 bg-black/60 px-2 py-0.5 rounded">
-                    Kotak Penuh 1:1
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* RATIO SELECTORS */}
-            <div className="grid grid-cols-3 gap-1.5 pt-1">
-              <button
-                type="button"
-                onClick={() => setCropRatioMode("center")}
-                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "center" ? "bg-emerald-950/80 border-emerald-500 text-emerald-200 font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}`}
-              >
-                <span>🎯 Papan Tengah</span>
-                <span className="text-[9px] opacity-75">Fokus 82%</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCropRatioMode("square")}
-                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "square" ? "bg-blue-950/80 border-blue-500 text-blue-200 font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}`}
-              >
-                <span>⏹ Kotak 1:1</span>
-                <span className="text-[9px] opacity-75">Persegi</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCropRatioMode("full")}
-                className={`py-2 px-1 text-xs rounded-xl border flex flex-col items-center gap-1 transition-all ${cropRatioMode === "full" ? "bg-neutral-800 border-neutral-500 text-white font-bold" : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted-foreground)]"}` }
-              >
-                <span>🖼 Asli</span>
-                <span className="text-[9px] opacity-75">Tanpa Potong</span>
-              </button>
-            </div>
-
-            {/* ACTION BUTTONS */}
-            <div className="row gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsCropModalOpen(false)}
-                className="ctl ctl-sm flex-1 font-medium"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmCropAndScan}
-                className="ctl ctl-sm flex-1 font-bold bg-[var(--primary)] text-white hover:brightness-110"
-              >
-                ✂ Potong & Pindai AI
-              </button>
-            </div>
-          </div>
-        </div>
+        <PerspectiveCropModal
+          imageUrl={pendingCropImage}
+          isOpen={isCropModalOpen}
+          onClose={() => setIsCropModalOpen(false)}
+          onConfirm={handleConfirmCropAndScan}
+          onSkip={handleSkipCropAndScan}
+          lang={lang}
+        />
       )}
       {/* TOP CONTROL BAR */}
       <div className="panel px-3.5 py-2.5 row-between flex-wrap gap-2.5" style={{ background: "var(--card)" }}>
@@ -1187,13 +984,12 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <CapturedPiecesBar fen={liveFen} side={tacticalIntel.turn === "Putih" ? "white" : "black"} />
             </div>
 
-            <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--board-dark)]">
+            <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
               <Chessboard
                 options={{
                   id: "board-solver-full",
                   position: liveFen,
                   allowDragging: false,
-                  boardStyle: { backgroundColor: "var(--board-dark)" },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                   animationDurationInMs: 250,
@@ -1333,14 +1129,13 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <CapturedPiecesBar fen={initialFen} side="white" />
             </div>
 
-            <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--board-dark)]">
+            <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
               <Chessboard
                 options={{
                   id: "board-ref-full",
                   position: initialFen,
                   allowDragging: true,
                   onPieceDrop: handleBoard1Drop,
-                  boardStyle: { backgroundColor: "var(--board-dark)" },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                 }}
@@ -1378,14 +1173,13 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <span className="font-bold text-xs text-white">Papan 1: Referensi Asli</span>
               <CapturedPiecesBar fen={initialFen} side="white" />
             </div>
-            <div className="w-full aspect-square rounded-xl overflow-hidden border border-[var(--border)] bg-[var(--board-dark)]">
+            <div className="w-full aspect-square rounded-xl overflow-hidden border border-[var(--border)]">
               <Chessboard
                 options={{
                   id: "board-compare-1",
                   position: initialFen,
                   allowDragging: true,
                   onPieceDrop: handleBoard1Drop,
-                  boardStyle: { backgroundColor: "var(--board-dark)" },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                 }}
@@ -1401,13 +1195,12 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 Eval: {currentScoreCp !== null ? `${currentScoreCp > 0 ? "+" : ""}${(currentScoreCp / 100).toFixed(1)}` : "+0.0"}
               </span>
             </div>
-            <div className="w-full aspect-square rounded-xl overflow-hidden border border-[var(--primary)] bg-[var(--board-dark)]">
+            <div className="w-full aspect-square rounded-xl overflow-hidden border border-[var(--primary)]">
               <Chessboard
                 options={{
                   id: "board-compare-2",
                   position: liveFen,
                   allowDragging: false,
-                  boardStyle: { backgroundColor: "var(--board-dark)" },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                 }}
