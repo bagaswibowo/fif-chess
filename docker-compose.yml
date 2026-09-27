@@ -1,8 +1,13 @@
 services:
   chesscog:
+    build:
+      context: ./chesscog-service
+      dockerfile: Dockerfile
     image: jev-chesscog:latest
     container_name: jev-chesscog
     restart: unless-stopped
+    profiles:
+      - chesscog
     environment:
       - PYTHONUNBUFFERED=1
 
@@ -10,6 +15,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: jev-chess:latest
     container_name: jev-chess
     restart: unless-stopped
     ports:
@@ -22,14 +28,17 @@ services:
       - NODE_ENV=production
       - JEV_DATA_DIR=/app/data
       - CHESSCOG_URL=http://chesscog:8000
-    depends_on:
-      - chesscog
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
 
   cftunnel-jev-chess:
     image: cloudflare/cloudflared:latest
     container_name: cftunnel-jev-chess
     restart: unless-stopped
     network_mode: host
+    profiles:
+      - cloudflare
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     command: tunnel --no-autoupdate --protocol http2 run

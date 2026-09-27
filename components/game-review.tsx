@@ -9,9 +9,11 @@
 // 5. Standardized Pill Tab Bar konsisten dengan UI FIF Chess.
 
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { BoardControls } from "@/components/board-controls";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
 import type { GameRecord } from "@/lib/game-history";
+import { IconAlert3D } from "@/components/icons3d";
 
 type SortKey = "when" | "result" | "moves" | "opponent";
 type Dir = "asc" | "desc";
@@ -115,9 +117,24 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   const [fullscreenReview, setFullscreenReview] = useState(false);
   const [flipOrientation, setFlipOrientation] = useState(false);
   useEffect(() => {
-    if (!fullscreenReview) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFullscreenReview(false);
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "f" || e.key === "F") {
+        setFullscreenReview((v) => !v);
+      } else if (e.key === "z" || e.key === "Z") {
+        setFlipOrientation((v) => !v);
+      } else if (e.key === "Escape" && fullscreenReview) {
+        setFullscreenReview(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -225,15 +242,15 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
     if (moveIndex === 0 || !playedNow || !evalResult) return null;
     const delta = evalResult.deltaCp ?? 0;
     if (playedNow.san === evalResult.bestSan || delta <= 30) {
-      return { kind: "best", label: "Langkah Terbaik", badge: "🟢 Best Move", color: "text-emerald-400" };
+      return { kind: "best", label: "Langkah Terbaik", badge: "Best Move", color: "text-emerald-400" };
     }
     if (delta <= 80) {
-      return { kind: "inaccuracy", label: "Kurang Akurat", badge: "🟡 Inaccuracy", color: "text-amber-300" };
+      return { kind: "inaccuracy", label: "Kurang Akurat", badge: "Inaccuracy", color: "text-amber-300" };
     }
     if (delta <= 200) {
-      return { kind: "mistake", label: "Kesalahan", badge: "🟠 Mistake", color: "text-orange-400" };
+      return { kind: "mistake", label: "Kesalahan", badge: "Mistake", color: "text-orange-400" };
     }
-    return { kind: "blunder", label: "Blunder Fatal", badge: "🔴 Blunder", color: "text-red-400" };
+    return { kind: "blunder", label: "Blunder Fatal", badge: "Blunder", color: "text-red-400" };
   }, [moveIndex, playedNow, evalResult]);
 
   // Deteksi ancaman di posisi saat ini
@@ -383,7 +400,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
           <div
             className={
               fullscreenReview
-                ? "fixed inset-0 z-50 bg-[#161512] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
+                ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
                 : "stack gap-3"
             }
           >
@@ -431,14 +448,14 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   className="ctl ctl-sm font-bold"
                   onClick={() => { setPlaying((p) => !p); if (moveIndex >= fenList.length - 1) setMoveIndex(0); }}
                 >
-                  {playing ? "⏸ Jeda" : "▶ Putar"}
+                  {playing ? "Jeda" : "Putar"}
                 </button>
                 <button
                   className="ctl ctl-sm"
                   onClick={() => { setPlaying(false); setMoveIndex(0); }}
                   disabled={moveIndex === 0}
                 >
-                  ⏮ Awal
+                  Awal
                 </button>
                 <button
                   className="ctl ctl-sm"
@@ -471,7 +488,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   disabled={moveIndex <= 1}
                   title="Lompat ke Momen Kritis/Taktis Sebelumnya"
                 >
-                  ⏮ Blunder Prev
+                  Blunder Prev
                 </button>
                 <button
                   className="ctl ctl-sm text-xs font-bold border-amber-500/40 text-amber-300 hover:bg-amber-950/30"
@@ -490,7 +507,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   disabled={moveIndex >= fenList.length - 1}
                   title="Lompat ke Momen Kritis/Taktis Berikutnya"
                 >
-                  ⏭ Blunder Next
+                  Blunder Next
                 </button>
               </div>
 
@@ -504,41 +521,16 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 <span className="font-mono text-xs font-bold text-neutral-300 px-2.5 py-1 rounded bg-[var(--surface)] border border-[var(--border)]">
                   Langkah {moveIndex} / {active.moves.length}
                 </span>
-                {/* Tombol Putar Posisi Papan */}
-                <button
-                  type="button"
-                  onClick={() => setFlipOrientation((v) => !v)}
-                  className="ctl ctl-sm px-2.5 py-1 text-xs font-bold rounded-lg border border-[var(--border)] text-neutral-200 hover:bg-[var(--surface)] flex items-center gap-1.5 shrink-0 transition-all"
-                  title="Putar Orientasi Papan Catur (Putih / Hitam di bawah)"
-                >
-                  <span>🔄</span>
-                  <span className="hidden sm:inline">Putar Posisi</span>
-                  <span className="text-[10px] text-neutral-400 font-mono">
-                    ({(flipOrientation ? (active.humanSide === "white" ? "Hitam" : "Putih") : (active.humanSide === "white" ? "Putih" : "Hitam"))} Bawah)
-                  </span>
-                </button>
 
-                {fullscreenReview ? (
-                  <button
-                    type="button"
-                    onClick={() => setFullscreenReview(false)}
-                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-red-950/80 border border-red-500/50 text-red-200 hover:bg-red-900 flex items-center gap-1.5 shadow-sm transition-all"
-                    title="Keluar Layar Penuh (Esc)"
-                  >
-                    <span>✕</span>
-                    <span className="hidden sm:inline">Keluar Layar Penuh (Esc)</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setFullscreenReview(true)}
-                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#81b64c] text-white hover:brightness-110 flex items-center gap-1.5 shadow-sm transition-all"
-                    title="Buka Mode Fokus Layar Penuh (1 Layar)"
-                  >
-                    <span>⛶</span>
-                    <span className="hidden sm:inline">Fokus 1 Layar</span>
-                  </button>
-                )}
+                <BoardControls
+                  variant="toolbar"
+                  orientation={active ? (flipOrientation ? (active.humanSide === "white" ? "black" : "white") : active.humanSide) : "white"}
+                  onFlipOrientation={() => setFlipOrientation((v) => !v)}
+                  isFullscreen={fullscreenReview}
+                  onToggleFullscreen={() => setFullscreenReview((v) => !v)}
+                  showShortcuts={true}
+                  className="border-0 bg-transparent p-0 shadow-none"
+                />
               </div>
             </div>
 
@@ -651,7 +643,8 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   {activeThreats.length > 0 && (
                     <div className="p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 mt-2 stack-tight">
                       <div className="text-[11px] font-bold text-red-300 flex items-center gap-1.5">
-                        <span>⚠️ Ancaman Lawan Terdeteksi:</span>
+                        <IconAlert3D size={14} className="shrink-0" />
+                        <span>Ancaman Lawan Terdeteksi:</span>
                       </div>
                       {activeThreats.map((t, idx) => (
                         <p key={idx} className="text-[11px] text-neutral-200 m-0 leading-tight">

@@ -13,7 +13,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Chessboard } from "react-chessboard";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
-import { IconClose3D, IconSwap3D, IconBot3D } from "@/components/icons3d";
+import { IconClose3D, IconSwap3D, IconBot3D, IconLightbulb3D } from "@/components/icons3d";
 import type { PlayedMove } from "@/lib/types";
 
 type Props = {
@@ -63,11 +63,22 @@ export function ClockMovesFullscreen({
     setCurrentOrientation(boardOrientation);
   }, [boardOrientation]);
 
-  // Hanya tombol Escape yang menutup fullscreen.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "Escape" || e.key === "f" || e.key === "F") {
         onClose();
+      } else if (e.key === "z" || e.key === "Z") {
+        setCurrentOrientation((o) => (o === "white" ? "black" : "white"));
       }
     };
     window.addEventListener("keydown", onKey);
@@ -96,7 +107,7 @@ export function ClockMovesFullscreen({
       role="dialog"
       aria-modal="true"
       aria-label="Arena Catur Layar Penuh"
-      className="fixed inset-0 z-50 bg-[#121110] text-white flex flex-col justify-between overflow-hidden select-none"
+      className="fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col justify-between overflow-hidden select-none"
     >
       {/* HEADER NAVIGASI ATAS */}
       <header className="px-3 sm:px-6 py-2 bg-[var(--card)]/95 backdrop-blur border-b border-[var(--border)] flex items-center justify-between shrink-0 z-20 h-11">
@@ -165,7 +176,7 @@ export function ClockMovesFullscreen({
                 <span className="text-xs font-bold text-white block truncate max-w-[130px] sm:max-w-[200px]">
                   {currentOrientation === "white" ? blackName : whiteName}
                 </span>
-                <span className="text-[10px] text-neutral-400 hidden sm:inline">
+                <span className="text-xs text-neutral-400 hidden sm:inline">
                   {currentOrientation === "white" ? (activeSide === "black" ? "● Melangkah..." : "Menunggu") : (activeSide === "white" ? "● Melangkah..." : "Menunggu")}
                 </span>
               </div>
@@ -196,7 +207,7 @@ export function ClockMovesFullscreen({
                   height: currentOrientation === "white" ? `${whiteWinningPercent}%` : `${100 - whiteWinningPercent}%`,
                 }}
               />
-              <span className="absolute inset-x-0 bottom-1 text-[7px] font-mono font-bold text-center text-black pointer-events-none select-none">
+              <span className="absolute inset-x-0 bottom-1 text-[8px] font-mono font-bold text-center text-black pointer-events-none select-none">
                 {Math.abs(evalValue).toFixed(1)}
               </span>
             </div>
@@ -233,7 +244,7 @@ export function ClockMovesFullscreen({
                 <span className="text-xs font-bold text-white block truncate max-w-[130px] sm:max-w-[200px]">
                   {currentOrientation === "white" ? whiteName : blackName} (Anda)
                 </span>
-                <span className="text-[10px] text-neutral-400 hidden sm:inline">
+                <span className="text-xs text-neutral-400 hidden sm:inline">
                   {isHumanTurn ? "● Giliran Anda" : "Menunggu lawan"}
                 </span>
               </div>
@@ -265,7 +276,7 @@ export function ClockMovesFullscreen({
                     {coachCommentary ? "Analisis AI Coach" : "Analisis Komentator Stockfish"}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] text-emerald-400 font-bold">
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] text-emerald-400 font-bold">
                   Eval: {evalValue > 0 ? "+" + evalValue.toFixed(2) : evalValue.toFixed(2)}
                 </span>
               </div>
@@ -276,7 +287,10 @@ export function ClockMovesFullscreen({
                     <div className="font-bold text-emerald-400">{coachCommentary.headline}</div>
                     <div className="text-neutral-300">{coachCommentary.reason}</div>
                     {coachCommentary.tactic && (
-                      <div className="text-[11px] text-amber-300 italic">💡 {coachCommentary.tactic}</div>
+                      <div className="text-xs text-amber-300 italic flex items-center gap-1.5">
+                        <IconLightbulb3D size={13} className="shrink-0" />
+                        <span>{coachCommentary.tactic}</span>
+                      </div>
                     )}
                   </div>
                 ) : lastMove ? (
@@ -303,27 +317,55 @@ export function ClockMovesFullscreen({
               <span className="text-xs font-bold uppercase tracking-wider text-neutral-300">
                 Notasi Langkah ({moves.length})
               </span>
-              <span className="text-[10px] text-neutral-400 font-mono">
+              <span className="text-xs text-neutral-400 font-mono">
                 Babak ke-{Math.floor(moves.length / 2) + 1}
               </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto rounded-lg bg-[var(--surface)] border border-[var(--border)] p-1">
-              <div className="grid grid-cols-2 gap-1 text-xs font-mono">
-                {moves.map((m, i) => (
-                  <div
-                    key={i}
-                    className={`px-2 py-1 rounded flex items-center justify-between ${
-                      i === moves.length - 1 ? "bg-[var(--primary)]/20 text-[var(--primary)] font-black" : "text-neutral-300 hover:bg-neutral-800/40"
-                    }`}
-                  >
-                    <span className="text-[10px] text-neutral-500 w-6">
-                      {i % 2 === 0 ? `${Math.floor(i / 2) + 1}.` : ""}
-                    </span>
-                    <span className="font-bold">{m.san}</span>
-                    <span className="text-[9px] opacity-60 uppercase">{m.by === "human" ? "User" : "Bot"}</span>
-                  </div>
-                ))}
+            {/* Header Kolom Notasi */}
+            <div className="grid grid-cols-[2rem_1fr_1fr] px-2 py-1 bg-[var(--surface)] border border-[var(--border)] rounded-t-lg text-xs font-bold text-neutral-400">
+              <span className="text-center">#</span>
+              <span className="truncate">{whiteName}</span>
+              <span className="truncate">{blackName}</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto rounded-b-lg bg-[var(--surface)]/60 border-x border-b border-[var(--border)] p-1">
+              <div className="space-y-0.5 text-xs font-mono">
+                {Array.from({ length: Math.ceil(moves.length / 2) }).map((_, roundIdx) => {
+                  const whiteMove = moves[roundIdx * 2];
+                  const blackMove = moves[roundIdx * 2 + 1];
+                  const isLatestRound = roundIdx === Math.floor((moves.length - 1) / 2);
+                  return (
+                    <div
+                      key={roundIdx}
+                      className={`grid grid-cols-[2rem_1fr_1fr] items-center px-1.5 py-1 rounded transition-colors ${
+                        roundIdx % 2 === 0 ? "bg-neutral-800/30" : "bg-transparent"
+                      }`}
+                    >
+                      <span className="text-center text-xs text-neutral-500 font-bold select-none">
+                        {roundIdx + 1}.
+                      </span>
+                      <span
+                        className={`font-bold px-1.5 py-0.5 rounded truncate ${
+                          whiteMove && moves.indexOf(whiteMove) === moves.length - 1
+                            ? "bg-[var(--primary)] text-white"
+                            : "text-neutral-200"
+                        }`}
+                      >
+                        {whiteMove?.san || "-"}
+                      </span>
+                      <span
+                        className={`font-bold px-1.5 py-0.5 rounded truncate ${
+                          blackMove && moves.indexOf(blackMove) === moves.length - 1
+                            ? "bg-[var(--primary)] text-white"
+                            : "text-neutral-200"
+                        }`}
+                      >
+                        {blackMove?.san || "-"}
+                      </span>
+                    </div>
+                  );
+                })}
                 <div ref={scrollBottomRef} />
               </div>
             </div>

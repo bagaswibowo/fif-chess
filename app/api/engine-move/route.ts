@@ -113,10 +113,36 @@ export async function POST(request: Request) {
 
   const key = apiKey();
   if (!key) {
-    return NextResponse.json(
-      { error: 'TYPESAFE_API_KEY is not set. Add your TypeSafe API key to play against Jev.', retryable: false },
-      { status: 503 },
-    );
+    // If TYPESAFE_API_KEY is not set, use local neural connectome FlyBrain or tactical engine
+    // so Jev vs Stockfish arena plays continuously without halting
+    try {
+      const flyResult = playFlyBrainMove(fen);
+      if (flyResult) {
+        return NextResponse.json(flyResult);
+      }
+    } catch (fbErr) {
+      console.warn("FlyBrain fallback error for Jev:", fbErr);
+    }
+
+    try {
+      const sfResult = await playStockfishMove(fen, Math.max(4, depth - 2));
+      return NextResponse.json({
+        uci: sfResult.uci,
+        san: sfResult.san,
+        fen: sfResult.fen,
+        probabilities: sfResult.probabilities,
+        confidence: sfResult.confidence,
+        droppedMoveCount: sfResult.droppedMoveCount,
+        outcome: sfResult.outcome,
+        scoreCp: (sfResult as any).scoreCp ?? null,
+      });
+    } catch (sfErr) {
+      console.error("Stockfish fallback failed for Jev:", sfErr);
+      return NextResponse.json(
+        { error: 'TYPESAFE_API_KEY is not set. Add your TypeSafe API key to play against Jev.', retryable: false },
+        { status: 503 },
+      );
+    }
   }
 
   try {

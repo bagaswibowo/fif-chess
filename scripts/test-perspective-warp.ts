@@ -65,4 +65,11 @@ const rCenter = projectPoint(Hrect, 50, 50);
 assert.ok(Math.abs(rCenter.x - 60) < 1e-4);
 assert.ok(Math.abs(rCenter.y - 60) < 1e-4);
 
+// 5. Test detectChessboardCorners fallback / shape sanity
+import { detectChessboardCorners } from "../lib/perspective-warp.ts";
+const detected = detectChessboardCorners({} as any);
+assert.equal(detected.length, 4);
+assert.ok(detected[0].x >= 0 && detected[0].x <= 1);
+assert.ok(detected[2].x > detected[0].x);
+
 console.log("All perspective warp homography tests PASSED successfully!");

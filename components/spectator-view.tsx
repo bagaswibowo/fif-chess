@@ -9,6 +9,7 @@
 // 5. Layout compact & minimalis tanpa membuang ruang layar.
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
+import { BoardControls } from "@/components/board-controls";
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -140,6 +141,33 @@ export function SpectatorView({
   const [threatInfo, setThreatInfo] = useState<{ from: string; to: string; sq: string } | null>(null);
   const [predictedMove, setPredictedMove] = useState<{ from: string; to: string } | null>(null);
   const [commentary, setCommentary] = useState<Commentary | null>(null);
+
+  const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
+  const [fullscreenSpectator, setFullscreenSpectator] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "f" || e.key === "F") {
+        setFullscreenSpectator((v) => !v);
+      } else if (e.key === "z" || e.key === "Z") {
+        setBoardOrientation((o) => (o === "white" ? "black" : "white"));
+      } else if (e.key === "Escape" && fullscreenSpectator) {
+        setFullscreenSpectator(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreenSpectator]);
 
   const abortRef = useRef(false);
 
@@ -344,15 +372,6 @@ export function SpectatorView({
     if (!abortRef.current) setStatus("finished");
   }, [whiteEngine, blackEngine, jevDepth, sfDepth, seed, currentFen]);
 
-  const swapSides = () => {
-    if (status === "running") stopMatch();
-    const prevWhite = whiteEngine;
-    const prevBlack = blackEngine;
-    setWhiteEngine(prevBlack);
-    setBlackEngine(prevWhite);
-    resetMatch();
-  };
-
   const stopMatch = () => {
     abortRef.current = true;
     setStatus("paused");
@@ -375,8 +394,9 @@ export function SpectatorView({
   const lastMove = moves[moves.length - 1] ?? null;
   const lastCp = lastMove?.scoreCp ?? null;
   const isLastMoveWhite = moves.length % 2 === 1;
-  const whiteCp = lastCp !== null ? (isLastMoveWhite ? -lastCp : lastCp) : null;
-  const barPct = whiteCp !== null ? Math.round(((Math.tanh(whiteCp / 400) + 1) / 2) * 100) : 50;
+  const whiteCp = lastCp !== null ? (isLastMoveWhite ? lastCp : -lastCp) : null;
+  const rawPct = whiteCp !== null ? Math.round(((Math.tanh(whiteCp / 400) + 1) / 2) * 100) : 50;
+  const barPct = Math.max(5, Math.min(95, rawPct));
 
   const arrows = useMemo(() => {
     const list: { startSquare: string; endSquare: string; color: string }[] = [];
@@ -424,7 +444,13 @@ export function SpectatorView({
   }, [moves]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-3 pb-8 px-1 md:px-0">
+    <div
+      className={
+        fullscreenSpectator
+          ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
+          : "max-w-6xl mx-auto space-y-3 pb-8 px-1 md:px-0"
+      }
+    >
       {showConfetti && <Confetti />}
 
       {/* TOP HEADER BAR - AI vs Engine Catur */}
@@ -445,21 +471,19 @@ export function SpectatorView({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {status === "idle" || status === "paused" || status === "finished" ? (
             <Button
               onClick={runMatch}
-              size="sm"
-              className="bg-[var(--primary)] hover:opacity-90 text-white font-bold text-xs h-7 px-2.5 shadow-sm active:translate-y-[1px]"
+              className="bg-[var(--primary)] hover:opacity-90 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-sm active:translate-y-[1px]"
             >
               {status === "idle" ? "Mulai" : "Lanjutkan"}
             </Button>
           ) : (
             <Button
               onClick={stopMatch}
-              size="sm"
               variant="outline"
-              className="border-red-500/50 text-red-400 font-bold text-xs h-7 px-2.5 active:translate-y-[1px]"
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10 font-bold text-xs h-9 px-4 rounded-xl active:translate-y-[1px]"
             >
               Jeda
             </Button>
@@ -468,33 +492,21 @@ export function SpectatorView({
           {status !== "idle" && (
             <Button
               onClick={resetMatch}
-              size="sm"
               variant="outline"
-              className="border-[var(--border)] text-neutral-300 font-bold text-xs h-7 px-2 active:translate-y-[1px]"
+              className="border-[var(--border)] text-neutral-300 hover:text-white font-bold text-xs h-9 px-3 rounded-xl active:translate-y-[1px]"
             >
               Reset
             </Button>
           )}
 
-          <Button
-            onClick={swapSides}
-            size="sm"
-            variant="outline"
-            className="border-[var(--primary)]/60 text-[var(--primary)] hover:bg-[var(--primary)]/10 font-bold text-xs h-7 px-2.5 flex items-center gap-1.5 active:translate-y-[1px]"
-            title="Tukar posisi Putih dan Hitam"
-          >
-            <IconSwap3D size={14} />
-            <span>Tukar Sisi</span>
-          </Button>
-
           {/* Depth Selector */}
-          <div className="flex items-center gap-1 bg-[var(--background)] p-0.5 rounded-lg border border-[var(--border)]">
-            <span className="text-[10px] text-[var(--muted-foreground)] font-bold px-1">Depth:</span>
+          <div className="flex items-center gap-1 bg-[var(--background)] px-1.5 h-9 rounded-xl border border-[var(--border)]">
+            <span className="text-[10px] text-[var(--muted-foreground)] font-bold px-1 hidden sm:inline">Depth:</span>
             {[6, 10, 14].map((d) => (
               <button
                 key={d}
                 onClick={() => { setJevDepth(d); setSfDepth(d); }}
-                className={`px-1.5 py-0.5 rounded text-[11px] font-bold transition-all ${
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
                   jevDepth === d ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"
                 }`}
               >
@@ -508,10 +520,36 @@ export function SpectatorView({
       {/* MAIN TWO-COLUMN ARENA LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
         
-        {/* LEFT COLUMN (7 Cols): Chess Arena (Eval Bar + Top Player + Board + Bottom Player + Legend) */}
+        {/* LEFT COLUMN (7 Cols): Chess Arena (Controls & Legend on TOP -> Top Player -> Board + Eval -> Bottom Player) */}
         <div className="lg:col-span-7 space-y-2">
           
-          {/* Top Player (Black) with 1-Click Engine Selector & Captured Pieces */}
+          {/* 1. Unified Board Action Controls (ON TOP) */}
+          <BoardControls
+            variant="toolbar"
+            orientation={boardOrientation}
+            onFlipOrientation={() => setBoardOrientation((o) => (o === "white" ? "black" : "white"))}
+            isFullscreen={fullscreenSpectator}
+            onToggleFullscreen={() => setFullscreenSpectator((v) => !v)}
+            showShortcuts={true}
+          />
+
+          {/* 2. Visual Arrows Legend (ON TOP) */}
+          <div className="panel px-3 py-2 rounded-xl border border-[var(--border)] flex items-center justify-around text-xs font-bold text-neutral-300 shadow-sm" style={{ background: "var(--surface)" }}>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300" />
+              <span className="font-semibold text-neutral-300">Langkah Terkini</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded bg-red-500 border border-red-300" />
+              <span className="font-bold text-red-400">Target Diancam</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded bg-sky-400 border border-sky-300" />
+              <span className="font-bold text-sky-400">Prediksi Balasan</span>
+            </span>
+          </div>
+
+          {/* 3. Top Player (Black) with 1-Click Engine Selector & Captured Pieces */}
           <div className="panel px-3 py-2 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm" style={{ background: "var(--card)" }}>
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-3.5 h-3.5 rounded-full bg-neutral-900 border-2 border-neutral-600 shrink-0" />
@@ -531,13 +569,34 @@ export function SpectatorView({
             <CapturedPiecesBar fen={currentFen} side="black" />
           </div>
 
-          {/* Board Container with Sleek Vertical Eval Bar */}
-          <div className="flex gap-2 items-stretch">
-            {/* Slim Vertical Eval Bar */}
-            <div className="w-2.5 md:w-3 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)] flex flex-col justify-end shrink-0 shadow-inner">
+          {/* 4. Board Container with Sleek Vertical Dual-Bar Eval */}
+          <div className="flex gap-2.5 items-stretch">
+            {/* Slim Vertical Dual Eval Bar: Black at top, White at bottom (responsive to orientation) */}
+            <div
+              className="w-3 md:w-3.5 bg-neutral-900 rounded-full overflow-hidden border border-[var(--border)] flex flex-col justify-between shrink-0 shadow-inner relative select-none"
+              title={`Evaluasi: ${whiteCp !== null ? (whiteCp > 0 ? `+${(whiteCp/100).toFixed(1)} Putih` : `${(whiteCp/100).toFixed(1)} Hitam`) : "0.0 (Seimbang)"}`}
+            >
+              {/* Top portion (Black if white orientation, White if black orientation) */}
               <div
-                className="w-full bg-neutral-200 transition-all duration-500 rounded-b-full"
-                style={{ height: `${barPct}%` }}
+                className={`w-full transition-all duration-500 ease-out ${
+                  boardOrientation === "white"
+                    ? "bg-neutral-900"
+                    : "bg-neutral-100"
+                }`}
+                style={{ height: `${boardOrientation === "white" ? 100 - barPct : barPct}%` }}
+              />
+
+              {/* Dividing Line / Marker */}
+              <div className="w-full h-[1.5px] bg-neutral-600/50 shrink-0 z-10" />
+
+              {/* Bottom portion (White if white orientation, Black if black orientation) */}
+              <div
+                className={`w-full transition-all duration-500 ease-out ${
+                  boardOrientation === "white"
+                    ? "bg-neutral-100"
+                    : "bg-neutral-900"
+                }`}
+                style={{ height: `${boardOrientation === "white" ? barPct : 100 - barPct}%` }}
               />
             </div>
 
@@ -547,7 +606,7 @@ export function SpectatorView({
                 options={{
                   id: "spectator-board",
                   position: currentFen,
-                  boardOrientation: "white",
+                  boardOrientation: boardOrientation,
                   allowDragging: false,
                   arrows,
                   squareStyles,
@@ -560,7 +619,7 @@ export function SpectatorView({
             </div>
           </div>
 
-          {/* Bottom Player (White) with 1-Click Engine Selector & Captured Pieces */}
+          {/* 5. Bottom Player (White) with 1-Click Engine Selector & Captured Pieces */}
           <div className="panel px-3 py-2 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm" style={{ background: "var(--card)" }}>
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-neutral-300 shrink-0" />
@@ -578,22 +637,6 @@ export function SpectatorView({
               </span>
             </div>
             <CapturedPiecesBar fen={currentFen} side="white" />
-          </div>
-
-          {/* Visual Arrows Legend */}
-          <div className="panel px-3 py-2 rounded-xl border border-[var(--border)] flex items-center justify-around text-[12px] font-bold text-neutral-300 shadow-sm" style={{ background: "var(--surface)" }}>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300" />
-              <span className="font-semibold text-neutral-300">Langkah Terkini</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-red-500 border border-red-300" />
-              <span className="font-bold text-red-400">Target Diancam</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-sky-400 border border-sky-300" />
-              <span className="font-bold text-sky-400">Prediksi Balasan</span>
-            </span>
           </div>
         </div>
 

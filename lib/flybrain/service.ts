@@ -3,7 +3,7 @@ const MIDGAME_PROMO_BOOST = 0.65;
 const ENDGAME_PAWN_ADVANCE_FACTOR = 0.40;
 const MIDGAME_PAWN_ADVANCE_FACTOR = 0.25;
 
-import { describeOutcome } from "@/lib/chess";
+import { describeOutcome } from "../chess.ts";
 import fs from "node:fs";
 import path from "node:path";
 import { Chess } from "chess.js";
@@ -52,6 +52,7 @@ export type FlyMoveScore = {
 export function evaluateWithFlyBrain(fen: string, isEndgame: boolean = false): {
   moves: FlyMoveScore[];
   value: number;
+  diagnostics?: any;
 } | null {
   try {
     const brain = getFlyBrain();
@@ -63,7 +64,11 @@ export function evaluateWithFlyBrain(fen: string, isEndgame: boolean = false): {
     const turn = chess.turn();
     const isWhite = turn === "w";
     const planes = encodeBoard(chess);
-    const { policy, value: currentPosValue } = brain.forward(planes);
+    const fwd = (brain as any).forward(planes);
+    const policy = fwd.policy;
+    const currentPosValue = fwd.value;
+    const activity = fwd.activity;
+    const retinaDrive = fwd.retinaDrive;
 
     const legal = legalMoveIndices(chess);
     if (!legal || legal.length === 0) return null;
@@ -141,9 +146,80 @@ export function evaluateWithFlyBrain(fen: string, isEndgame: boolean = false): {
 
     scored.sort((a, b) => b.prob - a.prob);
 
+    // Extract Connectome Diagnostics (Biomimetic Visualizer)
+    const CLASS_NAMES: Record<number, string> = {
+      0: "Optic Lobe (Sistem Visual)",
+      1: "Sensory / Ascending (Sensorik)",
+      2: "Central Brain (Memori & Keputusan)",
+      3: "Descending / Motor (Keluaran Gerak)",
+    };
+
+    const regionalSums = { optic: 0, sensory: 0, central: 0, motor: 0 };
+    const regionalCounts = { optic: 0, sensory: 0, central: 0, motor: 0 };
+    const topActive: { id: number; region: string; activity: number; codexUrl: string }[] = [];
+
+    if (activity && brain.superClass) {
+      const sc = brain.superClass;
+      const step = Math.max(1, Math.floor(activity.length / 5000));
+      for (let i = 0; i < activity.length; i += step) {
+        const act = activity[i];
+        const cls = sc[i] ?? 2;
+        if (cls === 0) { regionalSums.optic += act; regionalCounts.optic++; }
+        else if (cls === 1) { regionalSums.sensory += act; regionalCounts.sensory++; }
+        else if (cls === 3) { regionalSums.motor += act; regionalCounts.motor++; }
+        else { regionalSums.central += act; regionalCounts.central++; }
+
+        if (act > 0.3) {
+          topActive.push({
+            id: i,
+            region: CLASS_NAMES[cls] || "Central Brain",
+            activity: Number(act.toFixed(3)),
+            codexUrl: `https://codex.flywire.ai`,
+          });
+        }
+      }
+    }
+
+    topActive.sort((a, b) => b.activity - a.activity);
+    const topNeurons = topActive.slice(0, 5);
+
+    // Compound eye heatmap (64 squares)
+    const eyeMap = new Array(64).fill(0);
+    if (retinaDrive && brain.retinaSquare) {
+      const sq = brain.retinaSquare;
+      const count = new Array(64).fill(0);
+      for (let k = 0; k < retinaDrive.length; k++) {
+        const s = sq[k];
+        if (s >= 0 && s < 64) {
+          eyeMap[s] += Math.max(0, retinaDrive[k]);
+          count[s]++;
+        }
+      }
+      for (let s = 0; s < 64; s++) {
+        if (count[s] > 0) eyeMap[s] = Number((eyeMap[s] / count[s]).toFixed(3));
+      }
+    }
+
+    const regionalActivity = {
+      optic: Number((regionalCounts.optic ? regionalSums.optic / regionalCounts.optic : 0).toFixed(3)),
+      sensory: Number((regionalCounts.sensory ? regionalSums.sensory / regionalCounts.sensory : 0).toFixed(3)),
+      central: Number((regionalCounts.central ? regionalSums.central / regionalCounts.central : 0).toFixed(3)),
+      motor: Number((regionalCounts.motor ? regionalSums.motor / regionalCounts.motor : 0).toFixed(3)),
+    };
+
+    const scoreCp = Math.round(currentPosValue * 100);
+    const mood: "smug" | "thinking" | "panic" = scoreCp > 60 ? "smug" : scoreCp < -60 ? "panic" : "thinking";
+
     return {
       moves: scored,
       value: currentPosValue,
+      diagnostics: {
+        scoreCp,
+        mood,
+        regionalActivity,
+        eyeMap,
+        topNeurons,
+      },
     };
   } catch (err) {
     console.error("FlyBrain evaluation error:", err);
@@ -177,5 +253,6 @@ export function playFlyBrainMove(fen: string) {
     droppedMoveCount: 0,
     scoreCp: Math.round(result.value * 100),
     outcome: describeOutcome(chess),
+    diagnostics: result.diagnostics,
   };
 }

@@ -78,6 +78,7 @@ export type BuiltJevRequest = {
   legalUcis: string[];
   droppedUcis: string[];
   flyMoves: FlyMoveScore[];
+  diagnostics?: any;
 };
 
 function isPassedPawn(chess: Chess, fromSq: string, targetColor?: "w" | "b"): boolean {
@@ -329,6 +330,7 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
     legalUcis: selected.map((move) => move.uci),
     droppedUcis: dropped.map((move) => move.uci),
     flyMoves,
+    diagnostics: (flyResult as any)?.diagnostics ?? null,
   };
 }
 

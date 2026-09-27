@@ -9,12 +9,20 @@
 // dan bisa disaring. Satu sumber data, dua cara belajar.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BoardControls } from "@/components/board-controls";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
 import { QUEST_CHAPTERS, type Puzzle } from "@/lib/puzzle-data";
 import { useSavedPuzzles } from "@/lib/puzzle-store";
 import { HighlightedChessText } from "@/components/chess-text-highlight";
-import { IconCheck3D } from "@/components/icons3d";
+import {
+  IconCheck3D,
+  IconStar3D,
+  IconTarget3D,
+  IconSearch3D,
+  IconLightbulb3D,
+  IconClose3D,
+} from "@/components/icons3d";
 
 const KEY = "jev_chess_quest_progress";
 
@@ -65,9 +73,24 @@ export function LearningHub({ lang = "id" }: Props) {
   const [activeId, setActiveId] = useState<string>(QUEST_CHAPTERS[0]?.id ?? "");
   const [fullscreenQuest, setFullscreenQuest] = useState(false);
   useEffect(() => {
-    if (!fullscreenQuest) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFullscreenQuest(false);
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "f" || e.key === "F") {
+        setFullscreenQuest((v) => !v);
+      } else if (e.key === "z" || e.key === "Z") {
+        setPlayAsBlack((v) => !v);
+      } else if (e.key === "Escape" && fullscreenQuest) {
+        setFullscreenQuest(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -204,7 +227,7 @@ export function LearningHub({ lang = "id" }: Props) {
     <div
       className={
         fullscreenQuest
-          ? "fixed inset-0 z-50 bg-[#161512] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
+          ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
           : "stack"
       }
       style={fullscreenQuest ? undefined : { maxWidth: "64rem", margin: "0 auto" }}
@@ -223,27 +246,6 @@ export function LearningHub({ lang = "id" }: Props) {
             <IconCheck3D size={16} />
             {doneCount}/{chapters.length} bab · {progress.xp} XP
           </span>
-          {fullscreenQuest ? (
-            <button
-              type="button"
-              onClick={() => setFullscreenQuest(false)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-red-950/80 border border-red-500/50 text-red-200 hover:bg-red-900 flex items-center gap-1.5 shadow-sm transition-all"
-              title="Keluar Layar Penuh (Esc)"
-            >
-              <span>✕</span>
-              <span className="hidden sm:inline">Keluar Layar Penuh (Esc)</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setFullscreenQuest(true)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-[#81b64c] text-white hover:brightness-110 flex items-center gap-1.5 shadow-sm transition-all"
-              title="Buka Mode Fokus Layar Penuh (1 Layar)"
-            >
-              <span>⛶</span>
-              <span className="hidden sm:inline">Fokus 1 Layar</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -262,7 +264,7 @@ export function LearningHub({ lang = "id" }: Props) {
 
         <div className="row items-center gap-2 min-w-0 flex-1 justify-center">
           <span className="text-xs shrink-0 font-bold uppercase tracking-wider text-neutral-400">
-            {progress.completed.includes(chapter?.id || "") ? "✓ " : ""}Bab {currentIndex + 1} / {chapters.length}:
+            {progress.completed.includes(chapter?.id || "") ? "[Selesai] " : ""}Bab {currentIndex + 1} / {chapters.length}:
           </span>
           <select
             value={chapter?.id || ""}
@@ -274,7 +276,7 @@ export function LearningHub({ lang = "id" }: Props) {
               const isDone = progress.completed.includes(c.id);
               return (
                 <option key={c.id} value={c.id}>
-                  {isDone ? "✓ " : ""}{i + 1}. {c.theme} ({c.difficulty})
+                  {isDone ? "[Selesai] " : ""}{i + 1}. {c.theme} ({c.difficulty})
                 </option>
               );
             })}
@@ -290,20 +292,6 @@ export function LearningHub({ lang = "id" }: Props) {
           title={lang === "id" ? "Bab Berikutnya" : "Next"}
         >
           Next →
-        </button>
-
-        {/* Tombol Putar Posisi Papan */}
-        <button
-          type="button"
-          onClick={() => setPlayAsBlack((v) => !v)}
-          className="ctl ctl-sm px-2.5 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-neutral-200 hover:bg-[var(--surface)] flex items-center gap-1.5 shrink-0 transition-all"
-          title="Putar Orientasi Papan Catur (Putih / Hitam di bawah)"
-        >
-          <span>🔄</span>
-          <span className="hidden sm:inline">Putar Posisi</span>
-          <span className="text-[10px] text-neutral-400 font-mono">
-            ({boardSide === "white" ? "Putih" : "Hitam"} Bawah)
-          </span>
         </button>
       </div>
 
@@ -347,6 +335,16 @@ export function LearningHub({ lang = "id" }: Props) {
               }}
             />
           </div>
+
+          <BoardControls
+            variant="toolbar"
+            orientation={boardSide}
+            onFlipOrientation={() => setPlayAsBlack((v) => !v)}
+            isFullscreen={fullscreenQuest}
+            onToggleFullscreen={() => setFullscreenQuest((v) => !v)}
+            showShortcuts={true}
+            className="w-full mt-2"
+          />
         </div>
 
         {/* RIGHT: QUEST, HINTS & TRIK EXPLANATION */}
@@ -368,8 +366,9 @@ export function LearningHub({ lang = "id" }: Props) {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-black text-amber-300 bg-amber-950/70 border border-amber-500/50 shadow-sm flex items-center gap-1">
-                ⭐ +{chapter.xp} XP
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-black text-amber-300 bg-amber-950/70 border border-amber-500/50 shadow-sm flex items-center gap-1.5">
+                <IconStar3D size={14} className="shrink-0" />
+                <span>+{chapter.xp} XP</span>
               </span>
               <button
                 className="ctl ctl-xs px-2 py-0.5 text-[10px] font-bold border border-[var(--border)] rounded-md text-neutral-300 hover:text-white"
@@ -395,7 +394,7 @@ export function LearningHub({ lang = "id" }: Props) {
           {/* QUEST CARD (Misi Taktik) */}
           <div className="p-3.5 rounded-xl bg-neutral-900/90 border border-neutral-800 shadow-sm space-y-1.5">
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-400">
-              <span>🎯</span>
+              <IconTarget3D size={16} className="shrink-0" />
               <span>Misi Quest Taktik</span>
             </div>
             <p className="text-sm text-neutral-200 leading-relaxed font-normal">
@@ -406,16 +405,18 @@ export function LearningHub({ lang = "id" }: Props) {
           {/* HINTS */}
           {hint >= 1 && status === "unsolved" && (
             <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/40 text-sm leading-relaxed text-amber-100 animate-in fade-in">
-              <strong className="text-amber-300 block mb-0.5 text-xs uppercase tracking-wider font-mono">
-                🔍 Petunjuk 1 (Bidak):
+              <strong className="text-amber-300 mb-0.5 text-xs uppercase tracking-wider font-mono flex items-center gap-1.5">
+                <IconSearch3D size={14} />
+                <span>Petunjuk 1 (Bidak):</span>
               </strong>
               <HighlightedChessText text={chapter.hintPiece} />
             </div>
           )}
           {hint >= 2 && status === "unsolved" && (
             <div className="p-3 rounded-xl bg-sky-950/30 border border-sky-500/40 text-sm leading-relaxed text-sky-100 animate-in fade-in">
-              <strong className="text-sky-300 block mb-0.5 text-xs uppercase tracking-wider font-mono">
-                🎯 Petunjuk 2 (Petak Tujuan):
+              <strong className="text-sky-300 mb-0.5 text-xs uppercase tracking-wider font-mono flex items-center gap-1.5">
+                <IconTarget3D size={14} />
+                <span>Petunjuk 2 (Petak Tujuan):</span>
               </strong>
               <HighlightedChessText text={chapter.hintExplanation} />
             </div>
@@ -435,8 +436,9 @@ export function LearningHub({ lang = "id" }: Props) {
               </div>
               
               <div className="pt-1 border-t border-emerald-800/60">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300 block mb-1">
-                  💡 Rahasia Trik & Motif Taktik (CT-ART 4.0):
+                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300 mb-1 flex items-center gap-1.5">
+                  <IconLightbulb3D size={14} />
+                  <span>Rahasia Trik & Motif Taktik (CT-ART 4.0):</span>
                 </span>
                 <p className="text-sm text-emerald-50 leading-relaxed font-normal">
                   <HighlightedChessText text={chapter.trickExplanation} />
@@ -447,7 +449,10 @@ export function LearningHub({ lang = "id" }: Props) {
 
           {status === "wrong" && (
             <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-500/60 text-sm text-rose-200 flex items-center gap-2 animate-in fade-in">
-              <span className="font-bold">✕ Langkah belum tepat.</span>
+              <span className="font-bold flex items-center gap-1.5">
+                <IconClose3D size={16} />
+                <span>Langkah belum tepat.</span>
+              </span>
               <span className="text-xs text-rose-300">Coba analisa ulang atau buka petunjuk.</span>
             </div>
           )}

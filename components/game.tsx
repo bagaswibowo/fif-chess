@@ -2,7 +2,8 @@
 import { DockModals, type DockModalType } from "@/components/dock-modals";
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BoardControls } from "@/components/board-controls";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import type { PieceDropHandlerArgs, PieceHandlerArgs } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -97,8 +98,33 @@ export function Game() {
   // identitas client-side yang bisa dipalsukan.
   const { user: currentUser, login, register, logout } = useSession();
     const [activeDockModal, setActiveDockModal] = useState<DockModalType>(null);
-const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [fullscreenClocks, setFullscreenClocks] = useState(false);
+
+  // Global Hotkeys: [F] = Putar Papan, [Z] = Fokus 1 Layar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "f" || e.key === "F") {
+        setFullscreenClocks((v) => !v);
+      } else if (e.key === "z" || e.key === "Z") {
+        setHumanSide((s) => (s === "white" ? "black" : "white"));
+      } else if (e.key === "Escape") {
+        setFullscreenClocks(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleNavClick = (tab: NavTab) => {
     if (!currentUser) {
       setShowAuthModal(true);
@@ -871,8 +897,8 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                 </div>
               </div>
 
-              {/* Chessboard (Responsive to Viewport Width) */}
-              <div className="w-full max-w-[min(94vw,65vh)] lg:max-w-none aspect-square mx-auto relative shadow-2xl rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)]">
+              {/* Chessboard Container with Floating Corner Controls */}
+              <div className="w-full max-w-[min(94vw,65vh)] lg:max-w-none aspect-square mx-auto relative shadow-2xl rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] group">
                 <Chessboard
                   options={{
                     id: "fif-chess-main",
@@ -939,39 +965,30 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                 </div>
               </div>
 
-              {/* ACTION: fullscreen jam + log, dan simpan trik lawan */}
-              <div className="w-full flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setHumanSide((s) => (s === "white" ? "black" : "white"))}
-                  className="ctl ctl-sm flex items-center gap-1.5"
-                  title="Putar Orientasi Papan Catur"
-                >
-                  <IconSwap3D size={14} />
-                  <span>Putar Papan</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFullscreenClocks(true)}
-                  className="ctl ctl-sm flex items-center gap-1.5 font-bold bg-[var(--primary)] text-white hover:brightness-110"
-                  aria-label="Layar penuh: Mode Fokus Papan, Jam, Eval Bar & Notasi"
-                >
-                  <IconPlay3D size={14} />
-                  <span>Fokus 1 Layar</span>
-                </button>
-                {moves.length > 0 && (
-                <button
-                    onClick={saveOpponentTrick}
-                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 ${
-                      opponentTacticSaved
-                        ? "bg-emerald-950/80 border-emerald-500 text-emerald-300"
-                        : "bg-[var(--card)] border-[var(--border)] text-neutral-300 hover:text-white hover:border-[var(--primary)]"
-                    }`}
-                  >
-                    <span>{opponentTacticSaved ? "Trik Lawan Berhasil Disimpan ke Teka-Teki!" : "Simpan Trik Lawan Ini Jadi Teka-Teki"}</span>
-                </button>
-                )}
-              </div>
+              {/* ERGONOMIC BOARD CONTROL DOCK (Symmetrical, Accessible, Tactile) */}
+              <BoardControls
+                variant="dock"
+                orientation={humanSide}
+                onFlipOrientation={() => setHumanSide((s) => (s === "white" ? "black" : "white"))}
+                isFullscreen={fullscreenClocks}
+                onToggleFullscreen={() => setFullscreenClocks(true)}
+                showShortcuts={true}
+                extra={
+                  moves.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={saveOpponentTrick}
+                      className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 ${
+                        opponentTacticSaved
+                          ? "bg-emerald-950/80 border-emerald-500 text-emerald-300"
+                          : "bg-[var(--card)] border-[var(--border)] text-neutral-300 hover:text-white hover:border-[var(--primary)]"
+                      }`}
+                    >
+                      <span>{opponentTacticSaved ? "Trik Lawan Berhasil Disimpan ke Teka-Teki!" : "Simpan Trik Lawan Ini Jadi Teka-Teki"}</span>
+                    </button>
+                  ) : null
+                }
+              />
               {fullscreenClocks && (
                 <ClockMovesFullscreen
                   fen={fen}
@@ -1187,14 +1204,14 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                               </span>
                             </div>
                             <div className="grid grid-cols-3 gap-1.5">
-                              {[
-                                { id: "5m", label: "5 mnt", sub: "Kilat" },
-                                { id: "10m", label: "10 mnt", sub: "Cepat ⏱" },
-                                { id: "3m", label: "3 mnt", sub: "Kilat" },
-                                { id: "1m", label: "1 mnt", sub: "Peluru" },
-                                { id: "30m", label: "30 mnt", sub: "Klasik ⏳" },
-                                { id: "unlimited", label: "Bebas", sub: "Tanpa Batas" },
-                              ].map((t) => (
+                                {[
+                                  { id: "5m", label: "5 mnt", sub: "Kilat" },
+                                  { id: "10m", label: "10 mnt", sub: "Cepat" },
+                                  { id: "3m", label: "3 mnt", sub: "Kilat" },
+                                  { id: "1m", label: "1 mnt", sub: "Peluru" },
+                                  { id: "30m", label: "30 mnt", sub: "Klasik" },
+                                  { id: "unlimited", label: "Bebas", sub: "Tanpa Batas" },
+                                ].map((t) => (
                                 <button
                                   key={t.id}
                                   type="button"
@@ -1370,7 +1387,35 @@ const [showAuthModal, setShowAuthModal] = useState(false);
                       <div className="text-xs text-neutral-400 font-bold uppercase tracking-wider mb-1">
                         {lang === "id" ? "Notasi Langkah Catur (FEN/SAN):" : "Chess Notation (FEN/SAN):"}
                       </div>
-                      <MoveList moves={moves} />
+                      <MoveList
+                        moves={moves}
+                        whiteName={
+                          humanSide === "white"
+                            ? me.name
+                            : playMode === "ai"
+                              ? selectedAiOpponent === "jev-fly"
+                                ? "Jev + Fly Brain"
+                                : selectedAiOpponent === "fly"
+                                  ? "Fruit Fly Brain"
+                                  : selectedAiOpponent === "jev"
+                                    ? "Jev"
+                                    : "Stockfish"
+                              : pvpOpponentName
+                        }
+                        blackName={
+                          humanSide === "black"
+                            ? me.name
+                            : playMode === "ai"
+                              ? selectedAiOpponent === "jev-fly"
+                                ? "Jev + Fly Brain"
+                                : selectedAiOpponent === "fly"
+                                  ? "Fruit Fly Brain"
+                                  : selectedAiOpponent === "jev"
+                                    ? "Jev"
+                                    : "Stockfish"
+                              : pvpOpponentName
+                        }
+                      />
                     </div>
                   )}
                 </CardContent>

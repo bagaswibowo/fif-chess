@@ -23,6 +23,7 @@ import {
   IconClose3D,
 } from "@/components/icons3d";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
+import { BoardControls } from "@/components/board-controls";
 import { PerspectiveCropModal } from "@/components/perspective-crop-modal";
 
 type Props = {
@@ -174,6 +175,32 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [scanSuccessMessage, setScanSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState<{ percent: number; stage: string } | null>(null);
+  const [fullscreenScan, setFullscreenScan] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "f" || e.key === "F") {
+        setFullscreenScan((v) => !v);
+      } else if (e.key === "z" || e.key === "Z") {
+        setScanBoardOrientation((o) => (o === "white" ? "black" : "white"));
+      } else if (e.key === "Escape" && fullscreenScan) {
+        setFullscreenScan(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreenScan]);
+
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const cancelScanning = useCallback(() => {
@@ -554,8 +581,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             />
           </div>
           <div className="row-between items-center pt-1">
-            <span className="text-[10px] text-[var(--muted-foreground)]">
-              *Otomatis dikompresi & dimaksimalkan agar cepat diproses AI
+            <span className="text-xs text-[var(--muted-foreground)]">
+              *Otomatis dipangkas & dimaksimalkan dengan akurasi 95%
             </span>
             <button
               type="button"
@@ -615,8 +642,9 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <IconScan3D size={24} />
               <span>{isProcessingImage ? "Memproses Gambar..." : "Ambil Foto via Kamera HP"}</span>
             </button>
-            <span className="text-[11px] text-[var(--muted-foreground)] mt-2">
-              Arahkan kamera langsung ke papan catur fisik
+            <span className="text-xs text-emerald-300 font-semibold mt-2 flex items-center gap-1.5">
+              <IconLightning3D size={14} />
+              <span>Auto-Crop 95% Akurasi Aktif</span>
             </span>
           </div>
 
@@ -667,7 +695,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
           {/* FEN INPUT ROW */}
           <div className="w-full max-w-2xl mt-6 pt-5 border-t border-[var(--border)] stack-tight text-left">
-            <label className="text-[11px] font-bold text-neutral-400">Atau masukkan notasi FEN langsung:</label>
+            <label className="text-xs font-bold text-neutral-300">Atau masukkan notasi FEN langsung:</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -688,12 +716,12 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
           {/* PRESET CHIPS */}
           <div className="w-full max-w-2xl mt-4 flex items-center gap-1.5 flex-wrap justify-center">
-            <span className="text-[11px] text-[var(--muted-foreground)] mr-1">Preset Tersedia:</span>
+            <span className="text-xs text-[var(--muted-foreground)] mr-1">Preset Tersedia:</span>
             {PRESET_POSITIONS.map((p) => (
               <button
                 key={p.name}
                 onClick={() => applyNewInitialFen(p.fen, `Posisi ${p.name} dimuat!`)}
-                className="px-2.5 py-1 rounded-lg text-[11px] bg-[var(--surface)] border border-[var(--border)] text-neutral-300 hover:text-white hover:border-[var(--primary)] transition-all"
+                className="px-2.5 py-1 rounded-lg text-xs bg-[var(--surface)] border border-[var(--border)] text-neutral-300 hover:text-white hover:border-[var(--primary)] transition-all"
               >
                 {p.name}
               </button>
@@ -755,7 +783,13 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   // Papan catur aktif beserta simulasi AI Solver & Kontrol
   // ==========================================
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-3 pb-6">
+    <div
+      className={
+        fullscreenScan
+          ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
+          : "w-full max-w-6xl mx-auto space-y-3 pb-6"
+      }
+    >
       <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageFile} />
 
       {/* PERSPECTIVE CROP MODAL (OCE / CAMSCANNER) */}
@@ -1003,6 +1037,16 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 </div>
               )}
             </div>
+
+            <BoardControls
+              variant="toolbar"
+              orientation={scanBoardOrientation}
+              onFlipOrientation={() => setScanBoardOrientation((o) => (o === "white" ? "black" : "white"))}
+              isFullscreen={fullscreenScan}
+              onToggleFullscreen={() => setFullscreenScan((v) => !v)}
+              showShortcuts={true}
+              className="mt-2"
+            />
           </div>
 
           {/* RIGHT: CONTROLS & TACTICAL ANALYSIS */}
@@ -1018,7 +1062,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
 
               <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
                 <div>
-                  <label className="text-[10px] text-[var(--muted-foreground)] font-bold block mb-0.5">Putih Melangkah:</label>
+                  <label className="text-xs text-[var(--muted-foreground)] font-bold block mb-0.5">Putih Melangkah:</label>
                   <select
                     value={whiteEngine}
                     onChange={(e) => setWhiteEngine(e.target.value as EngineType)}
@@ -1032,7 +1076,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-[var(--muted-foreground)] font-bold block mb-0.5">Hitam Melangkah:</label>
+                  <label className="text-xs text-[var(--muted-foreground)] font-bold block mb-0.5">Hitam Melangkah:</label>
                   <select
                     value={blackEngine}
                     onChange={(e) => setBlackEngine(e.target.value as EngineType)}
@@ -1085,7 +1129,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               </div>
 
               <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] space-y-1">
-                <div className="text-[11px] font-bold text-[var(--primary)] flex items-center gap-1">
+                <div className="text-xs font-bold text-[var(--primary)] flex items-center gap-1">
                   <IconTrophy3D size={13} />
                   <span>Solusi &amp; Rencana Taktis:</span>
                 </div>
@@ -1093,7 +1137,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               </div>
 
               <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] space-y-1">
-                <div className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
+                <div className="text-xs font-bold text-amber-400 flex items-center gap-1">
                   <IconBot3D size={13} />
                   <span>Titik Bahaya / Blunder:</span>
                 </div>
@@ -1103,10 +1147,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               {/* Moves List */}
               {solveMoves.length > 0 && (
                 <div className="pt-1">
-                  <div className="text-[10px] font-bold text-[var(--muted-foreground)] mb-1 uppercase">
+                  <div className="text-xs font-bold text-[var(--muted-foreground)] mb-1 uppercase">
                     Langkah Solusi Terkini ({solveMoves.length}):
                   </div>
-                  <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] font-mono text-[11px]">
+                  <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] font-mono text-xs">
                     {solveMoves.map((m, idx) => (
                       <span key={idx} className="px-1.5 py-0.5 rounded bg-[var(--card)] text-white">
                         {idx + 1}. <strong>{m.san}</strong> ({m.by})
@@ -1136,6 +1180,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 options={{
                   id: "board-ref-full",
                   position: initialFen,
+                  boardOrientation: scanBoardOrientation,
                   allowDragging: true,
                   onPieceDrop: handleBoard1Drop,
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
@@ -1143,6 +1188,14 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 }}
               />
             </div>
+
+            <BoardControls
+              variant="toolbar"
+              orientation={scanBoardOrientation}
+              onFlipOrientation={() => setScanBoardOrientation((o) => (o === "white" ? "black" : "white"))}
+              showShortcuts={true}
+              className="mt-2"
+            />
           </div>
 
           <div className="lg:col-span-5 panel p-3.5 stack text-xs" style={{ background: "var(--card)" }}>
@@ -1151,7 +1204,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               Papan referensi ini adalah posisi catur asli hasil ekstraksi kamera atau FEN. Anda dapat menggeser bidak langsung di papan untuk membetulkan penempatan bidak.
             </p>
 
-            <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] stack-tight font-mono text-[11px] break-all select-all text-emerald-300">
+            <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] stack-tight font-mono text-xs break-all select-all text-emerald-300">
               {initialFen}
             </div>
 

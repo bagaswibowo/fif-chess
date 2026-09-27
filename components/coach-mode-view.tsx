@@ -2,13 +2,24 @@
 
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
+import { BoardControls } from "@/components/board-controls";
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confetti } from "@/components/confetti";
-import { IconBot3D, IconLightning3D } from "@/components/icons3d";
+import {
+  IconBot3D,
+  IconLightning3D,
+  IconKingWhite3D,
+  IconKingBlack3D,
+  IconLightbulb3D,
+  IconAlert3D,
+  IconTarget3D,
+  IconCheck3D,
+  IconClose3D,
+} from "@/components/icons3d";
 import { describeOutcome, findLegalMove, getLegalMoves, type GameOutcome } from "@/lib/chess";
 
 type Props = { lang?: "id" | "en" };
@@ -22,12 +33,12 @@ function classifyLoss(cpLoss: number | null, isBest: boolean): "brilliant" | "be
 }
 
 const QUALITY: Record<"brilliant" | "best" | "good" | "inaccuracy" | "mistake" | "blunder", { id: string; en: string; color: string }> = {
-  brilliant:  { id: "Brilian! ⭐", en: "Brilliant! ⭐",  color: "text-cyan-300" },
-  best:       { id: "Terbaik! ✓",  en: "Best Move! ✓",   color: "text-emerald-400" },
-  good:       { id: "Bagus.",      en: "Good.",            color: "text-green-300" },
-  inaccuracy: { id: "Kurang Akurat", en: "Inaccuracy",   color: "text-yellow-400" },
-  mistake:    { id: "Kesalahan",  en: "Mistake",          color: "text-orange-400" },
-  blunder:    { id: "Blunder! ✗", en: "Blunder! ✗",     color: "text-red-400" },
+  brilliant:  { id: "Brilian!",      en: "Brilliant!",     color: "text-cyan-300" },
+  best:       { id: "Terbaik!",      en: "Best Move!",     color: "text-emerald-400" },
+  good:       { id: "Bagus.",        en: "Good.",          color: "text-green-300" },
+  inaccuracy: { id: "Kurang Akurat", en: "Inaccuracy",     color: "text-yellow-400" },
+  mistake:    { id: "Kesalahan",     en: "Mistake",        color: "text-orange-400" },
+  blunder:    { id: "Blunder!",      en: "Blunder!",       color: "text-red-400" },
 };
 
 const PRINCIPLES = [
@@ -44,6 +55,7 @@ export function CoachModeView({ lang = "id" }: Props) {
   const [fen, setFen] = useState(() => new Chess().fen());
   const [history, setHistory] = useState<string[]>([]);
   const [playerSide, setPlayerSide] = useState<"white" | "black">("white");
+  const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
   const [outcome, setOutcome] = useState<GameOutcome>(() => describeOutcome(new Chess()));
   const [showConfetti, setShowConfetti] = useState(false);
   const [fullscreenCoach, setFullscreenCoach] = useState(false);
@@ -158,6 +170,7 @@ export function CoachModeView({ lang = "id" }: Props) {
     setFen(c.fen());
     setHistory([]);
     setPlayerSide(side);
+    setBoardOrientation(side);
     setOutcome(describeOutcome(c));
     setShowConfetti(false);
     setSelected(null);
@@ -240,10 +253,10 @@ export function CoachModeView({ lang = "id" }: Props) {
 
     const quality = classifyLoss(cpLoss, isBest);
     let tactic = "";
-    if (move.san.includes("#")) tactic = "♚ SKAKMAT! Kemenangan mutlak!";
-    else if (move.san.includes("+")) tactic = "♟ Skak langsung ke Raja lawan.";
-    else if (move.isCapture) tactic = `✂ Pertukaran: memakan perwira di ${move.to}.`;
-    else if (move.isCastle) tactic = "🏰 Rokade: Raja terlindungi, Benteng terhubung.";
+    if (move.san.includes("#")) tactic = "SKAKMAT! Kemenangan mutlak!";
+    else if (move.san.includes("+")) tactic = "Skak langsung ke Raja lawan.";
+    else if (move.isCapture) tactic = `Pertukaran: memakan perwira di ${move.to}.`;
+    else if (move.isCastle) tactic = "Rokade: Raja terlindungi, Benteng terhubung.";
 
     setFeedback({
       quality,
@@ -340,9 +353,24 @@ export function CoachModeView({ lang = "id" }: Props) {
   }, [showHintArrow, hint]);
 
   useEffect(() => {
-    if (!fullscreenCoach) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFullscreenCoach(false);
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "f" || e.key === "F") {
+        setFullscreenCoach((v) => !v);
+      } else if (e.key === "z" || e.key === "Z") {
+        setBoardOrientation((o) => (o === "white" ? "black" : "white"));
+      } else if (e.key === "Escape" && fullscreenCoach) {
+        setFullscreenCoach(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -359,14 +387,14 @@ export function CoachModeView({ lang = "id" }: Props) {
     <div
       className={
         fullscreenCoach
-          ? "fixed inset-0 z-50 bg-[#161512] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
+          ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
           : "max-w-5xl mx-auto space-y-3 pb-8"
       }
     >
       {showConfetti && <Confetti />}
 
-      {/* Header Info Matchup - Ultra Compact on Mobile */}
-      <div className="bg-[#262421] px-3 py-2 rounded-xl border border-[#36322d] shadow-md flex items-center justify-between gap-2 shrink-0">
+      {/* Header Info Matchup with Standardized BoardControls */}
+      <div className="bg-[var(--card)] px-3 py-2 rounded-xl border border-[var(--border)] shadow-md flex items-center justify-between gap-2 shrink-0 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
           <IconBot3D size={22} className="shrink-0" />
           <div className="min-w-0">
@@ -380,55 +408,42 @@ export function CoachModeView({ lang = "id" }: Props) {
         </div>
 
         {/* Compact 2-way Side Toggle Switch: Putih / Hitam */}
-        <div className="flex items-center bg-[#171614] p-0.5 rounded-lg border border-[#36322d] shrink-0">
+        <div className="flex items-center bg-[var(--surface)] p-0.5 rounded-lg border border-[var(--border)] shrink-0">
           <button
             onClick={() => void resetGame("white")}
             disabled={thinking}
-            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
               playerSide === "white"
-                ? "bg-[#81b64c] text-white shadow-sm"
+                ? "bg-[var(--primary)] text-white shadow-sm"
                 : "text-neutral-400 hover:text-white"
             }`}
           >
-            <span>♔</span>
+            <IconKingWhite3D size={16} />
             <span className="hidden sm:inline">Putih</span>
           </button>
           <button
             onClick={() => void resetGame("black")}
             disabled={thinking}
-            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
               playerSide === "black"
-                ? "bg-[#81b64c] text-white shadow-sm"
+                ? "bg-[var(--primary)] text-white shadow-sm"
                 : "text-neutral-400 hover:text-white"
             }`}
           >
-            <span>♚</span>
+            <IconKingBlack3D size={16} />
             <span className="hidden sm:inline">Hitam</span>
           </button>
         </div>
 
-        {/* Tombol Layar Penuh Fokus */}
-        {fullscreenCoach ? (
-          <button
-            type="button"
-            onClick={() => setFullscreenCoach(false)}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-red-950/80 border border-red-500/50 text-red-200 hover:bg-red-900 flex items-center gap-1.5 shadow-sm transition-all shrink-0"
-            title="Keluar Layar Penuh (Esc)"
-          >
-            <span>✕</span>
-            <span className="hidden sm:inline">Keluar Layar Penuh (Esc)</span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setFullscreenCoach(true)}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-[#81b64c] text-white hover:brightness-110 flex items-center gap-1.5 shadow-sm transition-all shrink-0"
-            title="Buka Mode Fokus Layar Penuh (1 Layar)"
-          >
-            <span>⛶</span>
-            <span className="hidden sm:inline">Fokus 1 Layar</span>
-          </button>
-        )}
+        <BoardControls
+          variant="toolbar"
+          orientation={boardOrientation}
+          onFlipOrientation={() => setBoardOrientation((o) => (o === "white" ? "black" : "white"))}
+          isFullscreen={fullscreenCoach}
+          onToggleFullscreen={() => setFullscreenCoach((v) => !v)}
+          showShortcuts={true}
+          className="border-0 bg-transparent p-0 shadow-none"
+        />
       </div>
 {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
       <div
@@ -467,11 +482,11 @@ export function CoachModeView({ lang = "id" }: Props) {
             }
           >
             <Chessboard
-              key={`coach-board-${playerSide}`}
+              key={`coach-board-${boardOrientation}`}
               options={{
-                id: `coach-board-${playerSide}`,
+                id: `coach-board-${boardOrientation}`,
                 position: fen,
-                boardOrientation: playerSide,
+                boardOrientation: boardOrientation,
                 allowDragging: isPlayerTurn && !thinking,
                 onPieceDrop: handlePieceDrop,
                 onSquareClick: ({ square }) => {
@@ -503,11 +518,12 @@ export function CoachModeView({ lang = "id" }: Props) {
               {hint && (
                 <button
                   onClick={() => setShowHintArrow(!showHintArrow)}
-                  className={`h-6 px-2 text-[11px] font-bold rounded-md border border-[#36322d] transition-all ${
+                  className={`h-6 px-2 text-[11px] font-bold rounded-md border border-[#36322d] transition-all flex items-center gap-1 ${
                     showHintArrow ? "bg-[#38bdf8] text-black" : "text-[#38bdf8] hover:bg-[#38bdf8]/10"
                   }`}
                 >
-                  💡 Hint
+                  <IconLightbulb3D size={12} />
+                  <span>Hint</span>
                 </button>
               )}
             </div>
@@ -528,10 +544,11 @@ export function CoachModeView({ lang = "id" }: Props) {
               <Button
                 onClick={() => void tryMove(hint.uci.slice(0, 2), hint.uci.slice(2, 4))}
                 size="sm"
-                className="flex-1 bg-[#81b64c] hover:bg-[#81b64c]/80 text-white font-bold text-sm"
+                className="flex-1 bg-[#81b64c] hover:bg-[#81b64c]/80 text-white font-bold text-sm flex items-center justify-center gap-1.5"
                 disabled={thinkingRef.current}
               >
-                ✓ {lang === "id" ? `Mainkan Rekomendasi (${hint.san})` : `Play Recommendation (${hint.san})`}
+                <IconCheck3D size={16} />
+                <span>{lang === "id" ? `Mainkan Rekomendasi (${hint.san})` : `Play Recommendation (${hint.san})`}</span>
               </Button>
             )}
           </div>
@@ -559,11 +576,21 @@ export function CoachModeView({ lang = "id" }: Props) {
                   onClick={() => setShowHintArrow(v => !v)}
                   size="sm"
                   variant="outline"
-                  className={`h-7 px-2.5 text-xs font-bold border-[#81b64c]/40 ${
+                  className={`h-7 px-2.5 text-xs font-bold border-[#81b64c]/40 flex items-center gap-1.5 ${
                     showHintArrow ? "bg-[#38bdf8] text-black border-[#38bdf8]" : "bg-transparent text-[#81b64c] hover:bg-[#81b64c]/20"
                   }`}
                 >
-                  {showHintArrow ? "✕ Panah Sembunyi" : "🎯 Tunjukkan Panah"}
+                  {showHintArrow ? (
+                    <>
+                      <IconClose3D size={13} />
+                      <span>Panah Sembunyi</span>
+                    </>
+                  ) : (
+                    <>
+                      <IconTarget3D size={13} />
+                      <span>Tunjukkan Panah</span>
+                    </>
+                  )}
                 </Button>
               )}
             </CardHeader>
@@ -576,8 +603,9 @@ export function CoachModeView({ lang = "id" }: Props) {
                       <span className="text-xs text-neutral-300 font-medium">{hint.reason}</span>
                     </div>
                     {principle && (
-                      <div className="text-xs text-[#81b64c]/90 bg-[#81b64c]/10 p-2 rounded-lg border border-[#81b64c]/20">
-                        💡 {principle}
+                      <div className="text-xs text-[#81b64c]/90 bg-[#81b64c]/10 p-2 rounded-lg border border-[#81b64c]/20 flex items-center gap-1.5">
+                        <IconLightbulb3D size={14} className="shrink-0" />
+                        <span>{principle}</span>
                       </div>
                     )}
                   </>
@@ -605,7 +633,7 @@ export function CoachModeView({ lang = "id" }: Props) {
           {/* PERINGATAN ANCAMAN LAWAN */}
           {threat?.hasThreat && (
             <div className="bg-[#2e1717] border border-orange-500/50 p-3 rounded-xl flex items-center gap-2.5 text-orange-200 text-xs shadow-md">
-              <span className="text-base shrink-0">⚠️</span>
+              <IconAlert3D size={18} className="shrink-0" />
               <span>{threat.msg}</span>
             </div>
           )}
@@ -652,7 +680,7 @@ export function CoachModeView({ lang = "id" }: Props) {
                 </>
               ) : (
                 <div className="text-xs text-neutral-400 py-4 text-center space-y-1">
-                  <div>♟️ {lang === "id" ? "Silakan jalankan langkah pertama." : "Make your first move."}</div>
+                  <div>{lang === "id" ? "Silakan jalankan langkah pertama." : "Make your first move."}</div>
                   <div className="text-[11px] text-neutral-500">
                     {lang === "id" ? "AI Coach akan menilai kualitas dan akurasimu." : "AI Coach will rate move precision."}
                   </div>

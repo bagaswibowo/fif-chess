@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { BoardControls } from "@/components/board-controls";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Confetti } from "@/components/confetti";
-import { IconBot3D, IconLightning3D } from "@/components/icons3d";
+import { IconBot3D, IconLightning3D, IconPawn3D, IconAlert3D } from "@/components/icons3d";
 import { describeOutcome, findLegalMove, getLegalMoves, type GameOutcome } from "@/lib/chess";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -49,12 +50,12 @@ const QUALITY_COLOR: Record<MoveQuality, string> = {
 };
 
 const QUALITY_LABEL_ID: Record<MoveQuality, string> = {
-  brilliant: "Brilian! ⭐",
+  brilliant: "Brilian!",
   best: "Terbaik!",
   good: "Bagus.",
   inaccuracy: "Kurang Akurat",
   mistake: "Kesalahan",
-  blunder: "Blunder! ✗",
+  blunder: "Blunder!",
 };
 
 function classifyCpLoss(cpLoss: number | null, isBest: boolean): MoveQuality {
@@ -108,10 +109,10 @@ async function probeThreat(fen: string): Promise<ThreatInfo> {
         probability,
         squareHint: targetSquare,
         message: data.san.includes("#")
-          ? `⚠ Petak ${targetSquare} rawan — ancaman skakmat via ${data.san}!`
+          ? `Petak ${targetSquare} rawan — ancaman skakmat via ${data.san}!`
           : data.san.includes("+")
-          ? `⚠ Petak ${targetSquare} dalam bahaya — lawan bisa skak via ${data.san}.`
-          : `⚠ Petak ${targetSquare} terancam — lawan bisa ambil via ${data.san}.`,
+          ? `Petak ${targetSquare} dalam bahaya — lawan bisa skak via ${data.san}.`
+          : `Petak ${targetSquare} terancam — lawan bisa ambil via ${data.san}.`,
       };
     }
     return { hasThreat: false, probability: 0.1, squareHint: null, message: "" };
@@ -140,6 +141,33 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
   const [bestArrow, setBestArrow] = useState<[string, string] | null>(null);
   const [evalCp, setEvalCp] = useState<number | null>(null);
   const thinkingRef = useRef(false);
+  const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
+  const [fullscreenGuided, setFullscreenGuided] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "f" || e.key === "F") {
+        setFullscreenGuided((v) => !v);
+      } else if (e.key === "z" || e.key === "Z") {
+        setBoardOrientation((o) => (o === "white" ? "black" : "white"));
+      } else if (e.key === "Escape" && fullscreenGuided) {
+        setFullscreenGuided(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreenGuided]);
+
   const [strategyMode, setStrategyMode] = useState<"attack" | "defense" | "balanced">("balanced");
 
   // Re-init when startFen changes (from spectator "Try Position")
@@ -361,7 +389,13 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
   const qColor = feedback ? QUALITY_COLOR[feedback.quality] : "";
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4 pb-8">
+    <div
+      className={
+        fullscreenGuided
+          ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
+          : "max-w-5xl mx-auto space-y-4 pb-8"
+      }
+    >
       {showConfetti && <Confetti />}
 
       {/* Header */}
@@ -380,11 +414,13 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => resetGame("white")} variant="outline" className="border-[#36322d] text-white text-sm font-bold bg-[#1c1a18]" disabled={thinking}>
-            ♟ {lang === "id" ? "Main Putih" : "Play White"}
+          <Button onClick={() => resetGame("white")} variant="outline" className="border-[#36322d] text-white text-sm font-bold bg-[#1c1a18] flex items-center gap-1.5" disabled={thinking}>
+            <IconPawn3D size={18} />
+            <span>{lang === "id" ? "Main Putih" : "Play White"}</span>
           </Button>
-          <Button onClick={() => resetGame("black")} variant="outline" className="border-[#36322d] text-white text-sm font-bold bg-[#1c1a18]" disabled={thinking}>
-            ♟ {lang === "id" ? "Main Hitam" : "Play Black"}
+          <Button onClick={() => resetGame("black")} variant="outline" className="border-[#36322d] text-white text-sm font-bold bg-[#1c1a18] flex items-center gap-1.5" disabled={thinking}>
+            <IconPawn3D size={18} />
+            <span>{lang === "id" ? "Main Hitam" : "Play Black"}</span>
           </Button>
         </div>
       </div>
@@ -424,7 +460,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
       {/* Threat warning banner — appears above board when threat detected */}
       {threat?.hasThreat && threat.probability > 0.55 && !thinking && !outcome.over && (
         <div className="p-3.5 rounded-xl bg-orange-950/70 border border-orange-500/60 text-orange-200 text-sm font-semibold flex items-start gap-2.5 animate-pulse">
-          <span className="text-lg shrink-0">⚠</span>
+          <IconAlert3D size={20} className="shrink-0" />
           <div>
             <div className="font-black text-orange-300 text-xs uppercase tracking-wider mb-0.5">
               {lang === "id" ? `Peringatan Jev (${Math.round(threat.probability * 100)}% kemungkinan ancaman)` : `Jev Warning (${Math.round(threat.probability * 100)}% threat probability)`}
@@ -455,12 +491,12 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
             </span>
           </div>
 
-          <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full bg-[var(--board-dark)]">
+          <div className="rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl w-full bg-[var(--board-dark)]">
             <Chessboard
               options={{
                 id: "guided-board",
                 position: fen,
-                boardOrientation: playerSide,
+                boardOrientation: boardOrientation,
                 allowDragging: false,
                 boardStyle: { backgroundColor: "var(--board-dark)" },
                 onSquareClick: ({ square }) => {
@@ -473,11 +509,20 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
                 },
                 squareStyles,
                 arrows,
-                darkSquareStyle: { backgroundColor: "#b58863" },
-                lightSquareStyle: { backgroundColor: "#f0d9b5" },
+                darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                lightSquareStyle: { backgroundColor: "var(--board-light)" },
               }}
             />
           </div>
+
+          <BoardControls
+            variant="toolbar"
+            orientation={boardOrientation}
+            onFlipOrientation={() => setBoardOrientation((o) => (o === "white" ? "black" : "white"))}
+            isFullscreen={fullscreenGuided}
+            onToggleFullscreen={() => setFullscreenGuided((v) => !v)}
+            showShortcuts={true}
+          />
 
           <div className="flex gap-2">
             <Button onClick={handleUndo} variant="outline"

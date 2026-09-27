@@ -10,6 +10,7 @@ import {
   IconLightning3D,
   IconPawn3D,
   IconMedal3D,
+  IconClose3D,
 } from "@/components/icons3d";
 
 export type DockModalType = "friends" | "messages" | "notifications" | "settings" | null;
@@ -159,7 +160,7 @@ export function DockModals({
             onClick={onClose}
             className="w-8 h-8 rounded-lg bg-[#302e2b] hover:bg-[#3d3a34] text-neutral-400 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold"
           >
-            ✕
+            <IconClose3D size={16} />
           </button>
         </div>
 

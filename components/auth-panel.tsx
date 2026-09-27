@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { SessionUser } from "@/lib/use-session";
-import { IconPawn3D, IconShield3D } from "@/components/icons3d";
+import { IconPawn3D, IconShield3D, IconClose3D } from "@/components/icons3d";
 
 type Props = {
   user: SessionUser | null;
@@ -85,7 +85,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
           className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold"
           aria-label="Tutup"
         >
-          ✕
+          <IconClose3D size={16} />
         </button>
 
         {/* Profile Header */}
@@ -162,7 +162,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Prop
         className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold cursor-pointer"
         aria-label="Tutup"
       >
-        ✕
+        <IconClose3D size={16} />
       </button>
 
       {/* Modal Branding Header */}

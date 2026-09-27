@@ -190,3 +190,115 @@ export function warpQuadToSquare(
   dstCtx.putImageData(dstImageData, 0, 0);
   return dstCanvas.toDataURL("image/jpeg", quality);
 }
+
+/**
+ * Detects the 4 corners of a chessboard inside an arbitrary image.
+ * Uses high-contrast 8x8 checkerboard gradient energy projection.
+ * Returns normalized quad [TL, TR, BR, BL] in [0..1] range.
+ */
+export function detectChessboardCorners(
+  source: HTMLImageElement | HTMLCanvasElement
+): Quad {
+  const fallback: Quad = [
+    { x: 0.08, y: 0.08 },
+    { x: 0.92, y: 0.08 },
+    { x: 0.92, y: 0.92 },
+    { x: 0.08, y: 0.92 },
+  ];
+
+  if (typeof window === "undefined") return fallback;
+
+  try {
+    const srcW = "naturalWidth" in source ? source.naturalWidth : source.width;
+    const srcH = "naturalHeight" in source ? source.naturalHeight : source.height;
+    if (!srcW || !srcH) return fallback;
+
+    // Rescale to 160x160 analytical canvas for fast gradient profiling (~5ms)
+    const procSize = 160;
+    const procCanvas = document.createElement("canvas");
+    procCanvas.width = procSize;
+    procCanvas.height = procSize;
+    const procCtx = procCanvas.getContext("2d", { willReadFrequently: true });
+    if (!procCtx) return fallback;
+
+    procCtx.drawImage(source, 0, 0, procSize, procSize);
+    const imgData = procCtx.getImageData(0, 0, procSize, procSize);
+    const data = imgData.data;
+
+    // Convert to grayscale luminance
+    const gray = new Float32Array(procSize * procSize);
+    for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+      gray[j] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    }
+
+    // Compute horizontal & vertical edge gradient energy
+    const gradX = new Float32Array(procSize);
+    const gradY = new Float32Array(procSize);
+
+    for (let y = 1; y < procSize - 1; y++) {
+      for (let x = 1; x < procSize - 1; x++) {
+        const idx = y * procSize + x;
+        const gx = Math.abs(gray[idx + 1] - gray[idx - 1]);
+        const gy = Math.abs(gray[idx + procSize] - gray[idx - procSize]);
+        const mag = gx + gy;
+        gradX[x] += mag;
+        gradY[y] += mag;
+      }
+    }
+
+    // Find energy bounds where the periodic checkerboard grid exists
+    const findProfileBounds = (profile: Float32Array): { min: number; max: number } => {
+      let maxVal = 0;
+      for (let i = 0; i < procSize; i++) {
+        if (profile[i] > maxVal) maxVal = profile[i];
+      }
+      if (maxVal <= 0) return { min: 0.08, max: 0.92 };
+
+      const threshold = maxVal * 0.32;
+      let minIdx = Math.floor(procSize * 0.05);
+      let maxIdx = Math.floor(procSize * 0.95);
+
+      for (let i = Math.floor(procSize * 0.05); i < Math.floor(procSize * 0.6); i++) {
+        if (profile[i] >= threshold && profile[i + 1] >= threshold) {
+          minIdx = i;
+          break;
+        }
+      }
+
+      for (let i = Math.floor(procSize * 0.95); i > Math.floor(procSize * 0.4); i--) {
+        if (profile[i] >= threshold && profile[i - 1] >= threshold) {
+          maxIdx = i;
+          break;
+        }
+      }
+
+      let minNorm = minIdx / procSize;
+      let maxNorm = maxIdx / procSize;
+
+      // Ensure square proportion sanity
+      if (maxNorm - minNorm < 0.35) {
+        minNorm = 0.08;
+        maxNorm = 0.92;
+      }
+
+      // Add a slight 1% outer margin so edge squares/labels aren't cut
+      minNorm = Math.max(0.02, minNorm - 0.015);
+      maxNorm = Math.min(0.98, maxNorm + 0.015);
+
+      return { min: minNorm, max: maxNorm };
+    };
+
+    const bX = findProfileBounds(gradX);
+    const bY = findProfileBounds(gradY);
+
+    return [
+      { x: Number(bX.min.toFixed(4)), y: Number(bY.min.toFixed(4)) }, // TL
+      { x: Number(bX.max.toFixed(4)), y: Number(bY.min.toFixed(4)) }, // TR
+      { x: Number(bX.max.toFixed(4)), y: Number(bY.max.toFixed(4)) }, // BR
+      { x: Number(bX.min.toFixed(4)), y: Number(bY.max.toFixed(4)) }, // BL
+    ];
+  } catch {
+    return fallback;
+  }
+}
+

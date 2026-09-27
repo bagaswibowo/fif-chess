@@ -858,3 +858,121 @@ export function IconClose3D({ size = 18, className = "" }: IconProps) {
     </svg>
   );
 }
+
+// 3D Glowing Lightbulb Icon
+export function IconLightbulb3D({ size = 18, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const bulbGrad = `bulbGrad_${uid}`;
+  const bulbBase = `bulbBase_${uid}`;
+  const bulbGlow = `bulbGlow_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id={bulbGrad} cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#fef08a" />
+          <stop offset="45%" stopColor="#eab308" />
+          <stop offset="100%" stopColor="#ca8a04" />
+        </radialGradient>
+        <linearGradient id={bulbBase} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#94a3b8" />
+          <stop offset="100%" stopColor="#475569" />
+        </linearGradient>
+        <radialGradient id={bulbGlow} cx="50%" cy="40%" r="50%">
+          <stop offset="0%" stopColor="#facc15" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#facc15" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx="16" cy="13" r="12" fill={`url(#${bulbGlow})`} />
+      <path
+        d="M16 4 C10.5 4 6 8.5 6 14 C6 17.5 8 20.5 11 22.2 V25 C11 25.6 11.4 26 12 26 H20 C20.6 26 21 25.6 21 25 V22.2 C24 20.5 26 17.5 26 14 C26 8.5 21.5 4 16 4 Z"
+        fill={`url(#${bulbGrad})`}
+        filter="drop-shadow(0 2px 3px rgba(0,0,0,0.3))"
+      />
+      <ellipse cx="13" cy="10" rx="3" ry="1.5" fill="#ffffff" opacity="0.65" transform="rotate(-30 13 10)" />
+      <rect x="12" y="26" width="8" height="2" rx="1" fill={`url(#${bulbBase})`} />
+      <rect x="13" y="28" width="6" height="2" rx="1" fill="#334155" />
+    </svg>
+  );
+}
+
+// 3D Warning / Alert Icon
+export function IconAlert3D({ size = 18, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const alertGrad = `alertGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <linearGradient id={alertGrad} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fde047" />
+          <stop offset="50%" stopColor="#f59e0b" />
+          <stop offset="100%" stopColor="#d97706" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M16 3 L2 27 C1.3 28.2 2.2 29.7 3.6 29.7 H28.4 C29.8 29.7 30.7 28.2 30 27 L16 3 Z"
+        fill={`url(#${alertGrad})`}
+        stroke="#b45309"
+        strokeWidth="1.2"
+        filter="drop-shadow(0 2px 4px rgba(0,0,0,0.35))"
+      />
+      <ellipse cx="14" cy="12" rx="2" ry="1" fill="#ffffff" opacity="0.5" transform="rotate(-30 14 12)" />
+      <rect x="14.5" y="12" width="3" height="8" rx="1.5" fill="#1c1917" />
+      <circle cx="16" cy="24" r="1.8" fill="#1c1917" />
+    </svg>
+  );
+}
+
+// 3D Concentric Bullseye Target Icon
+export function IconTarget3D({ size = 18, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const tgtOuter = `tgtOuter_${uid}`;
+  const tgtMid = `tgtMid_${uid}`;
+  const tgtCenter = `tgtCenter_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id={tgtOuter} cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#f87171" />
+          <stop offset="70%" stopColor="#ef4444" />
+          <stop offset="100%" stopColor="#991b1b" />
+        </radialGradient>
+        <radialGradient id={tgtMid} cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#e2e8f0" />
+        </radialGradient>
+        <radialGradient id={tgtCenter} cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#fca5a5" />
+          <stop offset="60%" stopColor="#dc2626" />
+          <stop offset="100%" stopColor="#7f1d1d" />
+        </radialGradient>
+      </defs>
+      <circle cx="16" cy="16" r="14" fill={`url(#${tgtOuter})`} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.3))" />
+      <circle cx="16" cy="16" r="10" fill={`url(#${tgtMid})`} />
+      <circle cx="16" cy="16" r="6" fill={`url(#${tgtCenter})`} />
+      <circle cx="16" cy="16" r="2.5" fill="#ffffff" opacity="0.85" />
+    </svg>
+  );
+}
+
+// 3D Red Cross Error Icon
+export function IconCrossRed3D({ size = 18, className = "" }: IconProps) {
+  const uid = useId().replace(/:/g, "_");
+  const crossGrad = `crossGrad_${uid}`;
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id={crossGrad} cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#f87171" />
+          <stop offset="50%" stopColor="#ef4444" />
+          <stop offset="100%" stopColor="#991b1b" />
+        </radialGradient>
+      </defs>
+      <circle cx="16" cy="16" r="14" fill={`url(#${crossGrad})`} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.35))" />
+      <path d="M11 11 L21 21 M21 11 L11 21" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}

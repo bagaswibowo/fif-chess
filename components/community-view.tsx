@@ -248,7 +248,7 @@ function RichTextToolbar({
             if (v === "h3") insertFormat("### ", "\n", "Topik Pembahasan");
             e.target.value = "auto";
           }}
-          className="bg-[var(--card)] border border-[var(--border)] text-[11px] text-white rounded px-1.5 py-0.5 focus:outline-none"
+          className="bg-[var(--card)] border border-[var(--border)] text-xs text-white rounded px-2 py-1 focus:outline-none"
         >
           <option value="auto">Gaya: Normal</option>
           <option value="h1">Heading 1</option>
@@ -262,7 +262,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("**", "**", "teks tebal")}
-          className="px-1.5 py-0.5 rounded font-black text-white hover:bg-[var(--card)] transition-all"
+          className="px-2 py-1 rounded font-black text-white hover:bg-[var(--card)] transition-all text-xs"
           title="Tebal (Bold)"
         >
           B
@@ -270,7 +270,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("*", "*", "teks miring")}
-          className="px-1.5 py-0.5 rounded italic font-serif text-white hover:bg-[var(--card)] transition-all"
+          className="px-2 py-1 rounded italic font-serif text-white hover:bg-[var(--card)] transition-all text-xs"
           title="Miring (Italic)"
         >
           I
@@ -278,7 +278,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("~~", "~~", "teks coret")}
-          className="px-1.5 py-0.5 rounded line-through text-neutral-300 hover:bg-[var(--card)] transition-all text-[11px]"
+          className="px-2 py-1 rounded line-through text-neutral-300 hover:bg-[var(--card)] transition-all text-xs"
           title="Coret (Strikethrough)"
         >
           S
@@ -286,7 +286,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("<u>", "</u>", "garis bawah")}
-          className="px-1.5 py-0.5 rounded underline text-neutral-300 hover:bg-[var(--card)] transition-all text-[11px]"
+          className="px-2 py-1 rounded underline text-neutral-300 hover:bg-[var(--card)] transition-all text-xs"
           title="Garis Bawah (Underline)"
         >
           U
@@ -298,7 +298,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("- ", "\n", "Poin diskusi")}
-          className="px-1.5 py-0.5 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-[11px]"
+          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-xs"
           title="Daftar Poin (Bullet List)"
         >
           • List
@@ -306,7 +306,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("1. ", "\n", "Langkah terurut")}
-          className="px-1.5 py-0.5 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-[11px]"
+          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-xs"
           title="Daftar Nomor"
         >
           1. List
@@ -318,7 +318,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("> ", "\n", "Kutipan diskusi")}
-          className="px-1.5 py-0.5 rounded text-neutral-300 hover:bg-[var(--card)] transition-all font-mono text-[11px]"
+          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all font-mono text-xs"
           title="Kutipan (Quote)"
         >
           ” Quote
@@ -326,7 +326,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("```pgn\n", "\n```", "1. d4 Nf6 2. c4 g6 3. Nc3 Bg7")}
-          className="px-1.5 py-0.5 rounded text-neutral-300 hover:bg-[var(--card)] transition-all font-mono text-[11px]"
+          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all font-mono text-xs"
           title="Blok Notasi PGN / Kode"
         >
           {"{ }"} PGN
@@ -334,7 +334,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("| Kolom 1 | Kolom 2 |\n|---|---|\n| Data 1 | Data 2 |\n", "", "")}
-          className="px-1.5 py-0.5 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-[11px]"
+          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-xs"
           title="Tabel (Table)"
         >
           ⊞ Tabel
@@ -353,13 +353,13 @@ function RichTextToolbar({
             title="Lampirkan Permainan Catur dari Riwayat Permainan"
           >
             <IconHistory3D size={13} />
-            <span>{attachedGamesCount > 0 ? `${attachedGamesCount} Permainan Terlampir ✓` : "+ Lampirkan Permainan"}</span>
+            <span>{attachedGamesCount > 0 ? `${attachedGamesCount} Permainan Terlampir` : "+ Lampirkan Permainan"}</span>
           </button>
         )}
       </div>
 
       {/* Words Counter Badge */}
-      <div className="row-between text-[10px] text-[var(--muted-foreground)] px-1">
+      <div className="row-between text-xs text-[var(--muted-foreground)] px-1">
         <span>Gunakan toolbar di atas untuk memformat artikel catur &amp; notasi</span>
         <span className="font-mono font-bold">Words: {wordCount}</span>
       </div>
@@ -372,7 +372,7 @@ function FormattedPostContent({ text }: { text: string }) {
   const parts = text.split("\n\n");
 
   return (
-    <div className="stack-tight text-[12px] leading-relaxed text-neutral-200">
+    <div className="stack-tight text-xs leading-relaxed text-neutral-200">
       {parts.map((paragraph, pIdx) => {
         const trimmed = paragraph.trim();
 
@@ -384,7 +384,7 @@ function FormattedPostContent({ text }: { text: string }) {
           return (
             <blockquote
               key={pIdx}
-              className="pl-3 py-1 my-1 rounded-r-lg border-l-2 border-[var(--primary)] bg-[var(--surface)] text-[11px] italic text-neutral-300"
+              className="pl-3 py-1.5 my-1 rounded-r-lg border-l-2 border-[var(--primary)] bg-[var(--surface)] text-xs italic text-neutral-300"
             >
               {quoteLines}
             </blockquote>
@@ -396,7 +396,7 @@ function FormattedPostContent({ text }: { text: string }) {
           return (
             <pre
               key={pIdx}
-              className="p-2.5 my-1 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono text-[11px] text-emerald-300 overflow-x-auto select-all"
+              className="p-2.5 my-1 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono text-xs text-emerald-300 overflow-x-auto select-all"
             >
               {codeContent}
             </pre>
@@ -414,7 +414,7 @@ function FormattedPostContent({ text }: { text: string }) {
         if (trimmed.startsWith("- ")) {
           const items = trimmed.split("\n").map((l) => l.replace(/^-\s+/, ""));
           return (
-            <ul key={pIdx} className="list-disc list-inside space-y-0.5 my-1 pl-1 text-[12px]">
+            <ul key={pIdx} className="list-disc list-inside space-y-0.5 my-1 pl-1 text-xs">
               {items.map((it, i) => (
                 <li key={i} className="text-neutral-300">{it}</li>
               ))}
@@ -423,7 +423,7 @@ function FormattedPostContent({ text }: { text: string }) {
         }
 
         return (
-          <p key={pIdx} className="m-0 leading-relaxed text-[12px]">
+          <p key={pIdx} className="m-0 leading-relaxed text-xs">
             {paragraph}
           </p>
         );
@@ -518,7 +518,7 @@ function EmbeddedMatchPlayer({
             <IconAiBrain3D size={14} />
             <span className="font-bold text-white">Akurasi {analysis.accuracy}%</span>
           </div>
-          <div className="row gap-2 text-[11px] font-bold">
+          <div className="row gap-2 text-xs font-bold">
             <span className="text-red-400">{analysis.blunders} Blunder</span>
             <span className="text-orange-400">{analysis.mistakes} Kesalahan</span>
             <span className="text-yellow-400">{analysis.missedWins} Terlewat</span>
@@ -542,28 +542,28 @@ function EmbeddedMatchPlayer({
         </div>
 
         <div className="stack-tight justify-between h-full text-xs">
-          <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] min-h-16 stack-tight justify-center">
+          <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] min-h-16 stack-tight justify-center">
             {activeFeedback ? (
               <>
                 <div className="row-between">
                   <span className="font-mono font-bold text-white">#{activeFeedback.ply}: {activeFeedback.san}</span>
-                  <span className="text-[10px] font-bold text-[var(--primary)]">{activeFeedback.type.toUpperCase()}</span>
+                  <span className="text-xs font-bold text-[var(--primary)]">{activeFeedback.type.toUpperCase()}</span>
                 </div>
-                <p className="text-[11px] text-neutral-300 m-0">{activeFeedback.commentary}</p>
+                <p className="text-xs text-neutral-300 m-0">{activeFeedback.commentary}</p>
               </>
             ) : (
-              <div className="text-center text-[11px] text-neutral-400 italic">
+              <div className="text-center text-xs text-neutral-400 italic">
                 {currentStep === 0 ? "Posisi Awal" : `Langkah #${currentStep}: ${movesList[currentStep - 1]}`}
               </div>
             )}
           </div>
 
           <div className="grid grid-cols-5 gap-1 pt-1">
-            <button onClick={() => { setIsPlaying(false); setCurrentStep(0); }} className="ctl ctl-xs justify-center">|◀</button>
-            <button onClick={() => { setIsPlaying(false); setCurrentStep((p) => Math.max(0, p - 1)); }} className="ctl ctl-xs justify-center">◀</button>
-            <button onClick={() => setIsPlaying(!isPlaying)} className="ctl ctl-xs ctl-primary justify-center font-bold">{isPlaying ? "Jeda" : "▶ Putar"}</button>
-            <button onClick={() => { setIsPlaying(false); setCurrentStep((p) => Math.min(movesList.length, p + 1)); }} className="ctl ctl-xs justify-center">▶</button>
-            <button onClick={() => { setIsPlaying(false); setCurrentStep(movesList.length); }} className="ctl ctl-xs justify-center">▶|</button>
+            <button onClick={() => { setIsPlaying(false); setCurrentStep(0); }} className="ctl ctl-xs justify-center font-bold" title="Awal">|&lt;&lt;</button>
+            <button onClick={() => { setIsPlaying(false); setCurrentStep((p) => Math.max(0, p - 1)); }} className="ctl ctl-xs justify-center font-bold" title="Mundur">&lt;&lt;</button>
+            <button onClick={() => setIsPlaying(!isPlaying)} className="ctl ctl-xs ctl-primary justify-center font-bold">{isPlaying ? "Jeda" : "Putar"}</button>
+            <button onClick={() => { setIsPlaying(false); setCurrentStep((p) => Math.min(movesList.length, p + 1)); }} className="ctl ctl-xs justify-center font-bold" title="Maju">&gt;&gt;</button>
+            <button onClick={() => { setIsPlaying(false); setCurrentStep(movesList.length); }} className="ctl ctl-xs justify-center font-bold" title="Akhir">&gt;&gt;|</button>
           </div>
         </div>
       </div>
@@ -626,7 +626,7 @@ function GameAttachmentModal({
             <IconHistory3D size={18} />
             <div>
               <h3 className="text-sm font-bold text-white m-0">Lampirkan Permainan Catur</h3>
-              <p className="text-[11px] text-[var(--muted-foreground)] m-0">
+              <p className="text-xs text-[var(--muted-foreground)] m-0">
                 Pilih satu atau lebih permainan dari riwayat permainan Anda untuk dilampirkan ke dalam diskusi
               </p>
             </div>
@@ -645,8 +645,8 @@ function GameAttachmentModal({
           ) : (
             <table className="w-full text-xs font-mono border-collapse">
               <thead>
-                <tr className="border-b border-[var(--border)] bg-[var(--card)] text-neutral-400 text-[11px]">
-                  <th className="py-2 px-3 text-center w-12">
+                <tr className="border-b border-[var(--border)] bg-[var(--card)] text-neutral-400 text-xs font-bold">
+                  <th className="py-2.5 px-3 text-center w-12">
                     <input
                       type="checkbox"
                       checked={games.length > 0 && currentSelectedIds.size === games.length}
@@ -655,11 +655,11 @@ function GameAttachmentModal({
                       title="Pilih Semua"
                     />
                   </th>
-                  <th className="py-2 px-3 text-left font-sans">Waktu</th>
-                  <th className="py-2 px-3 text-left font-sans">Lawan</th>
-                  <th className="py-2 px-3 text-center font-sans">Sisi</th>
-                  <th className="py-2 px-3 text-center font-sans">Hasil</th>
-                  <th className="py-2 px-3 text-center font-sans">Langkah</th>
+                  <th className="py-2.5 px-3 text-left font-sans">Waktu</th>
+                  <th className="py-2.5 px-3 text-left font-sans">Lawan</th>
+                  <th className="py-2.5 px-3 text-center font-sans">Sisi</th>
+                  <th className="py-2.5 px-3 text-center font-sans">Hasil</th>
+                  <th className="py-2.5 px-3 text-center font-sans">Langkah</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]/60">
@@ -691,12 +691,12 @@ function GameAttachmentModal({
                       <td className="py-2 px-3 text-neutral-300 font-sans">{dateStr}</td>
                       <td className="py-2 px-3 text-white font-bold font-sans">vs {g.opponent}</td>
                       <td className="py-2 px-3 text-center font-sans">
-                        <span className={`px-2 py-0.5 rounded text-[10px] ${g.humanSide === "white" ? "bg-white text-black font-bold" : "bg-neutral-800 text-white border border-neutral-600"}`}>
+                        <span className={`px-2 py-0.5 rounded text-xs ${g.humanSide === "white" ? "bg-white text-black font-bold" : "bg-neutral-800 text-white border border-neutral-600"}`}>
                           {g.humanSide === "white" ? "Putih" : "Hitam"}
                         </span>
                       </td>
                       <td className="py-2 px-3 text-center font-sans">
-                        <span className={`text-[11px] font-bold ${g.outcomeKind === "checkmate" ? "text-emerald-400" : g.outcomeKind === "draw" ? "text-amber-300" : "text-neutral-300"}`}>
+                        <span className={`text-xs font-bold ${g.outcomeKind === "checkmate" ? "text-emerald-400" : g.outcomeKind === "draw" ? "text-amber-300" : "text-neutral-300"}`}>
                           {g.outcomeKind === "checkmate" ? "Skakmat" : g.outcomeKind === "draw" ? "Remis" : g.outcomeKind}
                         </span>
                       </td>
@@ -1023,11 +1023,11 @@ export function CommunityView({ user, lang = "id" }: Props) {
             <div className="stack-tight text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label className="label font-bold text-[11px]">Kategori Forum:</label>
+                  <label className="label font-bold text-xs">Kategori Forum:</label>
                   <select
                     value={newTopicCategory}
                     onChange={(e) => setNewTopicCategory(e.target.value)}
-                    className="w-full p-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-white focus:outline-none"
+                    className="w-full p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-white focus:outline-none"
                   >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
@@ -1035,18 +1035,18 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="label font-bold text-[11px]">Judul Topik:</label>
+                  <label className="label font-bold text-xs">Judul Topik:</label>
                   <input
                     type="text"
                     value={newTopicTitle}
                     onChange={(e) => setNewTopicTitle(e.target.value)}
                     placeholder="Contoh: Analisis Pembukaan Sisilia Najdorf..."
-                    className="w-full p-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)]"
+                    className="w-full p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)]"
                   />
                 </div>
               </div>
 
-              <label className="label font-bold text-[11px] mt-1">Isi Diskusi (Rich Text Editor):</label>
+              <label className="label font-bold text-xs mt-1">Isi Diskusi (Rich Text Editor):</label>
               
               {/* Full Rich Text Editor */}
               <div className="rounded-xl border border-[var(--border)] overflow-hidden">
@@ -1097,16 +1097,16 @@ export function CommunityView({ user, lang = "id" }: Props) {
                         className="px-2.5 py-1 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center gap-2 text-xs"
                       >
                         <span className="font-bold text-white">vs {g.opponent}</span>
-                        <span className="text-[10px] text-[var(--muted-foreground)]">
+                        <span className="text-xs text-[var(--muted-foreground)]">
                           ({g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind})
                         </span>
                         <button
                           type="button"
                           onClick={() => setSelectedGamesForNewTopic((prev) => prev.filter((item) => item.id !== g.id))}
-                          className="text-[var(--destructive)] font-bold hover:scale-110 transition-transform"
+                          className="text-[var(--destructive)] font-bold hover:scale-110 transition-transform p-0.5"
                           title="Hapus lampiran ini"
                         >
-                          ✕
+                          <IconClose3D size={14} />
                         </button>
                       </div>
                     ))}
@@ -1194,11 +1194,11 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   </span>
                 </div>
 
-                <p className="prose-note text-[11px] text-neutral-300 line-clamp-2 m-0">
+                <p className="prose-note text-xs text-neutral-300 line-clamp-2 m-0">
                   {th.posts[0]?.content}
                 </p>
 
-                <div className="row-between pt-1 text-[10px] text-[var(--muted-foreground)]" style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="row-between pt-1 text-xs text-[var(--muted-foreground)]" style={{ borderTop: "1px solid var(--border)" }}>
                   <div className="row items-center gap-1.5">
                     <span className="font-bold text-white">@{th.authorUsername}</span>
                     <span>·</span>
@@ -1228,7 +1228,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
               <span className="ctl ctl-xs font-bold" style={{ borderColor: "var(--primary)", color: "var(--primary)" }}>
                 {activeThread.categoryName}
               </span>
-              <span className="text-[11px] text-[var(--muted-foreground)]">
+              <span className="text-xs text-[var(--muted-foreground)]">
                 Aktivitas: {activeThread.lastActivity}
               </span>
             </div>
@@ -1243,15 +1243,15 @@ export function CommunityView({ user, lang = "id" }: Props) {
               <div key={post.id} className="panel p-3 stack-tight" style={{ background: "var(--card)" }}>
                 <div className="row-between pb-1.5" style={{ borderBottom: "1px solid var(--border)" }}>
                   <div className="row items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)] text-[var(--primary)] font-bold flex items-center justify-center text-[11px]">
+                    <div className="w-7 h-7 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)] text-[var(--primary)] font-bold flex items-center justify-center text-xs">
                       {post.avatarInitials}
                     </div>
                     <div>
                       <span className="font-bold text-xs text-white">@{post.authorUsername}</span>
-                      <span className="text-[10px] text-[var(--muted-foreground)] ml-1.5">{post.createdAt}</span>
+                      <span className="text-xs text-[var(--muted-foreground)] ml-1.5">{post.createdAt}</span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono text-[var(--muted-foreground)]">#{post.postNumber}</span>
+                  <span className="text-xs font-mono text-[var(--muted-foreground)]">#{post.postNumber}</span>
                 </div>
 
                 <FormattedPostContent text={post.content} />
@@ -1329,19 +1329,19 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   {selectedGamesForReply.map((g) => (
                     <div
                       key={g.id}
-                      className="px-2 py-0.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center gap-1.5 text-[11px]"
+                      className="px-2 py-0.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center gap-1.5 text-xs"
                     >
                       <span className="font-bold text-white">vs {g.opponent}</span>
-                      <span className="text-[10px] text-[var(--muted-foreground)]">
+                      <span className="text-xs text-[var(--muted-foreground)]">
                         ({g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind})
                       </span>
                       <button
                         type="button"
                         onClick={() => setSelectedGamesForReply((prev) => prev.filter((item) => item.id !== g.id))}
-                        className="text-[var(--destructive)] font-bold hover:scale-110"
+                        className="text-[var(--destructive)] font-bold hover:scale-110 p-0.5"
                         title="Hapus"
                       >
-                        ✕
+                        <IconClose3D size={14} />
                       </button>
                     </div>
                   ))}
