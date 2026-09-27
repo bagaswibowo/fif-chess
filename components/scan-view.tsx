@@ -166,6 +166,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [fenInput, setFenInput] = useState<string>("");
 
   const [activeTab, setActiveTab] = useState<ViewTab>("solver");
+  const [scanBoardOrientation, setScanBoardOrientation] = useState<"white" | "black">("white");
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [pendingCropImage, setPendingCropImage] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
@@ -989,6 +990,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 options={{
                   id: "board-solver-full",
                   position: liveFen,
+                  boardOrientation: scanBoardOrientation,
                   allowDragging: false,
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
@@ -1178,6 +1180,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 options={{
                   id: "board-compare-1",
                   position: initialFen,
+                  boardOrientation: scanBoardOrientation,
                   allowDragging: true,
                   onPieceDrop: handleBoard1Drop,
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
@@ -1200,6 +1203,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 options={{
                   id: "board-compare-2",
                   position: liveFen,
+                  boardOrientation: scanBoardOrientation,
                   allowDragging: false,
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },

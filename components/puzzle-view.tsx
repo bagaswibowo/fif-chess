@@ -18,6 +18,7 @@ export function PuzzleView({ lang = "id" }: Props) {
   const [category, setCategory] = useState<PuzzleCategory | "all">("all");
   const [index, setIndex] = useState(0);
   const [fullscreenPuzzle, setFullscreenPuzzle] = useState(false);
+  const [flipOrientation, setFlipOrientation] = useState(false);
 
   useEffect(() => {
     if (!fullscreenPuzzle) return;
@@ -154,7 +155,7 @@ export function PuzzleView({ lang = "id" }: Props) {
           ? "fixed inset-0 z-50 bg-[#161512] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
           : "stack"
       }
-      style={fullscreenPuzzle ? undefined : { maxWidth: "72rem", margin: "0 auto" }}
+      style={fullscreenPuzzle ? undefined : { maxWidth: "64rem", margin: "0 auto" }}
     >
       <div className="row-between items-center gap-2 shrink-0">
         <div>
@@ -253,35 +254,49 @@ export function PuzzleView({ lang = "id" }: Props) {
             Next →
           </button>
         </div>
+
+        {/* Tombol Putar Posisi Papan */}
+        <button
+          type="button"
+          onClick={() => setFlipOrientation((v) => !v)}
+          className="ctl ctl-sm px-2.5 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-neutral-200 hover:bg-[var(--surface)] flex items-center gap-1.5 shrink-0 transition-all"
+          title="Putar Orientasi Papan Catur (Putih / Hitam di bawah)"
+        >
+          <span>🔄</span>
+          <span className="hidden sm:inline">Putar Posisi</span>
+          <span className="text-[10px] text-neutral-400 font-mono">
+            ({(flipOrientation ? (puzzle.turn === "w" ? "Hitam" : "Putih") : (puzzle.turn === "w" ? "Putih" : "Hitam"))} Bawah)
+          </span>
+        </button>
       </div>
 
       <div
         className={
           fullscreenPuzzle
             ? "flex-1 grid lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_430px] gap-3 items-stretch min-h-0 overflow-hidden pt-1"
-            : "row gap-4 items-start"
+            : "grid lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-4 items-start w-full"
         }
       >
-        {/* LEFT: BOARD */}
+        {/* LEFT: BOARD (Besar proporsional persis AI Coach) */}
         <div
           className={
             fullscreenPuzzle
               ? "flex flex-col items-center justify-center h-full min-h-0 w-full max-w-[min(96vw,calc(100dvh-140px))] mx-auto py-0.5"
-              : "panel p-2.5 flex-1 max-w-[36rem] bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl"
+              : "rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full"
           }
         >
           <div
             className={
               fullscreenPuzzle
                 ? "aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full max-h-[calc(100dvh-150px)] flex items-center justify-center min-h-0"
-                : "aspect-square rounded-xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-inner"
+                : "aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full"
             }
           >
             <Chessboard
               options={{
                 id: `puzzle-${puzzle.id}`,
                 position: fen,
-                boardOrientation: puzzle.turn === "w" ? "white" : "black",
+                boardOrientation: flipOrientation ? (puzzle.turn === "w" ? "black" : "white") : (puzzle.turn === "w" ? "white" : "black"),
                 allowDragging: status !== "correct",
                 canDragPiece: ({ piece }) => (puzzle.turn === "w" ? piece.pieceType.startsWith("w") : piece.pieceType.startsWith("b")),
                 onPieceDrop: handlePieceDrop,

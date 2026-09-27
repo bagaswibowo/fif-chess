@@ -113,6 +113,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   const [moveIndex, setMoveIndex] = useState(0);
   const [engine, setEngine] = useState<Engine>("stockfish");
   const [fullscreenReview, setFullscreenReview] = useState(false);
+  const [flipOrientation, setFlipOrientation] = useState(false);
   useEffect(() => {
     if (!fullscreenReview) return;
     const onKey = (e: KeyboardEvent) => {
@@ -503,6 +504,20 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 <span className="font-mono text-xs font-bold text-neutral-300 px-2.5 py-1 rounded bg-[var(--surface)] border border-[var(--border)]">
                   Langkah {moveIndex} / {active.moves.length}
                 </span>
+                {/* Tombol Putar Posisi Papan */}
+                <button
+                  type="button"
+                  onClick={() => setFlipOrientation((v) => !v)}
+                  className="ctl ctl-sm px-2.5 py-1 text-xs font-bold rounded-lg border border-[var(--border)] text-neutral-200 hover:bg-[var(--surface)] flex items-center gap-1.5 shrink-0 transition-all"
+                  title="Putar Orientasi Papan Catur (Putih / Hitam di bawah)"
+                >
+                  <span>🔄</span>
+                  <span className="hidden sm:inline">Putar Posisi</span>
+                  <span className="text-[10px] text-neutral-400 font-mono">
+                    ({(flipOrientation ? (active.humanSide === "white" ? "Hitam" : "Putih") : (active.humanSide === "white" ? "Putih" : "Hitam"))} Bawah)
+                  </span>
+                </button>
+
                 {fullscreenReview ? (
                   <button
                     type="button"
@@ -556,7 +571,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                     options={{
                       id: `review-${active.id}`,
                       position: currentFen,
-                      boardOrientation: active.humanSide,
+                      boardOrientation: flipOrientation ? (active.humanSide === "white" ? "black" : "white") : active.humanSide,
                       allowDragging: false,
                       boardStyle: { backgroundColor: "var(--board-dark)" },
                       darkSquareStyle: { backgroundColor: "var(--board-dark)" },
