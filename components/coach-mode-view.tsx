@@ -1,6 +1,5 @@
 "use client";
 
-import { ClockMovesFullscreen } from "@/components/clock-moves-fullscreen";
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
@@ -340,6 +339,15 @@ export function CoachModeView({ lang = "id" }: Props) {
     }];
   }, [showHintArrow, hint]);
 
+  useEffect(() => {
+    if (!fullscreenCoach) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreenCoach(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreenCoach]);
+
   const whitePct = (() => {
     if (evalCp === null) return 50;
     return Math.round((Math.tanh(evalCp / 400) + 1) / 2 * 100);
@@ -348,11 +356,17 @@ export function CoachModeView({ lang = "id" }: Props) {
   const qColor = feedback ? QUALITY[feedback.quality].color : "";
 
   return (
-    <div className="max-w-5xl mx-auto space-y-3 pb-8">
+    <div
+      className={
+        fullscreenCoach
+          ? "fixed inset-0 z-50 bg-[#161512] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
+          : "max-w-5xl mx-auto space-y-3 pb-8"
+      }
+    >
       {showConfetti && <Confetti />}
 
       {/* Header Info Matchup - Ultra Compact on Mobile */}
-      <div className="bg-[#262421] px-3 py-2 rounded-xl border border-[#36322d] shadow-md flex items-center justify-between gap-2">
+      <div className="bg-[#262421] px-3 py-2 rounded-xl border border-[#36322d] shadow-md flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <IconBot3D size={22} className="shrink-0" />
           <div className="min-w-0">
@@ -394,22 +408,46 @@ export function CoachModeView({ lang = "id" }: Props) {
         </div>
 
         {/* Tombol Layar Penuh Fokus */}
-        <button
-          type="button"
-          onClick={() => setFullscreenCoach(true)}
-          className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-[#81b64c] text-white hover:brightness-110 flex items-center gap-1.5 shadow-sm transition-all shrink-0"
-          title="Buka Mode Fokus Layar Penuh (1 Layar)"
-        >
-          <span>⛶</span>
-          <span className="hidden sm:inline">Fokus 1 Layar</span>
-        </button>
+        {fullscreenCoach ? (
+          <button
+            type="button"
+            onClick={() => setFullscreenCoach(false)}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-red-950/80 border border-red-500/50 text-red-200 hover:bg-red-900 flex items-center gap-1.5 shadow-sm transition-all shrink-0"
+            title="Keluar Layar Penuh (Esc)"
+          >
+            <span>✕</span>
+            <span className="hidden sm:inline">Keluar Layar Penuh (Esc)</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setFullscreenCoach(true)}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-[#81b64c] text-white hover:brightness-110 flex items-center gap-1.5 shadow-sm transition-all shrink-0"
+            title="Buka Mode Fokus Layar Penuh (1 Layar)"
+          >
+            <span>⛶</span>
+            <span className="hidden sm:inline">Fokus 1 Layar</span>
+          </button>
+        )}
       </div>
 {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
-      <div className="grid lg:grid-cols-[1fr_380px] gap-4 items-start">
+      <div
+        className={
+          fullscreenCoach
+            ? "flex-1 grid lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_420px] gap-3 items-stretch min-h-0 overflow-hidden pt-1"
+            : "grid lg:grid-cols-[1fr_380px] gap-4 items-start"
+        }
+      >
         {/* LEFT COLUMN: Chessboard strictly anchored */}
-        <div className="space-y-2">
+        <div
+          className={
+            fullscreenCoach
+              ? "flex flex-col items-center justify-between h-full min-h-0 w-full max-w-[min(96vw,calc(100dvh-135px))] mx-auto py-0.5"
+              : "space-y-2"
+          }
+        >
           {/* Integrated Opponent Bar with Eval Badge & Captured Pieces */}
-          <div className="flex items-center justify-between px-3 py-1.5 bg-[#1c1a18] rounded-xl border border-[#36322d] shadow-sm">
+          <div className="w-full flex items-center justify-between px-3 py-1 bg-[#1c1a18] rounded-xl border border-[#36322d] shadow-sm shrink-0 mb-1">
             <div className="flex items-center gap-2 min-w-0">
               <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-neutral-800 border-neutral-600" : "bg-white border-neutral-300"}`} />
               <span className="text-xs md:text-sm font-bold text-white truncate">Stockfish 15</span>
@@ -421,7 +459,13 @@ export function CoachModeView({ lang = "id" }: Props) {
           </div>
 
           {/* Chessboard: Fixed Aspect Square with key=playerSide to force board orientation rotation */}
-          <div className="rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full bg-[var(--board-dark)]">
+          <div
+            className={
+              fullscreenCoach
+                ? "rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full aspect-square max-h-[calc(100dvh-220px)] bg-[var(--board-dark)] flex items-center justify-center min-h-0"
+                : "rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full bg-[var(--board-dark)]"
+            }
+          >
             <Chessboard
               key={`coach-board-${playerSide}`}
               options={{
@@ -448,7 +492,7 @@ export function CoachModeView({ lang = "id" }: Props) {
           </div>
 
           {/* Player Status Bar with Hint Action */}
-          <div className="flex items-center justify-between px-3 py-1.5 bg-[#1c1a18] rounded-xl border border-[#36322d] shadow-sm">
+          <div className="w-full flex items-center justify-between px-3 py-1 bg-[#1c1a18] rounded-xl border border-[#36322d] shadow-sm shrink-0 mt-1">
             <div className="flex items-center gap-2">
               <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-white border-neutral-300" : "bg-neutral-800 border-neutral-600"}`} />
               <span className="text-xs md:text-sm font-bold text-white">Anda (Player)</span>
@@ -470,7 +514,7 @@ export function CoachModeView({ lang = "id" }: Props) {
           </div>
 
           {/* Controls Bar Below Board */}
-          <div className="flex gap-2">
+          <div className="w-full flex gap-2 shrink-0 mt-1">
             <Button
               onClick={handleUndo}
               variant="outline"
@@ -494,7 +538,13 @@ export function CoachModeView({ lang = "id" }: Props) {
         </div>
 
         {/* RIGHT COLUMN: Real-Time Coach Guidance, Threats & Move Review */}
-        <div className="space-y-3">
+        <div
+          className={
+            fullscreenCoach
+              ? "h-full overflow-y-auto pr-1 space-y-2.5 custom-scrollbar min-h-0"
+              : "space-y-3"
+          }
+        >
           {/* REKOMENDASI LANGKAH AKTIF */}
           <Card className="bg-[#1f291e] border-2 border-[#81b64c]/60 text-white shadow-lg overflow-hidden">
             <CardHeader className="py-2.5 px-4 bg-[#81b64c]/10 border-b border-[#81b64c]/20 flex flex-row items-center justify-between">
@@ -639,50 +689,6 @@ export function CoachModeView({ lang = "id" }: Props) {
         </div>
       </div>
 
-      {fullscreenCoach && (
-        <ClockMovesFullscreen
-          fen={fen}
-          moves={history.map((san, i) => ({
-            san,
-            uci: "",
-            by: i % 2 === (playerSide === "white" ? 0 : 1) ? "human" : "stockfish",
-            ply: i + 1,
-          }))}
-          whiteName={playerSide === "white" ? "Anda (Player)" : "Stockfish 15"}
-          blackName={playerSide === "black" ? "Anda (Player)" : "Stockfish 15"}
-          whiteTime="—"
-          blackTime="—"
-          activeSide={outcome.over ? null : (chess.turn() === "w" ? "white" : "black")}
-          onClose={() => setFullscreenCoach(false)}
-          boardOrientation={playerSide}
-          onPieceDrop={handlePieceDrop}
-          onSquareClick={({ square }) => {
-            if (selected) {
-              void tryMove(selected, square);
-              setSelected(null);
-            } else {
-              setSelected(square);
-            }
-          }}
-          squareStyles={squareStyles}
-          scoreCp={evalCp}
-          coachCommentary={
-            feedback
-              ? {
-                  headline: feedback.headline,
-                  reason: feedback.reason,
-                  tactic: feedback.tactic,
-                }
-              : hint
-              ? {
-                  headline: `Saran: ${hint.san}`,
-                  reason: hint.reason || "Langkah terbaik pilihan AI Coach",
-                  tactic: principle || undefined,
-                }
-              : null
-          }
-        />
-      )}
-    </div>
+          </div>
   );
 }
