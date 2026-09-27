@@ -112,6 +112,15 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [moveIndex, setMoveIndex] = useState(0);
   const [engine, setEngine] = useState<Engine>("stockfish");
+  const [fullscreenReview, setFullscreenReview] = useState(false);
+  useEffect(() => {
+    if (!fullscreenReview) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreenReview(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreenReview]);
   const [evalResult, setEvalResult] = useState<AiEval | null>(null);
   const [loadingEval, setLoadingEval] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -370,7 +379,13 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
         !active ? (
           <p className="prose-note">Pilih satu baris di tab Riwayat.</p>
         ) : (
-          <div className="stack gap-3">
+          <div
+            className={
+              fullscreenReview
+                ? "fixed inset-0 z-50 bg-[#161512] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
+                : "stack gap-3"
+            }
+          >
             {/* MATCH SELECTOR & ENGINE PICKER */}
             <div className="panel p-3 row-between items-center gap-2 flex-wrap rounded-xl" style={{ background: "var(--card)" }}>
               <div className="row items-center gap-2 min-w-0">
@@ -478,7 +493,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 </button>
               </div>
 
-              <div className="row items-center gap-2">
+              <div className="row items-center gap-2 shrink-0">
                 <button
                   className="ctl ctl-xs font-mono text-[11px]"
                   onClick={() => setSpeed((s) => (s === 1200 ? 600 : s === 600 ? 2000 : 1200))}
@@ -488,15 +503,55 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 <span className="font-mono text-xs font-bold text-neutral-300 px-2.5 py-1 rounded bg-[var(--surface)] border border-[var(--border)]">
                   Langkah {moveIndex} / {active.moves.length}
                 </span>
+                {fullscreenReview ? (
+                  <button
+                    type="button"
+                    onClick={() => setFullscreenReview(false)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-red-950/80 border border-red-500/50 text-red-200 hover:bg-red-900 flex items-center gap-1.5 shadow-sm transition-all"
+                    title="Keluar Layar Penuh (Esc)"
+                  >
+                    <span>✕</span>
+                    <span className="hidden sm:inline">Keluar Layar Penuh (Esc)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setFullscreenReview(true)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#81b64c] text-white hover:brightness-110 flex items-center gap-1.5 shadow-sm transition-all"
+                    title="Buka Mode Fokus Layar Penuh (1 Layar)"
+                  >
+                    <span>⛶</span>
+                    <span className="hidden sm:inline">Fokus 1 Layar</span>
+                  </button>
+                )}
               </div>
             </div>
 
             {/* REVIEW BOARD + BLUNDER & THREAT ANALYSIS PANEL */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start w-full">
+            <div
+              className={
+                fullscreenReview
+                  ? "flex-1 grid grid-cols-1 lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_430px] gap-3 items-stretch min-h-0 overflow-hidden w-full pt-1"
+                  : "grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start w-full"
+              }
+            >
               
               {/* LEFT: BOARD WITH DUAL ARROWS */}
-              <div className="panel p-3 stack-tight items-center rounded-2xl" style={{ background: "var(--card)" }}>
-                <div className="w-full max-w-[min(90vw,54vh)] aspect-square rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]">
+              <div
+                className={
+                  fullscreenReview
+                    ? "flex flex-col items-center justify-between h-full min-h-0 w-full max-w-[min(96vw,calc(100dvh-140px))] mx-auto py-0.5 panel p-3 rounded-2xl"
+                    : "panel p-3 stack-tight items-center rounded-2xl"
+                }
+                style={{ background: "var(--card)" }}
+              >
+                <div
+                  className={
+                    fullscreenReview
+                      ? "w-full aspect-square max-h-[calc(100dvh-200px)] rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] flex items-center justify-center min-h-0"
+                      : "w-full max-w-[min(90vw,54vh)] aspect-square rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]"
+                  }
+                >
                   <Chessboard
                     options={{
                       id: `review-${active.id}`,
@@ -541,7 +596,13 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
               </div>
 
               {/* RIGHT: BLUNDER & THREAT CARD + RUNNING MOVE LIST */}
-              <div className="stack gap-3">
+              <div
+                className={
+                  fullscreenReview
+                    ? "h-full overflow-y-auto pr-1 space-y-2.5 custom-scrollbar min-h-0 stack gap-2.5"
+                    : "stack gap-3"
+                }
+              >
                 
                 {/* BLUNDER & STOCKFISH ANALYSIS CARD */}
                 <div className="panel p-3.5 rounded-2xl stack-tight border border-[var(--border)]" style={{ background: "var(--card)" }}>

@@ -63,6 +63,15 @@ export function LearningHub({ lang = "id" }: Props) {
   const { progress, complete } = useQuestProgress();
   const { saved } = useSavedPuzzles();
   const [activeId, setActiveId] = useState<string>(QUEST_CHAPTERS[0]?.id ?? "");
+  const [fullscreenQuest, setFullscreenQuest] = useState(false);
+  useEffect(() => {
+    if (!fullscreenQuest) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreenQuest(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreenQuest]);
   const [fen, setFen] = useState(QUEST_CHAPTERS[0]?.fen ?? "");
   const [selected, setSelected] = useState<string | null>(null);
   const [status, setStatus] = useState<"unsolved" | "correct" | "wrong">("unsolved");
@@ -192,8 +201,15 @@ export function LearningHub({ lang = "id" }: Props) {
         : "bg-rose-950/70 text-rose-300 border-rose-500/50";
 
   return (
-    <div className="stack" style={{ maxWidth: "72rem", margin: "0 auto" }}>
-      <div className="row-between">
+    <div
+      className={
+        fullscreenQuest
+          ? "fixed inset-0 z-50 bg-[#161512] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
+          : "stack"
+      }
+      style={fullscreenQuest ? undefined : { maxWidth: "72rem", margin: "0 auto" }}
+    >
+      <div className="row-between items-center gap-2 shrink-0">
         <div>
           <h2 className="section-title text-xl sm:text-2xl font-black text-white tracking-wide">
             {lang === "id" ? "Belajar & Quest Taktik" : "Learn & Tactical Quests"}
@@ -202,11 +218,32 @@ export function LearningHub({ lang = "id" }: Props) {
             Jalur Progresi Terstruktur CT-ART 4.0: Selesaikan Misi untuk Meningkatkan Rating ELO
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <span className="px-3 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5 shadow-sm">
             <IconCheck3D size={16} />
-            {doneCount}/{chapters.length} bab · {progress.xp} Total XP
+            {doneCount}/{chapters.length} bab · {progress.xp} XP
           </span>
+          {fullscreenQuest ? (
+            <button
+              type="button"
+              onClick={() => setFullscreenQuest(false)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-red-950/80 border border-red-500/50 text-red-200 hover:bg-red-900 flex items-center gap-1.5 shadow-sm transition-all"
+              title="Keluar Layar Penuh (Esc)"
+            >
+              <span>✕</span>
+              <span className="hidden sm:inline">Keluar Layar Penuh (Esc)</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setFullscreenQuest(true)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-[#81b64c] text-white hover:brightness-110 flex items-center gap-1.5 shadow-sm transition-all"
+              title="Buka Mode Fokus Layar Penuh (1 Layar)"
+            >
+              <span>⛶</span>
+              <span className="hidden sm:inline">Fokus 1 Layar</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -256,10 +293,28 @@ export function LearningHub({ lang = "id" }: Props) {
         </button>
       </div>
 
-      <div className="row gap-4 items-start">
+      <div
+        className={
+          fullscreenQuest
+            ? "flex-1 grid lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_430px] gap-3 items-stretch min-h-0 overflow-hidden pt-1"
+            : "row gap-4 items-start"
+        }
+      >
         {/* LEFT: BOARD */}
-        <div className="panel p-2.5 flex-1 max-w-[36rem] bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl">
-          <div className="aspect-square rounded-xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-inner">
+        <div
+          className={
+            fullscreenQuest
+              ? "flex flex-col items-center justify-center h-full min-h-0 w-full max-w-[min(96vw,calc(100dvh-140px))] mx-auto py-0.5"
+              : "panel p-2.5 flex-1 max-w-[36rem] bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl"
+          }
+        >
+          <div
+            className={
+              fullscreenQuest
+                ? "aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full max-h-[calc(100dvh-150px)] flex items-center justify-center min-h-0"
+                : "aspect-square rounded-xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-inner"
+            }
+          >
             <Chessboard
               options={{
                 id: `quest-${chapter.id}`,
@@ -281,7 +336,13 @@ export function LearningHub({ lang = "id" }: Props) {
         </div>
 
         {/* RIGHT: QUEST, HINTS & TRIK EXPLANATION */}
-        <div className="panel p-4 stack gap-3.5 flex-1 min-w-[18rem] bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl">
+        <div
+          className={
+            fullscreenQuest
+              ? "panel p-4 stack gap-3.5 h-full overflow-y-auto pr-1.5 custom-scrollbar min-h-0 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl"
+              : "panel p-4 stack gap-3.5 flex-1 min-w-[18rem] bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl"
+          }
+        >
           {/* Header Metadata */}
           <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2.5">
             <div className="flex items-center gap-2">
