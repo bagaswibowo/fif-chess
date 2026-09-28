@@ -94,7 +94,7 @@ export async function POST(req: Request) {
         username,
         fullName,
         role,
-        status: "approved" as const,
+        status: "pending" as const, // Changed from "approved" to "pending"
         isAdmin: false,
         elo: 1200,
         wins: 0,
@@ -111,14 +111,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Username sudah dipakai. Pilih yang lain." }, { status: 409 });
     }
 
-    const { token, maxAge } = startSession(created.id);
+    // Don't auto-login - return pending status
     const res = NextResponse.json({
       success: true,
-      pending: false,
-      user: publicUser(created),
-      message: "Pendaftaran berhasil! Selamat datang di JEV Chess.",
+      pending: true,
+      message: "Pendaftaran berhasil! Akun Anda menunggu persetujuan Admin Komunitas sebelum bisa login.",
     });
-    res.headers.set("Set-Cookie", sessionCookie(token, maxAge, req));
     return res;
   }
 

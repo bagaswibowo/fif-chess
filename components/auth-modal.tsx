@@ -36,17 +36,19 @@ export function AuthModal({
       <DialogPortal>
         <DialogOverlay />
         <DialogContent
-          className="max-w-[520px] sm:max-w-[580px] max-h-[90vh] overflow-y-auto"
+          className="max-w-[520px] sm:max-w-[580px] max-h-[90vh] overflow-y-auto p-0"
           showCloseButton={false}
         >
-          <AuthPanel
-            user={user}
-            onLogin={onLogin}
-            onRegister={onRegister}
-            onLogout={onLogout}
-            onClose={onClose}
-            defaultMode={defaultMode}
-          />
+          <div className="p-5 md:p-6">
+            <AuthPanel
+              user={user}
+              onLogin={onLogin}
+              onRegister={onRegister}
+              onLogout={onLogout}
+              onClose={onClose}
+              defaultMode={defaultMode}
+            />
+          </div>
         </DialogContent>
       </DialogPortal>
     </Dialog>

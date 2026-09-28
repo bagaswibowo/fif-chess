@@ -46,6 +46,7 @@ import {
   IconGlobe3D,
   IconMedal3D,
   IconCoach3D,
+  IconShield3D,
 } from "@/components/icons3d";
 import {
   applyUci,
@@ -75,6 +76,19 @@ type NavTab = "play" | "puzzle" | "vision" | "scan" | "community" | "review" | "
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
 type CoachSubTab = "coach" | "spectator" | "guided";
+
+// Feature Card Component for Landing Page
+function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
+  return (
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--primary)]/50 hover:bg-[var(--muted)]/30 transition-all cursor-default group">
+      <div className="w-10 h-10 rounded-lg bg-[var(--primary)]/15 border border-[var(--primary)]/30 flex items-center justify-center text-[var(--primary)] mb-3 group-hover:scale-105 transition-transform">
+        {icon}
+      </div>
+      <h3 className="font-bold text-sm text-white mb-1">{title}</h3>
+      <p className="text-[11px] text-neutral-400 leading-relaxed">{desc}</p>
+    </div>
+  );
+}
 
 type MatchCommentary = {
   headline: string;
@@ -879,17 +893,61 @@ export function Game() {
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col p-2 md:p-3 pb-20 md:pb-3 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
         {!currentUser ? (
-          <div className="w-full max-w-md mx-auto my-auto p-4 sm:p-6 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-2xl stack items-center text-center animate-in fade-in duration-200">
-            <div className="w-14 h-14 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center mb-2 shadow-inner">
-              <IconKingWhite3D size={32} />
+          <div className="w-full max-w-2xl mx-auto my-auto p-4 sm:p-6 space-y-6 animate-in fade-in duration-300">
+            {/* Hero Section */}
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary-strong)] border border-[var(--primary)] flex items-center justify-center shadow-xl">
+                <IconKingWhite3D size={36} />
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                JEV Chess <span className="text-[var(--primary)]">Telkom University</span>
+              </h1>
+              <p className="text-sm text-[var(--muted-foreground)] max-w-md mx-auto leading-relaxed">
+                Platform catur eksklusif untuk civitas Telkom University. Mainkan, belajar, dan berkembang bersama komunitas catur kampus.
+              </p>
             </div>
-            <h2 className="text-base sm:text-lg font-black text-white m-0">
-              JEV Chess Telkom University
-            </h2>
-            <p className="text-xs text-[var(--muted-foreground)] mt-1 mb-4 leading-relaxed">
-              Semua menu dan arena bermain terkunci. Silakan Masuk atau Daftarkan Akun Anda terlebih dahulu untuk membuka seluruh fitur.
-            </p>
-            <div className="w-full text-left">
+
+            {/* Feature Preview Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FeatureCard
+                icon={<IconPlay3D size={24} />}
+                title="Arena Bermain"
+                desc="Mainkan catur vs AI (Stockfish, Jev, Fly Brain) atau lawan teman PvP real-time."
+              />
+              <FeatureCard
+                icon={<IconPuzzle3D size={24} />}
+                title="Tactical Puzzles"
+                desc="Latih taktik dengan ribuan puzzle otomatis dari partitur GM dan engine analysis."
+              />
+              <FeatureCard
+                icon={<IconCoach3D size={24} />}
+                title="AI Coach & Analisis"
+                desc="Dapatkan komentar langkah, evaluasi posisi, dan latihan dipandu oleh AI Coach."
+              />
+              <FeatureCard
+                icon={<IconScan3D size={24} />}
+                title="Scan Papan Fisik"
+                desc="Ambil foto papan catur fisik & konversi ke FEN instan dengan ChessCog AI."
+              />
+              <FeatureCard
+                icon={<IconCommunity3D size={24} />}
+                title="Komunitas & Turnamen"
+                desc="Bergabung dengan UKM Catur, ikuti turnamen internal, dan chat dengan pemain lain."
+              />
+              <FeatureCard
+                icon={<IconVision3D size={24} />}
+                title="Vision Drill"
+                desc="Latih visualisasi papan buta & kalkulasi mendalam tanpa melihat bidak."
+              />
+            </div>
+
+            {/* CTA Section */}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 md:p-6 shadow-2xl space-y-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-sm text-[var(--muted-foreground)]">
+                <IconShield3D size={16} />
+                <span>Akun diverifikasi manual oleh Admin Komunitas untuk keamanan & fair-play</span>
+              </div>
+              
               <AuthModal
                 user={currentUser}
                 onLogin={login}
@@ -899,21 +957,28 @@ export function Game() {
                 onClose={() => setShowAuthModal(false)}
                 defaultMode="register"
               />
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="w-full h-11 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:translate-y-[1px] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                Daftar Akun Baru
-              </button>
-              <p className="text-center text-xs text-neutral-400 mt-3">
-                Sudah punya akun?{" "}
+              
+              <div className="space-y-3 pt-2">
                 <button
                   onClick={() => setShowAuthModal(true)}
-                  className="text-[var(--primary)] font-bold hover:underline cursor-pointer"
+                  className="w-full h-12 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:translate-y-[1px] text-white font-bold text-base shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer group"
                 >
-                  Masuk di sini
+                  <IconPawn3D size={20} className="group-hover:scale-110 transition-transform" />
+                  <span>Daftar Akun Baru</span>
                 </button>
-              </p>
+                <p className="text-xs text-neutral-400">
+                  Sudah punya akun?{" "}
+                  <button
+                    onClick={() => setShowAuthModal(true)}
+                    className="text-[var(--primary)] font-bold hover:underline cursor-pointer"
+                  >
+                    Masuk di sini
+                  </button>
+                </p>
+                <p className="text-[10px] text-neutral-500">
+                  ℹ️ Setelah mendaftar, akun akan diverifikasi Admin (biasanya {"<"}1 jam). Anda akan mendapat notifikasi saat disetujui.
+                </p>
+              </div>
             </div>
           </div>
         ) : (<>

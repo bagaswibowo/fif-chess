@@ -56,11 +56,17 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
       if (data?.error) {
         setMessage({ tone: data.pending ? "info" : "err", text: data.error });
       } else if (mode === "register") {
+        // Registration successful but pending admin approval
         setMessage({
           tone: "ok",
-          text: data?.message || "Pendaftaran berhasil! Anda otomatis masuk.",
+          text: data?.message || "Pendaftaran berhasil! Akun Anda menunggu persetujuan Admin Komunitas sebelum bisa login.",
         });
-        setTimeout(() => onClose(), 800);
+        // Don't auto-close or auto-login - let user see the message
+        // Clear form for potential new registration
+        setUsername("");
+        setPassword("");
+        setConfirmPassword("");
+        setFullName("");
       } else {
         onClose();
       }
