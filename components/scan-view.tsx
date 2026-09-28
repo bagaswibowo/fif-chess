@@ -1019,6 +1019,16 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <CapturedPiecesBar fen={liveFen} side={tacticalIntel.turn === "Putih" ? "white" : "black"} />
             </div>
 
+            <BoardControls
+              variant="toolbar"
+              orientation={scanBoardOrientation}
+              onFlipOrientation={() => setScanBoardOrientation((o) => (o === "white" ? "black" : "white"))}
+              isFullscreen={fullscreenScan}
+              onToggleFullscreen={() => setFullscreenScan((v) => !v)}
+              showShortcuts={true}
+              className="mt-2"
+            />
+
             <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
               <Chessboard
                 options={{
@@ -1038,15 +1048,6 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               )}
             </div>
 
-            <BoardControls
-              variant="toolbar"
-              orientation={scanBoardOrientation}
-              onFlipOrientation={() => setScanBoardOrientation((o) => (o === "white" ? "black" : "white"))}
-              isFullscreen={fullscreenScan}
-              onToggleFullscreen={() => setFullscreenScan((v) => !v)}
-              showShortcuts={true}
-              className="mt-2"
-            />
           </div>
 
           {/* RIGHT: CONTROLS & TACTICAL ANALYSIS */}

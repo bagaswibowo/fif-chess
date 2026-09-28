@@ -176,9 +176,8 @@ export function PuzzleView({ lang = "id" }: Props) {
       className={
         fullscreenPuzzle
           ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-          : "stack"
+          : "h-full max-h-full flex flex-col gap-2 min-h-0 overflow-hidden w-full max-w-7xl mx-auto"
       }
-      style={fullscreenPuzzle ? undefined : { maxWidth: "64rem", margin: "0 auto" }}
     >
       <div className="row-between items-center gap-2 shrink-0">
         <div>
@@ -258,28 +257,20 @@ export function PuzzleView({ lang = "id" }: Props) {
         </div>
       </div>
 
-      <div
-        className={
-          fullscreenPuzzle
-            ? "flex-1 grid lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_430px] gap-3 items-stretch min-h-0 overflow-hidden pt-1"
-            : "grid lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-4 items-start w-full"
-        }
-      >
-        {/* LEFT: BOARD (Besar proporsional persis AI Coach) */}
-        <div
-          className={
-            fullscreenPuzzle
-              ? "flex flex-col items-center justify-center h-full min-h-0 w-full max-w-[min(96vw,calc(100dvh-140px))] mx-auto py-0.5"
-              : "rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full"
-          }
-        >
-          <div
-            className={
-              fullscreenPuzzle
-                ? "aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full max-h-[calc(100dvh-150px)] flex items-center justify-center min-h-0"
-                : "aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full"
-            }
-          >
+      <div className="flex-1 grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-3 items-stretch min-h-0 overflow-hidden pt-1">
+        {/* LEFT: BOARD */}
+        <div className="flex flex-col justify-between items-center h-full min-h-0 w-full max-w-[calc(100vh-140px)] mx-auto py-0.5 space-y-1">
+          <BoardControls
+            variant="toolbar"
+            orientation={puzzle ? (flipOrientation ? (puzzle.turn === "w" ? "black" : "white") : (puzzle.turn === "w" ? "white" : "black")) : "white"}
+            onFlipOrientation={() => setFlipOrientation((v) => !v)}
+            isFullscreen={fullscreenPuzzle}
+            onToggleFullscreen={() => setFullscreenPuzzle((v) => !v)}
+            showShortcuts={true}
+            className="w-full shrink-0"
+          />
+
+          <div className="aspect-square h-full max-h-[calc(100vh-190px)] max-w-[calc(100vh-190px)] rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative min-h-0">
             <Chessboard
               options={{
                 id: `puzzle-${puzzle.id}`,
@@ -299,25 +290,10 @@ export function PuzzleView({ lang = "id" }: Props) {
             />
           </div>
 
-          <BoardControls
-            variant="toolbar"
-            orientation={puzzle ? (flipOrientation ? (puzzle.turn === "w" ? "black" : "white") : (puzzle.turn === "w" ? "white" : "black")) : "white"}
-            onFlipOrientation={() => setFlipOrientation((v) => !v)}
-            isFullscreen={fullscreenPuzzle}
-            onToggleFullscreen={() => setFullscreenPuzzle((v) => !v)}
-            showShortcuts={true}
-            className="w-full mt-2"
-          />
         </div>
 
         {/* RIGHT: QUEST, HINTS & TRIK EXPLANATION */}
-        <div
-          className={
-            fullscreenPuzzle
-              ? "panel p-4 stack gap-3.5 h-full overflow-y-auto pr-1.5 custom-scrollbar min-h-0 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl"
-              : "panel p-4 stack gap-3.5 flex-1 min-w-[18rem] bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl"
-          }
-        >
+        <div className="panel p-4 stack gap-3.5 h-full overflow-y-auto pr-1.5 custom-scrollbar min-h-0 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl">
           {/* Header Metadata */}
           <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2.5">
             <div className="flex items-center gap-2">
@@ -429,11 +405,14 @@ export function PuzzleView({ lang = "id" }: Props) {
                 <button
                   className="ctl ctl-sm px-3.5 py-2 text-xs font-bold rounded-xl border border-[var(--border)] text-neutral-400 hover:text-white"
                   onClick={() => {
-                    const c = new Chess(puzzle.fen);
-                    c.move({ from: from as Square, to: to as Square, promotion: puzzle.solutionUci[4] || "q" });
-                    setFen(c.fen());
-                    setStatus("correct");
-                    setHint(2);
+                    try {
+                      const c = new Chess(puzzle.fen);
+                      const move = c.move({ from: from as Square, to: to as Square, promotion: puzzle.solutionUci[4] || "q" });
+                      if (!move || move.san !== puzzle.solutionSan) return;
+                      setFen(c.fen());
+                      setStatus("correct");
+                      setHint(2);
+                    } catch {}
                   }}
                 >
                   Buka solusi

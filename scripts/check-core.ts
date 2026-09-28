@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { Chess } from "chess.js";
 import { PUZZLES, QUEST_CHAPTERS } from "../lib/puzzle-data.ts";
 import { replaySanList } from "../lib/chess.ts";
+import { buildLivePuzzle, isPlayablePuzzle } from "../lib/puzzle-store.ts";
 
 const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 const PIECE_NAME = { p: "pion", n: "knight", b: "gajah", r: "menara", q: "sekertaris" };
@@ -69,7 +70,25 @@ assert.deepEqual(r.map((m) => m.uci), ["e2e4", "e7e5", "g1f3", "b8c6"]);
 // 4. Replay harus berhenti, bukan mengarang, saat history tidak cocok.
 assert.equal(replaySanList(START, ["e4", "Qh8"]).length, 1, "replay menerima langkah ilegal");
 
-// 5. Design token: var() tanpa definisi = teks hitam diam-diam di atas
+// 5. Trik live harus menyimpan posisi sebelum solusi, bukan posisi sesudahnya.
+const livePosition = new Chess(START);
+livePosition.move("e4");
+livePosition.move("e5");
+const livePuzzle = buildLivePuzzle(
+  livePosition.fen(),
+  { by: "stockfish", uci: "e7e5", san: "e5" },
+  "Stockfish 15 NNUE",
+  ["e4", "e5"],
+  START,
+  "live-test",
+);
+assert.ok(livePuzzle, "trik live legal tidak berhasil dibuat");
+assert.equal(livePuzzle?.turn, "b", "giliran puzzle live harus mengikuti posisi sebelum solusi");
+assert.equal(new Chess(livePuzzle!.fen).get("e7")?.type, "p", "posisi puzzle harus memiliki pion solusi di e7");
+assert.equal(isPlayablePuzzle({ ...livePuzzle, savedAt: Date.now(), source: "test" }), true, "puzzle live harus playable");
+assert.equal(buildLivePuzzle(livePosition.fen(), { by: "human", uci: "e2e4", san: "e4" }, "Lawan", ["e4"], START, "human-test"), null, "langkah manusia tidak boleh disimpan sebagai trik lawan");
+
+// 6. Design token: var() tanpa definisi = teks hitam diam-diam di atas
 //    kayu gelap. next/font menyediakan variabelnya sendiri, jadi ia dikecualikan.
 const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf-8");
 const declared = new Set([...css.matchAll(/^\s*(--[a-z0-9-]+)\s*:/gm)].map((m) => m[1]));

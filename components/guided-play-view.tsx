@@ -393,34 +393,34 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
       className={
         fullscreenGuided
           ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-          : "max-w-5xl mx-auto space-y-4 pb-8"
+          : "h-full max-h-full flex flex-col gap-2 min-h-0 overflow-hidden w-full max-w-7xl mx-auto"
       }
     >
       {showConfetti && <Confetti />}
 
       {/* Header */}
-      <div className="bg-[#262421] px-5 py-4 rounded-2xl border border-[#36322d] shadow-xl flex flex-wrap justify-between items-center gap-3">
-        <div className="flex items-center gap-3">
-          <IconBot3D size={26} />
-          <div>
-            <h2 className="text-lg font-black text-white">
+      <div className="bg-[var(--card)] px-4 py-2 rounded-xl border border-[var(--border)] shadow-md flex justify-between items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <IconBot3D size={22} className="shrink-0" />
+          <div className="min-w-0">
+            <h2 className="text-xs md:text-sm font-black text-white truncate">
               {lang === "id" ? "Latihan Dipandu Jev" : "Jev Guided Practice"}
             </h2>
-            <p className="text-xs text-neutral-300">
+            <p className="text-[10px] text-neutral-400 truncate">
               {lang === "id"
-                ? "Jev memandu tiap langkahmu + memberi peringatan ancaman sebelum kamu bergerak"
-                : "Jev coaches every move + warns you of threats before you play"}
+                ? "Jev memandu tiap langkahmu + peringatan ancaman"
+                : "Jev coaches every move + warns of threats"}
             </p>
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => resetGame("white")} variant="outline" className="border-[#36322d] text-white text-sm font-bold bg-[#1c1a18] flex items-center gap-1.5" disabled={thinking}>
-            <IconPawn3D size={18} />
-            <span>{lang === "id" ? "Main Putih" : "Play White"}</span>
+        <div className="flex gap-1.5 shrink-0">
+          <Button onClick={() => resetGame("white")} variant="outline" size="default" className="border-[var(--border)] text-white text-xs font-bold bg-[var(--surface)] hover:bg-[var(--card)] flex items-center gap-1.5" disabled={thinking}>
+            <IconPawn3D size={16} />
+            <span>{lang === "id" ? "Putih" : "White"}</span>
           </Button>
-          <Button onClick={() => resetGame("black")} variant="outline" className="border-[#36322d] text-white text-sm font-bold bg-[#1c1a18] flex items-center gap-1.5" disabled={thinking}>
-            <IconPawn3D size={18} />
-            <span>{lang === "id" ? "Main Hitam" : "Play Black"}</span>
+          <Button onClick={() => resetGame("black")} variant="outline" size="default" className="border-[var(--border)] text-white text-xs font-bold bg-[var(--surface)] hover:bg-[var(--card)] flex items-center gap-1.5" disabled={thinking}>
+            <IconPawn3D size={16} />
+            <span>{lang === "id" ? "Hitam" : "Black"}</span>
           </Button>
         </div>
       </div>
@@ -470,15 +470,15 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-[minmax(300px,1fr)_380px] gap-5 items-start">
+      <div className="flex-1 grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-3 items-stretch min-h-0 overflow-y-auto lg:overflow-hidden pt-1">
         {/* Board */}
-        <div className="space-y-3">
+        <div className="flex flex-col justify-between items-center h-full min-h-0 w-full max-w-[calc(100vh-140px)] mx-auto py-0.5 space-y-1">
           {/* Eval bar */}
-          <div className="bg-[#1c1a18] rounded-xl border border-[#36322d] p-2.5 flex items-center gap-3">
+          <div className="w-full bg-[var(--card)] rounded-xl border border-[var(--border)] px-3 py-1.5 flex items-center gap-3 shrink-0">
             <span className="text-xs text-neutral-300 font-mono w-10 text-right">
               {evalCp !== null ? (evalCp > 0 ? `+${(evalCp/100).toFixed(1)}` : (evalCp/100).toFixed(1)) : "="}
             </span>
-            <div className="flex-1 h-3 bg-[#1a1a1a] rounded-full overflow-hidden">
+            <div className="flex-1 h-2.5 bg-neutral-900 rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-500"
                 style={{
                   width: `${evalBarPct}%`,
@@ -491,13 +491,43 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
             </span>
           </div>
 
-          <div className="rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl w-full bg-[var(--board-dark)]">
+          <BoardControls
+            variant="toolbar"
+            orientation={boardOrientation}
+            onFlipOrientation={() => setBoardOrientation((o) => (o === "white" ? "black" : "white"))}
+            isFullscreen={fullscreenGuided}
+            onToggleFullscreen={() => setFullscreenGuided((v) => !v)}
+            showShortcuts={true}
+            className="w-full shrink-0"
+          />
+
+          <div className="flex w-full shrink-0 gap-2">
+            <Button onClick={handleUndo} variant="outline" size="sm"
+              className="flex-1 border-[var(--border)] bg-[var(--surface)] text-xs font-bold text-neutral-300 hover:bg-[var(--card)]"
+              disabled={history.length < 2 || thinkingRef.current}>
+              ← {lang === "id" ? "Undo" : "Undo"}
+            </Button>
+            {bestArrow && (
+              <Button onClick={() => setShowBestArrow(v => !v)} variant="outline" size="sm"
+                className={`flex-1 text-xs font-bold border-sky-500/40 ${showBestArrow ? "bg-sky-950/80 text-sky-300" : "bg-[var(--surface)] text-neutral-300"}`}>
+                {showBestArrow ? (lang === "id" ? "Sembunyikan Terbaik" : "Hide Best") : (lang === "id" ? "Tampilkan Terbaik" : "Show Best")}
+              </Button>
+            )}
+          </div>
+
+          <div className="aspect-square w-full max-h-[min(68dvh,760px)] max-w-[min(68dvh,760px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative shrink-0">
             <Chessboard
               options={{
                 id: "guided-board",
                 position: fen,
                 boardOrientation: boardOrientation,
-                allowDragging: false,
+                allowDragging: !thinking && !outcome.over,
+                canDragPiece: ({ piece }) => piece.pieceType.startsWith(playerSide === "white" ? "w" : "b") && chess.turn() === (playerSide === "white" ? "w" : "b"),
+                onPieceDrop: ({ sourceSquare, targetSquare }) => {
+                  if (!targetSquare || thinkingRef.current) return false;
+                  void tryMove(sourceSquare, targetSquare);
+                  return true;
+                },
                 boardStyle: { backgroundColor: "var(--board-dark)" },
                 onSquareClick: ({ square }) => {
                   if (selectedSquare) {
@@ -515,32 +545,10 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
             />
           </div>
 
-          <BoardControls
-            variant="toolbar"
-            orientation={boardOrientation}
-            onFlipOrientation={() => setBoardOrientation((o) => (o === "white" ? "black" : "white"))}
-            isFullscreen={fullscreenGuided}
-            onToggleFullscreen={() => setFullscreenGuided((v) => !v)}
-            showShortcuts={true}
-          />
-
-          <div className="flex gap-2">
-            <Button onClick={handleUndo} variant="outline"
-              className="flex-1 border-[#36322d] text-neutral-300 text-sm font-bold bg-[#1c1a18]"
-              disabled={history.length < 2 || thinkingRef.current}>
-              ← {lang === "id" ? "Undo" : "Undo"}
-            </Button>
-            {bestArrow && (
-              <Button onClick={() => setShowBestArrow(v => !v)} variant="outline"
-                className={`flex-1 text-xs font-bold border-[#38bdf8]/40 ${showBestArrow ? "bg-[#0f2231] text-sky-300" : "bg-[#1c1a18] text-neutral-300"}`}>
-                {showBestArrow ? (lang === "id" ? "Sembunyikan" : "Hide") : (lang === "id" ? "Tampilkan Terbaik" : "Show Best")}
-              </Button>
-            )}
-          </div>
         </div>
 
         {/* Right panel */}
-        <div className="space-y-4">
+        <div className="h-full overflow-y-auto pr-1 space-y-2.5 custom-scrollbar min-h-0">
           {/* Thinking indicator */}
           {thinking && (
             <div className="p-3 rounded-xl bg-[#1e2a14] border border-[#81b64c]/40 text-[#81b64c] text-xs font-bold animate-pulse flex items-center gap-2">

@@ -69,7 +69,7 @@ export function MoveList({
       </div>
 
       {/* Isi Daftar Notasi */}
-      <ScrollArea className="flex-1 h-56 px-2 py-1.5">
+      <ScrollArea className="flex-1 min-h-0 px-2 py-1.5">
         <div className="space-y-0.5">
           {rows.map((row) => (
             <div

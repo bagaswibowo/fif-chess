@@ -388,13 +388,13 @@ export function CoachModeView({ lang = "id" }: Props) {
       className={
         fullscreenCoach
           ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-          : "max-w-5xl mx-auto space-y-3 pb-8"
+          : "min-h-0 flex flex-col gap-2 w-full max-w-7xl mx-auto"
       }
     >
       {showConfetti && <Confetti />}
 
       {/* Header Info Matchup with Standardized BoardControls */}
-      <div className="bg-[var(--card)] px-3 py-2 rounded-xl border border-[var(--border)] shadow-md flex items-center justify-between gap-2 shrink-0 flex-wrap">
+      <div className="bg-[var(--card)] px-3 py-2 rounded-xl border border-[var(--border)] shadow-md grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 shrink-0 min-h-14 overflow-visible">
         <div className="flex items-center gap-2 min-w-0">
           <IconBot3D size={22} className="shrink-0" />
           <div className="min-w-0">
@@ -445,24 +445,29 @@ export function CoachModeView({ lang = "id" }: Props) {
           className="border-0 bg-transparent p-0 shadow-none"
         />
       </div>
-{/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
-      <div
-        className={
-          fullscreenCoach
-            ? "flex-1 grid lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_420px] gap-3 items-stretch min-h-0 overflow-hidden pt-1"
-            : "grid lg:grid-cols-[1fr_380px] gap-4 items-start"
-        }
-      >
+
+      <div className="flex w-full shrink-0 gap-2">
+        <Button onClick={handleUndo} variant="outline" size="sm"
+          className="flex-1 border-[var(--border)] bg-[var(--surface)] text-xs font-bold text-neutral-300 hover:bg-[var(--card)]"
+          disabled={history.length < 2 || thinkingRef.current}>
+          ← {lang === "id" ? "Batalkan Langkah" : "Undo"}
+        </Button>
+        {hint && isPlayerTurn && (
+          <Button onClick={() => void tryMove(hint.uci.slice(0, 2), hint.uci.slice(2, 4))} size="sm"
+            className="flex-1 bg-[var(--primary)] text-xs font-bold text-white hover:bg-[var(--primary-hover)]"
+            disabled={thinkingRef.current}>
+            <IconCheck3D size={16} />
+            {lang === "id" ? `Mainkan Rekomendasi (${hint.san})` : `Play Recommendation (${hint.san})`}
+          </Button>
+        )}
+      </div>
+
+      {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
+      <div className="flex-1 grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-3 items-stretch min-h-0 overflow-y-auto lg:overflow-hidden pt-1">
         {/* LEFT COLUMN: Chessboard strictly anchored */}
-        <div
-          className={
-            fullscreenCoach
-              ? "flex flex-col items-center justify-between h-full min-h-0 w-full max-w-[min(96vw,calc(100dvh-135px))] mx-auto py-0.5"
-              : "space-y-2"
-          }
-        >
+        <div className="flex flex-col justify-between items-center h-full min-h-0 w-full max-w-[calc(100vh-140px)] mx-auto py-0.5 space-y-1">
           {/* Integrated Opponent Bar with Eval Badge & Captured Pieces */}
-          <div className="w-full flex items-center justify-between px-3 py-1 bg-[#1c1a18] rounded-xl border border-[#36322d] shadow-sm shrink-0 mb-1">
+          <div className="w-full flex items-center justify-between px-3 py-1 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-neutral-800 border-neutral-600" : "bg-white border-neutral-300"}`} />
               <span className="text-xs md:text-sm font-bold text-white truncate">Stockfish 15</span>
@@ -474,13 +479,7 @@ export function CoachModeView({ lang = "id" }: Props) {
           </div>
 
           {/* Chessboard: Fixed Aspect Square with key=playerSide to force board orientation rotation */}
-          <div
-            className={
-              fullscreenCoach
-                ? "rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full aspect-square max-h-[calc(100dvh-220px)] bg-[var(--board-dark)] flex items-center justify-center min-h-0"
-                : "rounded-2xl overflow-hidden border-2 border-[#36322d] shadow-2xl w-full bg-[var(--board-dark)]"
-            }
-          >
+          <div className="aspect-square h-full max-h-[calc(100vh-210px)] max-w-[calc(100vh-210px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative min-h-0">
             <Chessboard
               key={`coach-board-${boardOrientation}`}
               options={{
@@ -502,66 +501,27 @@ export function CoachModeView({ lang = "id" }: Props) {
                 boardStyle: { backgroundColor: "var(--board-dark)" },
                 darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                 lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                animationDurationInMs: 200,
               }}
             />
           </div>
 
           {/* Player Status Bar with Hint Action */}
-          <div className="w-full flex items-center justify-between px-3 py-1 bg-[#1c1a18] rounded-xl border border-[#36322d] shadow-sm shrink-0 mt-1">
+          <div className="w-full flex items-center justify-between px-3 py-1 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
             <div className="flex items-center gap-2">
               <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-white border-neutral-300" : "bg-neutral-800 border-neutral-600"}`} />
               <span className="text-xs md:text-sm font-bold text-white">Anda (Player)</span>
-              {isPlayerTurn && <span className="text-[10px] text-[#81b64c] font-black animate-pulse">Giliran</span>}
+              {isPlayerTurn && <span className="text-[10px] text-[var(--primary)] font-black animate-pulse">Giliran</span>}
             </div>
             <div className="flex items-center gap-2">
               <CapturedPiecesBar fen={fen} side={playerSide} />
-              {hint && (
-                <button
-                  onClick={() => setShowHintArrow(!showHintArrow)}
-                  className={`h-6 px-2 text-[11px] font-bold rounded-md border border-[#36322d] transition-all flex items-center gap-1 ${
-                    showHintArrow ? "bg-[#38bdf8] text-black" : "text-[#38bdf8] hover:bg-[#38bdf8]/10"
-                  }`}
-                >
-                  <IconLightbulb3D size={12} />
-                  <span>Hint</span>
-                </button>
-              )}
             </div>
           </div>
 
-          {/* Controls Bar Below Board */}
-          <div className="w-full flex gap-2 shrink-0 mt-1">
-            <Button
-              onClick={handleUndo}
-              variant="outline"
-              size="sm"
-              className="flex-1 border-[#36322d] text-neutral-300 text-sm font-bold bg-[#1c1a18] hover:bg-[#262421]"
-              disabled={history.length < 2 || thinkingRef.current}
-            >
-              ← {lang === "id" ? "Batalkan Langkah (Undo)" : "Undo Move"}
-            </Button>
-            {hint && isPlayerTurn && (
-              <Button
-                onClick={() => void tryMove(hint.uci.slice(0, 2), hint.uci.slice(2, 4))}
-                size="sm"
-                className="flex-1 bg-[#81b64c] hover:bg-[#81b64c]/80 text-white font-bold text-sm flex items-center justify-center gap-1.5"
-                disabled={thinkingRef.current}
-              >
-                <IconCheck3D size={16} />
-                <span>{lang === "id" ? `Mainkan Rekomendasi (${hint.san})` : `Play Recommendation (${hint.san})`}</span>
-              </Button>
-            )}
-          </div>
         </div>
 
         {/* RIGHT COLUMN: Real-Time Coach Guidance, Threats & Move Review */}
-        <div
-          className={
-            fullscreenCoach
-              ? "h-full overflow-y-auto pr-1 space-y-2.5 custom-scrollbar min-h-0"
-              : "space-y-3"
-          }
-        >
+        <div className="h-full overflow-y-auto pr-1 space-y-2.5 custom-scrollbar min-h-0">
           {/* REKOMENDASI LANGKAH AKTIF */}
           <Card className="bg-[#1f291e] border-2 border-[#81b64c]/60 text-white shadow-lg overflow-hidden">
             <CardHeader className="py-2.5 px-4 bg-[#81b64c]/10 border-b border-[#81b64c]/20 flex flex-row items-center justify-between">

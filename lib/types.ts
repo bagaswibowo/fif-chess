@@ -15,6 +15,8 @@ export type JevAnalysis = {
   probabilities: Record<string, number>;
   confidence: number | null;
   droppedMoveCount: number;
+  scoreCp?: number | null;
+  mate?: number | null;
 };
 
 export type JevError = {

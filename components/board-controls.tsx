@@ -9,7 +9,7 @@ export interface BoardControlsProps {
   onFlipOrientation: () => void;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
-  variant?: "toolbar" | "dock";
+  variant?: "toolbar" | "dock" | "compact";
   showShortcuts?: boolean;
   flipLabel?: string;
   fullscreenLabel?: string;
@@ -84,6 +84,37 @@ export function BoardControls({
     );
   }
 
+  if (variant === "compact") {
+    return (
+      <div className={`flex items-center gap-1 ${className}`}>
+        <button
+          type="button"
+          onClick={onFlipOrientation}
+          className="ctl ctl-sm bg-[var(--surface)] px-3 text-xs text-neutral-200"
+          title={`Putar orientasi papan (${currentSideLabel})${showShortcuts ? " [Z]" : ""}`}
+          aria-label={`Putar orientasi papan (${currentSideLabel})`}
+        >
+          <IconSwap3D size={14} />
+          <span className="hidden sm:inline">Putar Papan</span>
+          {showShortcuts && <kbd className="hidden lg:inline text-[10px]">Z</kbd>}
+        </button>
+        {onToggleFullscreen && (
+          <button
+            type="button"
+            onClick={onToggleFullscreen}
+            className={`ctl ctl-sm px-3 text-xs ${isFullscreen ? "bg-red-950/80 text-red-200" : "ctl-primary text-white"}`}
+            title={isFullscreen ? "Keluar fokus (Esc)" : `Fokus 1 layar${showShortcuts ? " [F]" : ""}`}
+            aria-label={isFullscreen ? "Keluar fokus" : "Fokus 1 layar"}
+          >
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            <span className="hidden sm:inline">{isFullscreen ? "Keluar Fokus" : "Fokus 1 Layar"}</span>
+            {showShortcuts && <kbd className="hidden lg:inline text-[10px]">{isFullscreen ? "Esc" : "F"}</kbd>}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   // variant === "toolbar" (Sleek horizontal toolbar outside the board)
   return (
     <div className={`flex items-center gap-2 px-2.5 py-2 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0 ${className}`}>
@@ -91,7 +122,7 @@ export function BoardControls({
         <button
           type="button"
           onClick={onFlipOrientation}
-          className="h-9 px-3 rounded-xl text-xs font-bold bg-[var(--surface)] hover:bg-[var(--card)] border border-[var(--border)] text-neutral-200 hover:text-white flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]"
+          className="h-10 px-3 rounded-xl text-xs font-bold bg-[var(--surface)] hover:bg-[var(--card)] border border-[var(--border)] text-neutral-200 hover:text-white flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]"
           title={`Putar Orientasi Papan (${currentSideLabel})${showShortcuts ? " [Z]" : ""}`}
           aria-label={`Putar Orientasi Papan (${currentSideLabel})`}
         >
@@ -108,7 +139,7 @@ export function BoardControls({
           <button
             type="button"
             onClick={onToggleFullscreen}
-            className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98] ${
+            className={`h-10 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98] ${
               isFullscreen
                 ? "bg-red-950/80 border border-red-500/50 text-red-200 hover:bg-red-900"
                 : "bg-[var(--primary)] text-white hover:opacity-90 border border-[var(--primary)]"

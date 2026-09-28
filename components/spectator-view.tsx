@@ -448,7 +448,7 @@ export function SpectatorView({
       className={
         fullscreenSpectator
           ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-          : "max-w-6xl mx-auto space-y-3 pb-8 px-1 md:px-0"
+          : "h-full max-h-full flex flex-col gap-2 min-h-0 overflow-hidden w-full max-w-7xl mx-auto"
       }
     >
       {showConfetti && <Confetti />}
@@ -518,10 +518,10 @@ export function SpectatorView({
       </div>
 
       {/* MAIN TWO-COLUMN ARENA LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch flex-1 min-h-0 overflow-hidden">
         
         {/* LEFT COLUMN (7 Cols): Chess Arena (Controls & Legend on TOP -> Top Player -> Board + Eval -> Bottom Player) */}
-        <div className="lg:col-span-7 space-y-2">
+        <div className="lg:col-span-7 flex flex-col justify-between h-full min-h-0 space-y-1.5">
           
           {/* 1. Unified Board Action Controls (ON TOP) */}
           <BoardControls
@@ -534,7 +534,7 @@ export function SpectatorView({
           />
 
           {/* 2. Visual Arrows Legend (ON TOP) */}
-          <div className="panel px-3 py-2 rounded-xl border border-[var(--border)] flex items-center justify-around text-xs font-bold text-neutral-300 shadow-sm" style={{ background: "var(--surface)" }}>
+          <div className="panel px-3 py-1.5 rounded-xl border border-[var(--border)] flex items-center justify-around text-xs font-bold text-neutral-300 shadow-sm shrink-0" style={{ background: "var(--surface)" }}>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300" />
               <span className="font-semibold text-neutral-300">Langkah Terkini</span>
@@ -550,7 +550,7 @@ export function SpectatorView({
           </div>
 
           {/* 3. Top Player (Black) with 1-Click Engine Selector & Captured Pieces */}
-          <div className="panel px-3 py-2 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm" style={{ background: "var(--card)" }}>
+          <div className="panel px-3 py-1.5 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm shrink-0" style={{ background: "var(--card)" }}>
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-3.5 h-3.5 rounded-full bg-neutral-900 border-2 border-neutral-600 shrink-0" />
               <select
@@ -570,7 +570,7 @@ export function SpectatorView({
           </div>
 
           {/* 4. Board Container with Sleek Vertical Dual-Bar Eval */}
-          <div className="flex gap-2.5 items-stretch">
+          <div className="flex gap-2 items-stretch justify-center w-full flex-1 min-h-0 max-h-[calc(100vh-215px)]">
             {/* Slim Vertical Dual Eval Bar: Black at top, White at bottom (responsive to orientation) */}
             <div
               className="w-3 md:w-3.5 bg-neutral-900 rounded-full overflow-hidden border border-[var(--border)] flex flex-col justify-between shrink-0 shadow-inner relative select-none"
@@ -601,7 +601,7 @@ export function SpectatorView({
             </div>
 
             {/* Chessboard */}
-            <div className="flex-1 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] aspect-square max-w-[540px] mx-auto w-full">
+            <div className="aspect-square h-full max-h-[calc(100vh-215px)] max-w-[calc(100vh-215px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative min-h-0">
               <Chessboard
                 options={{
                   id: "spectator-board",
@@ -641,11 +641,11 @@ export function SpectatorView({
         </div>
 
         {/* RIGHT COLUMN (5 Cols): Live AI Commentary & 2-Column Move History */}
-        <div className="lg:col-span-5 space-y-3">
+        <div className="lg:col-span-5 flex flex-col gap-2 h-full min-h-0 overflow-hidden">
           
           {/* LIVE AI COMMENTATOR & TACTICS CARD - Typography 12px with bold & italic */}
-          <Card className="panel border-[var(--border)] text-white shadow-xl overflow-hidden" style={{ background: "var(--card)" }}>
-            <CardHeader className="py-2.5 px-3.5 border-b border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-2" style={{ background: "var(--surface)" }}>
+          <Card className="panel border-[var(--border)] text-white shadow-xl overflow-hidden shrink-0 max-h-[38%] flex flex-col" style={{ background: "var(--card)" }}>
+            <CardHeader className="py-2 px-3.5 border-b border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 shrink-0" style={{ background: "var(--surface)" }}>
               <CardTitle className="text-xs md:text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
                 <IconBot3D size={18} className="shrink-0" />
                 <span>Komentator &amp; Taktik AI</span>
@@ -659,12 +659,12 @@ export function SpectatorView({
               )}
             </CardHeader>
 
-            <CardContent className="p-3.5 space-y-2.5 text-[12px] leading-relaxed">
+            <CardContent className="p-3 space-y-2 text-[12px] leading-relaxed overflow-y-auto flex-1 min-h-0 custom-scrollbar">
               {commentary ? (
                 <>
                   {/* Tactical Concept Explanation with Explicit Name */}
                   {commentary.tacticalBadge && (
-                    <div className="p-2.5 rounded-xl border border-amber-500/40 text-[12px] text-neutral-200 leading-relaxed" style={{ background: "var(--surface)" }}>
+                    <div className="p-2 rounded-xl border border-amber-500/40 text-[12px] text-neutral-200 leading-relaxed" style={{ background: "var(--surface)" }}>
                       <span className="font-black text-amber-400">{commentary.tacticalBadge.name}: </span>
                       <span className="italic text-neutral-300">{commentary.tacticalBadge.description}</span>
                     </div>
@@ -701,8 +701,8 @@ export function SpectatorView({
           </Card>
 
           {/* 2-COLUMN MOVE HISTORY TABLE - White Engine vs Black Engine */}
-          <Card className="panel border-[var(--border)] text-white shadow-lg overflow-hidden" style={{ background: "var(--card)" }}>
-            <CardHeader className="py-2 px-3.5 border-b border-[var(--border)] flex flex-row items-center justify-between" style={{ background: "var(--surface)" }}>
+          <Card className="panel border-[var(--border)] text-white shadow-lg overflow-hidden flex-1 min-h-0 flex flex-col" style={{ background: "var(--card)" }}>
+            <CardHeader className="py-1.5 px-3.5 border-b border-[var(--border)] flex flex-row items-center justify-between shrink-0" style={{ background: "var(--surface)" }}>
               <CardTitle className="text-xs font-black uppercase tracking-wider text-neutral-300">
                 Notasi Langkah ({moves.length})
               </CardTitle>
@@ -713,8 +713,8 @@ export function SpectatorView({
               )}
             </CardHeader>
 
-            <CardContent className="p-0">
-              <div className="h-56 overflow-y-auto font-mono text-[12px]">
+            <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
+              <div className="h-full overflow-y-auto font-mono text-[12px] custom-scrollbar">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] text-neutral-400 font-sans uppercase tracking-wider">

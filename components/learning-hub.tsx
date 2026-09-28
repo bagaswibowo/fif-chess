@@ -310,6 +310,16 @@ export function LearningHub({ lang = "id" }: Props) {
               : "rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full"
           }
         >
+          <BoardControls
+            variant="toolbar"
+            orientation={boardSide}
+            onFlipOrientation={() => setPlayAsBlack((v) => !v)}
+            isFullscreen={fullscreenQuest}
+            onToggleFullscreen={() => setFullscreenQuest((v) => !v)}
+            showShortcuts={true}
+            className="w-full shrink-0"
+          />
+
           <div
             className={
               fullscreenQuest
@@ -336,15 +346,6 @@ export function LearningHub({ lang = "id" }: Props) {
             />
           </div>
 
-          <BoardControls
-            variant="toolbar"
-            orientation={boardSide}
-            onFlipOrientation={() => setPlayAsBlack((v) => !v)}
-            isFullscreen={fullscreenQuest}
-            onToggleFullscreen={() => setFullscreenQuest((v) => !v)}
-            showShortcuts={true}
-            className="w-full mt-2"
-          />
         </div>
 
         {/* RIGHT: QUEST, HINTS & TRIK EXPLANATION */}
@@ -370,14 +371,6 @@ export function LearningHub({ lang = "id" }: Props) {
                 <IconStar3D size={14} className="shrink-0" />
                 <span>+{chapter.xp} XP</span>
               </span>
-              <button
-                className="ctl ctl-xs px-2 py-0.5 text-[10px] font-bold border border-[var(--border)] rounded-md text-neutral-300 hover:text-white"
-                onClick={() => setPlayAsBlack((v) => !v)}
-                aria-pressed={playAsBlack}
-                title="Balik orientasi papan catur"
-              >
-                {boardSide === "white" ? "Putih Bawah" : "Hitam Bawah"}
-              </button>
             </div>
           </div>
 
@@ -476,11 +469,14 @@ export function LearningHub({ lang = "id" }: Props) {
                 <button
                   className="ctl ctl-sm px-3.5 py-2 text-xs font-bold rounded-xl border border-[var(--border)] text-neutral-400 hover:text-white"
                   onClick={() => {
-                    const c = new Chess(chapter.fen);
-                    c.move({ from: from as Square, to: to as Square, promotion: chapter.solutionUci[4] || "q" });
-                    setFen(c.fen());
-                    setStatus("correct");
-                    setHint(2);
+                    try {
+                      const c = new Chess(chapter.fen);
+                      const move = c.move({ from: from as Square, to: to as Square, promotion: chapter.solutionUci[4] || "q" });
+                      if (!move || move.san !== chapter.solutionSan) return;
+                      setFen(c.fen());
+                      setStatus("correct");
+                      setHint(2);
+                    } catch {}
                   }}
                 >
                   Buka solusi

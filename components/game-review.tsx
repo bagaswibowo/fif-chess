@@ -5,7 +5,7 @@
 // 1. Blunder Detection: Menghitung delta evaluasi Stockfish (Best Move, Inaccuracy, Mistake, Blunder).
 // 2. Dual Arrows: Panah Merah untuk langkah yang dimainkan (blunder), Panah Hijau untuk saran terbaik Stockfish.
 // 3. Threat Origin Detector: Menjelaskan mengapa langkah itu blunder dan bidak mana yang terancam.
-// 4. Interactive Running Move Log dengan badge blunder visual & tombol [⏮ Blunder Prev] [⏭ Blunder Next].
+// 4. Interactive running move log dengan badge kualitas langkah dan navigasi posisi.
 // 5. Standardized Pill Tab Bar konsisten dengan UI FIF Chess.
 
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
@@ -98,6 +98,11 @@ type Props = {
 };
 
 type Engine = "stockfish" | "jev" | "fly";
+const ENGINE_LABELS: Record<Engine, string> = {
+  stockfish: "Stockfish 15 NNUE",
+  jev: "Jev System One",
+  fly: "Fruit Fly Brain",
+};
 type AiEval = {
   bestUci: string;
   bestSan: string;
@@ -141,8 +146,8 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   }, [fullscreenReview]);
   const [evalResult, setEvalResult] = useState<AiEval | null>(null);
   const [loadingEval, setLoadingEval] = useState(false);
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(1200);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed] = useState(1200);
   const cache = useRef(new Map<string, AiEval>());
 
   const sorted = useMemo(() => sortHistory(history, sortKey, dir), [history, sortKey, dir]);
@@ -178,18 +183,20 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
 
   useEffect(() => {
     setMoveIndex(0);
-    setPlaying(false);
+    setIsPlaying(false);
   }, [active?.id]);
 
   useEffect(() => {
-    if (!playing) return;
+    if (!isPlaying) return;
     if (moveIndex >= fenList.length - 1) {
-      setPlaying(false);
+      setIsPlaying(false);
       return;
     }
-    const t = setTimeout(() => setMoveIndex((i) => Math.min(i + 1, fenList.length - 1)), speed);
-    return () => clearTimeout(t);
-  }, [playing, moveIndex, fenList.length, speed]);
+    const timer = window.setTimeout(() => {
+      setMoveIndex((index) => Math.min(fenList.length - 1, index + 1));
+    }, playbackSpeed);
+    return () => window.clearTimeout(timer);
+  }, [fenList.length, isPlaying, moveIndex, playbackSpeed]);
 
   // Request engine evaluation with delta blunder analysis
   useEffect(() => {
@@ -296,16 +303,16 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   );
 
   return (
-    <div className="stack" style={{ maxWidth: "76rem", margin: "0 auto" }}>
-      <div className="row-between flex-wrap gap-2">
-        <h2 className="section-title m-0">{lang === "id" ? "Riwayat & Review Blunder" : "History & Blunder Review"}</h2>
+    <div className="h-full max-h-full flex flex-col gap-2 min-h-0 overflow-hidden w-full max-w-7xl mx-auto">
+      <div className="row-between flex-wrap gap-2 shrink-0">
+        <h2 className="section-title m-0 text-lg md:text-xl">{lang === "id" ? "Riwayat & Review Blunder" : "History & Blunder Review"}</h2>
         <button className="ctl ctl-sm font-bold" onClick={onBackToPlay}>
           {lang === "id" ? "← Kembali Bermain" : "← Back to Play"}
         </button>
       </div>
 
       {/* STANDARDIZED PILL TAB BAR (Consistent with Header) */}
-      <div className="inline-flex p-1 rounded-full bg-[var(--surface)] border border-[var(--border)] self-start gap-1" role="tablist">
+      <div className="inline-flex p-1 rounded-full bg-[var(--surface)] border border-[var(--border)] self-start gap-1 shrink-0" role="tablist">
         <button
           role="tab"
           aria-selected={tab === "list"}
@@ -333,8 +340,8 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
       </div>
 
       {tab === "list" ? (
-        <div className="panel p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-sm">
-          <div className="table-wrap">
+        <div className="panel p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-sm flex-1 min-h-0 flex flex-col">
+          <div className="table-wrap flex-1 min-h-0 overflow-y-auto custom-scrollbar">
             <table className="data-table">
               <thead>
                 <tr>
@@ -401,129 +408,89 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
             className={
               fullscreenReview
                 ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-                : "stack gap-3"
+                : "h-full min-h-0 flex flex-col gap-2 overflow-hidden"
             }
           >
-            {/* MATCH SELECTOR & ENGINE PICKER */}
-            <div className="panel p-3 row-between items-center gap-2 flex-wrap rounded-xl" style={{ background: "var(--card)" }}>
-              <div className="row items-center gap-2 min-w-0">
-                <label className="text-xs font-bold text-neutral-400" htmlFor="sel-game">
-                  Pertandingan:
-                </label>
-                <select
-                  id="sel-game"
-                  className="ctl ctl-sm text-xs font-bold truncate max-w-[260px] py-1 px-2 cursor-pointer"
-                  style={{ background: "var(--surface)" }}
-                  value={active.id}
-                  onChange={(e) => setSelectedId(e.target.value)}
-                >
-                  {sorted.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {formatWhen(g.playedAt)} · {g.opponent} ({g.winner === g.humanSide ? "Menang" : g.winner ? "Kalah" : "Remis"})
-                    </option>
-                  ))}
-                </select>
+            {/* UNIFIED REVIEW CONTROLS (Single cohesive bar, 0 redundancy) */}
+            <div className="panel px-2.5 py-1.5 rounded-xl flex items-center justify-between gap-2 flex-wrap border border-[var(--border)] shadow-sm shrink-0" style={{ background: "var(--card)" }}>
+              {/* Left: Match & Engine Selector */}
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <label className="text-xs font-bold text-neutral-400" htmlFor="sel-game">
+                    Pertandingan:
+                  </label>
+                  <select
+                    id="sel-game"
+                    className="ctl ctl-sm text-xs font-bold truncate max-w-[220px] py-1 px-2 cursor-pointer"
+                    style={{ background: "var(--surface)" }}
+                    value={active.id}
+                    onChange={(e) => setSelectedId(e.target.value)}
+                  >
+                    {sorted.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {formatWhen(g.playedAt)} · {g.opponent} ({g.winner === g.humanSide ? "Menang" : g.winner ? "Kalah" : "Remis"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-neutral-400 font-medium">Engine:</span>
+                  <select
+                    className="ctl ctl-sm text-xs font-bold py-1 px-2 cursor-pointer"
+                    style={{ background: "var(--surface)" }}
+                    value={engine}
+                    onChange={(e) => setEngine(e.target.value as Engine)}
+                    aria-label="Engine review"
+                  >
+                    <option value="stockfish">Stockfish 15 NNUE</option>
+                    <option value="jev">Jev System One</option>
+                    <option value="fly">Fruit Fly Brain</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="row items-center gap-2">
-                <span className="text-xs text-neutral-400 font-medium">Engine Review:</span>
-                <select
-                  className="ctl ctl-sm text-xs font-bold py-1 px-2 cursor-pointer"
-                  style={{ background: "var(--surface)" }}
-                  value={engine}
-                  onChange={(e) => setEngine(e.target.value as Engine)}
-                  aria-label="Engine review"
+              {/* Center: Clean Playback Navigation (Only Maju & Mundur, no redundant blunder or putar buttons) */}
+              <div className="flex items-center gap-2">
+                <button
+                  className={`ctl ctl-sm font-bold px-3 py-1.5 rounded-lg border transition-colors ${isPlaying ? "bg-[var(--primary)] border-[var(--primary)] text-white shadow-sm" : "border-[var(--border)] text-neutral-200 hover:text-white hover:bg-[var(--surface)]"}`}
+                  onClick={() => {
+                    if (moveIndex >= fenList.length - 1) setMoveIndex(0);
+                    setIsPlaying((playing) => !playing);
+                  }}
+                  disabled={fenList.length <= 1}
+                  title={isPlaying ? "Jeda pemutaran" : "Putar otomatis"}
                 >
-                  <option value="stockfish">Stockfish 15 NNUE (Rekomendasi)</option>
-                  <option value="jev">Jev System One</option>
-                  <option value="fly">Fruit Fly Brain</option>
-                </select>
-              </div>
-            </div>
+                  {isPlaying ? "Jeda" : "Putar"}
+                </button>
 
-            {/* PLAYBACK CONTROLS */}
-            <div className="panel px-3 py-2 row-between items-center gap-2 flex-wrap rounded-xl" style={{ background: "var(--card)" }}>
-              <div className="row items-center gap-1.5 flex-wrap">
                 <button
-                  className="ctl ctl-sm font-bold"
-                  onClick={() => { setPlaying((p) => !p); if (moveIndex >= fenList.length - 1) setMoveIndex(0); }}
-                >
-                  {playing ? "Jeda" : "Putar"}
-                </button>
-                <button
-                  className="ctl ctl-sm"
-                  onClick={() => { setPlaying(false); setMoveIndex(0); }}
+                  className="ctl ctl-sm font-bold px-3 py-1.5 rounded-lg border border-[var(--border)] text-neutral-200 hover:text-white hover:bg-[var(--surface)] disabled:opacity-40"
+                  onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.max(0, i - 1)); }}
                   disabled={moveIndex === 0}
-                >
-                  Awal
-                </button>
-                <button
-                  className="ctl ctl-sm"
-                  onClick={() => { setPlaying(false); setMoveIndex((i) => Math.max(0, i - 1)); }}
-                  disabled={moveIndex === 0}
+                  title="Langkah Sebelumnya (Mundur) [←]"
                 >
                   ← Mundur
                 </button>
-                <button
-                  className="ctl ctl-sm font-bold bg-[var(--primary)] text-white hover:brightness-110"
-                  onClick={() => { setPlaying(false); setMoveIndex((i) => Math.min(fenList.length - 1, i + 1)); }}
-                  disabled={moveIndex >= fenList.length - 1}
-                >
-                  Maju →
-                </button>
-                <button
-                  className="ctl ctl-sm text-xs font-bold border-amber-500/40 text-amber-300 hover:bg-amber-950/30"
-                  onClick={() => {
-                    setPlaying(false);
-                    // Jump to previous tactical moment or capture/check
-                    for (let i = moveIndex - 2; i >= 0; i--) {
-                      const m = played[i];
-                      if (m && (m.san.includes("x") || m.san.includes("+") || m.san.includes("#"))) {
-                        setMoveIndex(i + 1);
-                        return;
-                      }
-                    }
-                    setMoveIndex(0);
-                  }}
-                  disabled={moveIndex <= 1}
-                  title="Lompat ke Momen Kritis/Taktis Sebelumnya"
-                >
-                  Blunder Prev
-                </button>
-                <button
-                  className="ctl ctl-sm text-xs font-bold border-amber-500/40 text-amber-300 hover:bg-amber-950/30"
-                  onClick={() => {
-                    setPlaying(false);
-                    // Jump to next tactical moment or capture/check
-                    for (let i = moveIndex; i < played.length; i++) {
-                      const m = played[i];
-                      if (m && (m.san.includes("x") || m.san.includes("+") || m.san.includes("#"))) {
-                        setMoveIndex(i + 1);
-                        return;
-                      }
-                    }
-                    setMoveIndex(fenList.length - 1);
-                  }}
-                  disabled={moveIndex >= fenList.length - 1}
-                  title="Lompat ke Momen Kritis/Taktis Berikutnya"
-                >
-                  Blunder Next
-                </button>
-              </div>
 
-              <div className="row items-center gap-2 shrink-0">
-                <button
-                  className="ctl ctl-xs font-mono text-[11px]"
-                  onClick={() => setSpeed((s) => (s === 1200 ? 600 : s === 600 ? 2000 : 1200))}
-                >
-                  Speed: {speed === 2000 ? "0.5x" : speed === 600 ? "1.5x" : "1.0x"}
-                </button>
-                <span className="font-mono text-xs font-bold text-neutral-300 px-2.5 py-1 rounded bg-[var(--surface)] border border-[var(--border)]">
+                <span className="font-mono text-xs font-bold text-neutral-200 px-3 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] shrink-0">
                   Langkah {moveIndex} / {active.moves.length}
                 </span>
 
+                <button
+                  className="ctl ctl-sm font-bold px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white hover:brightness-110 disabled:opacity-40"
+                  onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.min(fenList.length - 1, i + 1)); }}
+                  disabled={moveIndex >= fenList.length - 1}
+                  title="Langkah Berikutnya (Maju) [→]"
+                >
+                  Maju →
+                </button>
+              </div>
+
+              {/* Right: Symmetrical Board Controls */}
+                  <div className="flex items-center gap-2 shrink-0">
                 <BoardControls
-                  variant="toolbar"
+                  variant="compact"
                   orientation={active ? (flipOrientation ? (active.humanSide === "white" ? "black" : "white") : active.humanSide) : "white"}
                   onFlipOrientation={() => setFlipOrientation((v) => !v)}
                   isFullscreen={fullscreenReview}
@@ -537,9 +504,9 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
             {/* REVIEW BOARD + BLUNDER & THREAT ANALYSIS PANEL */}
             <div
               className={
-                fullscreenReview
+                  fullscreenReview
                   ? "flex-1 grid grid-cols-1 lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_430px] gap-3 items-stretch min-h-0 overflow-hidden w-full pt-1"
-                  : "grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start w-full"
+                  : "flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-2 w-full overflow-y-auto"
               }
             >
               
@@ -548,7 +515,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 className={
                   fullscreenReview
                     ? "flex flex-col items-center justify-between h-full min-h-0 w-full max-w-[min(96vw,calc(100dvh-140px))] mx-auto py-0.5 panel p-3 rounded-2xl"
-                    : "panel p-3 stack-tight items-center rounded-2xl"
+                    : "panel p-2 flex flex-col items-center min-h-0 rounded-xl overflow-visible"
                 }
                 style={{ background: "var(--card)" }}
               >
@@ -556,7 +523,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   className={
                     fullscreenReview
                       ? "w-full aspect-square max-h-[calc(100dvh-200px)] rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] flex items-center justify-center min-h-0"
-                      : "w-full max-w-[min(90vw,54vh)] aspect-square rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]"
+                      : "w-full max-w-[min(78dvh,calc(100dvh-18rem),760px)] aspect-square shrink-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]"
                   }
                 >
                   <Chessboard
@@ -590,14 +557,14 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   />
                 </div>
 
-                <div className="row-between w-full pt-2 text-xs">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center gap-3 flex-wrap w-full pt-1.5 text-[10px]">
+                  <div className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
-                    <span className="text-neutral-300">Merah: Langkah yang Anda buat</span>
+                    <span className="text-neutral-300">Langkah dimainkan</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />
-                    <span className="text-emerald-400 font-bold">Hijau: Rekomendasi Stockfish</span>
+                    <span className="text-emerald-400 font-bold">Saran {ENGINE_LABELS[engine]}</span>
                   </div>
                 </div>
               </div>
@@ -607,7 +574,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 className={
                   fullscreenReview
                     ? "h-full overflow-y-auto pr-1 space-y-2.5 custom-scrollbar min-h-0 stack gap-2.5"
-                    : "stack gap-3"
+                    : "h-full min-h-0 overflow-y-auto pr-0.5 custom-scrollbar stack gap-2"
                 }
               >
                 
@@ -632,7 +599,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                       </div>
                     </div>
                     <div className="p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/40">
-                      <div className="text-[10px] text-emerald-300 uppercase font-medium">Saran Stockfish:</div>
+                      <div className="text-[10px] text-emerald-300 uppercase font-medium">Saran {ENGINE_LABELS[engine]}:</div>
                       <div className="font-mono font-black text-base text-emerald-400 pt-0.5">
                         {loadingEval ? "Menganalisis..." : (evalResult?.bestSan ?? "—")}
                       </div>
@@ -681,7 +648,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                           <button
                             key={idx}
                             type="button"
-                            onClick={() => { setPlaying(false); setMoveIndex(idx + 1); }}
+                            onClick={() => { setIsPlaying(false); setMoveIndex(idx + 1); }}
                             className={`px-2 py-1 rounded text-left flex items-center justify-between transition-all cursor-pointer ${
                               isCurrent
                                 ? "bg-[var(--primary)] text-white font-black shadow"
