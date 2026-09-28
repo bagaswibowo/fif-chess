@@ -22,6 +22,7 @@ import { ScanView } from "@/components/scan-view";
 import { CommunityView } from "@/components/community-view";
 import { GameReview } from "@/components/game-review";
 import { AuthPanel } from "@/components/auth-panel";
+import { AuthModal } from "@/components/auth-modal";
 import { AdminPanel } from "@/components/admin-panel";
 import { PvpPanel, type PvpRoom } from "@/components/pvp-panel";
 import { ClockMovesFullscreen } from "@/components/clock-moves-fullscreen";
@@ -889,13 +890,30 @@ export function Game() {
               Semua menu dan arena bermain terkunci. Silakan Masuk atau Daftarkan Akun Anda terlebih dahulu untuk membuka seluruh fitur.
             </p>
             <div className="w-full text-left">
-              <AuthPanel
+              <AuthModal
                 user={currentUser}
-                onClose={() => {}}
                 onLogin={login}
                 onRegister={register}
                 onLogout={logout}
+                open={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+                defaultMode="register"
               />
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="w-full h-11 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:translate-y-[1px] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                Daftar Akun Baru
+              </button>
+              <p className="text-center text-xs text-neutral-400 mt-3">
+                Sudah punya akun?{" "}
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-[var(--primary)] font-bold hover:underline cursor-pointer"
+                >
+                  Masuk di sini
+                </button>
+              </p>
             </div>
           </div>
         ) : (<>
@@ -1617,22 +1635,14 @@ export function Game() {
         }}
         onLogout={logout}
       />
-{showAuthModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowAuthModal(false);
-          }}
-        >
-          <AuthPanel
-            user={currentUser}
-            onClose={() => setShowAuthModal(false)}
-            onLogin={login}
-            onRegister={register}
-            onLogout={logout}
-          />
-        </div>
-      )}
+<AuthModal
+        user={currentUser}
+        onLogin={login}
+        onRegister={register}
+        onLogout={logout}
+        open={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
 
       <GameOverModal
         outcome={effectiveOutcome}

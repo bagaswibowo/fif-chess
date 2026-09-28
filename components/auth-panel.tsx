@@ -10,12 +10,13 @@ type Props = {
   onRegister: (username: string, password: string, fullName: string, role: string) => Promise<any>;
   onLogout: () => Promise<void>;
   onClose: () => void;
+  defaultMode?: "login" | "register";
 };
 
 type Mode = "login" | "register";
 
-export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose }: Props) {
-  const [mode, setMode] = useState<Mode>("login");
+export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaultMode = "login" }: Props) {
+  const [mode, setMode] = useState<Mode>(defaultMode);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
