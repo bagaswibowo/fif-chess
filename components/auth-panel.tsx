@@ -159,7 +159,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
     if (inline) {
       return (
         <div className="w-full max-w-[720px] mx-auto">
-          <div className="space-y-2.5 text-white">{profileContent}</div>
+          <div className="space-y-3 text-white">{profileContent}</div>
         </div>
       );
     }
@@ -250,7 +250,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
             required
           />
           {mode === "register" && (
-            <span className="block text-[10px] text-neutral-400 mt-0.5">
+            <span className="block text-xs text-neutral-400 mt-0.5">
               3-20 karakter, huruf kecil, angka, atau garis bawah.
             </span>
           )}
@@ -316,7 +316,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-[11px] text-[var(--primary)] hover:underline cursor-pointer"
+              className="text-xs text-[var(--primary)] hover:underline cursor-pointer"
             >
               {showPassword ? "Sembunyikan" : "Lihat Sandi"}
             </button>
@@ -389,7 +389,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
 
         {/* Submit Button */}
         <button
-          className="w-full h-10 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:translate-y-[1px] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full h-11 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:translate-y-[1px] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           type="submit"
           disabled={busy}
         >
@@ -407,7 +407,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
       </form>
 
       {/* Info Footnote */}
-      <div className="pt-1 border-t border-[var(--border)] text-[10px] text-neutral-400 space-y-0.5 text-center">
+      <div className="pt-1 border-t border-[var(--border)] text-xs text-neutral-400 space-y-0.5 text-center">
         {mode === "login" ? (
           <p>
             Belum punya akun?{" "}
@@ -433,8 +433,10 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
 
   if (inline) {
     return (
-        <div className="w-full max-w-[720px] mx-auto">
-          <div className="space-y-2.5 text-white">{formContent}</div>
+      <div className="w-full max-w-[720px] mx-auto">
+        <div className="space-y-3 text-white">{formContent}</div>
+      </div>
+    );
   }
 
   return (
