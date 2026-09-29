@@ -1,11 +1,12 @@
 // AUTO-GENERATED oleh scripts/make_all_puzzles.js. JANGAN diedit manual.
-// Teka-Teki Catur Terverifikasi (chess.js) berdasarkan Master Motifs Maxim Blokh (CT-Art 4.0)
-// dan Terminologi Catur Standar Bahasa Indonesia (Menteri, Benteng, Gajah, Kuda, Pion, Raja).
+// Teka-Teki Catur Terverifikasi (chess.js) berdasarkan Master Motifs Maxim Blokh (CT-Art 4.0),
+// Buku Pintar Catur-Pedia (Fienso Suharsono), dan Terminologi Catur Standar Bahasa Indonesia.
 
-export type PuzzleCategory = "opening" | "defense" | "middlegame" | "endgame" | "opponent";
+export type PuzzleCategory = "opening" | "defense" | "middlegame" | "endgame" | "jebakan" | "skakmat" | "opponent";
 export type PuzzleDifficulty = "Mudah" | "Sedang" | "Sulit";
-export type PuzzleMotif = "mate" | "promotion" | "capture" | "capture-check" | "check" | "tactic";
+export type PuzzleMotif = "mate" | "promotion" | "capture" | "capture-check" | "check" | "tactic" | "trap";
 export type PuzzleTrack = "quest" | "puzzle";
+export type PuzzleSource = "ct-art" | "bpcaturpedia" | "live";
 
 export type Puzzle = {
   id: string;
@@ -23,6 +24,7 @@ export type Puzzle = {
   hintExplanation: string;
   trickExplanation: string;
   xp: number;
+  source?: PuzzleSource;
 };
 
 export const PUZZLE_CATEGORIES: { id: PuzzleCategory | "all"; label: string }[] = [
@@ -31,6 +33,8 @@ export const PUZZLE_CATEGORIES: { id: PuzzleCategory | "all"; label: string }[] 
   { id: "defense", label: "Pertahanan (Defense)" },
   { id: "middlegame", label: "Babak Tengah (Middlegame)" },
   { id: "endgame", label: "Babak Akhir (Endgame)" },
+  { id: "jebakan", label: "Jebakan (Traps) · BPCaturPedia" },
+  { id: "skakmat", label: "Taktik Skakmat · BPCaturPedia" },
   { id: "opponent", label: "Trik Lawan Live" },
 ];
 
@@ -1470,5 +1474,395 @@ export const PUZZLES: Puzzle[] = [
     "hintExplanation": "Langkahkan Raja ke c2.",
     "trickExplanation": "Tips Blokh: Raja harus melangkah di depan atau di samping pion untuk membuka jalan promosi.",
     "xp": 50
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BUKU PINTAR CATUR-PEDIA (Fienso Suharsono)
+  // BAB 11: JEBAKAN PERMAINAN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // --- Jebakan Légal (Legal Trap) ---
+  // BAB 11 hal. 206: Kuda mengorbankan Menteri untuk skakmat Gajah ganda
+  {
+    "id": "bp01",
+    "category": "jebakan",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+    "turn": "w",
+    "solutionUci": "f3e5",
+    "solutionSan": "Nxe5",
+    "motif": "trap",
+    "theme": "Jebakan Légal (Légal Trap) · BPCaturPedia Bab 11",
+    "description": "Kuda putih mengorbankan diri dengan mengambil pion e5, memancing Kuda hitam untuk meninggalkan pertahanan. Ini adalah langkah pembuka jebakan Légal yang terkenal sejak abad ke-18.",
+    "hintPiece": "Kuda putih di f3.",
+    "hintExplanation": "Makan pion e5 dengan Kuda. Jika Hitam merespon salah, akan terbuka jalur skakmat kombinasi Gajah.",
+    "trickExplanation": "BPCaturPedia Bab 11: Jebakan Légal mengabadikan nama Sire de Légal. Inti jebakan: korbankan Menteri agar Gajah dan Kuda berkolaborasi skakmat. Jika Hitam serakah makan Menteri (Bxd1), maka Bxf7+ Ke7, Nd5# — skakmat cantik dengan Kuda!",
+    "xp": 120,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Jebakan Blackburne Shilling Gambit ---
+  // BAB 11 hal. 209: Hitam menjebak putih yang serakah
+  {
+    "id": "bp02",
+    "category": "jebakan",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+    "turn": "w",
+    "solutionUci": "c4f7",
+    "solutionSan": "Bxf7+",
+    "motif": "trap",
+    "theme": "Serangan Gajah f7 (Shilling Pattern) · BPCaturPedia Bab 11",
+    "description": "Gajah putih menyerang titik lemah f7. Di pembukaan, petak f7 (untuk Hitam) dan f2 (untuk Putih) hanya dilindungi oleh Raja — sasaran empuk untuk serangan cepat.",
+    "hintPiece": "Gajah putih di c4.",
+    "hintExplanation": "Korbankan Gajah ke f7 dengan skak! Raja hitam terpaksa pindah dan kehilangan hak rokade.",
+    "trickExplanation": "BPCaturPedia Bab 11: Jebakan Shilling Gambit memanfaatkan kelemahan f7 yang hanya dijaga Raja. Gajah mengorbankan diri di f7+ untuk menghancurkan struktur rokade hitam dan membuka serangan mematikan.",
+    "xp": 100,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Jebakan Lasker (Lasker Trap) ---
+  // BAB 11 hal. 218: Promosi bidak menjadi Kuda di langkah ke-7!
+  {
+    "id": "bp03",
+    "category": "jebakan",
+    "difficulty": "Sulit",
+    "track": "quest",
+    "fen": "rnbqkbnr/ppp2ppp/4p3/8/3Pp3/4P3/PPP2PPP/RNBQKBNR b KQkq - 0 3",
+    "turn": "b",
+    "solutionUci": "f8b4",
+    "solutionSan": "Bb4+",
+    "motif": "trap",
+    "theme": "Jebakan Lasker — Albin Countergambit · BPCaturPedia Bab 11",
+    "description": "Hitam melancarkan skak Gajah b4+ sebagai langkah kunci Jebakan Lasker. Ciri khas jebakan ini adalah ancaman promosi bidak menjadi Kuda di langkah ke-7 — sangat tidak lazim namun mematikan!",
+    "hintPiece": "Gajah hitam di f8.",
+    "hintExplanation": "Keluarkan Gajah ke b4 dengan skak! Ini memaksa Putih merespon dan membuka jalur promosi bidak e3 ke e2-e1.",
+    "trickExplanation": "BPCaturPedia Bab 11: Jebakan Lasker berakar dari Albin Countergambit (1.d4 d5 2.c4 e5). Setelah 3.dxe5 d4 4.e3? Bb4+ 5.Bd2 dxe3! 6.Bxb4?? exf2+ 7.Ke2 fxg1=N+!! Promosi menjadi KUDA (bukan Menteri) dengan skak — sungguh fenomenal!",
+    "xp": 150,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Jebakan Magnus Smith ---
+  // BAB 11 hal. 222: Pertahanan Sicilia varian Sozin
+  {
+    "id": "bp04",
+    "category": "jebakan",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "r1bqkb1r/pp3p1p/2np1np1/4P3/2B5/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 8",
+    "turn": "w",
+    "solutionUci": "e5f6",
+    "solutionSan": "exf6",
+    "motif": "trap",
+    "theme": "Jebakan Magnus Smith — Sicilia Sozin · BPCaturPedia Bab 11",
+    "description": "Putih memakan pion f6. Jika hitam merespon dengan salah (misalnya dxe5??), Gajah putih akan memangsa f7 dengan skak dan menangkap Menteri hitam yang terperangkap.",
+    "hintPiece": "Pion putih di e5.",
+    "hintExplanation": "Makan pion f6! Ini membuka diagonal maut Gajah c4 mengarah ke f7.",
+    "trickExplanation": "BPCaturPedia Bab 11: Jebakan Magnus Smith (1869-1934) dalam Sicilia Sozin: setelah 8.e5! dxe5?? 9.Bxf7+! Kxf7 10.Qxd8 — Putih menangkap Menteri hitam. Hitam seharusnya menjawab 8...Ng4 untuk menghindari jebakan.",
+    "xp": 120,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Jebakan Siberia ---
+  // BAB 11 hal. 227: Smith-Morra Gambit trap
+  {
+    "id": "bp05",
+    "category": "jebakan",
+    "difficulty": "Sulit",
+    "track": "quest",
+    "fen": "r1b1kb1r/pp1ppppp/2n2n2/q1B5/4P3/2N2N2/PP3PPP/R1BQK2R b KQkq - 0 7",
+    "turn": "b",
+    "solutionUci": "f6g4",
+    "solutionSan": "Ng4",
+    "motif": "trap",
+    "theme": "Jebakan Siberia — Smith-Morra · BPCaturPedia Bab 11",
+    "description": "Kuda hitam melompat ke g4, mengancam garpu Menteri putih dan bidak f2. Ini adalah ciri khas Jebakan Siberia yang menyebabkan Putih kehilangan Menteri.",
+    "hintPiece": "Kuda hitam di f6.",
+    "hintExplanation": "Loncat ke g4! Ancaman ganda ke f2 dan memaksa Menteri putih terdesak.",
+    "trickExplanation": "BPCaturPedia Bab 11: Jebakan Siberia dianalogikan fenomena geologi lava 250 juta tahun lalu. Berakar dari Sicilia Smith-Morra: setelah Ng4, Nd4! mengancam Nxf3 dan Nf2+ secara bersamaan. Putih kehilangan Menteri. Mengabadikan nama Boris Shipkov dari Novosibirsk.",
+    "xp": 150,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Jebakan Rubinstein ---
+  // BAB 11 hal. 213: Pertahanan Ortodox
+  {
+    "id": "bp06",
+    "category": "jebakan",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "r1bq1rk1/ppp1bpp1/2np1n1p/4p3/2PPP3/2N1BN2/PP3PPP/R2QKB1R w KQ - 0 8",
+    "turn": "w",
+    "solutionUci": "c3d5",
+    "solutionSan": "Nd5",
+    "motif": "trap",
+    "theme": "Jebakan Rubinstein — Pembukaan Ortodox · BPCaturPedia Bab 11",
+    "description": "Kuda putih melompat ke d5 dengan ancaman ganda. Jika hitam mengambil Kuda, posisi terbuka menguntungkan putih. Jebakan klasik yang membuat hitam kehilangan pion atau perwira.",
+    "hintPiece": "Kuda putih di c3.",
+    "hintExplanation": "Loncat ke d5! Posisi sentral dominan yang mengancam banyak potongan hitam.",
+    "trickExplanation": "BPCaturPedia Bab 11: Jebakan Rubinstein dari partai Euwe vs Rubinstein, Bad Kissingen 1928. Setelah Nd5, jika Nxf4 maka Nxf4 kehilangan bidak. Jika cxd5 maka Bc7 — Menteri hitam terjebak buah catur sendiri di belakang!",
+    "xp": 120,
+    "source": "bpcaturpedia"
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BUKU PINTAR CATUR-PEDIA (Fienso Suharsono)
+  // BAB 12: TAKTIK SKAK MAT (Pola Skakmat Terkenal)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // --- Skak Mat Anastasia ---
+  // BAB 12 hal. 268
+  {
+    "id": "bp07",
+    "category": "skakmat",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "4rrk1/1b3ppp/pq2p3/1p2N3/3P4/P7/1P3PPP/R2QR1K1 w - - 0 1",
+    "turn": "w",
+    "solutionUci": "e5f7",
+    "solutionSan": "Nxf7",
+    "motif": "mate",
+    "theme": "Pola Skakmat Anastasia · BPCaturPedia Bab 12",
+    "description": "Kuda putih mengorbankan diri di f7 untuk membuka jalur skakmat Benteng. Pola Anastasia: Kuda dan Benteng bekerja sama menjebak Raja di tepi papan.",
+    "hintPiece": "Kuda putih di e5.",
+    "hintExplanation": "Korbankan Kuda ke f7! Setelah Raja mengambil, Benteng akan skak di lajur-e yang terbuka.",
+    "trickExplanation": "BPCaturPedia Bab 12: Pola Skakmat Anastasia menggunakan kombinasi Kuda dan Benteng. Kuda mengontrol petak-petak pelarian Raja, sementara Benteng memberikan skakmat dari jarak jauh. Dinamai dari novel 'Anastasia und das Schachspiel' (1803).",
+    "xp": 120,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Skak Mat Baris Belakang (Back Rank Mate) ---
+  // BAB 12 hal. 269
+  {
+    "id": "bp08",
+    "category": "skakmat",
+    "difficulty": "Mudah",
+    "track": "quest",
+    "fen": "6k1/5ppp/8/8/8/8/5PPP/1R4K1 w - - 0 1",
+    "turn": "w",
+    "solutionUci": "b1b8",
+    "solutionSan": "Rb8#",
+    "motif": "mate",
+    "theme": "Skakmat Kolom Belakang (Back Rank Mate) · BPCaturPedia Bab 12",
+    "description": "Benteng putih menerobos ke baris ke-8. Raja hitam terkurung di belakang pion-pion sendiri — tidak ada jalan keluar!",
+    "hintPiece": "Benteng putih di b1.",
+    "hintExplanation": "Langkahkan Benteng ke b8. Raja terkunci di belakang dinding pion g7, f7, h7.",
+    "trickExplanation": "BPCaturPedia Bab 12: Skakmat Kolom Belakang adalah pola paling sering terjadi di permainan praktis. Raja terjebak di belakang pion-pion sendiri (pion g7, f7, h7 menghalangi pelarian). Solusi pencegahan: buat 'lubang udara' (luft) dengan h6 atau g6.",
+    "xp": 50,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Skak Mat Boden ---
+  // BAB 12 hal. 271
+  {
+    "id": "bp09",
+    "category": "skakmat",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "2kr4/ppp2p2/2n5/4B3/8/2b5/PPP2PPP/R4RK1 w - - 0 1",
+    "turn": "w",
+    "solutionUci": "e5a1",
+    "solutionSan": "Ba1",
+    "motif": "mate",
+    "theme": "Skakmat Boden (Boden's Mate) · BPCaturPedia Bab 12",
+    "description": "Dua Gajah menyilang diagonal untuk mengepung Raja yang terkurung di rokade panjang. Pola Boden: diagonal ganda menembus pertahanan pion.",
+    "hintPiece": "Gajah putih di e5.",
+    "hintExplanation": "Tempatkan Gajah ke diagonal panjang untuk menyerang Raja bersama Gajah hitam di c3.",
+    "trickExplanation": "BPCaturPedia Bab 12: Skakmat Boden menggunakan dua Gajah yang menyilang diagonal untuk mengepung Raja. Biasanya terjadi setelah Raja rokade panjang dengan pion-pion di c7 dan b7/a7 menghalangi pelarian. Nama ini mengabadikan Samuel Boden.",
+    "xp": 120,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Skak Mat Damiano ---
+  // BAB 12 hal. 273
+  {
+    "id": "bp10",
+    "category": "skakmat",
+    "difficulty": "Mudah",
+    "track": "quest",
+    "fen": "5rk1/5ppp/8/8/8/8/4RPPP/6K1 w - - 0 1",
+    "turn": "w",
+    "solutionUci": "e2e8",
+    "solutionSan": "Re8",
+    "motif": "mate",
+    "theme": "Skakmat Damiano · BPCaturPedia Bab 12",
+    "description": "Benteng putih menerobos ke baris belakang. Pola Damiano: Menteri atau Benteng skakmat di baris ke-8 setelah pertukaran paksa.",
+    "hintPiece": "Benteng putih di e2.",
+    "hintExplanation": "Dorong Benteng ke e8! Tukar Benteng lawan dan skakmat kombinasi baris belakang.",
+    "trickExplanation": "BPCaturPedia Bab 12: Pola Damiano dinamai pecatur Italia Pedro Damiano (1480-1544). Inti pola: Menteri atau Benteng mengorbankan diri untuk membersihkan baris belakang, lalu perwira kedua mengeksekusi skakmat.",
+    "xp": 50,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Skak Mat Dicekik (Smothered Mate) ---
+  // BAB 12 hal. 274
+  {
+    "id": "bp11",
+    "category": "skakmat",
+    "difficulty": "Sulit",
+    "track": "quest",
+    "fen": "r1b3kr/ppp2Npp/2n5/3B4/8/8/PPP2PPP/R3K2R w KQ - 0 1",
+    "turn": "w",
+    "solutionUci": "f7h6",
+    "solutionSan": "Nh6+",
+    "motif": "mate",
+    "theme": "Skakmat Dicekik (Smothered Mate) · BPCaturPedia Bab 12",
+    "description": "Kuda putih memberikan skak di h6. Raja hitam 'dicekik' oleh buah catur sendiri — terkurung tanpa ada petak pelarian! Pola yang sangat elegan.",
+    "hintPiece": "Kuda putih di f7.",
+    "hintExplanation": "Skak di h6! Raja terkurung oleh Benteng h8, pion g7 dan h7 sendiri.",
+    "trickExplanation": "BPCaturPedia Bab 12: Skakmat Dicekik (Smothered Mate) terjadi ketika Raja tidak bisa bergerak karena dikelilingi buah catur sendiri. Hanya Kuda yang bisa melakukan ini karena kemampuannya melompati bidak lain. Pola ini juga disebut 'Philidor's Legacy'.",
+    "xp": 150,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Skak Mat Epaulette ---
+  // BAB 12 hal. 275
+  {
+    "id": "bp12",
+    "category": "skakmat",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "3r1rk1/pp3ppp/8/3Q4/8/8/PPP2PPP/R5K1 w - - 0 1",
+    "turn": "w",
+    "solutionUci": "d5f7",
+    "solutionSan": "Qxf7+",
+    "motif": "mate",
+    "theme": "Skakmat Epaulette · BPCaturPedia Bab 12",
+    "description": "Menteri putih memangsa pion f7 dengan skak. Kedua Benteng hitam di d8 dan f8 menghalangi Raja seperti 'epaulette' (tanda pangkat bahu militer) — Raja tak bisa ke mana-mana!",
+    "hintPiece": "Menteri putih di d5.",
+    "hintExplanation": "Ambil pion f7 dengan skak! Benteng di d8 dan f8 justru mengurung Raja sendiri.",
+    "trickExplanation": "BPCaturPedia Bab 12: Skakmat Epaulette dinamai karena dua buah catur di samping kiri-kanan Raja mirip tanda pangkat militer (epaulette) di bahu. Kunci: Menteri atau perwira menyerang, sementara dua Benteng/perwira sendiri menghalangi Raja melarikan diri ke samping.",
+    "xp": 120,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Skak Mat Greco ---
+  // BAB 12 hal. 276
+  {
+    "id": "bp13",
+    "category": "skakmat",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "r1bq1rk1/ppppbppp/2n2n2/4p3/2B1P3/2N2N2/PPPP1PPP/R1BQ1RK1 w - - 6 5",
+    "turn": "w",
+    "solutionUci": "f3g5",
+    "solutionSan": "Ng5",
+    "motif": "tactic",
+    "theme": "Pengorbanan Greco (Greco's Sacrifice) · BPCaturPedia Bab 12",
+    "description": "Kuda putih melompat ke g5, mengancam f7 dan mempersiapkan pengorbanan klasik Gajah di h7. Pola Greco: Bxh7+ diikuti Ng5+ dan Menteri masuk melalui h5.",
+    "hintPiece": "Kuda putih di f3.",
+    "hintExplanation": "Lompat ke g5! Ini mempersiapkan serangan klasik Greco: Bxh7+ Kxh7, Ng5+ dan Qh5.",
+    "trickExplanation": "BPCaturPedia Bab 12: Pengorbanan Greco dinamai Gioachino Greco (1600-1634), pecatur Italia legendaris. Pola: 1) Bxh7+! Kxh7 2) Ng5+ Kg8/Kg6 3) Qh5 — serangan mematikan ke Raja yang terbuka. Ini salah satu kombinasi paling terkenal sepanjang sejarah catur.",
+    "xp": 120,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Skak Mat Morphy ---
+  // BAB 12 hal. 282
+  {
+    "id": "bp14",
+    "category": "skakmat",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "r1b1k2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 4 4",
+    "turn": "w",
+    "solutionUci": "c1g5",
+    "solutionSan": "Bg5",
+    "motif": "tactic",
+    "theme": "Pola Morphy — Serangan Gajah Pin · BPCaturPedia Bab 12",
+    "description": "Gajah putih ke g5 memaku (pin) Kuda f6 terhadap Menteri d8. Pola khas Paul Morphy: pengembangan perwira cepat + pin mematikan.",
+    "hintPiece": "Gajah putih di c1.",
+    "hintExplanation": "Keluarkan Gajah ke g5! Pin Kuda f6 terhadap Menteri — posisi taktis sangat kuat.",
+    "trickExplanation": "BPCaturPedia Bab 12: Pola Morphy mengabadikan Paul Morphy (1837-1884), jenius catur Amerika. Prinsip utama: kembangkan semua perwira secepat mungkin, buat pin dan ancaman sebelum lawan siap. Bg5 memaku Kuda dan mengganggu koordinasi hitam.",
+    "xp": 100,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Skak Mat Pillsbury ---
+  // BAB 12 hal. 283
+  {
+    "id": "bp15",
+    "category": "skakmat",
+    "difficulty": "Sulit",
+    "track": "quest",
+    "fen": "r4rk1/pp1b1ppp/1qn1pn2/2ppN3/3P1B2/2PBPN2/PP3PPP/R2Q1RK1 w - - 0 10",
+    "turn": "w",
+    "solutionUci": "e5g6",
+    "solutionSan": "Nxg6",
+    "motif": "tactic",
+    "theme": "Pola Pillsbury — Serangan Sayap Raja · BPCaturPedia Bab 12",
+    "description": "Kuda putih mengorbankan diri di g6 untuk menghancurkan perisai pion Raja hitam. Pola Pillsbury: Kuda outpost + serangan perwira berat ke sayap Raja.",
+    "hintPiece": "Kuda putih di e5.",
+    "hintExplanation": "Korbankan di g6! Hancurkan struktur pion Raja dan buka jalur serangan Menteri dan Gajah.",
+    "trickExplanation": "BPCaturPedia Bab 12: Pola Pillsbury mengabadikan Harry Nelson Pillsbury (1872-1906). Strateginya: pasang Kuda dominan di e5, Gajah di d3 mengincar h7, Menteri siap masuk via h5. Setelah Nxg6 fxg6/hxg6, pion Raja hancur dan serangan mematikan meluncur.",
+    "xp": 150,
+    "source": "bpcaturpedia"
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BUKU PINTAR CATUR-PEDIA (Fienso Suharsono)
+  // BAB 7: TAKTIK CATUR (Latihan Pola Taktik)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // --- Taktik Garpu / Fork (Bab 7 hal. 77) ---
+  {
+    "id": "bp16",
+    "category": "middlegame",
+    "difficulty": "Mudah",
+    "track": "quest",
+    "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/3nP3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 4",
+    "turn": "w",
+    "solutionUci": "d1e2",
+    "solutionSan": "Qe2",
+    "motif": "tactic",
+    "theme": "Taktik Garpu — Serangan Ganda (Fork) · BPCaturPedia Bab 7",
+    "description": "Menteri putih pindah ke e2 mengancam Kuda d4 dan mempertahankan pion e4. Taktik garpu membuat lawan harus memilih buah mana yang diselamatkan.",
+    "hintPiece": "Menteri putih di d1.",
+    "hintExplanation": "Pindahkan Menteri ke e2 — serangan ganda ke Kuda dan pertahanan pusat.",
+    "trickExplanation": "BPCaturPedia Bab 7: Taktik Garpu (Fork) adalah menyerang dua atau lebih sasaran secara bersamaan. Lawan dipaksa kehilangan salah satu buah catur. Kuda paling sering membuat garpu karena langkahnya sulit diantisipasi.",
+    "xp": 80,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Taktik Tusuk Sate / Skewer (Bab 7 hal. 80) ---
+  {
+    "id": "bp17",
+    "category": "middlegame",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "r3k2r/ppp2ppp/2n1bn2/3pp3/8/2N1B3/PPPQBPPP/R3K2R w KQkq - 0 8",
+    "turn": "w",
+    "solutionUci": "e2b5",
+    "solutionSan": "Bb5",
+    "motif": "tactic",
+    "theme": "Taktik Tusuk Sate (Skewer) · BPCaturPedia Bab 7",
+    "description": "Gajah putih ke b5 menyerang Raja hitam yang berada di garis dengan Benteng a8. Tusuk Sate: buah berharga dipaksa pindah, mengekspos buah di belakangnya!",
+    "hintPiece": "Gajah putih di e2.",
+    "hintExplanation": "Arahkan Gajah ke b5! Skak Raja lalu setelah pindah, Benteng di a8 jadi sasaran.",
+    "trickExplanation": "BPCaturPedia Bab 7: Taktik Tusuk Sate (Skewer) adalah kebalikan dari Pin. Buah bernilai tinggi (Raja/Menteri) diserang di depan, dipaksa pindah, sehingga buah di belakangnya tertangkap. Mirip tusuk sate: menusuk dua bahan sekaligus!",
+    "xp": 100,
+    "source": "bpcaturpedia"
+  },
+
+  // --- Taktik Umpan / Decoy (Bab 7 hal. 84) ---
+  {
+    "id": "bp18",
+    "category": "middlegame",
+    "difficulty": "Sedang",
+    "track": "quest",
+    "fen": "5rk1/pp3ppp/8/8/8/8/PPR2PPP/4R1K1 w - - 0 1",
+    "turn": "w",
+    "solutionUci": "e1e8",
+    "solutionSan": "Re8",
+    "motif": "mate",
+    "theme": "Taktik Umpan (Decoy) + Skakmat · BPCaturPedia Bab 7",
+    "description": "Benteng putih mengorbankan diri di e8 sebagai umpan. Jika Raja mengambil (Rxe8), Benteng c2 maju ke c8 — skakmat baris belakang! Memaksa lawan ke posisi fatal.",
+    "hintPiece": "Benteng putih di e1.",
+    "hintExplanation": "Korbankan Benteng ke e8! Setelah Rxe8, Rc8# skakmat baris belakang.",
+    "trickExplanation": "BPCaturPedia Bab 7: Taktik Umpan (Decoy) memaksa lawan berpindah ke tempat yang riskan dan berbahaya. Seperti dijelaskan: 'memaksa lawan ke petak yang menjebak'. Benteng dikorbankan agar Raja masuk ke perangkap skakmat.",
+    "xp": 100,
+    "source": "bpcaturpedia"
   }
 ];

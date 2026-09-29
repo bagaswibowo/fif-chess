@@ -6,12 +6,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Chess } from "chess.js";
-import { PUZZLES, QUEST_CHAPTERS, byCategory, type Puzzle, type PuzzleCategory } from "./puzzle-data.ts";
+import { PUZZLES, QUEST_CHAPTERS, byCategory, type Puzzle, type PuzzleCategory, type PuzzleSource } from "./puzzle-data.ts";
 
 const KEY = "jev_chess_saved_puzzles";
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-export type SavedPuzzle = Puzzle & { savedAt: number; source: string };
+export type SavedPuzzle = Puzzle & { savedAt: number; source: PuzzleSource };
 
 export function isPlayablePuzzle(value: unknown): value is SavedPuzzle {
   if (!value || typeof value !== "object") return false;
@@ -120,7 +120,7 @@ export function useSavedPuzzles() {
     setSaved(loadSaved());
   }, []);
 
-  const save = useCallback((puzzle: Puzzle, source: string) => {
+  const save = useCallback((puzzle: Puzzle, source: PuzzleSource) => {
     setSaved((prev) => {
       if (prev.some((p) => p.id === puzzle.id)) return prev;
       const next = [{ ...puzzle, savedAt: Date.now(), source }, ...prev].slice(0, 60);

@@ -15,7 +15,7 @@ import { JevDistribution } from "@/components/jev-distribution";
 import { MoveList } from "@/components/move-list";
 import { PromotionDialog } from "@/components/promotion-dialog";
 import { LearningHub } from "@/components/learning-hub";
-import { PuzzleView } from "@/components/puzzle-view";
+
 import type { Puzzle } from "@/lib/puzzle-data";
 import { buildLivePuzzle, loadSaved, persistSaved } from "@/lib/puzzle-store";
 import { ScanView } from "@/components/scan-view";
@@ -34,7 +34,7 @@ import { GameOverModal } from "@/components/game-over-modal";
 import { useChessClock } from "@/lib/use-chess-clock";
 import {
   IconPawn3D, IconKingWhite3D, IconKingBlack3D, IconDice3D, IconFriends3D, IconMessages3D, IconBell3D, IconSettings3D, IconPlay3D,
-  IconPuzzle3D,
+
   IconVision3D,
   IconScan3D,
   IconCommunity3D,
@@ -70,7 +70,7 @@ const AI_LABEL: Record<string, string> = {
 };
 
 type PendingPromotion = { from: string; to: string };
-type NavTab = "play" | "puzzle" | "vision" | "scan" | "community" | "review" | "coach" | "admin";
+type NavTab = "play" | "vision" | "scan" | "community" | "review" | "coach" | "admin";
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
 type CoachSubTab = "coach" | "spectator" | "guided";
@@ -709,17 +709,7 @@ export function Game() {
               <span>{lang === "id" ? "Bermain" : "Play"}</span>
             </button>
 
-            <button
-              onClick={() => handleNavClick("puzzle")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "puzzle"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconPuzzle3D size={22} />
-              <span>{lang === "id" ? "Teka-Teki" : "Puzzles"}</span>
-            </button>
+
 
             <button
               onClick={() => handleNavClick("review")}
@@ -769,7 +759,7 @@ export function Game() {
               }`}
             >
               <IconVision3D size={22} />
-              <span>{lang === "id" ? "Belajar & Quest" : "Learn & Quest"}</span>
+              <span>{lang === "id" ? "Trik & Quest" : "Tricks & Quest"}</span>
             </button>
 
             <button
@@ -950,7 +940,7 @@ export function Game() {
           </div>
         )}
         {navTab === "vision" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><LearningHub lang={lang} /></div>}
-        {navTab === "puzzle" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><PuzzleView lang={lang} /></div>}
+
         {navTab === "review" && (
           <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
             <GameReview
@@ -1589,8 +1579,7 @@ export function Game() {
           {[
             { id: "play", icon: IconPlay3D, labelId: "Bermain", labelEn: "Play" },
             { id: "coach", icon: IconCoach3D, labelId: "Latih", labelEn: "Train" },
-            { id: "vision", icon: IconVision3D, labelId: "Quest", labelEn: "Quest" },
-            { id: "puzzle", icon: IconPuzzle3D, labelId: "Puzzle", labelEn: "Puzzle" },
+            { id: "vision", icon: IconVision3D, labelId: "Trik", labelEn: "Tricks" },
             { id: "scan", icon: IconScan3D, labelId: "Scan", labelEn: "Scan" },
             { id: "review", icon: IconMedal3D, labelId: "Review", labelEn: "Review" },
             { id: "community", icon: IconCommunity3D, labelId: "Klub", labelEn: "Club" },
