@@ -11,11 +11,12 @@ type Props = {
   onLogout: () => Promise<void>;
   onClose: () => void;
   defaultMode?: "login" | "register";
+  inline?: boolean;
 };
 
 type Mode = "login" | "register";
 
-export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaultMode = "login" }: Props) {
+export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaultMode = "login", inline = false }: Props) {
   const [mode, setMode] = useState<Mode>(defaultMode);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -56,17 +57,11 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
       if (data?.error) {
         setMessage({ tone: data.pending ? "info" : "err", text: data.error });
       } else if (mode === "register") {
-        // Registration successful but pending admin approval
         setMessage({
           tone: "ok",
-          text: data?.message || "Pendaftaran berhasil! Akun Anda menunggu persetujuan Admin Komunitas sebelum bisa login.",
+          text: data?.message || "Pendaftaran berhasil! Anda otomatis masuk.",
         });
-        // Don't auto-close or auto-login - let user see the message
-        // Clear form for potential new registration
-        setUsername("");
-        setPassword("");
-        setConfirmPassword("");
-        setFullName("");
+        setTimeout(() => onClose(), 800);
       } else {
         onClose();
       }
@@ -84,27 +79,29 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
         ? Math.round((user.wins / (user.wins + user.losses + user.draws)) * 100)
         : 0;
 
-    return (
-      <div className="bg-[var(--background)] border border-[var(--border)] rounded-2xl p-5 md:p-6 w-full max-w-[420px] shadow-2xl space-y-4 text-white relative animate-in fade-in zoom-in-95 duration-200">
+    const profileContent = (
+      <>
         {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold"
-          aria-label="Tutup"
-        >
-          <IconClose3D size={16} />
-        </button>
+        {!inline && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold"
+            aria-label="Tutup"
+          >
+            <IconClose3D size={16} />
+          </button>
+        )}
 
         {/* Profile Header */}
-        <div className="flex items-center gap-3.5 pr-8">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary-strong)] border-2 border-[var(--primary)] flex items-center justify-center text-base font-black text-white shadow-md shrink-0">
+        <div className="flex items-center gap-3 pr-8">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary-strong)] border-2 border-[var(--primary)] flex items-center justify-center text-sm font-black text-white shadow-md shrink-0">
             {user.username.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-base text-white truncate">{user.fullName}</h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-bold text-sm text-white truncate">{user.fullName}</h3>
               {user.isAdmin && (
-                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
                   Admin
                 </span>
               )}
@@ -116,61 +113,77 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-2 bg-[var(--background)] p-3 rounded-xl border border-[var(--border)] text-center">
+        <div className="grid grid-cols-3 gap-1.5 bg-[var(--background)] p-2.5 rounded-xl border border-[var(--border)] text-center">
           <div>
-            <span className="block text-[10px] uppercase font-bold text-neutral-400">Rating ELO</span>
-            <span className="font-mono font-black text-lg text-[var(--primary)]">{user.elo}</span>
+            <span className="block text-[9px] uppercase font-bold text-neutral-400">Rating ELO</span>
+            <span className="font-mono font-black text-base text-[var(--primary)]">{user.elo}</span>
           </div>
           <div>
-            <span className="block text-[10px] uppercase font-bold text-neutral-400">Menang/Kalah</span>
-            <span className="font-mono font-bold text-sm text-neutral-200">
+            <span className="block text-[9px] uppercase font-bold text-neutral-400">Menang/Kalah</span>
+            <span className="font-mono font-bold text-xs text-neutral-200">
               {user.wins}W / {user.losses}L
             </span>
           </div>
           <div>
-            <span className="block text-[10px] uppercase font-bold text-neutral-400">Win Rate</span>
-            <span className="font-mono font-bold text-sm text-emerald-400">{winRate}%</span>
+            <span className="block text-[9px] uppercase font-bold text-neutral-400">Win Rate</span>
+            <span className="font-mono font-bold text-xs text-emerald-400">{winRate}%</span>
           </div>
         </div>
 
         {/* Admin Quick Action */}
         {user.isAdmin && (
-          <div className="bg-amber-950/40 border border-amber-500/40 p-3 rounded-xl text-xs text-amber-200 flex items-center gap-2">
-            <IconShield3D size={18} />
+          <div className="bg-amber-950/40 border border-amber-500/40 p-2.5 rounded-lg text-xs text-amber-200 flex items-center gap-1.5">
+            <IconShield3D size={16} />
             <span className="font-medium">Akses Admin aktif untuk moderasi & persetujuan user.</span>
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex gap-2.5 pt-2 border-t border-[var(--border)]">
+        <div className="flex gap-2 pt-1.5 border-t border-[var(--border)]">
           <button
             onClick={onClose}
-            className="flex-1 h-10 px-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-200 font-bold text-sm transition-all"
+            className="flex-1 h-9 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-200 font-bold text-xs transition-all"
           >
             Tutup
           </button>
           <button
             onClick={() => void onLogout()}
-            className="flex-1 h-10 px-4 rounded-xl border border-red-500/50 bg-red-950/40 hover:bg-red-900/60 text-red-300 font-bold text-sm transition-all"
+            className="flex-1 h-9 px-3 rounded-lg border border-red-500/50 bg-red-950/40 hover:bg-red-900/60 text-red-300 font-bold text-xs transition-all"
           >
             Keluar (Logout)
           </button>
         </div>
+      </>
+    );
+
+    if (inline) {
+      return (
+        <div className="w-full max-w-[720px] mx-auto">
+          <div className="space-y-2.5 text-white">{profileContent}</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-[var(--background)] border border-[var(--border)] rounded-2xl p-5 md:p-6 w-full max-w-[420px] shadow-2xl space-y-4 text-white relative animate-in fade-in zoom-in-95 duration-200">
+        {profileContent}
       </div>
     );
   }
 
   // NOT LOGGED IN: Tabbed Login / Signup Modal
-  return (
-    <div className="bg-[var(--background)] border border-[var(--border)] rounded-2xl p-5 md:p-6 w-full max-w-[420px] shadow-2xl space-y-4 text-white relative animate-in fade-in zoom-in-95 duration-200">
+  const formContent = (
+    <>
       {/* Close Button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold cursor-pointer"
-        aria-label="Tutup"
-      >
-        <IconClose3D size={16} />
-      </button>
+      {!inline && (
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--surface)] hover:bg-[var(--border)] text-neutral-400 hover:text-white flex items-center justify-center transition-colors text-sm font-bold cursor-pointer"
+          aria-label="Tutup"
+        >
+          <IconClose3D size={16} />
+        </button>
+      )}
 
       {/* Modal Branding Header */}
       <div className="flex items-center gap-2.5 pr-8">
@@ -193,7 +206,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
             setMode("login");
             setMessage(null);
           }}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
             mode === "login"
               ? "bg-[var(--primary)] text-white shadow-md"
               : "text-neutral-400 hover:text-white"
@@ -207,7 +220,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
             setMode("register");
             setMessage(null);
           }}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
             mode === "register"
               ? "bg-[var(--primary)] text-white shadow-md"
               : "text-neutral-400 hover:text-white"
@@ -218,18 +231,18 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
       </div>
 
       {/* Auth Form */}
-      <form onSubmit={submit} className="space-y-3.5">
+      <form onSubmit={submit} className="space-y-3">
         {/* Username Field */}
         <div>
           <label
-            className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1.5"
+            className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1"
             htmlFor="auth-username"
           >
             Username
           </label>
           <input
             id="auth-username"
-            className="w-full h-11 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
+            className="w-full h-10 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
@@ -237,61 +250,63 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
             required
           />
           {mode === "register" && (
-            <span className="block text-[10px] text-neutral-400 mt-1">
+            <span className="block text-[10px] text-neutral-400 mt-0.5">
               3-20 karakter, huruf kecil, angka, atau garis bawah.
             </span>
           )}
         </div>
 
-        {/* Additional Register Fields */}
+        {/* Additional Register Fields - 2 column layout */}
         {mode === "register" && (
           <>
-            <div>
-              <label
-                className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1.5"
-                htmlFor="auth-fullname"
-              >
-                Nama Lengkap
-              </label>
-              <input
-                id="auth-fullname"
-                className="w-full h-11 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                autoComplete="name"
-                placeholder="misal: Admin Komunitas / Budi Santoso"
-                required
-              />
-            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label
+                  className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1"
+                  htmlFor="auth-fullname"
+                >
+                  Nama Lengkap
+                </label>
+                <input
+                  id="auth-fullname"
+                  className="w-full h-10 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  autoComplete="name"
+                  placeholder="misal: Budi Santoso"
+                  required
+                />
+              </div>
 
-            <div>
-              <label
-                className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1.5"
-                htmlFor="auth-role"
-              >
-                Peran / Civitas Tel-U
-              </label>
-              <select
-                id="auth-role"
-                className="w-full h-11 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white focus:outline-none focus:border-[var(--primary)] text-sm transition-all cursor-pointer"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                <option value="Mahasiswa TI Tel-U">Mahasiswa Teknik Informatika Tel-U</option>
-                <option value="Mahasiswa Sistem Informasi Tel-U">Mahasiswa Sistem Informasi Tel-U</option>
-                <option value="Mahasiswa Tel-U (Umum)">Mahasiswa Telkom University (Lainnya)</option>
-                <option value="Dosen Telkom University">Dosen Telkom University</option>
-                <option value="UKM Catur Telkom University">Anggota UKM Catur Tel-U</option>
-                <option value="Alumni Telkom University">Alumni Telkom University</option>
-                <option value="Umum / Tamu">Umum / Komunitas Catur</option>
-              </select>
+              <div>
+                <label
+                  className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1"
+                  htmlFor="auth-role"
+                >
+                  Peran / Civitas Tel-U
+                </label>
+                <select
+                  id="auth-role"
+                  className="w-full h-10 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white focus:outline-none focus:border-[var(--primary)] text-sm transition-all cursor-pointer"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                >
+                  <option value="Mahasiswa TI Tel-U">Mahasiswa TI Tel-U</option>
+                  <option value="Mahasiswa SI Tel-U">Mahasiswa SI Tel-U</option>
+                  <option value="Mahasiswa Tel-U (Umum)">Mahasiswa Tel-U (Umum)</option>
+                  <option value="Dosen Telkom University">Dosen Telkom University</option>
+                  <option value="UKM Catur Tel-U">UKM Catur Tel-U</option>
+                  <option value="Alumni Telkom University">Alumni Telkom University</option>
+                  <option value="Umum / Tamu">Umum / Tamu</option>
+                </select>
+              </div>
             </div>
           </>
         )}
 
         {/* Password Field */}
         <div>
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center justify-between mb-1">
             <label
               className="block text-xs font-bold text-neutral-300 uppercase tracking-wider"
               htmlFor="auth-password"
@@ -308,7 +323,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
           </div>
           <input
             id="auth-password"
-            className="w-full h-11 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
+            className="w-full h-10 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -323,14 +338,14 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
         {mode === "register" && (
           <div>
             <label
-              className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1.5"
+              className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1"
               htmlFor="auth-confirm-password"
             >
               Konfirmasi Kata Sandi
             </label>
             <input
               id="auth-confirm-password"
-              className="w-full h-11 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
+              className="w-full h-10 px-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-white placeholder:text-neutral-600 focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] text-sm transition-all"
               type={showPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -344,7 +359,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
 
         {/* Terms Agreement Checkbox (Register Only) */}
         {mode === "register" && (
-          <label className="flex items-start gap-2.5 text-xs text-neutral-300 cursor-pointer pt-1">
+          <label className="flex items-start gap-2 text-xs text-neutral-300 cursor-pointer pt-0.5">
             <input
               type="checkbox"
               checked={agreeTerms}
@@ -352,7 +367,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
               className="w-4 h-4 mt-0.5 rounded bg-[var(--background)] border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)] accent-[var(--primary)]"
               required
             />
-            <span>Saya menyetujui aturan fair-play dan ketentuan komunitas catur Telkom University.</span>
+            <span>Saya menyetujui aturan fair-play & ketentuan komunitas catur Telkom University.</span>
           </label>
         )}
 
@@ -360,7 +375,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
         {message && (
           <div
             role="status"
-            className={`p-3 rounded-xl text-xs leading-relaxed border ${
+            className={`p-2 rounded-lg text-xs leading-relaxed border ${
               message.tone === "err"
                 ? "bg-red-950/50 border-red-500/50 text-red-200"
                 : message.tone === "info"
@@ -374,7 +389,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
 
         {/* Submit Button */}
         <button
-          className="w-full h-11 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:translate-y-[1px] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full h-10 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:translate-y-[1px] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           type="submit"
           disabled={busy}
         >
@@ -386,13 +401,13 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
           ) : mode === "login" ? (
             "Masuk ke Arena"
           ) : (
-            "Kirim Pendaftaran Akun"
+            "Kirim Pendaftaran"
           )}
         </button>
       </form>
 
       {/* Info Footnote */}
-      <div className="pt-2 border-t border-[var(--border)] text-[11px] text-neutral-400 space-y-1 text-center">
+      <div className="pt-1 border-t border-[var(--border)] text-[10px] text-neutral-400 space-y-0.5 text-center">
         {mode === "login" ? (
           <p>
             Belum punya akun?{" "}
@@ -409,11 +424,22 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
           </p>
         ) : (
           <p className="text-neutral-400 leading-normal">
-            ℹ️ Akun baru diverifikasi dan disetujui oleh{" "}
-            <strong className="text-white">Admin Komunitas</strong> sebelum dapat login.
+            ℹ️ Akun diverifikasi Admin Komunitas sebelum bisa login.
           </p>
         )}
       </div>
+    </>
+  );
+
+  if (inline) {
+    return (
+        <div className="w-full max-w-[720px] mx-auto">
+          <div className="space-y-2.5 text-white">{formContent}</div>
+  }
+
+  return (
+    <div className="bg-[var(--background)] border border-[var(--border)] rounded-2xl p-5 md:p-6 w-full max-w-[420px] shadow-2xl space-y-4 text-white relative animate-in fade-in zoom-in-95 duration-200">
+      {formContent}
     </div>
   );
 }
