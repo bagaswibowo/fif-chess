@@ -63,7 +63,8 @@ export function PerspectiveCropModal({
   const dragStartRef = useRef<{ clientX: number; clientY: number } | null>(null);
   const cornersStartRef = useRef<Quad | null>(null);
 
-  // Load image & automatically run 95% accuracy chessboard detection
+  // Load image, lalu jalankan auto-detect sudut: service YOLOv11 dulu (gaya
+  // OMR-Scanner), fallback heuristik gradien lokal. User selalu bisa geser manual.
   useEffect(() => {
     if (!imageUrl || !isOpen) return;
     const img = new Image();
@@ -71,12 +72,42 @@ export function PerspectiveCropModal({
     img.onload = () => {
       imgRef.current = img;
       setImageLoaded(true);
-      const autoCorners = detectChessboardCorners(img);
-      setCorners(autoCorners);
-      setAutoDetected(true);
+      void runServerAutoDetect(img);
     };
     img.src = imageUrl;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageUrl, isOpen]);
+
+  const runServerAutoDetect = useCallback(async (img: HTMLImageElement) => {
+    try {
+      // Kompres ringan sebelum dikirim ke service deteksi sudut
+      const maxSide = 720;
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * scale);
+      c.height = Math.round(img.naturalHeight * scale);
+      c.getContext("2d")?.drawImage(img, 0, 0, c.width, c.height);
+      const payload = c.toDataURL("image/jpeg", 0.85);
+
+      const res = await fetch("/api/board-corners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: payload }),
+        signal: AbortSignal.timeout(12000),
+      });
+      const data = await res.json().catch(() => null);
+      if (data?.ok && Array.isArray(data.corners) && data.corners.length === 4) {
+        setCorners(data.corners);
+        setAutoDetected(true);
+        return;
+      }
+    } catch {
+      // service tidak jalan — jatuh ke heuristik lokal
+    }
+    const localCorners = detectChessboardCorners(img);
+    setCorners(localCorners);
+    setAutoDetected(false);
+  }, []);
 
   // Rotasi 90 derajat
   const handleRotate = useCallback(() => {
@@ -441,13 +472,11 @@ export function PerspectiveCropModal({
     }
   };
 
-  // Re-run Auto-Detection (95% Accuracy)
+  // Re-run Auto-Detection (service YOLOv11 dulu, fallback lokal)
   const handleAutoDetect = useCallback(() => {
     if (!imgRef.current) return;
-    const detected = detectChessboardCorners(imgRef.current);
-    setCorners(detected);
-    setAutoDetected(true);
-  }, []);
+    void runServerAutoDetect(imgRef.current);
+  }, [runServerAutoDetect]);
 
   if (!isOpen) return null;
 
@@ -466,7 +495,7 @@ export function PerspectiveCropModal({
                 {autoDetected && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black bg-emerald-950/90 border border-emerald-500 text-emerald-300">
                     <IconLightning3D size={12} />
-                    <span>95% Akurat</span>
+                    <span>Auto</span>
                   </span>
                 )}
               </div>
@@ -518,7 +547,7 @@ export function PerspectiveCropModal({
                 title="Deteksi ulang batas papan catur secara otomatis"
               >
                 <IconLightning3D size={13} />
-                <span>Auto-Detect 95%</span>
+                <span>Auto-Detect</span>
               </button>
 
               <button

@@ -6,10 +6,24 @@ services:
     image: jev-chesscog:latest
     container_name: jev-chesscog
     restart: unless-stopped
-    profiles:
-      - chesscog
     environment:
       - PYTHONUNBUFFERED=1
+
+  yolo11:
+    build:
+      context: ./yolo11-service
+      dockerfile: Dockerfile
+    image: jev-yolo11:latest
+    container_name: jev-yolo11
+    restart: unless-stopped
+    # Model bidak catur pretrained diunduh OTOMATIS oleh entrypoint saat
+    # container start (yolo11n fine-tune, 12 kelas). Tidak perlu setup manual.
+    environment:
+      - YOLO_MODEL_PATH=/app/models/best.pt
+      - YOLO_MODEL_URL=${YOLO_MODEL_URL:-https://huggingface.co/dopaul/chess-piece-detector-merged-v2/resolve/main/best.pt}
+      - YOLO_CONF_THRESHOLD=${YOLO_CONF_THRESHOLD:-0.25}
+    volumes:
+      - ./models/yolo11:/app/models
 
   app:
     build:
@@ -28,6 +42,7 @@ services:
       - NODE_ENV=production
       - JEV_DATA_DIR=/app/data
       - CHESSCOG_URL=http://chesscog:8000
+      - YOLO11_URL=http://yolo11:8100
     volumes:
       - ./data:/app/data
       - ./models:/app/models

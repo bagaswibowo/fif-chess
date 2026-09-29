@@ -213,7 +213,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     setError(lang === "id" ? "Pemindaian dibatalkan." : "Scan cancelled.");
   }, [lang]);
 
-  const processAndScanImage = async (rawBase64: string) => {
+  const processAndScanImage = async (rawBase64: string, prewarped = false) => {
     setIsProcessingImage(true);
     setError(null);
     setScanProgress({ percent: 15, stage: "Mengompresi gambar & resolusi..." });
@@ -239,7 +239,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       const res = await fetch("/api/scan-board", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: compressed }),
+        body: JSON.stringify({ image: compressed, prewarped }),
         signal: controller.signal,
       });
 
@@ -247,7 +247,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       clearTimeout(p2);
       clearTimeout(timer);
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ ok: false, error: "Respons server tidak valid." }));
       if (data.ok && data.fen) {
         setScanProgress({ percent: 100, stage: "Selesai! Memuat posisi ke papan..." });
         setTimeout(() => {
@@ -256,7 +256,14 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           setIsProcessingImage(false);
         }, 400);
       } else {
-        setError(data.error || "Gagal mengekstrak posisi dari gambar.");
+        // Gagal jujur dari server (mis. tidak ada engine vision yang aktif).
+        // Tampilkan pesan server + arahkan ke editing manual di papan referensi.
+        setError(
+          data.error ||
+            (lang === "id"
+              ? "Posisi tidak terbaca. Coba foto yang lebih terang & tegak lurus, atau tempel FEN manual / muat posisi lalu edit bidaknya di tab Papan Referensi."
+              : "Position unreadable. Try a brighter, straight-on photo, paste FEN manually, or edit pieces on the reference board.")
+        );
         setScanProgress(null);
         setIsProcessingImage(false);
       }
@@ -414,7 +421,9 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const handleConfirmCropAndScan = async (warpedBase64: string) => {
     setIsCropModalOpen(false);
     setPendingCropImage(null);
-    await processAndScanImage(warpedBase64);
+    // Gambar sudah di-warp jadi persegi 800x800 oleh modal crop —
+    // server bisa membaca 64 petak langsung tanpa deteksi papan.
+    await processAndScanImage(warpedBase64, true);
   };
 
   const handleSkipCropAndScan = async (rawBase64: string) => {
@@ -582,7 +591,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           </div>
           <div className="row-between items-center pt-1">
             <span className="text-xs text-[var(--muted-foreground)]">
-              *Otomatis dipangkas & dimaksimalkan dengan akurasi 95%
+              *Hasil scan dapat keliru — selalu periksa & perbaiki bidak di tab Papan Referensi sebelum dianalisis
             </span>
             <button
               type="button"
@@ -644,7 +653,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             </button>
             <span className="text-xs text-emerald-300 font-semibold mt-2 flex items-center gap-1.5">
               <IconLightning3D size={14} />
-              <span>Auto-Crop 95% Akurasi Aktif</span>
+              <span>Auto-Crop Perspektif Aktif — hasil selalu bisa diedit manual</span>
             </span>
           </div>
 

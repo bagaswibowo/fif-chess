@@ -1,18 +1,19 @@
 "use client";
 
-// Trik & Quest Gabungan
+// Trik & Quest (Gabungan)
 //
-// Menggabungkan fitur "Belajar & Quest" (jalur progresi terstruktur) dengan
-// "Bank Teka-Teki" (eksplorasi bebas) menjadi satu komponen unified.
-// Data teka-teki diperkaya dengan konten dari Buku Pintar Catur-Pedia
-// (Fienso Suharsono): Jebakan (Bab 11), Taktik Skak Mat (Bab 12),
-// dan Taktik Catur (Bab 7).
+// Fitur "Quest" dan "Bank Teka-Teki" kini menjadi satu tampilan dengan filter
+// kategori — keduanya menarik dari sumber data yang sama (lib/puzzle-data.ts),
+// sehingga tidak ada lagi dua mode terpisah. Semua puzzle memberikan XP.
+// Konten diperkaya dari Buku Pintar Catur-Pedia (Fienso Suharsono):
+// Bab 7 Taktik Catur, Bab 10 Permainan Akhir, Bab 11 Jebakan, dan
+// Bab 12 Taktik Skak Mat.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BoardControls } from "@/components/board-controls";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
-import { QUEST_CHAPTERS, PUZZLE_CATEGORIES, type Puzzle, type PuzzleCategory } from "@/lib/puzzle-data";
+import { PUZZLE_CATEGORIES, type Puzzle, type PuzzleCategory } from "@/lib/puzzle-data";
 import { mergePuzzles, useSavedPuzzles, filterPuzzles } from "@/lib/puzzle-store";
 import { HighlightedChessText } from "@/components/chess-text-highlight";
 import {
@@ -65,17 +66,14 @@ export function useQuestProgress() {
   return { progress, complete };
 }
 
-type ViewMode = "quest" | "bank";
 type Props = { lang?: "id" | "en" };
 
 export function LearningHub({ lang = "id" }: Props) {
   const { progress, complete } = useQuestProgress();
   const { saved } = useSavedPuzzles();
-  const [viewMode, setViewMode] = useState<ViewMode>("quest");
-  const [activeId, setActiveId] = useState<string>(QUEST_CHAPTERS[0]?.id ?? "");
   const [fullscreen, setFullscreen] = useState(false);
   const [category, setCategory] = useState<PuzzleCategory | "all">("all");
-  const [bankIndex, setBankIndex] = useState(0);
+  const [puzzleIndex, setPuzzleIndex] = useState(0);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -101,36 +99,15 @@ export function LearningHub({ lang = "id" }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [fullscreen]);
 
-  const [fen, setFen] = useState(QUEST_CHAPTERS[0]?.fen ?? "");
+  const [fen, setFen] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [status, setStatus] = useState<"unsolved" | "correct" | "wrong">("unsolved");
   const [hint, setHint] = useState(0);
   const [playAsBlack, setPlayAsBlack] = useState(false);
-  const [solved, setSolved] = useState<Set<string>>(new Set());
 
-  // Quest chapters
-  const chapters = useMemo<Puzzle[]>(() => {
-    const seen = new Set(QUEST_CHAPTERS.map((c) => c.id));
-    const live = saved
-      .filter((s) => !seen.has(s.id))
-      .map((s) => ({ ...s, id: s.id, track: "quest" as const }));
-    return [...QUEST_CHAPTERS, ...live];
-  }, [saved]);
-
-  // Bank puzzles
-  const allBank = useMemo(() => mergePuzzles(saved), [saved]);
-  const bankList = useMemo(() => filterPuzzles(allBank, category), [allBank, category]);
-
-  // Currently active puzzle depending on mode
-  const chapter = useMemo(
-    () => (viewMode === "quest" ? chapters.find((c) => c.id === activeId) ?? chapters[0] : undefined),
-    [chapters, activeId, viewMode]
-  );
-  const bankPuzzle = useMemo(
-    () => (viewMode === "bank" ? bankList[Math.min(bankIndex, bankList.length - 1)] : undefined),
-    [bankList, bankIndex, viewMode]
-  );
-  const puzzle = viewMode === "quest" ? chapter : bankPuzzle;
+  // Satu daftar: puzzle bawaan + trik lawan yang disimpan pemain (tanpa duplikat)
+  const list = useMemo(() => filterPuzzles(mergePuzzles(saved), category), [saved, category]);
+  const puzzle = list[Math.min(puzzleIndex, Math.max(0, list.length - 1))];
 
   const boardSide = playAsBlack
     ? (puzzle?.turn === "w" ? "black" : "white")
@@ -149,7 +126,7 @@ export function LearningHub({ lang = "id" }: Props) {
   }, [puzzle?.id, load]);
 
   useEffect(() => {
-    setBankIndex(0);
+    setPuzzleIndex(0);
   }, [category]);
 
   const onSquareClick = ({ square }: { square: string }) => {
@@ -187,8 +164,7 @@ export function LearningHub({ lang = "id" }: Props) {
       setFen(c.fen());
       setStatus("correct");
       setSelected(null);
-      if (viewMode === "quest") complete(puzzle.id, puzzle.xp);
-      setSolved((prev) => new Set(prev).add(puzzle.id));
+      complete(puzzle.id, puzzle.xp);
     } else {
       setStatus("wrong");
       setSelected(null);
@@ -211,8 +187,7 @@ export function LearningHub({ lang = "id" }: Props) {
       setFen(c.fen());
       setStatus("correct");
       setSelected(null);
-      if (viewMode === "quest") complete(puzzle.id, puzzle.xp);
-      setSolved((prev) => new Set(prev).add(puzzle.id));
+      complete(puzzle.id, puzzle.xp);
       return true;
     } else {
       setStatus("wrong");
@@ -234,10 +209,8 @@ export function LearningHub({ lang = "id" }: Props) {
     squareStyles[to] = { backgroundColor: "color-mix(in srgb, var(--primary) 55%, transparent)" };
   }
 
-  const doneCount = chapters.filter((c) => progress.completed.includes(c.id)).length;
-  const curIdx = viewMode === "quest" ? chapters.findIndex((c) => c.id === puzzle?.id) : bankIndex;
-  const currentIndex = curIdx >= 0 ? curIdx : 0;
-  const currentList = viewMode === "quest" ? chapters : bankList;
+  const doneCount = list.filter((c) => progress.completed.includes(c.id)).length;
+  const currentIndex = Math.min(puzzleIndex, Math.max(0, list.length - 1));
 
   const diffBadgeClass =
     puzzle.difficulty === "Mudah"
@@ -270,137 +243,64 @@ export function LearningHub({ lang = "id" }: Props) {
         <div className="flex items-center gap-2 shrink-0">
           <span className="px-3 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5 shadow-sm">
             <IconCheck3D size={16} />
-            {doneCount}/{chapters.length} bab · {progress.xp} XP
+            {doneCount}/{list.length} selesai · {progress.xp} XP
           </span>
         </div>
       </div>
 
-      {/* MODE TOGGLE: Quest vs Bank */}
+      {/* NAVIGASI + FILTER KATEGORI */}
       <div className="panel px-3 py-2 flex items-center gap-2 flex-wrap bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm">
-        <div className="flex items-center rounded-lg border border-[var(--border)] overflow-hidden shrink-0">
-          <button
-            onClick={() => setViewMode("quest")}
-            className={`px-4 py-1.5 text-xs font-bold transition-all ${
-              viewMode === "quest"
-                ? "bg-[var(--primary)] text-white"
-                : "bg-[var(--surface)] text-neutral-400 hover:text-white"
-            }`}
-          >
-            ⚔️ Quest (Progresi)
-          </button>
-          <button
-            onClick={() => setViewMode("bank")}
-            className={`px-4 py-1.5 text-xs font-bold transition-all ${
-              viewMode === "bank"
-                ? "bg-[var(--primary)] text-white"
-                : "bg-[var(--surface)] text-neutral-400 hover:text-white"
-            }`}
-          >
-            📚 Bank Teka-Teki
-          </button>
-        </div>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value as PuzzleCategory | "all")}
+          className="ctl ctl-sm text-xs font-bold py-1.5 px-2.5 cursor-pointer bg-[var(--surface)] text-neutral-200 border border-[var(--border)] rounded-lg"
+          aria-label="Pilih Kategori"
+        >
+          {PUZZLE_CATEGORIES.map((c) => {
+            const count = c.id === "all" ? list.length : filterPuzzles(mergePuzzles(saved), c.id as PuzzleCategory).length;
+            if (count === 0) return null;
+            return (
+              <option key={c.id} value={c.id}>
+                {c.label} ({count})
+              </option>
+            );
+          })}
+        </select>
 
-        {/* Quest Pager or Bank Filter */}
-        {viewMode === "quest" ? (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <button
-              className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-neutral-300 hover:text-white shrink-0"
-              disabled={currentIndex <= 0}
-              onClick={() => {
-                if (currentIndex > 0) setActiveId(chapters[currentIndex - 1].id);
-              }}
-              title="Bab Sebelumnya"
-            >
-              ← Prev
-            </button>
+        <button
+          className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-neutral-300 hover:text-white shrink-0"
+          disabled={currentIndex <= 0}
+          onClick={() => setPuzzleIndex((i) => Math.max(0, i - 1))}
+          title="Sebelumnya"
+        >
+          ← Prev
+        </button>
 
-            <select
-              value={puzzle?.id || ""}
-              onChange={(e) => setActiveId(e.target.value)}
-              className="ctl ctl-sm text-xs font-bold truncate max-w-[210px] sm:max-w-[360px] py-1.5 px-2.5 cursor-pointer bg-[var(--surface)] text-white border border-[var(--border)] rounded-lg flex-1 min-w-0"
-              aria-label="Pilih Bab Quest"
-            >
-              {chapters.map((c, i) => {
-                const isDone = progress.completed.includes(c.id);
-                const srcLabel = c.source === "bpcaturpedia" ? " 📖" : "";
-                return (
-                  <option key={c.id} value={c.id}>
-                    {isDone ? "[✓] " : ""}{i + 1}. {c.theme}{srcLabel} ({c.difficulty})
-                  </option>
-                );
-              })}
-            </select>
+        <select
+          value={currentIndex}
+          onChange={(e) => setPuzzleIndex(Number(e.target.value))}
+          className="ctl ctl-sm text-xs font-bold truncate max-w-[210px] sm:max-w-[360px] py-1.5 px-2.5 cursor-pointer bg-[var(--surface)] text-white border border-[var(--border)] rounded-lg flex-1 min-w-0"
+          aria-label="Pilih Teka-Teki"
+        >
+          {list.map((p, idx) => {
+            const isDone = progress.completed.includes(p.id);
+            const srcLabel = p.source === "bpcaturpedia" ? " 📖" : "";
+            return (
+              <option key={p.id} value={idx}>
+                {isDone ? "[✓] " : ""}{idx + 1}. {p.theme}{srcLabel} ({p.difficulty})
+              </option>
+            );
+          })}
+        </select>
 
-            <button
-              className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-neutral-300 hover:text-white shrink-0"
-              disabled={currentIndex >= chapters.length - 1}
-              onClick={() => {
-                if (currentIndex < chapters.length - 1) setActiveId(chapters[currentIndex + 1].id);
-              }}
-              title="Bab Berikutnya"
-            >
-              Next →
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as PuzzleCategory | "all")}
-              className="ctl ctl-sm text-xs font-bold py-1.5 px-2.5 cursor-pointer bg-[var(--surface)] text-neutral-200 border border-[var(--border)] rounded-lg"
-              aria-label="Pilih Kategori"
-            >
-              {PUZZLE_CATEGORIES.map((c) => {
-                const count = c.id === "all" ? allBank.length : allBank.filter((p) => p.category === c.id).length;
-                if (count === 0) return null;
-                return (
-                  <option key={c.id} value={c.id}>
-                    {c.label} ({count})
-                  </option>
-                );
-              })}
-            </select>
-
-            <button
-              className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-neutral-300 hover:text-white shrink-0"
-              disabled={bankIndex <= 0}
-              onClick={() => setBankIndex((i) => Math.max(0, i - 1))}
-              title="Sebelumnya"
-            >
-              ← Prev
-            </button>
-
-            <select
-              value={bankIndex}
-              onChange={(e) => setBankIndex(Number(e.target.value))}
-              className="ctl ctl-sm text-xs font-bold py-1.5 px-2.5 cursor-pointer truncate max-w-[170px] sm:max-w-[240px] bg-[var(--surface)] text-white border border-[var(--border)] rounded-lg"
-              aria-label="Pilih Posisi"
-            >
-              {bankList.map((p, idx) => {
-                const isSolved = solved.has(p.id);
-                const srcLabel = p.source === "bpcaturpedia" ? " 📖" : "";
-                return (
-                  <option key={p.id} value={idx}>
-                    {isSolved ? "[✓] " : ""}#{idx + 1}: {p.theme}{srcLabel}
-                  </option>
-                );
-              })}
-            </select>
-
-            <button
-              className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-neutral-300 hover:text-white shrink-0"
-              disabled={bankIndex >= bankList.length - 1}
-              onClick={() => setBankIndex((i) => Math.min(bankList.length - 1, i + 1))}
-              title="Berikutnya"
-            >
-              Next →
-            </button>
-
-            <span className="px-2 py-0.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs font-mono text-emerald-400 shrink-0">
-              {solved.size}/{allBank.length} selesai
-            </span>
-          </div>
-        )}
+        <button
+          className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-lg border border-[var(--border)] text-neutral-300 hover:text-white shrink-0"
+          disabled={currentIndex >= list.length - 1}
+          onClick={() => setPuzzleIndex((i) => Math.min(list.length - 1, i + 1))}
+          title="Berikutnya"
+        >
+          Next →
+        </button>
       </div>
 
       <div
@@ -455,7 +355,7 @@ export function LearningHub({ lang = "id" }: Props) {
           </div>
         </div>
 
-        {/* RIGHT: QUEST / TRIK INFO PANEL */}
+        {/* RIGHT: INFO PANEL */}
         <div
           className={
             fullscreen
@@ -467,7 +367,7 @@ export function LearningHub({ lang = "id" }: Props) {
           <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2.5">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider bg-[var(--surface)] text-neutral-300 border border-[var(--border)]">
-                {viewMode === "quest" ? `Bab ${currentIndex + 1}` : `#${currentIndex + 1}`} · {puzzle.category}
+                #{currentIndex + 1} · {puzzle.category}
               </span>
               <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${diffBadgeClass}`}>
                 {puzzle.difficulty}
@@ -496,11 +396,11 @@ export function LearningHub({ lang = "id" }: Props) {
             </span>
           </div>
 
-          {/* QUEST / TRIK CARD (Misi Taktik) */}
+          {/* MISI TAKTIK */}
           <div className="p-3.5 rounded-xl bg-neutral-900/90 border border-neutral-800 shadow-sm space-y-1.5">
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-400">
               <IconTarget3D size={16} className="shrink-0" />
-              <span>{viewMode === "quest" ? "Misi Quest Taktik" : "Misi Trik & Taktik"}</span>
+              <span>Misi Trik & Taktik</span>
             </div>
             <p className="text-sm text-neutral-200 leading-relaxed font-normal">
               <HighlightedChessText text={puzzle.description} />
@@ -539,7 +439,7 @@ export function LearningHub({ lang = "id" }: Props) {
                   +{puzzle.xp} XP Didapat
                 </span>
               </div>
-              
+
               <div className="pt-1 border-t border-emerald-800/60">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300 mb-1 flex items-center gap-1.5">
                   <IconLightbulb3D size={14} />
@@ -605,16 +505,10 @@ export function LearningHub({ lang = "id" }: Props) {
                   ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400"
                   : "border border-[var(--border)] text-neutral-300 hover:text-white"
               }`}
-              onClick={() => {
-                if (viewMode === "quest") {
-                  if (currentIndex < chapters.length - 1) setActiveId(chapters[currentIndex + 1].id);
-                } else {
-                  setBankIndex((i) => Math.min(bankList.length - 1, i + 1));
-                }
-              }}
-              disabled={currentIndex >= currentList.length - 1}
+              onClick={() => setPuzzleIndex((i) => Math.min(list.length - 1, i + 1))}
+              disabled={currentIndex >= list.length - 1}
             >
-              <span>{viewMode === "quest" ? "Bab Berikutnya →" : "Berikutnya →"}</span>
+              <span>Berikutnya →</span>
             </button>
           </div>
         </div>

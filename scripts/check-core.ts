@@ -115,7 +115,6 @@ const REVIEWED = [
   "community-view.tsx",
   "game-review.tsx",
   "clock-moves-fullscreen.tsx",
-  "puzzle-view.tsx",
   "learning-hub.tsx",
 ];
 for (const file of REVIEWED) {
