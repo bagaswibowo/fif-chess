@@ -251,7 +251,10 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       if (data.ok && data.fen) {
         setScanProgress({ percent: 100, stage: "Selesai! Memuat posisi ke papan..." });
         setTimeout(() => {
-          applyNewInitialFen(data.fen, "Foto berhasil dipindai & posisi dimuat ke papan!");
+          // Preview dulu di Papan Referensi & Edit Posisi — user bisa membetulkan
+          // bidak hasil scan (drag) sebelum membawanya ke Simulator.
+          applyNewInitialFen(data.fen, "Foto berhasil dipindai! Periksa & betulkan bidak bila perlu, lalu lanjut ke Solver.");
+          setActiveTab("reference");
           setScanProgress(null);
           setIsProcessingImage(false);
         }, 400);
@@ -389,8 +392,9 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const base64Url = canvas.toDataURL("image/jpeg", 0.90);
         stopWebcam();
+        // Simpan foto untuk opsi "Sesuaikan Sudut Manual", lalu langsung scan.
         setPendingCropImage(base64Url);
-        setIsCropModalOpen(true);
+        void processAndScanImage(base64Url);
       }
     } catch (e: any) {
       setError(e.message || "Gagal mengambil snapshot kamera.");
@@ -411,8 +415,9 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     reader.onload = (event) => {
       const base64Url = event.target?.result as string;
       if (base64Url) {
+        // Simpan foto asli untuk opsi "Sesuaikan Sudut Manual", lalu langsung scan.
         setPendingCropImage(base64Url);
-        setIsCropModalOpen(true);
+        void processAndScanImage(base64Url);
       }
     };
     reader.readAsDataURL(file);
@@ -1223,8 +1228,18 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               className="ctl ctl-sm ctl-primary font-bold justify-center mt-2 flex items-center gap-1.5"
             >
               <IconBot3D size={14} />
-              <span>Lanjut ke Arena Dual-Engine Solver</span>
+              <span>Gunakan di Simulator (Dual-Engine Solver)</span>
             </button>
+
+            {pendingCropImage && (
+              <button
+                onClick={() => setIsCropModalOpen(true)}
+                className="ctl ctl-sm ctl-quiet font-bold justify-center flex items-center gap-1.5"
+              >
+                <IconScan3D size={14} />
+                <span>Sesuaikan Sudut Papan Manual (bila hasil meleset)</span>
+              </button>
+            )}
           </div>
         </div>
       )}

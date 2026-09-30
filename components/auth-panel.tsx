@@ -159,7 +159,14 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
     if (inline) {
       return (
         <div className="w-full max-w-[720px] mx-auto">
-          <div className="space-y-3 text-white">{profileContent}</div>
+          {/* Card background wajib: tanpa ini pop-up "tembus pandang" saat dipakai
+              sebagai modal (lihat pemakaian showAuthModal di game.tsx). */}
+          <div
+            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 md:p-6 shadow-2xl space-y-3 text-white relative animate-in fade-in zoom-in-95 duration-200"
+            style={{ background: "var(--card)" }}
+          >
+            {profileContent}
+          </div>
         </div>
       );
     }
@@ -434,7 +441,13 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
   if (inline) {
     return (
       <div className="w-full max-w-[720px] mx-auto">
-        <div className="space-y-3 text-white">{formContent}</div>
+        {/* Card background wajib: tanpa ini pop-up login "tembus pandang" saat modal. */}
+        <div
+          className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 md:p-6 shadow-2xl space-y-3 text-white relative animate-in fade-in zoom-in-95 duration-200"
+          style={{ background: "var(--card)" }}
+        >
+          {formContent}
+        </div>
       </div>
     );
   }

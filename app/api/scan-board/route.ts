@@ -590,6 +590,26 @@ export async function POST(req: NextRequest) {
             });
           }
         }
+        // Kandidat tidak sepenuhnya masuk akal (mis. raja tergeletak sehingga
+        // tak terdeteksi) — tetap kirim sebagai hasil "perlu review" agar user
+        // bisa mengedit di tab Papan Referensi, bukan menolak mentah.
+        const candidate =
+          sanitizeAndRepairFen(yoloData.board_fen_candidate || "") ||
+          sanitizeAndRepairFen(yoloData.fen || "");
+        const candidatePieces = candidate
+          ? (candidate.match(/[a-zA-Z]/g) || []).length
+          : 0;
+        if (candidate && candidatePieces >= 2) {
+          return NextResponse.json({
+            ok: true,
+            fen: candidate,
+            boardFen: candidate,
+            confidence: 0.6,
+            engine: "yolo11-review",
+            needsReview: true,
+            note: "Hasil scan perlu diperiksa — beberapa bidak kemungkinan salah terbaca (mis. bidak tergeletak). Edit di tab Papan Referensi sebelum dipakai.",
+          });
+        }
       }
     } catch (yoloErr: any) {
       console.warn("YOLO11 service skipped:", yoloErr?.message);
@@ -632,12 +652,11 @@ export async function POST(req: NextRequest) {
       {
         ok: false,
         error:
-          "Tidak ada engine vision yang tersedia untuk membaca foto papan. " +
-          "Solusi: (1) jalankan service yolo11 (docker compose --profile yolo11 up), " +
-          "(2) isi GEMINI_API_KEY atau OPENAI_API_KEY di .env untuk AI vision, " +
-          "(3) jalankan service chesscog lokal, atau " +
-          "(4) tempel notasi FEN manual / gunakan preset. " +
-          "Catatan: meskipun vision aktif, hasil scan sebaiknya selalu diperiksa & diedit di tab 'Papan Referensi & Edit Posisi'.",
+          "Service vision lokal (yolo11) tidak terjangkau untuk membaca foto papan. " +
+          "Solusi: (1) jalankan ulang stack: docker compose up -d --build, " +
+          "(2) cek log: docker logs jev-yolo11, atau " +
+          "(3) tempel notasi FEN manual / gunakan preset. " +
+          "Catatan: hasil scan sebaiknya selalu diperiksa & diedit di tab 'Papan Referensi & Edit Posisi'.",
       },
       { status: 422 }
     );

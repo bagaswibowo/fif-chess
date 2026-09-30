@@ -448,7 +448,7 @@ export function SpectatorView({
       className={
         fullscreenSpectator
           ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-          : "h-full max-h-full flex flex-col gap-2 min-h-0 overflow-hidden w-full max-w-7xl mx-auto"
+          : "h-full max-h-[calc(100dvh-9rem)] flex flex-col gap-2 min-h-0 overflow-hidden w-full max-w-7xl mx-auto"
       }
     >
       {showConfetti && <Confetti />}
@@ -701,7 +701,10 @@ export function SpectatorView({
           </Card>
 
           {/* 2-COLUMN MOVE HISTORY TABLE - White Engine vs Black Engine */}
-          <Card className="panel border-[var(--border)] text-white shadow-lg overflow-hidden flex-1 min-h-0 flex flex-col" style={{ background: "var(--card)" }}>
+          <Card
+            className="panel border-[var(--border)] text-white shadow-lg overflow-hidden flex-1 min-h-0 flex flex-col max-lg:max-h-[24rem]"
+            style={{ background: "var(--card)" }}
+          >
             <CardHeader className="py-1.5 px-3.5 border-b border-[var(--border)] flex flex-row items-center justify-between shrink-0" style={{ background: "var(--surface)" }}>
               <CardTitle className="text-xs font-black uppercase tracking-wider text-neutral-300">
                 Notasi Langkah ({moves.length})
