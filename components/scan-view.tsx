@@ -843,7 +843,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         {/* LIVE DETECTION MODAL */}
         {isLiveDetectOpen && (
           <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md">
-            <div className="panel p-4 stack max-w-sm w-full relative" style={{ background: "var(--card)", borderColor: "var(--primary)" }}>
+            <div className="panel p-4 stack max-w-sm w-full relative max-h-[92dvh] overflow-y-auto custom-scrollbar" style={{ background: "var(--card)", borderColor: "var(--primary)" }}>
               <div className="row-between pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -892,7 +892,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         {/* WEBCAM MODAL IF ACTIVE */}
         {isCameraOpen && (
           <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md">
-            <div className="panel p-4 stack max-w-sm w-full relative" style={{ background: "var(--card)", borderColor: "var(--primary)" }}>
+            <div className="panel p-4 stack max-w-sm w-full relative max-h-[92dvh] overflow-y-auto custom-scrollbar" style={{ background: "var(--card)", borderColor: "var(--primary)" }}>
               <div className="row-between pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <IconScan3D size={16} /> Pemindai Kamera Papan Catur

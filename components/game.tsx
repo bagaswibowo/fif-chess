@@ -645,7 +645,7 @@ export function Game() {
   return (
     <div className="flex flex-col md:flex-row h-screen max-h-screen overflow-hidden bg-[var(--background)] text-white select-none">
       {/* MOBILE TOP BAR (Hidden on Desktop) */}
-      <header className="flex md:hidden items-center justify-between px-3.5 py-2 bg-[var(--card)] border-b border-[var(--border)] shrink-0 z-30 shadow-md">
+      <header className="mobile-safe-top flex md:hidden items-center justify-between px-3.5 pb-2 bg-[var(--card)] border-b border-[var(--border)] shrink-0 z-30 shadow-md">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick("play")}>
           <div className="w-8 h-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center shadow">
             <IconPlay3D size={20} />
@@ -863,7 +863,7 @@ export function Game() {
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col p-2 md:p-3 pb-20 md:pb-3 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
+      <main className="flex-1 flex flex-col p-2 md:p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-3 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
         {!currentUser ? (
           <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 min-h-[calc(100vh-4rem)] flex flex-col">
             <div className="flex-1 overflow-y-auto">

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
@@ -22,6 +22,15 @@ export const metadata: Metadata = {
   title: "Jev Chess",
   description:
     "Play chess against TypeSafe Jev. Chess.js owns the rules; Jev only picks from legal UCI moves.",
+};
+
+// viewport-fit=cover wajib agar env(safe-area-inset-*) aktif di iPhone
+// (notch + home bar) sehingga header & nav bawah tidak tertutup.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#1c1a18",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
