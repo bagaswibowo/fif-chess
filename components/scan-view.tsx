@@ -25,6 +25,7 @@ import {
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { BoardControls } from "@/components/board-controls";
 import { PerspectiveCropModal } from "@/components/perspective-crop-modal";
+import { NotationTable } from "@/components/notation-table";
 
 type Props = {
   onLoadFen: (fen: string) => void;
@@ -1175,41 +1176,34 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 <p className="text-neutral-300 m-0 leading-snug">{tacticalIntel.danger}</p>
               </div>
 
-              {/* Moves Table — gaya tabel notasi AI Coach (pasangan Putih/Hitam) */}
+              {/* Moves Table — gaya tabel notasi seragam (pasangan Putih/Hitam) */}
               {solveMoves.length > 0 && (
                 <div className="pt-1">
-                  <div className="text-xs font-bold text-[var(--muted-foreground)] mb-1 uppercase">
-                    Notasi Langkah ({solveMoves.length}):
-                  </div>
-                  <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-                    <div className="grid grid-cols-[2.2rem_1fr_1fr] items-center px-2 py-1.5 border-b border-[var(--border)] bg-[var(--card)] text-[10px] font-bold text-neutral-400">
-                      <span className="text-center">#</span>
-                      <span className="truncate">{whiteEngine}</span>
-                      <span className="truncate">{blackEngine}</span>
-                    </div>
-                    <div className="max-h-48 overflow-y-auto px-2 py-1">
-                      {(() => {
-                        const rows: { no: number; w?: typeof solveMoves[number]; b?: typeof solveMoves[number] }[] = [];
-                        solveMoves.forEach((m, idx) => {
-                          const no = Math.floor(idx / 2) + 1;
-                          let row = rows.find((r) => r.no === no);
-                          if (!row) { row = { no }; rows.push(row); }
-                          if (idx % 2 === 0) row.w = m; else row.b = m;
-                        });
-                        return rows.map((row) => (
-                          <div key={row.no} className={`grid grid-cols-[2.2rem_1fr_1fr] items-center rounded py-0.5 px-1 font-mono text-xs ${row.no % 2 === 0 ? "bg-[var(--card)]/40" : ""}`}>
-                            <span className="text-center text-neutral-400 font-bold">{row.no}.</span>
-                            <span className="text-white font-bold truncate pr-1">
-                              {row.w ? <>{row.w.san} <span className="text-[9px] text-amber-400/80 font-normal">{row.w.scoreCp !== null && row.w.scoreCp !== undefined ? `${row.w.scoreCp > 0 ? "+" : ""}${(row.w.scoreCp / 100).toFixed(1)}` : ""}</span></> : ""}
-                            </span>
-                            <span className="text-neutral-200 font-bold truncate pl-1">
-                              {row.b ? <>{row.b.san} <span className="text-[9px] text-amber-400/80 font-normal">{row.b.scoreCp !== null && row.b.scoreCp !== undefined ? `${row.b.scoreCp > 0 ? "+" : ""}${(row.b.scoreCp / 100).toFixed(1)}` : ""}</span></> : ""}
-                            </span>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
+                  <NotationTable
+                    title="Notasi Langkah"
+                    whiteLabel={whiteEngine}
+                    blackLabel={blackEngine}
+                    plyCount={solveMoves.length}
+                    bodyMaxHeightClass="max-h-48"
+                    rows={(() => {
+                      const rows: { no: number; white?: string; black?: string; whiteScoreCp?: number | null; blackScoreCp?: number | null; latest?: boolean }[] = [];
+                      solveMoves.forEach((m, idx) => {
+                        const no = Math.floor(idx / 2) + 1;
+                        let row = rows.find((r) => r.no === no);
+                        if (!row) { row = { no }; rows.push(row); }
+                        if (idx % 2 === 0) {
+                          row.white = m.san;
+                          row.whiteScoreCp = m.scoreCp ?? null;
+                        } else {
+                          row.black = m.san;
+                          row.blackScoreCp = m.scoreCp ?? null;
+                        }
+                      });
+                      const last = rows[rows.length - 1];
+                      if (last) last.latest = true;
+                      return rows;
+                    })()}
+                  />
                 </div>
               )}
             </div>

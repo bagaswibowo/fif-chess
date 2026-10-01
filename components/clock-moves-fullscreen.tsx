@@ -10,9 +10,10 @@
 // 6. Live Stockfish & AI Coach Tactical Commentary.
 // 7. Scoresheet Riwayat Langkah dengan Auto-scroll.
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Chessboard } from "react-chessboard";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
+import { NotationTable } from "@/components/notation-table";
 import { IconClose3D, IconSwap3D, IconBot3D, IconLightbulb3D } from "@/components/icons3d";
 import type { PlayedMove } from "@/lib/types";
 
@@ -57,7 +58,6 @@ export function ClockMovesFullscreen({
 }: Props) {
   const [currentOrientation, setCurrentOrientation] = useState<"white" | "black">(boardOrientation);
   const [showCommentary, setShowCommentary] = useState(true);
-  const scrollBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setCurrentOrientation(boardOrientation);
@@ -86,11 +86,6 @@ export function ClockMovesFullscreen({
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
-
-  // Auto-scroll tabel notasi saat langkah bertambah
-  useEffect(() => {
-    scrollBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [moves.length]);
 
   // Hitung rasio evaluasi Stockfish (-10 s/d +10 pion)
   const evalValue = typeof scoreCp === "number" ? scoreCp / 100 : 0;
@@ -312,64 +307,22 @@ export function ClockMovesFullscreen({
           )}
 
           {/* SCORESHEET NOTASI LANGKAH */}
-          <div className="flex-1 flex flex-col p-3 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm min-h-0">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[var(--border)] mb-1 shrink-0">
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-300">
-                Notasi Langkah ({moves.length})
-              </span>
-              <span className="text-xs text-neutral-400 font-mono">
-                Babak ke-{Math.floor(moves.length / 2) + 1}
-              </span>
-            </div>
-
-            {/* Header Kolom Notasi */}
-            <div className="grid grid-cols-[2rem_1fr_1fr] px-2 py-1 bg-[var(--surface)] border border-[var(--border)] rounded-t-lg text-xs font-bold text-neutral-400">
-              <span className="text-center">#</span>
-              <span className="truncate">{whiteName}</span>
-              <span className="truncate">{blackName}</span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto rounded-b-lg bg-[var(--surface)]/60 border-x border-b border-[var(--border)] p-1">
-              <div className="space-y-0.5 text-xs font-mono">
-                {Array.from({ length: Math.ceil(moves.length / 2) }).map((_, roundIdx) => {
-                  const whiteMove = moves[roundIdx * 2];
-                  const blackMove = moves[roundIdx * 2 + 1];
-                  const isLatestRound = roundIdx === Math.floor((moves.length - 1) / 2);
-                  return (
-                    <div
-                      key={roundIdx}
-                      className={`grid grid-cols-[2rem_1fr_1fr] items-center px-1.5 py-1 rounded transition-colors ${
-                        roundIdx % 2 === 0 ? "bg-neutral-800/30" : "bg-transparent"
-                      }`}
-                    >
-                      <span className="text-center text-xs text-neutral-500 font-bold select-none">
-                        {roundIdx + 1}.
-                      </span>
-                      <span
-                        className={`font-bold px-1.5 py-0.5 rounded truncate ${
-                          whiteMove && moves.indexOf(whiteMove) === moves.length - 1
-                            ? "bg-[var(--primary)] text-white"
-                            : "text-neutral-200"
-                        }`}
-                      >
-                        {whiteMove?.san || "-"}
-                      </span>
-                      <span
-                        className={`font-bold px-1.5 py-0.5 rounded truncate ${
-                          blackMove && moves.indexOf(blackMove) === moves.length - 1
-                            ? "bg-[var(--primary)] text-white"
-                            : "text-neutral-200"
-                        }`}
-                      >
-                        {blackMove?.san || "-"}
-                      </span>
-                    </div>
-                  );
-                })}
-                <div ref={scrollBottomRef} />
-              </div>
-            </div>
-          </div>
+          <NotationTable
+            title="Notasi Langkah"
+            whiteLabel={whiteName}
+            blackLabel={blackName}
+            plyCount={moves.length}
+            className="flex-1 min-h-0"
+            bodyMaxHeightClass=""
+            rows={Array.from({ length: Math.ceil(moves.length / 2) }).map((_, roundIdx) => ({
+              no: roundIdx + 1,
+              white: moves[roundIdx * 2]?.san,
+              black: moves[roundIdx * 2 + 1]?.san,
+              whiteScoreCp: null,
+              blackScoreCp: null,
+              latest: roundIdx === Math.floor((moves.length - 1) / 2),
+            }))}
+          />
 
         </div>
 

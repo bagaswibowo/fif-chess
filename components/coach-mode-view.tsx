@@ -3,6 +3,7 @@
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { BoardControls } from "@/components/board-controls";
+import { NotationTable } from "@/components/notation-table";
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -651,28 +652,18 @@ export function CoachModeView({ lang = "id" }: Props) {
 
           {/* Riwayat Langkah */}
           {history.length > 0 && (
-            <Card className="bg-[#262421] border-[#36322d] text-white">
-              <CardHeader className="py-2 px-4 border-b border-[#36322d]">
-                <CardTitle className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                  {lang === "id" ? "Riwayat Langkah" : "Move History"} ({history.length} ply)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-2.5">
-                <div className="flex flex-wrap gap-1 font-mono text-xs max-h-[110px] overflow-y-auto">
-                  {history.map((san, idx) => (
-                    <span
-                      key={idx}
-                      className={`px-1.5 py-0.5 rounded ${
-                        idx % 2 === 0 ? "bg-[#312e2b] text-neutral-200" : "bg-[#1c1a18] text-neutral-300"
-                      } ${idx === history.length - 1 ? "ring-1 ring-[#81b64c] text-white font-bold" : ""}`}
-                    >
-                      {idx % 2 === 0 && <span className="text-neutral-500 mr-1">{Math.floor(idx / 2) + 1}.</span>}
-                      {san}
-                    </span>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <NotationTable
+              title={lang === "id" ? "Riwayat Langkah" : "Move History"}
+              whiteLabel={playerSide === "white" ? (lang === "id" ? "Anda (Player)" : "You (Player)") : "Stockfish 15"}
+              blackLabel={playerSide === "black" ? (lang === "id" ? "Anda (Player)" : "You (Player)") : "Stockfish 15"}
+              plyCount={history.length}
+              rows={Array.from({ length: Math.ceil(history.length / 2) }).map((_, i) => ({
+                no: i + 1,
+                white: history[i * 2],
+                black: history[i * 2 + 1],
+                latest: i === Math.floor((history.length - 1) / 2),
+              }))}
+            />
           )}
         </div>
       </div>

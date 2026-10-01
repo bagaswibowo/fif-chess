@@ -10,6 +10,7 @@
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { BoardControls } from "@/components/board-controls";
+import { NotationTable } from "@/components/notation-table";
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -448,7 +449,7 @@ export function SpectatorView({
       className={
         fullscreenSpectator
           ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-          : "h-full max-h-[calc(100dvh-9rem)] flex flex-col gap-2 min-h-0 overflow-hidden w-full max-w-7xl mx-auto"
+          : "flex flex-col gap-2 w-full max-w-7xl mx-auto"
       }
     >
       {showConfetti && <Confetti />}
@@ -468,6 +469,22 @@ export function SpectatorView({
               {status === "running" ? "Pertandingan Berlangsung..." : status === "finished" ? `Selesai (${moves.length} langkah)` : "Siap Dimulai"}
             </div>
           </div>
+        </div>
+
+        {/* Visual Arrows Legend (inline with header to save vertical space) */}
+        <div className="hidden xl:flex items-center justify-around gap-4 text-xs font-bold text-neutral-300 shrink-0">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300" />
+            <span className="font-semibold text-neutral-300">Langkah Terkini</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded bg-red-500 border border-red-300" />
+            <span className="font-bold text-red-400">Target Diancam</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded bg-sky-400 border border-sky-300" />
+            <span className="font-bold text-sky-400">Prediksi Balasan</span>
+          </span>
         </div>
 
         {/* Action Controls */}
@@ -518,10 +535,10 @@ export function SpectatorView({
       </div>
 
       {/* MAIN TWO-COLUMN ARENA LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch flex-1 min-h-0 overflow-hidden">
+      <div className={`grid grid-cols-1 lg:grid-cols-12 gap-3 items-start ${fullscreenSpectator ? "flex-1 min-h-0" : ""}`}>
         
         {/* LEFT COLUMN (7 Cols): Chess Arena (Controls & Legend on TOP -> Top Player -> Board + Eval -> Bottom Player) */}
-        <div className="lg:col-span-7 flex flex-col justify-between h-full min-h-0 space-y-1.5">
+        <div className="lg:col-span-7 flex flex-col gap-1.5">
           
           {/* 1. Unified Board Action Controls (ON TOP) */}
           <BoardControls
@@ -533,21 +550,7 @@ export function SpectatorView({
             showShortcuts={true}
           />
 
-          {/* 2. Visual Arrows Legend (ON TOP) */}
-          <div className="panel px-3 py-1.5 rounded-xl border border-[var(--border)] flex items-center justify-around text-xs font-bold text-neutral-300 shadow-sm shrink-0" style={{ background: "var(--surface)" }}>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300" />
-              <span className="font-semibold text-neutral-300">Langkah Terkini</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-red-500 border border-red-300" />
-              <span className="font-bold text-red-400">Target Diancam</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-sky-400 border border-sky-300" />
-              <span className="font-bold text-sky-400">Prediksi Balasan</span>
-            </span>
-          </div>
+
 
           {/* 3. Top Player (Black) with 1-Click Engine Selector & Captured Pieces */}
           <div className="panel px-3 py-1.5 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm shrink-0" style={{ background: "var(--card)" }}>
@@ -570,7 +573,7 @@ export function SpectatorView({
           </div>
 
           {/* 4. Board Container with Sleek Vertical Dual-Bar Eval */}
-          <div className="flex gap-2 items-stretch justify-center w-full flex-1 min-h-0 max-h-[calc(100vh-165px)]">
+          <div className="flex gap-2 items-start justify-center w-full">
             {/* Slim Vertical Dual Eval Bar: Black at top, White at bottom (responsive to orientation) */}
             <div
               className="w-3 md:w-3.5 bg-neutral-900 rounded-full overflow-hidden border border-[var(--border)] flex flex-col justify-between shrink-0 shadow-inner relative select-none"
@@ -601,7 +604,7 @@ export function SpectatorView({
             </div>
 
             {/* Chessboard */}
-            <div className="aspect-square h-full max-h-[calc(100vh-165px)] max-w-[calc(100vh-165px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative min-h-0">
+            <div className="aspect-square w-full max-h-[calc(100vh-215px)] max-w-[calc(100vh-215px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
               <Chessboard
                 options={{
                   id: "spectator-board",
@@ -641,7 +644,7 @@ export function SpectatorView({
         </div>
 
         {/* RIGHT COLUMN (5 Cols): Live AI Commentary & 2-Column Move History */}
-        <div className="lg:col-span-5 flex flex-col gap-2 h-full min-h-0 overflow-hidden">
+        <div className="lg:col-span-5 flex flex-col gap-2 min-h-0 lg:max-h-[calc(100dvh-11rem)] lg:overflow-y-auto lg:pr-1 custom-scrollbar">
           
           {/* LIVE AI COMMENTATOR & TACTICS CARD - Typography 12px with bold & italic */}
           <Card className="panel border-[var(--border)] text-white shadow-xl overflow-hidden shrink-0 max-h-[38%] flex flex-col" style={{ background: "var(--card)" }}>
@@ -701,78 +704,29 @@ export function SpectatorView({
           </Card>
 
           {/* 2-COLUMN MOVE HISTORY TABLE - White Engine vs Black Engine */}
-          <Card
-            className="panel border-[var(--border)] text-white shadow-lg overflow-hidden flex-1 min-h-0 flex flex-col max-lg:max-h-[24rem]"
-            style={{ background: "var(--card)" }}
-          >
-            <CardHeader className="py-1.5 px-3.5 border-b border-[var(--border)] flex flex-row items-center justify-between shrink-0" style={{ background: "var(--surface)" }}>
-              <CardTitle className="text-xs font-black uppercase tracking-wider text-neutral-300">
-                Notasi Langkah ({moves.length})
-              </CardTitle>
-              {outcome && (
+          <NotationTable
+            title="Notasi Langkah"
+            plyCount={moves.length}
+            whiteLabel={ENGINE_LABELS[whiteEngine]}
+            blackLabel={ENGINE_LABELS[blackEngine]}
+            className="flex-1 min-h-0 max-lg:max-h-[24rem]"
+            bodyMaxHeightClass=""
+            headerExtra={
+              outcome ? (
                 <Badge variant="outline" className="text-[10px] bg-amber-500/20 text-amber-300 border-amber-500/40">
                   {outcome.label}
                 </Badge>
-              )}
-            </CardHeader>
-
-            <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
-              <div className="h-full overflow-y-auto font-mono text-[12px] custom-scrollbar">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] text-neutral-400 font-sans uppercase tracking-wider">
-                      <th className="py-1 px-2 text-center w-8">#</th>
-                      <th className="py-1 px-2.5 text-left border-r border-[var(--border)]">
-                        Putih: <strong className="text-white">{ENGINE_LABELS[whiteEngine]}</strong>
-                      </th>
-                      <th className="py-1 px-2.5 text-left">
-                        Hitam: <strong className="text-white">{ENGINE_LABELS[blackEngine]}</strong>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--border)]/60 text-[11px]">
-                    {moveRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="text-center py-8 text-neutral-500 italic text-[11px]">
-                          Belum ada langkah yang dimainkan.
-                        </td>
-                      </tr>
-                    ) : (
-                      moveRows.map((r, i) => (
-                        <tr key={i} className="hover:bg-neutral-800/40 transition-colors">
-                          <td className="py-1 px-2 text-center text-neutral-500 font-bold">{r.n}.</td>
-                          <td className="py-1 px-2.5 border-r border-[var(--border)]">
-                            {r.white ? (
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-white">{r.white.san}</span>
-                                <span className="text-[10px] text-neutral-400 font-mono">
-                                  {r.white.scoreCp !== null ? `${r.white.scoreCp > 0 ? "+" : ""}${(r.white.scoreCp / 100).toFixed(1)}` : ""}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-neutral-600">—</span>
-                            )}
-                          </td>
-                          <td className="py-1 px-2.5">
-                            {r.black ? (
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-neutral-300">{r.black.san}</span>
-                                <span className="text-[10px] text-neutral-400 font-mono">
-                                  {r.black.scoreCp !== null ? `${r.black.scoreCp > 0 ? "+" : ""}${(r.black.scoreCp / 100).toFixed(1)}` : ""}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-neutral-600">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+              ) : undefined
+            }
+            rows={moveRows.map((r, i) => ({
+              no: r.n,
+              white: r.white?.san,
+              black: r.black?.san,
+              whiteScoreCp: r.white?.scoreCp ?? null,
+              blackScoreCp: r.black?.scoreCp ?? null,
+              latest: i === moveRows.length - 1 && (r.white !== undefined || r.black !== undefined),
+            }))}
+          />
 
           {/* Outcome Result Card if Over */}
           {outcome && outcome.over && (

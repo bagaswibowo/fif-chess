@@ -10,6 +10,7 @@
 
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { BoardControls } from "@/components/board-controls";
+import { NotationTable } from "@/components/notation-table";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
 import type { GameRecord } from "@/lib/game-history";
@@ -640,30 +641,20 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                     </span>
                   </div>
 
-                  <div className="overflow-y-auto max-h-56 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-1.5">
-                    <div className="grid grid-cols-2 gap-1 text-xs font-mono">
-                      {active.moves.map((san, idx) => {
-                        const isCurrent = idx === moveIndex - 1;
-                        return (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => { setIsPlaying(false); setMoveIndex(idx + 1); }}
-                            className={`px-2 py-1 rounded text-left flex items-center justify-between transition-all cursor-pointer ${
-                              isCurrent
-                                ? "bg-[var(--primary)] text-white font-black shadow"
-                                : "text-neutral-300 hover:bg-neutral-800"
-                            }`}
-                          >
-                            <span className="text-[10px] text-neutral-500 w-6">
-                              {idx % 2 === 0 ? `${Math.floor(idx / 2) + 1}.` : ""}
-                            </span>
-                            <span className="font-bold">{san}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <NotationTable
+                    title={lang === "id" ? "Daftar Langkah Pertandingan" : "Match Move List"}
+                    whiteLabel={active.humanSide === "white" ? (lang === "id" ? "Anda" : "You") : active.opponent}
+                    blackLabel={active.humanSide === "black" ? (lang === "id" ? "Anda" : "You") : active.opponent}
+                    plyCount={active.moves.length}
+                    bodyMaxHeightClass="max-h-56"
+                    onSelect={(ply) => { setIsPlaying(false); setMoveIndex(ply); }}
+                    rows={Array.from({ length: Math.ceil(active.moves.length / 2) }).map((_, i) => ({
+                      no: i + 1,
+                      white: active.moves[i * 2],
+                      black: active.moves[i * 2 + 1],
+                      latest: i * 2 + 1 === moveIndex - 1 || i * 2 === moveIndex - 1,
+                    }))}
+                  />
                 </div>
 
               </div>
