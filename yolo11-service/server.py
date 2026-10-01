@@ -227,24 +227,62 @@ def _cell_brightness(g: np.ndarray, x0: float, y0: float, sq: float):
     return bright
 
 
-def _checker_score(bright: np.ndarray) -> float:
-    """Skor kualitas checkerboard dari grid kecerahan 8x8: korelasi Pearson
-    terhadap template checkerboard. Invarian terhadap skala & shift kecerahan
-    (threshold mean berbasis kontras terbukti rapuh — nilai antara 155-165
-    meruntuhkan match). Tanda negatif = petak genap gelap (orientasi standar
-    a8 gelap); kedua tanda diterima karena foto dari sisi Hitam ditangani
-    lewat rotasi 180° terpisah."""
+def _checker_signed(bright: np.ndarray) -> float:
+    """Korelasi Pearson TANPA abs terhadap template checkerboard.
+
+    Invarian terhadap skala & shift kecerahan (threshold mean berbasis kontras
+    terbukti rapuh — nilai antara 155-165 meruntuhkan match).
+    """
     bc = bright - bright.mean()
     denom = float(np.sqrt((bc ** 2).sum())) * _TPL_NORM
     if denom < 1e-9:
         return 0.0
-    return abs(float((bc * _TPL_C).sum()) / denom)
+    return float((bc * _TPL_C).sum()) / denom
+
+
+def _checker_score(bright: np.ndarray) -> float:
+    """Skor kualitas checkerboard = |korelasi| terhadap template checkerboard.
+
+    Magnitudo saja. TIDAK dipakai untuk orientasi: checkerboard simetris 180°
+    sehingga kecerahan tidak pernah bisa membedakan a8 dari h1 — dibuktikan
+    oleh test_checker_orientation.py. Orientasi diambil dari warna bidak
+    (lihat orient_from_detections).
+    """
+    return abs(_checker_signed(bright))
+
+
+def orient_from_detections(detections, grid) -> str | None:
+    """Sisi pandang dari warna bidak di baris paling bawah papan.
+
+    Sisi Putih -> baris bawah berisi bidak Putih; sisi Hitam -> bidak Hitam.
+    Ambang 2 bidak se warna: satu bidak atau baris tercampur bukan bukti,
+    pemanggil lalu jatuh ke mode plausibilitas (lihat predict).
+
+    Baris dihitung dari grid terkalibrasi (sama seperti grid_fen), bukan piksel
+    mentah, supaya "baris 7" berarti baris papan terdalam.
+    """
+    x0, y0, sq = grid[0], grid[1], grid[2]
+    per_row: dict[int, list[str]] = {}
+    for fen_char, cx, cy, _h, _conf in detections:
+        col, row = int((cx - x0) / sq), int((cy - y0) / sq)
+        if 0 <= col <= 7 and 0 <= row <= 7:
+            per_row.setdefault(row, []).append(fen_char)
+
+    for row in sorted(per_row, reverse=True):      # dari baris terdalam ke atas
+        pieces = per_row[row]
+        white = sum(p.isupper() for p in pieces)
+        if not white:                 # semua bidak di baris terdalam = hitam
+            return "black_bottom" if len(pieces) >= 2 else None
+        if white == len(pieces) and white >= 2:
+            return "white_bottom"
+        return None                     # baris tercampur = bukan bukti
+    return None
 
 
 def calibrate_grid(img: np.ndarray):
     """
     Cari area 64 petak sesungguhnya di dalam gambar (warp ATAU mentah).
-    Return (x0, y0, sq) dalam piksel gambar penuh, atau None.
+    Return (x0, y0, sq, skor) dalam piksel gambar penuh, atau None.
 
     Pencarian coarse-to-fine pada gambar downscale ~380px lalu refine pada
     gambar penuh. Ukuran petak kandidat meliputi papan KECIL dari gambar
@@ -319,7 +357,14 @@ def calibrate_grid(img: np.ndarray):
 
 
 def detect_pieces(img_np: np.ndarray, conf_override: float | None = None):
-    """Jalankan YOLOv11, kembalikan daftar (kelas_fen, cx, cy, conf)."""
+    """Jalankan YOLOv11, kembalikan daftar (kelas_fen, cx, cy_anchor, tinggi, conf).
+
+    cy_anchor BUKAN tengah kotak. Untuk bidak tinggi (raja, ratu, gajah, kuda)
+    yang menutupi petak di belakangnya, yang menentukan petak adalah DASAR bidak
+    yang menyentuh papan. Titik tengah kotak sering jatuh di petak SEBELUM posisi
+    sebenarnya — inilah penyebab "pieces in wrong squares" yang paling sering.
+    x tetap memakai tengah kotak: bidak berdiri tegak, kolomnya stabil.
+    """
     model = load_model()
     if model is None:
         raise HTTPException(
@@ -337,7 +382,14 @@ def detect_pieces(img_np: np.ndarray, conf_override: float | None = None):
             if fen_char is None:
                 continue
             x1, y1, x2, y2 = box.xyxy[0].tolist()
-            detections.append((fen_char, (x1 + x2) / 2.0, (y1 + y2) / 2.0, float(box.conf[0])))
+            cx = (x1 + x2) / 2.0
+            h = y2 - y1
+            # Anchor di 80% tinggi kotak: dasar bidak, diklik sedikit ke atas
+            # untuk tolerate garis dasar petak & bayangan kontak. Bukan y2 mentah
+            # (bayangan bisa menambah 5-10% tinggi) tapi bukan tengah (untuk bidak
+            # tinggi = petak yang salah).
+            cy = y1 + h * 0.8
+            detections.append((fen_char, cx, cy, h, float(box.conf[0])))
     return detections
 
 
@@ -369,7 +421,8 @@ def grid_fen(detections, grid, img=None) -> str:
     board = [[""] * 8 for _ in range(8)]
     best_conf = [[0.0] * 8 for _ in range(8)]
     H, W = img.shape[:2] if img is not None else (0, 0)
-    for fen_char, cx, cy, conf in detections:
+    for det in detections:
+        fen_char, cx, cy, _h, conf = det
         col = int((cx - x0) / sq)
         row = int((cy - y0) / sq)
         if col < 0 or col > 7 or row < 0 or row > 7:
@@ -1163,13 +1216,14 @@ def predict(req: ScanRequest):
             calib = cal_raw
             logger.info("Memakai kalibrasi FOTO MENTAH (skor %.2f)", cal_raw[3])
         if calib is None:
-            # Fallback terakhir: asumsikan papan memenuhi gambar.
+            # Fallback terakhir: asumsikan papan memenuhi gambar. Tanpa kalibrasi
+            # tidak ada tanda checkerboard yang bisa dipercaya → mode tebak lama.
             if warped is not None:
                 work_img = warped
             else:
                 work_img = img
             calib = (0.0, 0.0, work_img.shape[1] / 8.0, 0.0)
-            logger.warning("Kalibrasi grid gagal — fallback grid penuh.")
+            logger.warning("Kalibrasi grid gagal — fallback grid penuh, orientasi dari bidak.")
 
         h, w = work_img.shape[:2]
 
@@ -1180,12 +1234,23 @@ def predict(req: ScanRequest):
         for conf_try in (CONF_THRESHOLD, 0.15, 0.08):
             dets = detect_pieces(work_img, conf_override=conf_try)
             cand = grid_fen(dets, calib, img=work_img)
+            # Simpan kandidat TERBANYAK bidak, bukan hanya yang pertama — ini yang
+            # dipakai sebagai "perlu review" kalau tak ada yang plausibel.
             if first_candidate is None or piece_count(cand) > piece_count(first_candidate):
-                if first_candidate is None:
-                    first_candidate = cand
-            # 4. Orientasi: coba apa adanya (foto dari sisi Putih) lalu rotasi
-            #    180° (foto dari sisi Hitam). Ambil yang plausibel.
-            for label, bfen in (("normal", cand), ("rot180", rotate180_board(cand))):
+                first_candidate = cand
+            # 4. Orientasi. Bukti utama: warna bidak di baris paling bawah
+            #    (lihat orient_from_detections). Kalau bidak terlalu sedikit,
+            #    jatuh ke perilaku lama: coba dua arah, pilih yang plausible —
+            #    itu yang paling sering salah di tengah permainan.
+            orient_hint = orient_from_detections(dets, calib)
+            if orient_hint == "black_bottom":
+                variants = (("rot180", rotate180_board(cand)),)
+            elif orient_hint == "white_bottom":
+                variants = (("normal", cand),)
+            else:
+                logger.info("Orientasi dari bidak tidak meyakinkan — mode tebak dua arah.")
+                variants = (("normal", cand), ("rot180", rotate180_board(cand)))
+            for label, bfen in variants:
                 if plausible_board_fen(bfen):
                     result = (bfen, label, conf_try)
                     break
