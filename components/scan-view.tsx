@@ -173,6 +173,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [pendingCropImage, setPendingCropImage] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [selectedPieceTool, setSelectedPieceTool] = useState<string | null>(null);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [scanSuccessMessage, setScanSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState<{ percent: number; stage: string } | null>(null);
@@ -292,6 +293,15 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  // Live Detection State (kamera kontinu + scan berulang)
+  const [isLiveDetectOpen, setIsLiveDetectOpen] = useState(false);
+  const [liveDetectStatus, setLiveDetectStatus] = useState<"idle" | "detecting" | "success" | "error">("idle");
+  const [liveDetectFen, setLiveDetectFen] = useState<string | null>(null);
+  const [liveDetectError, setLiveDetectError] = useState<string | null>(null);
+  const liveVideoRef = useRef<HTMLVideoElement | null>(null);
+  const liveStreamRef = useRef<MediaStream | null>(null);
+  const liveAbortRef = useRef<boolean>(false);
+
   // Dual-Engine Solver State
   const [whiteEngine, setWhiteEngine] = useState<EngineType>("stockfish");
   const [blackEngine, setBlackEngine] = useState<EngineType>("jev-fly");
@@ -301,7 +311,6 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   const [currentScoreCp, setCurrentScoreCp] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mobileCameraInputRef = useRef<HTMLInputElement>(null);
   const autoSolveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const applyNewInitialFen = useCallback(
@@ -432,6 +441,118 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     await processAndScanImage(warpedBase64, true);
   };
 
+  // ===== LIVE DETECTION: kamera kontinu + scan berulang sampai FEN stabil =====
+  const stopLiveDetection = useCallback(() => {
+    liveAbortRef.current = true;
+    if (liveStreamRef.current) {
+      liveStreamRef.current.getTracks().forEach((t) => t.stop());
+      liveStreamRef.current = null;
+    }
+    setIsLiveDetectOpen(false);
+    setLiveDetectStatus("idle");
+  }, []);
+
+  const startLiveDetection = useCallback(async () => {
+    stopLiveDetection();
+    setError(null);
+    setLiveDetectError(null);
+    setLiveDetectFen(null);
+    setLiveDetectStatus("detecting");
+    setIsLiveDetectOpen(true);
+    liveAbortRef.current = false;
+
+    const openStream = async (): Promise<MediaStream | null> => {
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+      } catch {
+        try {
+          return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        } catch {
+          return null;
+        }
+      }
+    };
+
+    const stream = await openStream();
+    if (liveAbortRef.current) {
+      stream?.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    if (!stream) {
+      setLiveDetectStatus("error");
+      setLiveDetectError(lang === "id" ? "Izin kamera tidak diberikan." : "Camera permission denied.");
+      return;
+    }
+    liveStreamRef.current = stream;
+    if (liveVideoRef.current) {
+      liveVideoRef.current.srcObject = stream;
+      liveVideoRef.current.play().catch(() => {});
+    }
+
+    // Loop scan: ambil frame -> kirim ke /api/scan-board -> ulang.
+    // Berhenti otomatis saat FEN stabil 2x berturut-turut.
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    let lastFen: string | null = null;
+    let stableCount = 0;
+
+    while (!liveAbortRef.current) {
+      const video = liveVideoRef.current;
+      if (!video || video.readyState < 2 || !liveStreamRef.current) break;
+
+      let base64: string;
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) break;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        base64 = canvas.toDataURL("image/jpeg", 0.85);
+      } catch {
+        break;
+      }
+
+      setLiveDetectStatus("detecting");
+      try {
+        const compressed = await compressImage(base64, 800);
+        const res = await fetch("/api/scan-board", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: compressed }),
+        });
+        const data = await res.json().catch(() => ({ ok: false }));
+        if (liveAbortRef.current) break;
+
+        if (data.ok && data.fen && typeof data.fen === "string") {
+          // Bandingkan hanya bagian posisi (field pertama FEN) supaya stabil
+          const fenBoard = (data.fen as string).split(" ")[0];
+          if (fenBoard === lastFen) {
+            stableCount += 1;
+          } else {
+            stableCount = 1;
+            lastFen = fenBoard;
+          }
+          setLiveDetectFen(data.fen as string);
+          if (stableCount >= 2) {
+            setLiveDetectStatus("success");
+            applyNewInitialFen(data.fen as string, "Live detection berhasil — posisi stabil terbaca!");
+            setTimeout(() => stopLiveDetection(), 900);
+            break;
+          }
+        } else {
+          setLiveDetectFen(null);
+        }
+      } catch {
+        // Jaringan/server gagal sekali: tunggu lalu coba lagi.
+      }
+
+      await sleep(1500);
+    }
+  }, [applyNewInitialFen, lang, stopLiveDetection]);
+
   const handleSkipCropAndScan = async (rawBase64: string) => {
     setIsCropModalOpen(false);
     setPendingCropImage(null);
@@ -439,15 +560,26 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
   };
 
   // Edit posisi bebas di papan referensi: BUKAN gerakan catur legal — bidak
-  // dipindah/ditukar/diambil bebas untuk mengoreksi hasil scan. chess.move()
+  // dipindah/ditukar/dihapus bebas untuk mengoreksi hasil scan. chess.move()
   // menolak gerakan ilegal (mis. raja di bawah serangan) sehingga drag gagal;
   // manipulasi FEN langsung memperbolehkan semua penempatan.
+  // Drag bidak KELUAR papan (targetSquare null) = hapus bidak.
   const handleBoard1Drop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }): boolean => {
-    if (!targetSquare || targetSquare === sourceSquare) return false;
     try {
       const chess = new Chess(initialFen);
       const piece = chess.get(sourceSquare as any);
       if (!piece) return false;
+      if (!targetSquare) {
+        // Dilepas di luar papan → hapus bidak dari posisi.
+        chess.remove(sourceSquare as any);
+        const delFen = chess.fen();
+        if (delFen && delFen.split(" ")[0]) {
+          applyNewInitialFen(delFen);
+          return true;
+        }
+        return false;
+      }
+      if (targetSquare === sourceSquare) return false;
       chess.remove(sourceSquare as any);
       chess.put(piece, targetSquare as any);
       const newFen = chess.fen();
@@ -461,6 +593,20 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       return false;
     } catch {
       return false;
+    }
+  };
+
+  // Mode hapus bidak: klik bidak di papan referensi untuk menghapusnya.
+  const handleReferenceSquareClick = ({ square, piece }: { square: string; piece?: { pieceType?: string } | null }) => {
+    if (!isDeleteMode || !piece) return;
+    try {
+      const chess = new Chess(initialFen);
+      if (!chess.get(square as any)) return;
+      chess.remove(square as any);
+      const newFen = chess.fen();
+      if (newFen && newFen.split(" ")[0]) applyNewInitialFen(newFen);
+    } catch {
+      /* abaikan */
     }
   };
 
@@ -651,114 +797,97 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             Import Posisi Papan Catur
           </h2>
           <p className="text-xs text-[var(--muted-foreground)] max-w-md mt-1 mb-6 leading-relaxed">
-            Halaman ini siap menerima posisi catur dari foto papan fisik kamera HP, screenshot gambar, preset pembukaan/endgame, atau kode FEN manual.
+            Pindai posisi dari kamera, unggah foto papan, atau gunakan Live Detection — kamera membaca papan fisik secara kontinu sampai posisi terbaca stabil.
           </p>
 
-                    {/* MOBILE HERO CAMERA BUTTON (TOMBOL KAMERA TENGAH DI HP) */}
-          <div className="md:hidden w-full flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-[var(--surface)] to-[var(--card)] border border-[var(--border)] shadow-lg mb-4">
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              ref={mobileCameraInputRef}
-              className="hidden"
-              onChange={handleImageFile}
-            />
-            <button
-              type="button"
-              onClick={() => mobileCameraInputRef.current?.click()}
-              disabled={isProcessingImage}
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm flex items-center justify-center gap-2.5 shadow-lg active:scale-95 transition-all"
-            >
-              <IconScan3D size={24} />
-              <span>{isProcessingImage ? "Memproses Gambar..." : "Ambil Foto via Kamera HP"}</span>
-            </button>
-            <span className="text-xs text-emerald-300 font-semibold mt-2 flex items-center gap-1.5">
-              <IconLightning3D size={14} />
-              <span>Auto-Crop Perspektif Aktif — hasil selalu bisa diedit manual</span>
-            </span>
-          </div>
-
-          {/* ACTION BUTTON GRID */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full max-w-2xl">
+          {/* ACTION CARDS — 3 tombol besar dengan kontras terbaca */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl">
+            {/* KAMERA — kartu utama */}
             <button
               onClick={() => void startWebcam("environment")}
               disabled={isProcessingImage}
-              className="ctl ctl-sm ctl-primary font-bold flex flex-col items-center gap-2 py-4 rounded-xl"
+              className="group relative flex flex-col items-center gap-1.5 py-6 px-3 rounded-2xl text-white text-center transition-all active:scale-[0.97] disabled:opacity-50 border border-[var(--primary)] bg-[var(--primary)] hover:brightness-110 shadow-[0_6px_20px_-6px_var(--primary)]"
             >
-              <IconScan3D size={22} />
-              <span className="text-xs">Kamera HP / Webcam</span>
+              <IconScan3D size={28} />
+              <span className="text-sm font-black">Kamera</span>
+              <span className="text-[11px] font-medium text-white/85 leading-snug">Ambil foto posisi via kamera HP / webcam</span>
             </button>
 
+            {/* UPLOAD FOTO */}
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isProcessingImage}
-              className="ctl ctl-sm font-bold flex flex-col items-center gap-2 py-4 rounded-xl"
+              className="group relative flex flex-col items-center gap-1.5 py-6 px-3 rounded-2xl text-center transition-all active:scale-[0.97] disabled:opacity-50 border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--primary)]/60 hover:bg-[var(--card)] shadow-sm"
             >
-              <IconVision3D size={22} />
-              <span className="text-xs">
-                {isProcessingImage ? "Memproses AI..." : "Upload Foto Papan"}
+              <IconVision3D size={28} />
+              <span className="text-sm font-black text-white">{isProcessingImage ? "Memproses AI..." : "Upload Foto"}</span>
+              <span className="text-[11px] font-medium text-neutral-400 leading-snug">Pindai foto papan / screenshot</span>
+            </button>
+
+            {/* LIVE DETECTION */}
+            <button
+              onClick={() => void startLiveDetection()}
+              disabled={isProcessingImage}
+              className="group relative flex flex-col items-center gap-1.5 py-6 px-3 rounded-2xl text-center transition-all active:scale-[0.97] disabled:opacity-50 border border-emerald-500/50 bg-emerald-950/40 hover:border-emerald-400 hover:bg-emerald-900/40 shadow-sm"
+            >
+              <span className="relative flex items-center justify-center">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse absolute -top-1 -right-2.5 ring-2 ring-emerald-950" />
+                <IconLightning3D size={28} />
               </span>
-            </button>
-
-            <button
-              onClick={() => applyNewInitialFen(PRESET_POSITIONS[0].fen, "Posisi Elephant Gambit dimuat!")}
-              className="ctl ctl-sm font-bold flex flex-col items-center gap-2 py-4 rounded-xl"
-            >
-              <IconLightning3D size={22} />
-              <span className="text-xs">Preset Cepat</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (navigator.clipboard?.readText) {
-                  navigator.clipboard.readText().then((txt) => {
-                    if (txt && txt.trim()) applyNewInitialFen(txt.trim(), "FEN berhasil ditempel dari clipboard!");
-                  }).catch(() => {});
-                }
-              }}
-              className="ctl ctl-sm font-bold flex flex-col items-center gap-2 py-4 rounded-xl"
-            >
-              <IconSwap3D size={22} />
-              <span className="text-xs">Tempel dari Clipboard</span>
+              <span className="text-sm font-black text-emerald-300">Live Detection</span>
+              <span className="text-[11px] font-medium text-emerald-200/70 leading-snug">Deteksi papan fisik secara kontinu</span>
             </button>
           </div>
+        </div>
 
-          {/* FEN INPUT ROW */}
-          <div className="w-full max-w-2xl mt-6 pt-5 border-t border-[var(--border)] stack-tight text-left">
-            <label className="text-xs font-bold text-neutral-300">Atau masukkan notasi FEN langsung:</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={fenInput}
-                onChange={(e) => setFenInput(e.target.value)}
-                placeholder="Contoh: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-                className="flex-1 p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs text-white font-mono focus:outline-none focus:border-[var(--primary)]"
-              />
-              <button
-                onClick={() => applyNewInitialFen(fenInput, "Notasi FEN berhasil dimuat!")}
-                disabled={!fenInput.trim()}
-                className="ctl ctl-sm ctl-primary font-bold px-4 shrink-0"
-              >
-                Muat Papan
+        {/* LIVE DETECTION MODAL */}
+        {isLiveDetectOpen && (
+          <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md">
+            <div className="panel p-4 stack max-w-sm w-full relative" style={{ background: "var(--card)", borderColor: "var(--primary)" }}>
+              <div className="row-between pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Detection — Arahkan Kamera ke Papan
+                </span>
+                <button className="ctl ctl-xs ctl-quiet" onClick={stopLiveDetection}>
+                  <IconClose3D size={14} />
+                </button>
+              </div>
+              <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-black border-2 border-emerald-500/60 flex items-center justify-center">
+                <video ref={liveVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                <div className="absolute inset-4 pointer-events-none grid grid-cols-8 grid-rows-8 border border-emerald-400/80 rounded-lg">
+                  {Array.from({ length: 64 }).map((_, i) => (
+                    <div key={i} className="border border-emerald-400/20" />
+                  ))}
+                </div>
+                {liveDetectFen && (
+                  <div className="absolute bottom-2 left-2 right-2 px-2 py-1.5 rounded-lg bg-black/70 text-[10px] font-mono text-emerald-300 truncate" title={liveDetectFen}>
+                    {liveDetectFen}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-center gap-2 pt-1 min-h-[2rem]">
+                {liveDetectStatus === "detecting" && (
+                  <span className="text-xs text-neutral-300 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    Membaca papan...
+                  </span>
+                )}
+                {liveDetectStatus === "success" && (
+                  <span className="text-xs text-emerald-300 flex items-center gap-1.5 font-bold">
+                    <IconCheck3D size={14} /> Posisi terbaca & dimuat!
+                  </span>
+                )}
+                {liveDetectStatus === "error" && (
+                  <span className="text-xs text-red-400">{liveDetectError || "Gagal membaca papan."}</span>
+                )}
+              </div>
+              <button type="button" onClick={stopLiveDetection} className="ctl ctl-sm w-full font-bold">
+                Tutup Live Detection
               </button>
             </div>
           </div>
-
-          {/* PRESET CHIPS */}
-          <div className="w-full max-w-2xl mt-4 flex items-center gap-1.5 flex-wrap justify-center">
-            <span className="text-xs text-[var(--muted-foreground)] mr-1">Preset Tersedia:</span>
-            {PRESET_POSITIONS.map((p) => (
-              <button
-                key={p.name}
-                onClick={() => applyNewInitialFen(p.fen, `Posisi ${p.name} dimuat!`)}
-                className="px-2.5 py-1 rounded-lg text-xs bg-[var(--surface)] border border-[var(--border)] text-neutral-300 hover:text-white hover:border-[var(--primary)] transition-all"
-              >
-                {p.name}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
         {/* WEBCAM MODAL IF ACTIVE */}
         {isCameraOpen && (
@@ -1060,7 +1189,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               className="mt-2"
             />
 
-            <div className="w-full mx-auto aspect-square max-h-[calc(100vh-165px)] max-w-[calc(100vh-165px)] rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
+            <div className="w-full mx-auto aspect-square max-w-[min(100%,calc(100dvh-230px))] rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
               <Chessboard
                 options={{
                   id: "board-solver-full",
@@ -1217,25 +1346,12 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           <div className="lg:col-span-7 panel p-3 stack-tight" style={{ background: "var(--card)" }}>
             <div className="row-between pb-1.5" style={{ borderBottom: "1px solid var(--border)" }}>
               <span className="font-bold text-xs md:text-sm text-white flex items-center gap-2">
-                <IconVision3D size={18} /> Papan 1: Referensi Asli (Drag Bidak untuk Edit)
+                <IconVision3D size={18} /> Papan 1: Referensi Asli (Edit Bidak)
               </span>
               <CapturedPiecesBar fen={initialFen} side="white" />
             </div>
 
-            <div className="w-full mx-auto aspect-square max-h-[calc(100vh-165px)] max-w-[calc(100vh-165px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
-              <Chessboard
-                options={{
-                  id: "board-ref-full",
-                  position: initialFen,
-                  boardOrientation: scanBoardOrientation,
-                  allowDragging: true,
-                  onPieceDrop: handleBoard1Drop,
-                  darkSquareStyle: { backgroundColor: "var(--board-dark)" },
-                  lightSquareStyle: { backgroundColor: "var(--board-light)" },
-                }}
-              />
-            </div>
-
+            {/* Kontrol papan DI ATAS (konsisten dengan tab Solver & AI Coach) */}
             <BoardControls
               variant="toolbar"
               orientation={scanBoardOrientation}
@@ -1243,13 +1359,40 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               showShortcuts={true}
               className="mt-2"
             />
+
+            <div className="w-full mx-auto aspect-square max-w-[min(100%,calc(100dvh-230px))] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
+              <Chessboard
+                options={{
+                  id: "board-ref-full",
+                  position: initialFen,
+                  boardOrientation: scanBoardOrientation,
+                  allowDragging: true,
+                  onPieceDrop: handleBoard1Drop,
+                  onSquareClick: handleReferenceSquareClick,
+                  darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                  lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                }}
+              />
+            </div>
           </div>
 
           <div className="lg:col-span-5 panel p-3.5 stack text-xs" style={{ background: "var(--card)" }}>
             <span className="font-bold text-sm text-white">Detail Posisi Ter-Import</span>
             <p className="prose-note m-0 text-xs">
-              Papan referensi ini adalah posisi catur asli hasil ekstraksi kamera atau FEN. Anda dapat menggeser bidak langsung di papan untuk membetulkan penempatan bidak.
+              Geser bidak untuk membetulkan penempatan, seret bidak <strong>keluar papan</strong> untuk menghapus, atau aktifkan Mode Hapus lalu klik bidak yang salah deteksi.
             </p>
+
+            {/* Mode Hapus Bidak */}
+            <button
+              onClick={() => setIsDeleteMode((v) => !v)}
+              className={`ctl ctl-sm w-full font-bold justify-center flex items-center gap-1.5 ${
+                isDeleteMode ? "ctl-danger" : "ctl-quiet"
+              }`}
+              title="Aktifkan lalu klik bidak di papan untuk menghapusnya"
+            >
+              <IconClose3D size={14} />
+              <span>{isDeleteMode ? "Mode Hapus: AKTIF — klik bidak untuk hapus" : "Mode Hapus Bidak"}</span>
+            </button>
 
             <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] stack-tight font-mono text-xs break-all select-all text-emerald-300">
               {initialFen}

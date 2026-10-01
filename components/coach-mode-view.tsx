@@ -480,7 +480,7 @@ export function CoachModeView({ lang = "id" }: Props) {
           </div>
 
           {/* Chessboard: Fixed Aspect Square with key=playerSide to force board orientation rotation */}
-          <div className="aspect-square h-full max-h-[calc(100vh-210px)] max-w-[calc(100vh-210px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative min-h-0">
+          <div className="aspect-square w-full max-w-[min(100%,calc(100dvh-210px))] mx-auto rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
             <Chessboard
               key={`coach-board-${boardOrientation}`}
               options={{

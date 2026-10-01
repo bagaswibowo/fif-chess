@@ -471,22 +471,6 @@ export function SpectatorView({
           </div>
         </div>
 
-        {/* Visual Arrows Legend (inline with header to save vertical space) */}
-        <div className="hidden xl:flex items-center justify-around gap-4 text-xs font-bold text-neutral-300 shrink-0">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300" />
-            <span className="font-semibold text-neutral-300">Langkah Terkini</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-red-500 border border-red-300" />
-            <span className="font-bold text-red-400">Target Diancam</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-sky-400 border border-sky-300" />
-            <span className="font-bold text-sky-400">Prediksi Balasan</span>
-          </span>
-        </div>
-
         {/* Action Controls */}
         <div className="flex items-center gap-2 shrink-0">
           {status === "idle" || status === "paused" || status === "finished" ? (
@@ -550,7 +534,21 @@ export function SpectatorView({
             showShortcuts={true}
           />
 
-
+          {/* 2. Visual Arrows Legend (selalu tampil di atas papan) */}
+          <div className="panel px-3 py-1.5 rounded-xl border border-[var(--border)] flex items-center justify-around text-xs font-bold text-neutral-300 shadow-sm shrink-0 flex-wrap gap-y-1" style={{ background: "var(--surface)" }}>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300" />
+              <span className="font-semibold text-neutral-300">Langkah Terkini</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded bg-red-500 border border-red-300" />
+              <span className="font-bold text-red-400">Target Diancam</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded bg-sky-400 border border-sky-300" />
+              <span className="font-bold text-sky-400">Prediksi Balasan</span>
+            </span>
+          </div>
 
           {/* 3. Top Player (Black) with 1-Click Engine Selector & Captured Pieces */}
           <div className="panel px-3 py-1.5 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm shrink-0" style={{ background: "var(--card)" }}>
@@ -604,7 +602,13 @@ export function SpectatorView({
             </div>
 
             {/* Chessboard */}
-            <div className="aspect-square w-full max-h-[calc(100vh-215px)] max-w-[calc(100vh-215px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
+            <div
+              className={`aspect-square w-full max-w-full rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative ${
+                fullscreenSpectator
+                  ? "lg:w-auto lg:h-full max-h-full"
+                  : "mx-auto max-w-[min(100%,calc(100dvh-215px))]"
+              }`}
+            >
               <Chessboard
                 options={{
                   id: "spectator-board",

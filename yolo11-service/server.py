@@ -326,7 +326,9 @@ def detect_pieces(img_np: np.ndarray, conf_override: float | None = None):
             status_code=503,
             detail="Model YOLOv11 belum tersedia. Jalankan docker compose up -d --build.",
         )
-    results = model.predict(img_np, conf=conf_override or CONF_THRESHOLD, verbose=False)
+    # imgsz 1024 (bukan default 640): bidak kecil di foto jauh/HP jauh lebih
+    # terbaca — recall naik signifikan dengan biaya inferensi ~2x (masih <1 dtk).
+    results = model.predict(img_np, conf=conf_override or CONF_THRESHOLD, imgsz=1024, verbose=False)
     detections = []
     for r in results:
         names = r.names
@@ -339,17 +341,52 @@ def detect_pieces(img_np: np.ndarray, conf_override: float | None = None):
     return detections
 
 
-def grid_fen(detections, grid) -> str:
+def _square_occupied(cell: np.ndarray) -> bool:
+    """Verifikasi piksel ala ChessboardDetect: petak kosong = seluruh tengah
+    petak seragam dengan warna dasar (ring). Petak berbidak selalu punya
+    piksel yang jauh berbeda dari dasar (badan/outline/bayangan bidak).
+    Return True bila petak terisi."""
+    ch, cw = cell.shape[:2]
+    if ch < 10 or cw < 10:
+        return True  # terlalu kecil untuk dinilai — terima deteksinya
+    ring = _ring_color(cell)
+    m = max(2, int(min(ch, cw) * 0.18))
+    center = cell[m:ch - m, m:cw - m].reshape(-1, 3).astype(np.float32)
+    if center.size == 0:
+        return True
+    dist = np.linalg.norm(center - ring, axis=1)
+    # Petak kosong: <6% piksel menyimpang jauh (noise). Petak berisi: outline
+    # + bayangan membuat >=6-10% piksel menyimpang walau warna bidak mirip petak.
+    return float((dist > 55.0).mean()) > 0.06
+
+
+def grid_fen(detections, grid, img=None) -> str:
     """Peta deteksi ke grid terkalibrasi (x0, y0, sq) dan susun board FEN.
-    Dedup per petak: ambil deteksi dengan confidence tertinggi."""
+    Dedup per petak: ambil deteksi dengan confidence tertinggi.
+    Bila img diberikan, deteksi pada petak yang terbukti KOSONG (piksel
+    tengah = warna dasar petak) dibuang sebagai false positive."""
     x0, y0, sq = grid[0], grid[1], grid[2]
     board = [[""] * 8 for _ in range(8)]
     best_conf = [[0.0] * 8 for _ in range(8)]
+    H, W = img.shape[:2] if img is not None else (0, 0)
     for fen_char, cx, cy, conf in detections:
         col = int((cx - x0) / sq)
         row = int((cy - y0) / sq)
         if col < 0 or col > 7 or row < 0 or row > 7:
             continue  # di luar papan terkalibrasi (mis. bidak cadangan)
+        if img is not None:
+            xa = int(round(x0 + col * sq))
+            ya = int(round(y0 + row * sq))
+            xb = int(round(x0 + (col + 1) * sq))
+            yb = int(round(y0 + (row + 1) * sq))
+            if xa >= 0 and ya >= 0 and xb <= W and yb <= H:
+                cell = img[ya:yb, xa:xb]
+                if not _square_occupied(cell):
+                    logger.info(
+                        "Buang deteksi %s (conf %.2f) di petak (r%d c%d): piksel = warna dasar petak",
+                        fen_char, conf, row, col,
+                    )
+                    continue
         if conf > best_conf[row][col]:
             best_conf[row][col] = conf
             board[row][col] = fen_char
@@ -1142,7 +1179,7 @@ def predict(req: ScanRequest):
         first_candidate = None
         for conf_try in (CONF_THRESHOLD, 0.15, 0.08):
             dets = detect_pieces(work_img, conf_override=conf_try)
-            cand = grid_fen(dets, calib)
+            cand = grid_fen(dets, calib, img=work_img)
             if first_candidate is None or piece_count(cand) > piece_count(first_candidate):
                 if first_candidate is None:
                     first_candidate = cand
