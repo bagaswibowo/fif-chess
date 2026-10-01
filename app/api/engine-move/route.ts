@@ -1,7 +1,7 @@
 import { playFlyBrainMove } from "@/lib/flybrain/service";
 import { NextResponse } from 'next/server';
 import { JevRequestError, playJevMove } from '@/lib/jev';
-import { playStockfishMove, guardJevMove } from '@/lib/stockfish';
+import { playStockfishMove, guardJevMove, guardJevFlyMove } from '@/lib/stockfish';
 import { Chess, validateFen } from 'chess.js';
 import { applyUci, describeOutcome } from '@/lib/chess';
 import { GATE_COOKIE, gateConfigured, readCookie, sessionValid } from '@/lib/gate';
@@ -13,10 +13,11 @@ function apiKey(): string | undefined {
   return value && value.trim().length > 0 ? value : undefined;
 }
 
-function parseEngine(bodyObj: Record<string, unknown>): 'stockfish' | 'jev' | 'fly' {
+function parseEngine(bodyObj: Record<string, unknown>): 'stockfish' | 'jev' | 'fly' | 'jev-fly' {
   const v = bodyObj.engine;
   if (v === 'jev') return 'jev';
   if (v === 'fly' || v === 'flybrain') return 'fly';
+  if (v === 'jev-fly' || v === 'jevfly' || v === 'hybrid') return 'jev-fly';
   return 'stockfish';
 }
 
@@ -71,6 +72,56 @@ export async function POST(request: Request) {
       return NextResponse.json(flyRes);
     }
     return NextResponse.json({ error: "FlyBrain could not compute move for position.", retryable: false }, { status: 400 });
+  }
+
+  // Hybrid Jev + FlyBrain + guard taktis Stockfish: gabungan semantik Jev
+  // (bila API hidup) + connectome FlyBrain, divalidasi Stockfish supaya
+  // tidak blunder dan tetap pintar mempromosikan pion.
+  if (engine === "jev-fly") {
+    try {
+      let hybrid;
+      const key = apiKey();
+      if (!key) throw new JevRequestError("TYPESAFE_API_KEY not set", 503, false);
+      try {
+        hybrid = await playJevMove(fen, { apiKey: key, seed, history });
+      } catch (jevErr) {
+        // Jev API tak tersedia (SSL/network) — pakai FlyBrain murni sbg hybrid.
+        console.warn("jev-fly: Jev API unavailable, using FlyBrain:", jevErr instanceof Error ? jevErr.message : jevErr);
+        const flyRes = playFlyBrainMove(fen);
+        if (!flyRes) {
+          return NextResponse.json({ error: "Hybrid engine could not compute a move.", retryable: false }, { status: 400 });
+        }
+        hybrid = {
+          uci: flyRes.uci,
+          san: flyRes.san,
+          fen: flyRes.fen,
+          probabilities: flyRes.probabilities,
+          confidence: flyRes.confidence,
+          droppedMoveCount: 0,
+          outcome: flyRes.outcome,
+          request: {} as any,
+        };
+      }
+      const guarded = await guardJevFlyMove(fen, hybrid, depth);
+      return NextResponse.json({
+        uci: guarded.uci,
+        san: guarded.san,
+        fen: guarded.fen,
+        probabilities: guarded.probabilities,
+        confidence: guarded.confidence,
+        droppedMoveCount: guarded.droppedMoveCount,
+        outcome: guarded.outcome,
+        scoreCp: (guarded as any).scoreCp ?? null,
+        engine: "jev-fly",
+      });
+    } catch (err) {
+      console.error("jev-fly execution failed:", err);
+      const flyRes = playFlyBrainMove(fen);
+      if (flyRes) {
+        return NextResponse.json(flyRes);
+      }
+      return NextResponse.json({ error: "Hybrid engine failed.", retryable: true }, { status: 502 });
+    }
   }
 
   if (engine === 'stockfish') {
@@ -161,6 +212,34 @@ export async function POST(request: Request) {
       scoreCp: result.scoreCp ?? null,
     });
   } catch (error) {
+    // Jev tidak selalu tersedia (API eksternal bisa down / sertifikat SSL
+    // invalid, mis. jam sistem tertinggal → CERT_NOT_YET_VALID). Jangan biarkan
+    // arena/solver macet: fallback ke FlyBrain lokal lalu Stockfish.
+    console.warn("Jev move failed, falling back:", error instanceof Error ? error.message : error);
+    try {
+      const flyResult = playFlyBrainMove(fen);
+      if (flyResult) {
+        return NextResponse.json({ ...flyResult, engine: "fly-jev-fallback" });
+      }
+    } catch (fbErr) {
+      console.warn("FlyBrain fallback for Jev failed:", fbErr);
+    }
+    try {
+      const sfResult = await playStockfishMove(fen, Math.max(4, depth - 2));
+      return NextResponse.json({
+        uci: sfResult.uci,
+        san: sfResult.san,
+        fen: sfResult.fen,
+        probabilities: sfResult.probabilities,
+        confidence: sfResult.confidence,
+        droppedMoveCount: sfResult.droppedMoveCount,
+        outcome: sfResult.outcome,
+        scoreCp: (sfResult as any).scoreCp ?? null,
+        engine: "stockfish-jev-fallback",
+      });
+    } catch (sfErr) {
+      console.error("Stockfish fallback for Jev failed:", sfErr);
+    }
     if (error instanceof JevRequestError) {
       return NextResponse.json({ error: error.message, retryable: error.retryable }, { status: error.status });
     }

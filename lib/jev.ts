@@ -423,7 +423,10 @@ export async function playJevMove(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(built.request),
-  });
+    // Timeout agresif: API eksternal yang mati/SSL tidak valid tidak boleh
+    // menggantung arena & solver berpuluh detik.
+    signal: AbortSignal.timeout(8000),
+  } as RequestInit);
 
   if (!response.ok) {
     throw mapHttpError(response.status);

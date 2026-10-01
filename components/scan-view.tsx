@@ -437,13 +437,24 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     await processAndScanImage(rawBase64);
   };
 
-  const handleBoard1Drop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
-    if (!targetSquare) return false;
+  // Edit posisi bebas di papan referensi: BUKAN gerakan catur legal — bidak
+  // dipindah/ditukar/diambil bebas untuk mengoreksi hasil scan. chess.move()
+  // menolak gerakan ilegal (mis. raja di bawah serangan) sehingga drag gagal;
+  // manipulasi FEN langsung memperbolehkan semua penempatan.
+  const handleBoard1Drop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }): boolean => {
+    if (!targetSquare || targetSquare === sourceSquare) return false;
     try {
       const chess = new Chess(initialFen);
-      const moved = chess.move({ from: sourceSquare as any, to: targetSquare as any });
-      if (moved) {
-        applyNewInitialFen(chess.fen());
+      const piece = chess.get(sourceSquare as any);
+      if (!piece) return false;
+      chess.remove(sourceSquare as any);
+      chess.put(piece, targetSquare as any);
+      const newFen = chess.fen();
+      // Terima walau posisi "ilegal" secara aturan main: validasi minimal
+      // hanya butuh FEN yang bisa di-parse. Papan referensi memang tempat
+      // membetulkan hasil scan yang salah penempatan.
+      if (newFen && newFen.split(" ")[0]) {
+        applyNewInitialFen(newFen);
         return true;
       }
       return false;
@@ -472,7 +483,9 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           ? "fly"
           : activeEngine === "stockfish"
             ? "stockfish"
-            : "jev";
+            : activeEngine === "jev-fly"
+              ? "jev-fly"
+              : "jev";
 
       const res = await fetch("/api/engine-move", {
         method: "POST",
@@ -497,9 +510,12 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         const nextChess = new Chess(data.fen);
         if (nextChess.isGameOver()) setIsAutoSolving(false);
       } else {
+        // Tampilkan alasan kegagalan — jangan berhenti diam-diam.
+        setError(data.error || "Engine gagal menghitung langkah.");
         setIsAutoSolving(false);
       }
     } catch {
+      setError("Tidak dapat menghubungi engine. Periksa koneksi lalu coba lagi.");
       setIsAutoSolving(false);
     } finally {
       setIsEngineCalculating(false);
@@ -513,7 +529,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     }
     autoSolveTimerRef.current = setInterval(() => {
       void stepEngineSolve();
-    }, 1200);
+    }, 600);
     return () => {
       if (autoSolveTimerRef.current) clearInterval(autoSolveTimerRef.current);
     };
@@ -1043,7 +1059,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               className="mt-2"
             />
 
-            <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
+            <div className="w-full mx-auto aspect-square max-h-[calc(100vh-165px)] max-w-[calc(100vh-165px)] rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
               <Chessboard
                 options={{
                   id: "board-solver-full",
@@ -1159,18 +1175,40 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 <p className="text-neutral-300 m-0 leading-snug">{tacticalIntel.danger}</p>
               </div>
 
-              {/* Moves List */}
+              {/* Moves Table — gaya tabel notasi AI Coach (pasangan Putih/Hitam) */}
               {solveMoves.length > 0 && (
                 <div className="pt-1">
                   <div className="text-xs font-bold text-[var(--muted-foreground)] mb-1 uppercase">
-                    Langkah Solusi Terkini ({solveMoves.length}):
+                    Notasi Langkah ({solveMoves.length}):
                   </div>
-                  <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] font-mono text-xs">
-                    {solveMoves.map((m, idx) => (
-                      <span key={idx} className="px-1.5 py-0.5 rounded bg-[var(--card)] text-white">
-                        {idx + 1}. <strong>{m.san}</strong> ({m.by})
-                      </span>
-                    ))}
+                  <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+                    <div className="grid grid-cols-[2.2rem_1fr_1fr] items-center px-2 py-1.5 border-b border-[var(--border)] bg-[var(--card)] text-[10px] font-bold text-neutral-400">
+                      <span className="text-center">#</span>
+                      <span className="truncate">{whiteEngine}</span>
+                      <span className="truncate">{blackEngine}</span>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto px-2 py-1">
+                      {(() => {
+                        const rows: { no: number; w?: typeof solveMoves[number]; b?: typeof solveMoves[number] }[] = [];
+                        solveMoves.forEach((m, idx) => {
+                          const no = Math.floor(idx / 2) + 1;
+                          let row = rows.find((r) => r.no === no);
+                          if (!row) { row = { no }; rows.push(row); }
+                          if (idx % 2 === 0) row.w = m; else row.b = m;
+                        });
+                        return rows.map((row) => (
+                          <div key={row.no} className={`grid grid-cols-[2.2rem_1fr_1fr] items-center rounded py-0.5 px-1 font-mono text-xs ${row.no % 2 === 0 ? "bg-[var(--card)]/40" : ""}`}>
+                            <span className="text-center text-neutral-400 font-bold">{row.no}.</span>
+                            <span className="text-white font-bold truncate pr-1">
+                              {row.w ? <>{row.w.san} <span className="text-[9px] text-amber-400/80 font-normal">{row.w.scoreCp !== null && row.w.scoreCp !== undefined ? `${row.w.scoreCp > 0 ? "+" : ""}${(row.w.scoreCp / 100).toFixed(1)}` : ""}</span></> : ""}
+                            </span>
+                            <span className="text-neutral-200 font-bold truncate pl-1">
+                              {row.b ? <>{row.b.san} <span className="text-[9px] text-amber-400/80 font-normal">{row.b.scoreCp !== null && row.b.scoreCp !== undefined ? `${row.b.scoreCp > 0 ? "+" : ""}${(row.b.scoreCp / 100).toFixed(1)}` : ""}</span></> : ""}
+                            </span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1190,7 +1228,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <CapturedPiecesBar fen={initialFen} side="white" />
             </div>
 
-            <div className="w-full max-w-[500px] mx-auto aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
+            <div className="w-full mx-auto aspect-square max-h-[calc(100vh-165px)] max-w-[calc(100vh-165px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
               <Chessboard
                 options={{
                   id: "board-ref-full",
@@ -1244,14 +1282,18 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         </div>
       )}
 
-      {/* TAB 3: BANDINGKAN KEDUANYA */}
+      {/* TAB 3: BANDINGKAN KEDUANYA — papan sejajar + captured kedua sisi */}
       {activeTab === "compare" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start pt-1">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch pt-1">
           {/* Papan 1 */}
-          <div className="panel p-3 stack-tight" style={{ background: "var(--card)" }}>
+          <div className="panel p-3 flex flex-col" style={{ background: "var(--card)" }}>
             <div className="row-between pb-1" style={{ borderBottom: "1px solid var(--border)" }}>
               <span className="font-bold text-xs text-white">Papan 1: Referensi Asli</span>
-              <CapturedPiecesBar fen={initialFen} side="white" />
+              <span className="font-mono text-xs text-[var(--primary)] font-bold">Awal</span>
+            </div>
+            {/* Hitam yang memakan ( pieces hitam yg dimiliki Putih ) */}
+            <div className="pt-1.5">
+              <CapturedPiecesBar fen={initialFen} side="black" />
             </div>
             <div className="w-full aspect-square rounded-xl overflow-hidden border border-[var(--border)]">
               <Chessboard
@@ -1266,15 +1308,22 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 }}
               />
             </div>
+            {/* Putih yang memakan */}
+            <div className="pt-1.5">
+              <CapturedPiecesBar fen={initialFen} side="white" />
+            </div>
           </div>
 
           {/* Papan 2 */}
-          <div className="panel p-3 stack-tight" style={{ background: "var(--card)" }}>
+          <div className="panel p-3 flex flex-col" style={{ background: "var(--card)" }}>
             <div className="row-between pb-1" style={{ borderBottom: "1px solid var(--border)" }}>
               <span className="font-bold text-xs text-white">Papan 2: Live Solver</span>
               <span className="font-mono text-xs text-[var(--primary)] font-bold">
                 Eval: {currentScoreCp !== null ? `${currentScoreCp > 0 ? "+" : ""}${(currentScoreCp / 100).toFixed(1)}` : "+0.0"}
               </span>
+            </div>
+            <div className="pt-1.5">
+              <CapturedPiecesBar fen={liveFen} side="black" />
             </div>
             <div className="w-full aspect-square rounded-xl overflow-hidden border border-[var(--primary)]">
               <Chessboard
@@ -1287,6 +1336,9 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                 }}
               />
+            </div>
+            <div className="pt-1.5">
+              <CapturedPiecesBar fen={liveFen} side="white" />
             </div>
           </div>
         </div>

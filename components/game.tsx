@@ -29,7 +29,6 @@ import { useSession } from "@/lib/use-session";
 import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import { CoachModeView } from "@/components/coach-mode-view";
 import { SpectatorView } from "@/components/spectator-view";
-import { GuidedPlayView } from "@/components/guided-play-view";
 import { GameOverModal } from "@/components/game-over-modal";
 import { useChessClock } from "@/lib/use-chess-clock";
 import {
@@ -73,7 +72,7 @@ type PendingPromotion = { from: string; to: string };
 type NavTab = "play" | "vision" | "scan" | "community" | "review" | "coach" | "admin";
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
-type CoachSubTab = "coach" | "spectator" | "guided";
+type CoachSubTab = "coach" | "spectator";
 
 type MatchCommentary = {
   headline: string;
@@ -154,8 +153,6 @@ export function Game() {
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
   const [navTab, setNavTab] = useState<NavTab>("play");
   const [coachSubTab, setCoachSubTab] = useState<CoachSubTab>("coach");
-  const [guidedStartFen, setGuidedStartFen] = useState<string | undefined>(undefined);
-  const [guidedStartMoves, setGuidedStartMoves] = useState<string[] | undefined>(undefined);
   const [aiDepth, setAiDepth] = useState(14);
   const [gameActive, setGameActive] = useState(false);
   const [selectedAiOpponent, setSelectedAiOpponent] = useState<"stockfish" | "jev-fly" | "jev" | "fly">("stockfish");
@@ -284,7 +281,7 @@ export function Game() {
       setThinking(true);
       setError(null);
       try {
-        const engineParam = selectedAiOpponent === "fly" ? "fly" : selectedAiOpponent === "stockfish" ? "stockfish" : "jev";
+        const engineParam = selectedAiOpponent === "fly" ? "fly" : selectedAiOpponent === "stockfish" ? "stockfish" : selectedAiOpponent === "jev-fly" ? "jev-fly" : "jev";
         const response = await fetch("/api/engine-move", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -901,7 +898,6 @@ export function Game() {
               {([
                 { id: "coach", labelId: "AI Coach", labelEn: "AI Coach" },
                 { id: "spectator", labelId: "Jev vs Stockfish", labelEn: "Jev vs Stockfish" },
-                { id: "guided", labelId: "Latihan Dipandu", labelEn: "Guided Practice" },
               ] as { id: CoachSubTab; labelId: string; labelEn: string }[]).map((tab) => (
                 <button
                   key={tab.id}
@@ -921,17 +917,7 @@ export function Game() {
                   <div className="min-h-0 w-full">
                     {coachSubTab === "coach" && <CoachModeView lang={lang} />}
                     {coachSubTab === "spectator" && (
-                      <SpectatorView
-                        lang={lang}
-                        onTryPosition={(fen, moves) => {
-                          setGuidedStartFen(fen);
-                          setGuidedStartMoves(moves);
-                          setCoachSubTab("guided");
-                        }}
-                      />
-                    )}
-                    {coachSubTab === "guided" && (
-                      <GuidedPlayView lang={lang} startFen={guidedStartFen} startMoves={guidedStartMoves} />
+                      <SpectatorView lang={lang} />
                     )}
                   </div>
                 }

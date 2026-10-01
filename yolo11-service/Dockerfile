@@ -11,6 +11,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY server.py entrypoint.sh ./
+COPY pieces/ /app/pieces/
+COPY pieces_staunty/ /app/pieces_staunty/
+COPY pieces_chessnut/ /app/pieces_chessnut/
 RUN chmod +x entrypoint.sh
 
 # Folder model (diisi otomatis oleh entrypoint bila kosong)

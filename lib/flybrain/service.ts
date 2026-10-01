@@ -79,6 +79,17 @@ export function evaluateWithFlyBrain(fen: string, isEndgame: boolean = false): {
     const exps = logits.map((l: number) => Math.exp(l - maxLogit));
     const sumExps = exps.reduce((a: number, b: number) => a + b, 0);
 
+    // LOOKAHEAD PRUNING: 1-ply lookahead (forward lawan) hanya untuk top-K
+    // kandidat policy + semua langkah taktis (promosi/pion lanjut jauh).
+    // Dgn 40+ langkah legal, forward 134k neuron per langkah membuat evaluasi
+    // melambat ke 4-7 detik. Top-12 policy mencakup hampir semua langkah yang
+    // realistis dipilih tanpa mengorbankan kualitas keputusan.
+    const LOOKAHEAD_TOP_K = 12;
+    const order = Array.from({ length: legal.length }, (_, i) => i).sort(
+      (a, b) => logits[b] - logits[a]
+    );
+    const doLookahead = new Set(order.slice(0, LOOKAHEAD_TOP_K));
+
     const scored: FlyMoveScore[] = [];
 
     for (let i = 0; i < legal.length; i++) {
@@ -106,10 +117,13 @@ export function evaluateWithFlyBrain(fen: string, isEndgame: boolean = false): {
             moveValue = 1.0; // Immediate checkmate!
           } else if (chess.isDraw()) {
             moveValue = 0.0;
-          } else {
+          } else if (doLookahead.has(i) || isPromotion || (isPawnPush && pawnAdvancedRank >= 5)) {
             const oppPlanes = encodeBoard(chess);
             const oppFwd = brain.forward(oppPlanes, { activity: false });
             moveValue = -oppFwd.value; // Negated opponent value
+          } else {
+            // Kandidat di luar top-K: nilai netral — cukup policy prior.
+            moveValue = 0;
 
             // Pawn promotion & advance bonus (aggressive promotion behavior)
             if (mv.promotion || san.includes("=")) {

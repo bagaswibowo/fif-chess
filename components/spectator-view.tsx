@@ -570,7 +570,7 @@ export function SpectatorView({
           </div>
 
           {/* 4. Board Container with Sleek Vertical Dual-Bar Eval */}
-          <div className="flex gap-2 items-stretch justify-center w-full flex-1 min-h-0 max-h-[calc(100vh-215px)]">
+          <div className="flex gap-2 items-stretch justify-center w-full flex-1 min-h-0 max-h-[calc(100vh-165px)]">
             {/* Slim Vertical Dual Eval Bar: Black at top, White at bottom (responsive to orientation) */}
             <div
               className="w-3 md:w-3.5 bg-neutral-900 rounded-full overflow-hidden border border-[var(--border)] flex flex-col justify-between shrink-0 shadow-inner relative select-none"
@@ -601,7 +601,7 @@ export function SpectatorView({
             </div>
 
             {/* Chessboard */}
-            <div className="aspect-square h-full max-h-[calc(100vh-215px)] max-w-[calc(100vh-215px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative min-h-0">
+            <div className="aspect-square h-full max-h-[calc(100vh-165px)] max-w-[calc(100vh-165px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative min-h-0">
               <Chessboard
                 options={{
                   id: "spectator-board",
