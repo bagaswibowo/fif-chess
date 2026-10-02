@@ -28,7 +28,7 @@ import {
   type TektokkanPrediction,
 } from "@/lib/tactics";
 
-type EngineType = "jev" | "fly" | "stockfish";
+type EngineType = "jev" | "fly" | "jev-fly" | "stockfish";
 type MatchStatus = "idle" | "running" | "paused" | "finished";
 
 type MatchMove = {
@@ -55,6 +55,7 @@ const ENGINE_LABELS: Record<EngineType, string> = {
   stockfish: "Stockfish 15 NNUE",
   jev: "Jev AI Connectome",
   fly: "Fruit Fly Brain",
+  "jev-fly": "Jev + Fly Brain",
 };
 
 function getAttackedSquares(chess: Chess, sq: string): string[] {
@@ -562,6 +563,7 @@ export function SpectatorView({
                 <option value="jev">Jev AI Connectome (Hitam)</option>
                 <option value="stockfish">Stockfish 15 NNUE (Hitam)</option>
                 <option value="fly">Fruit Fly Brain (Hitam)</option>
+                <option value="jev-fly">Jev + Fly Brain (Hitam)</option>
               </select>
               <span className="text-[11px] text-neutral-400 font-mono font-bold">
                 {whiteCp !== null ? (whiteCp < 0 ? `+${(-whiteCp/100).toFixed(1)}` : `-${(whiteCp/100).toFixed(1)}`) : "="}
@@ -638,6 +640,7 @@ export function SpectatorView({
                 <option value="stockfish">Stockfish 15 NNUE (Putih)</option>
                 <option value="jev">Jev AI Connectome (Putih)</option>
                 <option value="fly">Fruit Fly Brain (Putih)</option>
+                <option value="jev-fly">Jev + Fly Brain (Putih)</option>
               </select>
               <span className="text-[11px] text-emerald-400 font-mono font-bold">
                 {whiteCp !== null ? (whiteCp > 0 ? `+${(whiteCp/100).toFixed(1)}` : (whiteCp/100).toFixed(1)) : "="}
