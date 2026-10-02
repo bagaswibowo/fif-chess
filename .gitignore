@@ -44,3 +44,4 @@ models/*.flyb
 chesscog-service/models/*.pt
 artefacts/
 /data/
+models/
