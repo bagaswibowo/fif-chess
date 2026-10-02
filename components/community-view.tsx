@@ -234,7 +234,7 @@ function RichTextToolbar({
 
   return (
     <div
-      className="p-1.5 rounded-t-xl border-b border-[var(--border)] text-xs flex flex-col gap-1.5"
+      className="p-1.5 rounded-t-xl border-b border-[var(--border)] text-sm flex flex-col gap-1.5"
       style={{ background: "var(--surface)" }}
     >
       {/* Top Toolbar Row */}
@@ -248,7 +248,7 @@ function RichTextToolbar({
             if (v === "h3") insertFormat("### ", "\n", "Topik Pembahasan");
             e.target.value = "auto";
           }}
-          className="bg-[var(--card)] border border-[var(--border)] text-xs text-white rounded px-2 py-1 focus:outline-none"
+          className="bg-[var(--card)] border border-[var(--border)] text-sm text-white rounded px-2 py-1 focus:outline-none"
         >
           <option value="auto">Gaya: Normal</option>
           <option value="h1">Heading 1</option>
@@ -262,7 +262,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("**", "**", "teks tebal")}
-          className="px-2 py-1 rounded font-black text-white hover:bg-[var(--card)] transition-all text-xs"
+          className="px-2 py-1 rounded font-black text-white hover:bg-[var(--card)] transition-all text-sm"
           title="Tebal (Bold)"
         >
           B
@@ -270,7 +270,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("*", "*", "teks miring")}
-          className="px-2 py-1 rounded italic font-serif text-white hover:bg-[var(--card)] transition-all text-xs"
+          className="px-2 py-1 rounded italic font-serif text-white hover:bg-[var(--card)] transition-all text-sm"
           title="Miring (Italic)"
         >
           I
@@ -278,7 +278,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("~~", "~~", "teks coret")}
-          className="px-2 py-1 rounded line-through text-neutral-300 hover:bg-[var(--card)] transition-all text-xs"
+          className="px-2 py-1 rounded line-through text-neutral-300 hover:bg-[var(--card)] transition-all text-sm"
           title="Coret (Strikethrough)"
         >
           S
@@ -286,7 +286,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("<u>", "</u>", "garis bawah")}
-          className="px-2 py-1 rounded underline text-neutral-300 hover:bg-[var(--card)] transition-all text-xs"
+          className="px-2 py-1 rounded underline text-neutral-300 hover:bg-[var(--card)] transition-all text-sm"
           title="Garis Bawah (Underline)"
         >
           U
@@ -298,7 +298,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("- ", "\n", "Poin diskusi")}
-          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-xs"
+          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-sm"
           title="Daftar Poin (Bullet List)"
         >
           • List
@@ -306,7 +306,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("1. ", "\n", "Langkah terurut")}
-          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-xs"
+          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-sm"
           title="Daftar Nomor"
         >
           1. List
@@ -318,7 +318,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("> ", "\n", "Kutipan diskusi")}
-          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all font-mono text-xs"
+          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all font-mono text-sm"
           title="Kutipan (Quote)"
         >
           ” Quote
@@ -326,7 +326,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("```pgn\n", "\n```", "1. d4 Nf6 2. c4 g6 3. Nc3 Bg7")}
-          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all font-mono text-xs"
+          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all font-mono text-sm"
           title="Blok Notasi PGN / Kode"
         >
           {"{ }"} PGN
@@ -334,7 +334,7 @@ function RichTextToolbar({
         <button
           type="button"
           onClick={() => insertFormat("| Kolom 1 | Kolom 2 |\n|---|---|\n| Data 1 | Data 2 |\n", "", "")}
-          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-xs"
+          className="px-2 py-1 rounded text-neutral-300 hover:bg-[var(--card)] transition-all text-sm"
           title="Tabel (Table)"
         >
           ⊞ Tabel
@@ -345,7 +345,7 @@ function RichTextToolbar({
           <button
             type="button"
             onClick={onAttachGame}
-            className={`ml-auto px-2 py-0.5 rounded font-bold text-xs flex items-center gap-1 transition-all ${
+            className={`ml-auto px-2 py-0.5 rounded font-bold text-sm flex items-center gap-1 transition-all ${
               attachedGamesCount > 0
                 ? "bg-[var(--primary)] text-white shadow-sm"
                 : "bg-[var(--card)] text-white border border-[var(--border)] hover:border-[var(--primary)]"
@@ -359,7 +359,7 @@ function RichTextToolbar({
       </div>
 
       {/* Words Counter Badge */}
-      <div className="row-between text-xs text-[var(--muted-foreground)] px-1">
+      <div className="row-between text-sm text-[var(--muted-foreground)] px-1">
         <span>Gunakan toolbar di atas untuk memformat artikel catur &amp; notasi</span>
         <span className="font-mono font-bold">Words: {wordCount}</span>
       </div>
@@ -372,7 +372,7 @@ function FormattedPostContent({ text }: { text: string }) {
   const parts = text.split("\n\n");
 
   return (
-    <div className="stack-tight text-xs leading-relaxed text-neutral-200">
+    <div className="stack-tight text-sm leading-relaxed text-neutral-200">
       {parts.map((paragraph, pIdx) => {
         const trimmed = paragraph.trim();
 
@@ -384,7 +384,7 @@ function FormattedPostContent({ text }: { text: string }) {
           return (
             <blockquote
               key={pIdx}
-              className="pl-3 py-1.5 my-1 rounded-r-lg border-l-2 border-[var(--primary)] bg-[var(--surface)] text-xs italic text-neutral-300"
+              className="pl-3 py-1.5 my-1 rounded-r-lg border-l-2 border-[var(--primary)] bg-[var(--surface)] text-sm italic text-neutral-300"
             >
               {quoteLines}
             </blockquote>
@@ -396,7 +396,7 @@ function FormattedPostContent({ text }: { text: string }) {
           return (
             <pre
               key={pIdx}
-              className="p-2.5 my-1 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono text-xs text-emerald-300 overflow-x-auto select-all"
+              className="p-2.5 my-1 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono text-sm text-emerald-300 overflow-x-auto select-all"
             >
               {codeContent}
             </pre>
@@ -414,7 +414,7 @@ function FormattedPostContent({ text }: { text: string }) {
         if (trimmed.startsWith("- ")) {
           const items = trimmed.split("\n").map((l) => l.replace(/^-\s+/, ""));
           return (
-            <ul key={pIdx} className="list-disc list-inside space-y-0.5 my-1 pl-1 text-xs">
+            <ul key={pIdx} className="list-disc list-inside space-y-0.5 my-1 pl-1 text-sm">
               {items.map((it, i) => (
                 <li key={i} className="text-neutral-300">{it}</li>
               ))}
@@ -423,7 +423,7 @@ function FormattedPostContent({ text }: { text: string }) {
         }
 
         return (
-          <p key={pIdx} className="m-0 leading-relaxed text-xs">
+          <p key={pIdx} className="m-0 leading-relaxed text-sm">
             {paragraph}
           </p>
         );
@@ -496,12 +496,12 @@ function EmbeddedMatchPlayer({
       <div className="row-between pb-1.5" style={{ borderBottom: "1px solid var(--border)" }}>
         <div className="flex items-center gap-1.5">
           <IconHistory3D size={16} />
-          <span className="font-bold text-xs text-white">
+          <span className="font-bold text-sm text-white">
             Partai Lampiran: {authorUsername} ({game.humanSide === "white" ? "Putih" : "Hitam"}) vs {game.opponent}
           </span>
         </div>
         <span
-          className="ctl ctl-xs font-bold"
+          className="ctl ctl-sm font-bold"
           style={{
             borderColor: game.outcomeKind === "win" ? "var(--primary)" : game.outcomeKind === "loss" ? "var(--destructive)" : "var(--warning)",
             color: game.outcomeKind === "win" ? "var(--primary)" : game.outcomeKind === "loss" ? "var(--destructive)" : "var(--warning)",
@@ -513,12 +513,12 @@ function EmbeddedMatchPlayer({
 
       {/* Analysis Bar */}
       <div className="p-2 rounded-lg border border-[var(--border)] stack-tight" style={{ background: "var(--surface)" }}>
-        <div className="row-between flex-wrap gap-1.5 text-xs">
+        <div className="row-between flex-wrap gap-1.5 text-sm">
           <div className="flex items-center gap-1.5">
             <IconAiBrain3D size={14} />
             <span className="font-bold text-white">Akurasi {analysis.accuracy}%</span>
           </div>
-          <div className="row gap-2 text-xs font-bold">
+          <div className="row gap-2 text-sm font-bold">
             <span className="text-red-400">{analysis.blunders} Blunder</span>
             <span className="text-orange-400">{analysis.mistakes} Kesalahan</span>
             <span className="text-yellow-400">{analysis.missedWins} Terlewat</span>
@@ -541,29 +541,29 @@ function EmbeddedMatchPlayer({
           />
         </div>
 
-        <div className="stack-tight justify-between h-full text-xs">
+        <div className="stack-tight justify-between h-full text-sm">
           <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] min-h-16 stack-tight justify-center">
             {activeFeedback ? (
               <>
                 <div className="row-between">
                   <span className="font-mono font-bold text-white">#{activeFeedback.ply}: {activeFeedback.san}</span>
-                  <span className="text-xs font-bold text-[var(--primary)]">{activeFeedback.type.toUpperCase()}</span>
+                  <span className="text-sm font-bold text-[var(--primary)]">{activeFeedback.type.toUpperCase()}</span>
                 </div>
-                <p className="text-xs text-neutral-300 m-0">{activeFeedback.commentary}</p>
+                <p className="text-sm text-neutral-300 m-0">{activeFeedback.commentary}</p>
               </>
             ) : (
-              <div className="text-center text-xs text-neutral-400 italic">
+              <div className="text-center text-sm text-neutral-400 italic">
                 {currentStep === 0 ? "Posisi Awal" : `Langkah #${currentStep}: ${movesList[currentStep - 1]}`}
               </div>
             )}
           </div>
 
           <div className="grid grid-cols-5 gap-1 pt-1">
-            <button onClick={() => { setIsPlaying(false); setCurrentStep(0); }} className="ctl ctl-xs justify-center font-bold" title="Awal">|&lt;&lt;</button>
-            <button onClick={() => { setIsPlaying(false); setCurrentStep((p) => Math.max(0, p - 1)); }} className="ctl ctl-xs justify-center font-bold" title="Mundur">&lt;&lt;</button>
-            <button onClick={() => setIsPlaying(!isPlaying)} className="ctl ctl-xs ctl-primary justify-center font-bold">{isPlaying ? "Jeda" : "Putar"}</button>
-            <button onClick={() => { setIsPlaying(false); setCurrentStep((p) => Math.min(movesList.length, p + 1)); }} className="ctl ctl-xs justify-center font-bold" title="Maju">&gt;&gt;</button>
-            <button onClick={() => { setIsPlaying(false); setCurrentStep(movesList.length); }} className="ctl ctl-xs justify-center font-bold" title="Akhir">&gt;&gt;|</button>
+            <button onClick={() => { setIsPlaying(false); setCurrentStep(0); }} className="ctl ctl-sm justify-center font-bold" title="Awal">|&lt;&lt;</button>
+            <button onClick={() => { setIsPlaying(false); setCurrentStep((p) => Math.max(0, p - 1)); }} className="ctl ctl-sm justify-center font-bold" title="Mundur">&lt;&lt;</button>
+            <button onClick={() => setIsPlaying(!isPlaying)} className="ctl ctl-sm ctl-primary justify-center font-bold">{isPlaying ? "Jeda" : "Putar"}</button>
+            <button onClick={() => { setIsPlaying(false); setCurrentStep((p) => Math.min(movesList.length, p + 1)); }} className="ctl ctl-sm justify-center font-bold" title="Maju">&gt;&gt;</button>
+            <button onClick={() => { setIsPlaying(false); setCurrentStep(movesList.length); }} className="ctl ctl-sm justify-center font-bold" title="Akhir">&gt;&gt;|</button>
           </div>
         </div>
       </div>
@@ -626,12 +626,12 @@ function GameAttachmentModal({
             <IconHistory3D size={18} />
             <div>
               <h3 className="text-sm font-bold text-white m-0">Lampirkan Permainan Catur</h3>
-              <p className="text-xs text-[var(--muted-foreground)] m-0">
+              <p className="text-sm text-[var(--muted-foreground)] m-0">
                 Pilih satu atau lebih permainan dari riwayat permainan Anda untuk dilampirkan ke dalam diskusi
               </p>
             </div>
           </div>
-          <button className="ctl ctl-xs ctl-quiet" onClick={onClose}>
+          <button className="ctl ctl-sm ctl-quiet" onClick={onClose}>
             <IconClose3D size={14} />
           </button>
         </div>
@@ -639,13 +639,13 @@ function GameAttachmentModal({
         {/* TABEL PERMAINAN */}
         <div className="flex-1 overflow-y-auto max-h-[50vh] rounded-xl border border-[var(--border)] bg-[var(--surface)] my-2">
           {games.length === 0 ? (
-            <div className="text-center py-10 text-xs text-neutral-400">
+            <div className="text-center py-10 text-sm text-neutral-400">
               Belum ada riwayat permainan yang tersimpan di browser ini.
             </div>
           ) : (
-            <table className="w-full text-xs font-mono border-collapse">
+            <table className="w-full text-sm font-mono border-collapse">
               <thead>
-                <tr className="border-b border-[var(--border)] bg-[var(--card)] text-neutral-400 text-xs font-bold">
+                <tr className="border-b border-[var(--border)] bg-[var(--card)] text-neutral-400 text-sm font-bold">
                   <th className="py-2.5 px-3 text-center w-12">
                     <input
                       type="checkbox"
@@ -691,12 +691,12 @@ function GameAttachmentModal({
                       <td className="py-2 px-3 text-neutral-300 font-sans">{dateStr}</td>
                       <td className="py-2 px-3 text-white font-bold font-sans">vs {g.opponent}</td>
                       <td className="py-2 px-3 text-center font-sans">
-                        <span className={`px-2 py-0.5 rounded text-xs ${g.humanSide === "white" ? "bg-white text-black font-bold" : "bg-neutral-800 text-white border border-neutral-600"}`}>
+                        <span className={`px-2 py-0.5 rounded text-sm ${g.humanSide === "white" ? "bg-white text-black font-bold" : "bg-neutral-800 text-white border border-neutral-600"}`}>
                           {g.humanSide === "white" ? "Putih" : "Hitam"}
                         </span>
                       </td>
                       <td className="py-2 px-3 text-center font-sans">
-                        <span className={`text-xs font-bold ${g.outcomeKind === "checkmate" ? "text-emerald-400" : g.outcomeKind === "draw" ? "text-amber-300" : "text-neutral-300"}`}>
+                        <span className={`text-sm font-bold ${g.outcomeKind === "checkmate" ? "text-emerald-400" : g.outcomeKind === "draw" ? "text-amber-300" : "text-neutral-300"}`}>
                           {g.outcomeKind === "checkmate" ? "Skakmat" : g.outcomeKind === "draw" ? "Remis" : g.outcomeKind}
                         </span>
                       </td>
@@ -710,16 +710,16 @@ function GameAttachmentModal({
         </div>
 
         <div className="row-between items-center pt-2 border-t border-[var(--border)]">
-          <div className="text-xs text-[var(--muted-foreground)]">
+          <div className="text-sm text-[var(--muted-foreground)]">
             <span className="font-bold text-white">{currentSelectedIds.size}</span> permainan dipilih
           </div>
           <div className="flex gap-2">
-            <button type="button" className="ctl ctl-xs ctl-quiet" onClick={onClose}>
+            <button type="button" className="ctl ctl-sm ctl-quiet" onClick={onClose}>
               Batal
             </button>
             <button
               type="button"
-              className="ctl ctl-xs ctl-primary font-bold px-3"
+              className="ctl ctl-sm ctl-primary font-bold px-3"
               onClick={handleApply}
               disabled={games.length === 0}
             >
@@ -762,7 +762,19 @@ export function CommunityView({ user, lang = "id" }: Props) {
   ];
 
   // Threads Data
-  const [threads, setThreads] = useState<ForumThread[]>([
+  const [threads, setThreads] = useState<ForumThread[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/community")
+      .then(res => res.json())
+      .then(data => {
+        if (data.threads) setThreads(data.threads);
+        setIsLoading(false);
+      });
+  }, []);
+
+  /*
     {
       id: "t1",
       categoryId: "general",
@@ -856,7 +868,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
         },
       ],
     },
-  ]);
+  */
 
   const activeThread = useMemo(() => {
     return threads.find((t) => t.id === activeThreadId) || threads[0];
@@ -870,46 +882,39 @@ export function CommunityView({ user, lang = "id" }: Props) {
     replyInputRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSubmitReply = () => {
+  const handleSubmitReply = async () => {
     if (!user) {
       alert("Harap masuk atau daftarkan akun terlebih dahulu untuk membalas diskusi komunitas.");
       return;
     }
     if (!replyText.trim() && selectedGamesForReply.length === 0) return;
+    if (!activeThread) return;
 
-    const newPost: ForumPost = {
-      id: `p-${Date.now()}`,
-      postNumber: activeThread.posts.length + 1,
-      authorUsername: user?.username || "pemain_catur",
-      authorName: user?.fullName || "Pemain Catur",
-      authorTitle: user?.isAdmin ? "ADMIN KOMUNITAS" : "MEMBER",
-      authorRole: user?.isAdmin ? "Admin & Dosen" : "Anggota Komunitas",
-      avatarInitials: (user?.fullName || "PC").slice(0, 2).toUpperCase(),
-      content: replyText,
-      likes: 0,
-      createdAt: "Baru saja",
-      attachedGame: selectedGamesForReply[0] || undefined,
-      attachedGames: selectedGamesForReply.length > 0 ? selectedGamesForReply : undefined,
-    };
+    const res = await fetch("/api/community", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "reply",
+        threadId: activeThread.id,
+        post: {
+          content: replyText,
+          attachedGames: selectedGamesForReply.length > 0 ? selectedGamesForReply : undefined,
+        },
+      }),
+    }).then((r) => r.json());
 
-    setThreads((prev) =>
-      prev.map((t) =>
-        t.id === activeThread.id
-          ? {
-              ...t,
-              repliesCount: t.repliesCount + 1,
-              lastActivity: "Baru saja",
-              posts: [...t.posts, newPost],
-            }
-          : t
-      )
-    );
+    if (res.threads) {
+      setThreads(res.threads);
+    } else if (res.error) {
+      alert(res.error);
+      return;
+    }
 
     setReplyText("");
     setSelectedGamesForReply([]);
   };
 
-  const handleCreateTopic = () => {
+  const handleCreateTopic = async () => {
     if (!user) {
       alert("Harap masuk atau daftarkan akun terlebih dahulu untuk membuat topik diskusi baru.");
       return;
@@ -917,47 +922,36 @@ export function CommunityView({ user, lang = "id" }: Props) {
     if (!newTopicTitle.trim() || !newTopicContent.trim()) return;
 
     const cat = categories.find((c) => c.id === newTopicCategory) || categories[0];
-    const newThreadId = `t-${Date.now()}`;
 
-    const initialPost: ForumPost = {
-      id: `p-${Date.now()}`,
-      postNumber: 1,
-      authorUsername: user?.username || "pemain_catur",
-      authorName: user?.fullName || "Pemain Catur",
-      authorTitle: user?.isAdmin ? "ADMIN KOMUNITAS" : "MEMBER",
-      authorRole: user?.isAdmin ? "Admin & Dosen" : "Anggota Komunitas",
-      avatarInitials: (user?.fullName || "PC").slice(0, 2).toUpperCase(),
-      content: newTopicContent,
-      likes: 0,
-      createdAt: "Baru saja",
-      attachedGame: selectedGamesForNewTopic[0] || undefined,
-      attachedGames: selectedGamesForNewTopic.length > 0 ? selectedGamesForNewTopic : undefined,
-    };
+    const res = await fetch("/api/community", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "create_thread",
+        thread: {
+          categoryId: cat.id,
+          categoryName: cat.name,
+          title: newTopicTitle,
+          posts: [
+            {
+              content: newTopicContent,
+              attachedGames: selectedGamesForNewTopic.length > 0 ? selectedGamesForNewTopic : undefined,
+            },
+          ],
+        },
+      }),
+    }).then((r) => r.json());
 
-    const createdThread: ForumThread = {
-      id: newThreadId,
-      categoryId: cat.id,
-      categoryName: cat.name,
-      title: newTopicTitle,
-      authorUsername: user?.username || "pemain_catur",
-      authorName: user?.fullName || "Pemain Catur",
-      authorTitle: user?.isAdmin ? "ADMIN KOMUNITAS" : "MEMBER",
-      avatarInitials: (user?.fullName || "PC").slice(0, 2).toUpperCase(),
-      repliesCount: 1,
-      lastActivity: "Baru saja",
-      posts: [initialPost],
-      attachedGameSummary: selectedGamesForNewTopic[0]
-        ? {
-            opponent: selectedGamesForNewTopic[0].opponent,
-            outcome: selectedGamesForNewTopic[0].outcomeKind,
-            movesCount: selectedGamesForNewTopic[0].moves.length,
-            playedAs: selectedGamesForNewTopic[0].humanSide,
-          }
-        : undefined,
-    };
+    if (res.threads) {
+      setThreads(res.threads);
+      if (res.threads.length > 0) {
+        setActiveThreadId(res.threads[0].id);
+      }
+    } else if (res.error) {
+      alert(res.error);
+      return;
+    }
 
-    setThreads((prev) => [createdThread, ...prev]);
-    setActiveThreadId(newThreadId);
     setViewMode("thread");
     setShowNewTopicModal(false);
     setNewTopicTitle("");
@@ -982,7 +976,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
       <div className="panel px-3.5 py-2.5 row-between flex-wrap gap-2" style={{ background: "var(--card)" }}>
         <div className="row items-center gap-2">
           <IconCommunity3D size={22} />
-          <h2 className="text-xs md:text-sm font-black text-white m-0">
+          <h2 className="text-base md:text-lg font-black text-white m-0">
             Komunitas &amp; Forum Catur FIF Tel-U
           </h2>
         </div>
@@ -991,7 +985,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
           {viewMode === "thread" && (
             <button
               onClick={() => setViewMode("index")}
-              className="ctl ctl-xs ctl-quiet flex items-center gap-1"
+              className="ctl ctl-sm ctl-quiet flex items-center gap-1"
             >
               <span>← Kembali</span>
             </button>
@@ -999,7 +993,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
 
           <button
             onClick={() => setShowNewTopicModal(true)}
-            className="ctl ctl-xs ctl-primary font-bold flex items-center gap-1.5"
+            className="ctl ctl-sm ctl-primary font-bold flex items-center gap-1.5"
           >
             <IconPencil3D size={14} />
             <span>Buat Topik Baru</span>
@@ -1015,19 +1009,19 @@ export function CommunityView({ user, lang = "id" }: Props) {
               <span className="font-bold text-sm text-white flex items-center gap-1.5">
                 <IconPencil3D size={16} /> Buat Topik Diskusi Catur Baru
               </span>
-              <button className="ctl ctl-xs ctl-quiet" onClick={() => setShowNewTopicModal(false)}>
+              <button className="ctl ctl-sm ctl-quiet" onClick={() => setShowNewTopicModal(false)}>
                 <IconClose3D size={14} />
               </button>
             </div>
 
-            <div className="stack-tight text-xs">
+            <div className="stack-tight text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label className="label font-bold text-xs">Kategori Forum:</label>
+                  <label className="label font-bold text-sm">Kategori Forum:</label>
                   <select
                     value={newTopicCategory}
                     onChange={(e) => setNewTopicCategory(e.target.value)}
-                    className="w-full p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-white focus:outline-none"
+                    className="w-full p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm text-white focus:outline-none"
                   >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
@@ -1035,18 +1029,18 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="label font-bold text-xs">Judul Topik:</label>
+                  <label className="label font-bold text-sm">Judul Topik:</label>
                   <input
                     type="text"
                     value={newTopicTitle}
                     onChange={(e) => setNewTopicTitle(e.target.value)}
                     placeholder="Contoh: Analisis Pembukaan Sisilia Najdorf..."
-                    className="w-full p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)]"
+                    className="w-full p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm text-white focus:outline-none focus:border-[var(--primary)]"
                   />
                 </div>
               </div>
 
-              <label className="label font-bold text-xs mt-1">Isi Diskusi (Rich Text Editor):</label>
+              <label className="label font-bold text-sm mt-1">Isi Diskusi (Rich Text Editor):</label>
               
               {/* Full Rich Text Editor */}
               <div className="rounded-xl border border-[var(--border)] overflow-hidden">
@@ -1063,7 +1057,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   onChange={(e) => setNewTopicContent(e.target.value)}
                   rows={6}
                   placeholder="Tulis opini, penjelasan taktis, atau paste notasi PGN di sini..."
-                  className="w-full p-2.5 bg-[var(--surface)] text-xs text-white font-sans focus:outline-none resize-y"
+                  className="w-full p-2.5 bg-[var(--surface)] text-sm text-white font-sans focus:outline-none resize-y"
                 />
               </div>
 
@@ -1077,7 +1071,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
               />
 
               {selectedGamesForNewTopic.length > 0 && (
-                <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--primary)] stack-tight text-xs">
+                <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--primary)] stack-tight text-sm">
                   <div className="row-between pb-1 border-b border-[var(--border)]">
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <IconHistory3D size={14} /> Permainan Terlampir ({selectedGamesForNewTopic.length}):
@@ -1085,7 +1079,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                     <button
                       type="button"
                       onClick={() => setShowGamePickerInNewTopic(true)}
-                      className="text-xs text-[var(--primary)] font-bold hover:underline"
+                      className="text-sm text-[var(--primary)] font-bold hover:underline"
                     >
                       + Ubah / Tambah Permainan
                     </button>
@@ -1094,10 +1088,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
                     {selectedGamesForNewTopic.map((g) => (
                       <div
                         key={g.id}
-                        className="px-2.5 py-1 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center gap-2 text-xs"
+                        className="px-2.5 py-1 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center gap-2 text-sm"
                       >
                         <span className="font-bold text-white">vs {g.opponent}</span>
-                        <span className="text-xs text-[var(--muted-foreground)]">
+                        <span className="text-sm text-[var(--muted-foreground)]">
                           ({g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind})
                         </span>
                         <button
@@ -1116,13 +1110,13 @@ export function CommunityView({ user, lang = "id" }: Props) {
             </div>
 
             <div className="row justify-end gap-2 pt-2.5" style={{ borderTop: "1px solid var(--border)" }}>
-              <button className="ctl ctl-xs ctl-quiet" onClick={() => setShowNewTopicModal(false)}>
+              <button className="ctl ctl-sm ctl-quiet" onClick={() => setShowNewTopicModal(false)}>
                 Batal
               </button>
               <button
                 onClick={handleCreateTopic}
                 disabled={!newTopicTitle.trim() || !newTopicContent.trim()}
-                className="ctl ctl-xs ctl-primary font-bold flex items-center gap-1"
+                className="ctl ctl-sm ctl-primary font-bold flex items-center gap-1"
               >
                 <IconPencil3D size={13} />
                 <span>Terbitkan Tulisan</span>
@@ -1143,17 +1137,17 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari topik diskusi atau username..."
-                className="w-full p-1.5 pl-7 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs text-white focus:outline-none focus:border-[var(--primary)]"
+                className="w-full p-1.5 pl-7 rounded-lg bg-[var(--background)] border border-[var(--border)] text-sm text-white focus:outline-none focus:border-[var(--primary)]"
               />
               <div className="absolute left-2 top-2 pointer-events-none opacity-60">
                 <IconSearch3D size={13} />
               </div>
             </div>
 
-            <div className="row items-center gap-1 overflow-x-auto pt-0.5 text-xs">
+            <div className="row items-center gap-1 overflow-x-auto pt-0.5 text-sm">
               <button
                 onClick={() => setFilterCategory("all")}
-                className={`ctl ctl-xs shrink-0 ${filterCategory === "all" ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"}`}
+                className={`ctl ctl-sm shrink-0 ${filterCategory === "all" ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"}`}
               >
                 Semua Kategori
               </button>
@@ -1161,7 +1155,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 <button
                   key={c.id}
                   onClick={() => setFilterCategory(c.id)}
-                  className={`ctl ctl-xs shrink-0 ${filterCategory === c.id ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"}`}
+                  className={`ctl ctl-sm shrink-0 ${filterCategory === c.id ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"}`}
                 >
                   {c.name} ({c.threadsCount})
                 </button>
@@ -1185,20 +1179,20 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   <div className="row items-center gap-1.5 min-w-0">
                     {th.isPinned && <IconPin3D size={14} />}
                     {th.isHot && <IconFire3D size={14} />}
-                    <h3 className="font-bold text-xs md:text-sm text-white hover:text-[var(--primary)] truncate m-0">
+                    <h3 className="font-bold text-base md:text-lg text-white hover:text-[var(--primary)] truncate m-0">
                       {th.title}
                     </h3>
                   </div>
-                  <span className="ctl ctl-xs" style={{ background: "var(--surface)" }}>
+                  <span className="ctl ctl-sm" style={{ background: "var(--surface)" }}>
                     {th.categoryName}
                   </span>
                 </div>
 
-                <p className="prose-note text-xs text-neutral-300 line-clamp-2 m-0">
+                <p className="prose-note text-sm text-neutral-300 line-clamp-2 m-0">
                   {th.posts[0]?.content}
                 </p>
 
-                <div className="row-between pt-1 text-xs text-[var(--muted-foreground)]" style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="row-between pt-1 text-sm text-[var(--muted-foreground)]" style={{ borderTop: "1px solid var(--border)" }}>
                   <div className="row items-center gap-1.5">
                     <span className="font-bold text-white">@{th.authorUsername}</span>
                     <span>·</span>
@@ -1225,10 +1219,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
         <div className="stack-tight">
           <div className="panel p-3 stack-tight" style={{ background: "var(--card)" }}>
             <div className="row-between flex-wrap gap-1">
-              <span className="ctl ctl-xs font-bold" style={{ borderColor: "var(--primary)", color: "var(--primary)" }}>
+              <span className="ctl ctl-sm font-bold" style={{ borderColor: "var(--primary)", color: "var(--primary)" }}>
                 {activeThread.categoryName}
               </span>
-              <span className="text-xs text-[var(--muted-foreground)]">
+              <span className="text-sm text-[var(--muted-foreground)]">
                 Aktivitas: {activeThread.lastActivity}
               </span>
             </div>
@@ -1243,15 +1237,15 @@ export function CommunityView({ user, lang = "id" }: Props) {
               <div key={post.id} className="panel p-3 stack-tight" style={{ background: "var(--card)" }}>
                 <div className="row-between pb-1.5" style={{ borderBottom: "1px solid var(--border)" }}>
                   <div className="row items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)] text-[var(--primary)] font-bold flex items-center justify-center text-xs">
+                    <div className="w-7 h-7 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)] text-[var(--primary)] font-bold flex items-center justify-center text-sm">
                       {post.avatarInitials}
                     </div>
                     <div>
-                      <span className="font-bold text-xs text-white">@{post.authorUsername}</span>
-                      <span className="text-xs text-[var(--muted-foreground)] ml-1.5">{post.createdAt}</span>
+                      <span className="font-bold text-sm text-white">@{post.authorUsername}</span>
+                      <span className="text-sm text-[var(--muted-foreground)] ml-1.5">{post.createdAt}</span>
                     </div>
                   </div>
-                  <span className="text-xs font-mono text-[var(--muted-foreground)]">#{post.postNumber}</span>
+                  <span className="text-sm font-mono text-[var(--muted-foreground)]">#{post.postNumber}</span>
                 </div>
 
                 <FormattedPostContent text={post.content} />
@@ -1266,33 +1260,54 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   <EmbeddedMatchPlayer game={post.attachedGame} authorUsername={post.authorUsername} />
                 ) : null}
 
-                <div className="row-between pt-1.5 text-xs" style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="row-between pt-1.5 text-sm" style={{ borderTop: "1px solid var(--border)" }}>
                   <button
-                    onClick={() => {
-                      setThreads((prev) =>
-                        prev.map((t) =>
-                          t.id === activeThread.id
-                            ? {
-                                ...t,
-                                posts: t.posts.map((p) => (p.id === post.id ? { ...p, likes: p.likes + 1 } : p)),
-                              }
-                            : t
-                        )
-                      );
+                    onClick={async () => {
+                      const res = await fetch("/api/community", {
+                        method: "POST",
+                        body: JSON.stringify({ action: "like", threadId: activeThread.id, postId: post.id }),
+                      }).then(r => r.json());
+                      if (res.threads) setThreads(res.threads);
                     }}
-                    className="ctl ctl-xs flex items-center gap-1 font-bold"
+                    className="ctl ctl-sm flex items-center gap-1 font-bold"
                   >
                     <IconThumbsUp3D size={12} />
                     <span>{post.likes} Suka</span>
                   </button>
 
+
                   <button
                     onClick={() => handleQuotePost(post)}
-                    className="ctl ctl-xs ctl-quiet flex items-center gap-1 font-bold"
+                    className="ctl ctl-sm ctl-quiet flex items-center gap-1 font-bold"
                   >
                     <IconQuote3D size={12} />
                     <span>Kutip Balas</span>
                   </button>
+
+                  {user?.username === post.authorUsername && (
+                    <button
+                      onClick={async () => {
+                        if (confirm("Yakin ingin menghapus kiriman ini?")) {
+                          const res = await fetch("/api/community", {
+                            method: "POST",
+                            body: JSON.stringify({ action: "delete_post", threadId: activeThread.id, postId: post.id }),
+                          }).then(r => r.json());
+                          if (res.threads) {
+                             if (!res.threads.find((t: any) => t.id === activeThread.id)) {
+                               setViewMode("index");
+                             }
+                             setThreads(res.threads);
+                          } else {
+                             alert(res.error || "Gagal menghapus.");
+                          }
+                        }
+                      }}
+                      className="ctl ctl-sm flex items-center gap-1 font-bold text-[var(--destructive)] hover:bg-[var(--destructive)] hover:text-white"
+                    >
+                      <span>Hapus</span>
+                    </button>
+                  )}
+
                 </div>
               </div>
             ))}
@@ -1300,7 +1315,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
 
           {/* REPLY FORM */}
           <div className="panel p-3 stack-tight" style={{ background: "var(--surface)" }}>
-            <span className="label font-bold text-xs">Balas Diskusi:</span>
+            <span className="label font-bold text-sm">Balas Diskusi:</span>
 
             {/* Game Attachment Modal & Attached Games in Reply */}
             <GameAttachmentModal
@@ -1312,7 +1327,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
             />
 
             {selectedGamesForReply.length > 0 && (
-              <div className="p-2 rounded-xl bg-[var(--card)] border border-[var(--primary)] stack-tight text-xs">
+              <div className="p-2 rounded-xl bg-[var(--card)] border border-[var(--primary)] stack-tight text-sm">
                 <div className="row-between pb-1 border-b border-[var(--border)]">
                   <span className="font-bold text-white flex items-center gap-1.5">
                     <IconHistory3D size={14} /> Permainan Terlampir ({selectedGamesForReply.length}):
@@ -1320,7 +1335,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowGameImportPicker(true)}
-                    className="text-xs text-[var(--primary)] font-bold hover:underline"
+                    className="text-sm text-[var(--primary)] font-bold hover:underline"
                   >
                     + Ubah / Tambah Permainan
                   </button>
@@ -1329,10 +1344,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   {selectedGamesForReply.map((g) => (
                     <div
                       key={g.id}
-                      className="px-2 py-0.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center gap-1.5 text-xs"
+                      className="px-2 py-0.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center gap-1.5 text-sm"
                     >
                       <span className="font-bold text-white">vs {g.opponent}</span>
-                      <span className="text-xs text-[var(--muted-foreground)]">
+                      <span className="text-sm text-[var(--muted-foreground)]">
                         ({g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind})
                       </span>
                       <button
@@ -1364,7 +1379,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 onChange={(e) => setReplyText(e.target.value)}
                 rows={4}
                 placeholder="Ketik balasan Anda..."
-                className="w-full p-2.5 bg-[var(--card)] text-xs text-white focus:outline-none resize-y"
+                className="w-full p-2.5 bg-[var(--card)] text-sm text-white focus:outline-none resize-y"
               />
             </div>
 
@@ -1372,7 +1387,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
               <button
                 onClick={handleSubmitReply}
                 disabled={!replyText.trim() && selectedGamesForReply.length === 0}
-                className="ctl ctl-xs ctl-primary font-bold flex items-center gap-1 px-3"
+                className="ctl ctl-sm ctl-primary font-bold flex items-center gap-1 px-3"
               >
                 <IconMessages3D size={13} />
                 <span>Kirim Balasan</span>
