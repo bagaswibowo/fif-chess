@@ -1013,7 +1013,7 @@ export function Game() {
                 </div>
 
                 {/* Chessboard Container */}
-                <div className="aspect-square w-full lg:w-auto lg:h-full max-h-[calc(100dvh-165px)] max-w-full rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative">
+                <div className="aspect-square w-full max-w-[min(100%,calc(100dvh-240px))] rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative shrink-0">
                   <Chessboard
                     options={{
                       id: "fif-chess-main",
