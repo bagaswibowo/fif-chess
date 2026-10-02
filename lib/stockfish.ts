@@ -197,14 +197,13 @@ function evalSingleMove(fen: string, move: string, depth = 10): Promise<number |
   });
 }
 
-export async function guardJevMove(
+async function evaluateGuardedMove(
   fen: string,
   jevResult: JevPlaySuccess,
-  depth = 12,
+  guardDepth: number,
+  maxAllowedDiff: number
 ): Promise<StockfishResult> {
-  // ponytail: fallback to unverified Jev move if Stockfish process fails
   const chess = new Chess(fen);
-  const guardDepth = Math.max(12, depth);
   const sf = await getStockfishEval(fen, guardDepth, 5);
   if (!sf) {
     return {
@@ -225,9 +224,9 @@ export async function guardJevMove(
   }
 
   const bestScore = sf.bestScore;
-
-  // 1. ENDGAME PAWN PROMOTION BOOST (Pion bebas promosi ke Menteri =Q)
   const legals = chess.moves({ verbose: true });
+
+  // 1. Promosi Pion
   const promoMove = legals.find(
     (m) => m.promotion === "q" || (m.piece === "p" && (m.to.endsWith("8") || m.to.endsWith("1")))
   );
@@ -236,16 +235,14 @@ export async function guardJevMove(
     try {
       const testC = new Chess(chess.fen());
       testC.move({ from: promoMove.from, to: promoMove.to, promotion: "q" });
-      if (testC.isDraw() || testC.isStalemate()) {
-        chosenPromo = "r"; // Hindari pat/remis tak sengaja via under-promotion
-      }
+      if (testC.isDraw() || testC.isStalemate()) chosenPromo = "r";
     } catch {}
     const promoUci = promoMove.from + promoMove.to + chosenPromo;
     let promoScore = sf.candidateScores.get(promoUci);
     if (promoScore === undefined) {
       promoScore = (await evalSingleMove(fen, promoUci, Math.max(8, guardDepth - 2))) ?? undefined;
     }
-    if (promoScore !== undefined && (promoScore > 100 || (bestScore - promoScore <= 50))) {
+    if (promoScore !== undefined && (promoScore > 100 || (bestScore - promoScore <= maxAllowedDiff))) {
       try {
         const applied = applyUci(chess, promoUci);
         return {
@@ -262,7 +259,7 @@ export async function guardJevMove(
     }
   }
 
-  // 2. PASSED PAWN ADVANCE BOOST (Mendorong pion bebas menuju promosi)
+  // 2. Dorongan Pion Bebas
   const isWhiteTurn = chess.turn() === "w";
   const pushMove = legals.find((m) => {
     if (m.piece !== "p") return false;
@@ -274,7 +271,7 @@ export async function guardJevMove(
     if (pushScore === undefined) {
       pushScore = (await evalSingleMove(fen, pushUci, Math.max(8, guardDepth - 2))) ?? undefined;
     }
-    if (pushScore !== undefined && pushScore > 150 && (bestScore - pushScore <= 40)) {
+    if (pushScore !== undefined && pushScore > 150 && (bestScore - pushScore <= maxAllowedDiff)) {
       try {
         const applied = applyUci(chess, pushUci);
         return {
@@ -292,7 +289,7 @@ export async function guardJevMove(
   }
 
   const delta = jevScore !== undefined ? bestScore - jevScore : 9999;
-  const isSafe = jevScore !== undefined && delta <= 25 && jevScore > -20000;
+  const isSafe = jevScore !== undefined && delta <= maxAllowedDiff && jevScore > -20000;
 
   if (isSafe) {
     return {
@@ -307,7 +304,6 @@ export async function guardJevMove(
     };
   }
 
-  // Jev move is a tactical blunder. Try Jev\'s other high-probability moves
   const sortedCandidates = Object.entries(jevResult.probabilities || {})
     .sort((a, b) => b[1] - a[1])
     .map(([uci]) => uci);
@@ -318,7 +314,7 @@ export async function guardJevMove(
     if (candScore === undefined) {
       candScore = (await evalSingleMove(fen, cand, Math.max(8, guardDepth - 2))) ?? undefined;
     }
-    if (candScore !== undefined && bestScore - candScore <= 25 && candScore > -20000) {
+    if (candScore !== undefined && bestScore - candScore <= maxAllowedDiff && candScore > -20000) {
       try {
         const applied = applyUci(chess, cand);
         return {
@@ -335,7 +331,6 @@ export async function guardJevMove(
     }
   }
 
-  // No safe candidate from Jev: Stockfish tactical safeguard overrides to prevent blunder/mate
   try {
     const applied = applyUci(chess, sf.bestMove);
     return {
@@ -362,173 +357,20 @@ export async function guardJevMove(
   }
 }
 
+export async function guardJevMove(
+  fen: string,
+  jevResult: JevPlaySuccess,
+  depth = 12,
+): Promise<StockfishResult> {
+  return evaluateGuardedMove(fen, jevResult, Math.max(12, depth), 25);
+}
+
 export async function guardJevFlyMove(
   fen: string,
   hybridResult: JevPlaySuccess,
   depth = 12,
 ): Promise<StockfishResult> {
-  // Guard taktis utk hybrid Jev+FlyBrain: sama seperti guardJevMove tapi
-  // ambang lebih longgar (hybrid sudah cukup sehat) supaya karakter
-  // "otak lalat" tetap terasa, namun tidak pernah blunder material besar.
-  const chess = new Chess(fen);
-  const guardDepth = Math.max(10, Math.min(depth, 12));
-  const sf = await getStockfishEval(fen, guardDepth, 5);
-  if (!sf) {
-    return {
-      uci: hybridResult.uci,
-      san: hybridResult.san,
-      fen: hybridResult.fen,
-      probabilities: hybridResult.probabilities,
-      confidence: hybridResult.confidence ?? 0.7,
-      droppedMoveCount: hybridResult.droppedMoveCount,
-      outcome: hybridResult.outcome,
-      scoreCp: null,
-    };
-  }
-
-  const bestScore = sf.bestScore;
-
-  // 1. PROMOSI PION -> MENTERI: selalu prioritaskan bila tersedia & sehat.
-  const legals = chess.moves({ verbose: true });
-  const promoMove = legals.find(
-    (m) => m.promotion === "q" || (m.piece === "p" && (m.to.endsWith("8") || m.to.endsWith("1")))
-  );
-  if (promoMove) {
-    let chosenPromo = "q";
-    try {
-      const testC = new Chess(chess.fen());
-      testC.move({ from: promoMove.from, to: promoMove.to, promotion: "q" });
-      if (testC.isDraw() || testC.isStalemate()) {
-        chosenPromo = "r"; // hindari remis tak sengaja via under-promotion
-      }
-    } catch {}
-    const promoUci = promoMove.from + promoMove.to + chosenPromo;
-    let promoScore = sf.candidateScores.get(promoUci);
-    if (promoScore === undefined) {
-      promoScore = (await evalSingleMove(fen, promoUci, Math.max(8, guardDepth - 2))) ?? undefined;
-    }
-    if (promoScore !== undefined && (promoScore > 100 || bestScore - promoScore <= 60)) {
-      try {
-        const applied = applyUci(chess, promoUci);
-        return {
-          uci: promoUci,
-          san: applied.san,
-          fen: chess.fen(),
-          probabilities: { [promoUci]: 0.99, ...hybridResult.probabilities },
-          confidence: 0.99,
-          droppedMoveCount: 0,
-          outcome: describeOutcome(chess),
-          scoreCp: promoScore,
-        };
-      } catch {}
-    }
-  }
-
-  // 2. DORONGAN PION BEBAS menuju promosi (rank 6->7 / 3->2).
-  const isWhiteTurn = chess.turn() === "w";
-  const pushMove = legals.find((m) => {
-    if (m.piece !== "p") return false;
-    return isWhiteTurn ? (m.from.endsWith("6") && m.to.endsWith("7")) : (m.from.endsWith("3") && m.to.endsWith("2"));
-  });
-  if (pushMove) {
-    const pushUci = pushMove.from + pushMove.to;
-    let pushScore = sf.candidateScores.get(pushUci);
-    if (pushScore === undefined) {
-      pushScore = (await evalSingleMove(fen, pushUci, Math.max(8, guardDepth - 2))) ?? undefined;
-    }
-    if (pushScore !== undefined && pushScore > 150 && bestScore - pushScore <= 40) {
-      try {
-        const applied = applyUci(chess, pushUci);
-        return {
-          uci: pushUci,
-          san: applied.san,
-          fen: chess.fen(),
-          probabilities: { [pushUci]: 0.95, ...hybridResult.probabilities },
-          confidence: 0.95,
-          droppedMoveCount: 0,
-          outcome: describeOutcome(chess),
-          scoreCp: pushScore,
-        };
-      } catch {}
-    }
-  }
-
-  // 3. Guard blunder: hybrid move harus tidak jauh lebih buruk dari best.
-  let hybridScore = sf.candidateScores.get(hybridResult.uci);
-  if (hybridScore === undefined) {
-    hybridScore = (await evalSingleMove(fen, hybridResult.uci, Math.max(8, guardDepth - 2))) ?? undefined;
-  }
-  const delta = hybridScore !== undefined ? bestScore - hybridScore : 9999;
-  const isSafe = hybridScore !== undefined && delta <= 60 && hybridScore > -20000;
-  if (isSafe) {
-    return {
-      uci: hybridResult.uci,
-      san: hybridResult.san,
-      fen: hybridResult.fen,
-      probabilities: hybridResult.probabilities,
-      confidence: hybridResult.confidence ?? 0.7,
-      droppedMoveCount: hybridResult.droppedMoveCount,
-      outcome: hybridResult.outcome,
-      scoreCp: hybridScore ?? null,
-    };
-  }
-
-  // 4. Coba kandidat hybrid lain yang aman (maks 3 eval tambahan supaya
-  // latensi respons tetap rendah — tiap eval spawn proses Stockfish baru).
-  const sortedCandidates = Object.entries(hybridResult.probabilities || {})
-    .sort((a, b) => b[1] - a[1])
-    .map(([uci]) => uci);
-  let extraEval = 0;
-  for (const cand of sortedCandidates) {
-    if (cand === hybridResult.uci) continue;
-    let candScore = sf.candidateScores.get(cand);
-    if (candScore === undefined) {
-      if (extraEval >= 3) continue;
-      extraEval++;
-      candScore = (await evalSingleMove(fen, cand, Math.max(8, guardDepth - 2))) ?? undefined;
-    }
-    if (candScore !== undefined && bestScore - candScore <= 60 && candScore > -20000) {
-      try {
-        const applied = applyUci(chess, cand);
-        return {
-          uci: cand,
-          san: applied.san,
-          fen: chess.fen(),
-          probabilities: hybridResult.probabilities,
-          confidence: hybridResult.probabilities[cand] ?? 0.5,
-          droppedMoveCount: hybridResult.droppedMoveCount,
-          outcome: describeOutcome(chess),
-          scoreCp: candScore,
-        };
-      } catch {}
-    }
-  }
-
-  // 5. Semua kandidat buruk: Stockfish override penuh (anti-blunder).
-  try {
-    const applied = applyUci(chess, sf.bestMove);
-    return {
-      uci: sf.bestMove,
-      san: applied.san,
-      fen: chess.fen(),
-      probabilities: { [sf.bestMove]: 0.85, ...hybridResult.probabilities },
-      confidence: 0.85,
-      droppedMoveCount: hybridResult.droppedMoveCount,
-      outcome: describeOutcome(chess),
-      scoreCp: bestScore,
-    };
-  } catch {
-    return {
-      uci: hybridResult.uci,
-      san: hybridResult.san,
-      fen: hybridResult.fen,
-      probabilities: hybridResult.probabilities,
-      confidence: hybridResult.confidence ?? 0.7,
-      droppedMoveCount: hybridResult.droppedMoveCount,
-      outcome: hybridResult.outcome,
-      scoreCp: null,
-    };
-  }
+  return evaluateGuardedMove(fen, hybridResult, Math.max(10, Math.min(depth, 12)), 60);
 }
 
 export async function playStockfishMove(fen: string, depth = 14, playedUci?: string): Promise<StockfishResult> {
