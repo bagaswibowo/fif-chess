@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { Chess } from "chess.js";
 import { applyUci, describeOutcome, type GameOutcome } from "@/lib/chess";
+import { getLearnedMove, isBlunderMove, recordMatchExperience } from "./experience";
 import type { JevPlaySuccess } from "@/lib/jev";
 
 export type StockfishResult = {
@@ -226,6 +227,24 @@ async function evaluateGuardedMove(
   const bestScore = sf.bestScore;
   const legals = chess.moves({ verbose: true });
 
+  // 0. Memory Transposition Learning: Cek pengalaman pertandingan sebelumnya
+  const learned = getLearnedMove(fen);
+  if (learned && legals.some((m: any) => m.lan === learned.move)) {
+    try {
+      const applied = applyUci(chess, learned.move);
+      return {
+        uci: learned.move,
+        san: applied.san,
+        fen: chess.fen(),
+        probabilities: { [learned.move]: 0.99, ...jevResult.probabilities },
+        confidence: 0.99,
+        droppedMoveCount: 0,
+        outcome: describeOutcome(chess),
+        scoreCp: learned.score,
+      };
+    } catch {}
+  }
+
   // 1. Promosi Pion & Skakmat: jika langkah terbaik Stockfish adalah promosi atau skakmat, eksekusi langsung!
   const promoMoves = legals.filter(
     (m) => m.promotion === "q" || (m.piece === "p" && (m.to.endsWith("8") || m.to.endsWith("1")))
@@ -382,6 +401,7 @@ async function evaluateGuardedMove(
   }
 
   try {
+    recordMatchExperience(fen, sf.bestMove, bestScore, delta > 150 ? jevResult.uci : undefined);
     const applied = applyUci(chess, sf.bestMove);
     return {
       uci: sf.bestMove,
