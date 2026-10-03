@@ -23,6 +23,7 @@ import {
   IconClose3D,
 } from "@/components/icons3d";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
+import { EvalBar } from "@/components/eval-bar";
 import { BoardControls } from "@/components/board-controls";
 import { PerspectiveCropModal } from "@/components/perspective-crop-modal";
 import { NotationTable } from "@/components/notation-table";
@@ -1189,23 +1190,28 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               className="mt-2"
             />
 
-            <div className="w-full mx-auto aspect-square max-w-[min(100%,calc(100dvh-230px))] rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
-              <Chessboard
-                options={{
-                  id: "board-solver-full",
-                  position: liveFen,
-                  boardOrientation: scanBoardOrientation,
-                  allowDragging: false,
-                  darkSquareStyle: { backgroundColor: "var(--board-dark)" },
-                  lightSquareStyle: { backgroundColor: "var(--board-light)" },
-                  animationDurationInMs: 250,
-                }}
-              />
-              {isEngineCalculating && (
-                <div className="absolute top-2 right-2 bg-black/85 px-2 py-0.5 rounded text-[10px] text-[var(--primary)] font-bold border border-[var(--primary)] animate-pulse">
-                  Engine Menghitung...
+            <div className="flex justify-center w-full">
+              <div className="flex gap-2.5 items-stretch w-full max-w-[min(100%,calc(100dvh-230px))]">
+                <EvalBar fen={liveFen} scoreCp={currentScoreCp} orientation={scanBoardOrientation} />
+                <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
+                  <Chessboard
+                    options={{
+                      id: "board-solver-full",
+                      position: liveFen,
+                      boardOrientation: scanBoardOrientation,
+                      allowDragging: false,
+                      darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                      lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                      animationDurationInMs: 250,
+                    }}
+                  />
+                  {isEngineCalculating && (
+                    <div className="absolute top-2 right-2 bg-black/85 px-2 py-0.5 rounded text-[10px] text-[var(--primary)] font-bold border border-[var(--primary)] animate-pulse">
+                      Engine Menghitung...
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
           </div>

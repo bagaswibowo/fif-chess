@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { BoardControls } from "@/components/board-controls";
+import { EvalBar } from "@/components/eval-bar";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -515,8 +516,10 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
             )}
           </div>
 
-          <div className="aspect-square w-full max-h-[min(68dvh,760px)] max-w-[min(68dvh,760px)] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative shrink-0">
-            <Chessboard
+          <div className="flex gap-2 items-stretch justify-center w-full max-h-[min(68dvh,760px)] max-w-[min(68dvh,760px)] mx-auto">
+            <EvalBar fen={fen} scoreCp={evalCp} orientation={boardOrientation} />
+            <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative shrink-0">
+              <Chessboard
               options={{
                 id: "guided-board",
                 position: fen,
@@ -543,6 +546,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
                 lightSquareStyle: { backgroundColor: "var(--board-light)" },
               }}
             />
+            </div>
           </div>
 
         </div>

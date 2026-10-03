@@ -465,33 +465,35 @@ export function CoachModeView({ lang = "id" }: Props) {
           </div>
 
           {/* Chessboard Row with Vertical Eval Bar */}
-          <div className="flex gap-2 items-stretch justify-center w-full flex-1 min-h-0">
-            <EvalBar fen={fen} scoreCp={evalCp} orientation={boardOrientation} />
-            <div className="aspect-square w-full max-w-[min(100%,calc(100dvh-210px))] mx-auto rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
-              <Chessboard
-                key={`coach-board-${boardOrientation}`}
-                options={{
-                  id: `coach-board-${boardOrientation}`,
-                  position: fen,
-                  boardOrientation: boardOrientation,
-                  allowDragging: isPlayerTurn && !thinking,
-                  onPieceDrop: handlePieceDrop,
-                  onSquareClick: ({ square }) => {
-                    if (selected) {
-                      void tryMove(selected, square);
-                      setSelected(null);
-                    } else {
-                      setSelected(square);
-                    }
-                  },
-                  squareStyles,
-                  arrows,
-                  boardStyle: { backgroundColor: "var(--board-dark)" },
-                  darkSquareStyle: { backgroundColor: "var(--board-dark)" },
-                  lightSquareStyle: { backgroundColor: "var(--board-light)" },
-                  animationDurationInMs: 200,
-                }}
-              />
+          <div className="flex justify-center w-full flex-1 min-h-0">
+            <div className="flex gap-2.5 items-stretch w-full max-w-[min(100%,calc(100dvh-210px))]">
+              <EvalBar fen={fen} scoreCp={evalCp} orientation={boardOrientation} />
+              <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
+                <Chessboard
+                  key={`coach-board-${boardOrientation}`}
+                  options={{
+                    id: `coach-board-${boardOrientation}`,
+                    position: fen,
+                    boardOrientation: boardOrientation,
+                    allowDragging: isPlayerTurn && !thinking,
+                    onPieceDrop: handlePieceDrop,
+                    onSquareClick: ({ square }) => {
+                      if (selected) {
+                        void tryMove(selected, square);
+                        setSelected(null);
+                      } else {
+                        setSelected(square);
+                      }
+                    },
+                    squareStyles,
+                    arrows,
+                    boardStyle: { backgroundColor: "var(--board-dark)" },
+                    darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                    lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                    animationDurationInMs: 200,
+                  }}
+                />
+              </div>
             </div>
           </div>
 

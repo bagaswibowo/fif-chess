@@ -523,7 +523,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 }
                 style={{ background: "var(--card)" }}
               >
-                <div className="flex gap-2 items-stretch justify-center w-full flex-1 min-h-0">
+                <div className="flex gap-2.5 items-stretch justify-center w-full flex-1 min-h-0">
                   <EvalBar
                     fen={currentFen}
                     scoreCp={evalResult?.scoreCp}
@@ -532,8 +532,8 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   <div
                     className={
                       fullscreenReview
-                        ? "w-full aspect-square max-h-[calc(100dvh-200px)] rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] flex items-center justify-center min-h-0"
-                        : "w-full max-w-[min(78dvh,calc(100dvh-18rem),760px)] aspect-square shrink-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]"
+                        ? "aspect-square flex-1 max-h-[calc(100dvh-200px)] rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] flex items-center justify-center min-h-0"
+                        : "aspect-square flex-1 max-w-[min(78dvh,calc(100dvh-18rem),760px)] shrink-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]"
                     }
                   >
                     <Chessboard

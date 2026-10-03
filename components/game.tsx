@@ -65,7 +65,7 @@ const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const AI_LABEL: Record<string, string> = {
   stockfish: "Stockfish 15 NNUE",
   "jev-fly": "Jev + Fly Brain",
-  jev: "Jev AI Connectome",
+  jev: "Jev System One",
   fly: "Fruit Fly Brain",
 };
 
@@ -954,7 +954,7 @@ export function Game() {
                   <div className="min-w-0">
                     <div className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5 truncate">
                       <span>{playMode === "ai"
-                        ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain (134k)" : selectedAiOpponent === "jev" ? "Jev AI Connectome" : "Stockfish 15 NNUE")
+                        ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain (Hybrid)" : selectedAiOpponent === "fly" ? "Fruit Fly Brain (134k)" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15 NNUE")
                         : pvpOpponentName}</span>
                       <span className="text-[11px] font-normal text-neutral-400">
                         ({playMode === "ai" ? "3550" : "PvP Online"})
@@ -992,61 +992,63 @@ export function Game() {
               />
 
               {/* Board Row with Left Vertical Eval Bar (Chess.com Signature) */}
-              <div className="flex gap-2 items-stretch justify-center w-full flex-1 min-h-0 max-h-[calc(100vh-165px)]">
-                {/* Vertical Eval Bar: Responsif instan terhadap makan pion & evaluasi engine */}
-                <EvalBar
-                  fen={fen}
-                  scoreCp={
-                    typeof analysis?.scoreCp === "number"
-                      ? humanSide === "white"
-                        ? analysis.scoreCp
-                        : -analysis.scoreCp
-                      : null
-                  }
-                  orientation={humanSide}
-                />
-
-                {/* Chessboard Container */}
-                <div className="w-full max-w-[min(95vw,calc(100vh-240px))] aspect-square mx-auto rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative shrink-0">
-                  <Chessboard
-                    options={{
-                      id: "fif-chess-main",
-                      position: fen,
-                      boardOrientation: humanSide,
-                      allowDragging: humanToMove,
-                      canDragPiece,
-                      onPieceDrop,
-                      boardStyle: {
-                        backgroundColor: "var(--board-dark)",
-                      },
-                      onSquareClick: ({ square }) => {
-                        if (!humanToMove) return;
-                        if (selectedSquare) {
-                          if (selectedSquare === square) {
-                            setSelectedSquare(null);
-                            return;
-                          }
-                          if (isPromotionAttempt(chess, selectedSquare, square)) {
-                            setPendingPromotion({ from: selectedSquare, to: square });
-                            setSelectedSquare(null);
-                            return;
-                          }
-                          if (tryHumanMove(selectedSquare, square)) return;
-                        }
-                        const piece = chess.get(square as Square);
-                        const isHumanPiece =
-                          piece &&
-                          ((humanSide === "white" && piece.color === "w") ||
-                            (humanSide === "black" && piece.color === "b"));
-                        setSelectedSquare(isHumanPiece ? square : null);
-                      },
-                      squareStyles,
-                      lightSquareStyle: { backgroundColor: "var(--board-light)" },
-                      darkSquareStyle: { backgroundColor: "var(--board-dark)" },
-                      animationDurationInMs: 200,
-                      showNotation: true,
-                    }}
+              <div className="flex justify-center w-full flex-1 min-h-0 max-h-[calc(100vh-165px)]">
+                <div className="flex gap-2 md:gap-3 items-stretch w-full max-w-[min(95vw,calc(100vh-240px))]">
+                  {/* Vertical Eval Bar: Responsif instan terhadap makan pion & evaluasi engine */}
+                  <EvalBar
+                    fen={fen}
+                    scoreCp={
+                      typeof analysis?.scoreCp === "number"
+                        ? humanSide === "white"
+                          ? analysis.scoreCp
+                          : -analysis.scoreCp
+                        : null
+                    }
+                    orientation={humanSide}
                   />
+
+                  {/* Chessboard Container */}
+                  <div className="aspect-square flex-1 min-w-0 rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative">
+                    <Chessboard
+                      options={{
+                        id: "fif-chess-main",
+                        position: fen,
+                        boardOrientation: humanSide,
+                        allowDragging: humanToMove,
+                        canDragPiece,
+                        onPieceDrop,
+                        boardStyle: {
+                          backgroundColor: "var(--board-dark)",
+                        },
+                        onSquareClick: ({ square }) => {
+                          if (!humanToMove) return;
+                          if (selectedSquare) {
+                            if (selectedSquare === square) {
+                              setSelectedSquare(null);
+                              return;
+                            }
+                            if (isPromotionAttempt(chess, selectedSquare, square)) {
+                              setPendingPromotion({ from: selectedSquare, to: square });
+                              setSelectedSquare(null);
+                              return;
+                            }
+                            if (tryHumanMove(selectedSquare, square)) return;
+                          }
+                          const piece = chess.get(square as Square);
+                          const isHumanPiece =
+                            piece &&
+                            ((humanSide === "white" && piece.color === "w") ||
+                              (humanSide === "black" && piece.color === "b"));
+                          setSelectedSquare(isHumanPiece ? square : null);
+                        },
+                        squareStyles,
+                        lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                        darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                        animationDurationInMs: 200,
+                        showNotation: true,
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1244,7 +1246,7 @@ export function Game() {
                             <div>
                               <span className="text-xs font-bold text-neutral-300 block">
                                 {playMode === "ai"
-                                  ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev AI Connectome" : "Stockfish 15")
+                                  ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15")
                                   : pvpOpponentName}
                               </span>
                               {!humanToMove && <span className="text-[10px] text-[var(--primary)] font-black animate-pulse">Sedang Berpikir...</span>}
@@ -1419,10 +1421,10 @@ export function Game() {
                             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Mode Lawan</div>
                             <div className="grid grid-cols-2 gap-2">
                               {[
-                                { id: "jev", label: "Jev AI Connectome", sub: "Khusus API (Jev Only)" },
-                                { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine Kuat Elo 3550+" },
-                                { id: "fly", label: "Fruit Fly Brain", sub: "Transkriptomik & Viden" },
+                                { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine Elo 3550+" },
                                 { id: "jev-fly", label: "Jev + Fly Brain", sub: "Hybrid Connectome" },
+                                { id: "jev", label: "Jev System One", sub: "Semantik Posisi" },
+                                { id: "fly", label: "Fruit Fly Brain", sub: "134k Neuron Biologis" },
                               ].map((eng) => (
                                 <button
                                   key={eng.id}

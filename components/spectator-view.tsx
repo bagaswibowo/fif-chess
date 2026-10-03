@@ -574,32 +574,34 @@ export function SpectatorView({
           </div>
 
           {/* 4. Board Container with Sleek Vertical Dual-Bar Eval */}
-          <div className="flex gap-2 items-start justify-center w-full">
-            {/* Slim Vertical Dual Eval Bar: Black at top, White at bottom (responsive to orientation) */}
-            <EvalBar fen={currentFen} scoreCp={whiteCp} orientation={boardOrientation} />
-
-            {/* Chessboard */}
+          <div className="flex justify-center w-full">
             <div
-              className={`aspect-square w-full max-w-full rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative ${
+              className={`flex gap-2 md:gap-3 items-stretch w-full ${
                 fullscreenSpectator
                   ? "lg:w-auto lg:h-full max-h-full"
-                  : "mx-auto max-w-[min(100%,calc(100dvh-215px))]"
+                  : "max-w-[min(100%,calc(100dvh-215px))]"
               }`}
             >
-              <Chessboard
-                options={{
-                  id: "spectator-board",
-                  position: currentFen,
-                  boardOrientation: boardOrientation,
-                  allowDragging: false,
-                  arrows,
-                  squareStyles,
-                  boardStyle: { backgroundColor: "var(--board-dark)" },
-                  darkSquareStyle: { backgroundColor: "var(--board-dark)" },
-                  lightSquareStyle: { backgroundColor: "var(--board-light)" },
-                  animationDurationInMs: 300,
-                }}
-              />
+              {/* Slim Vertical Dual Eval Bar: Black at top, White at bottom (responsive to orientation) */}
+              <EvalBar fen={currentFen} scoreCp={whiteCp} orientation={boardOrientation} />
+
+              {/* Chessboard */}
+              <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
+                <Chessboard
+                  options={{
+                    id: "spectator-board",
+                    position: currentFen,
+                    boardOrientation: boardOrientation,
+                    allowDragging: false,
+                    arrows,
+                    squareStyles,
+                    boardStyle: { backgroundColor: "var(--board-dark)" },
+                    darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                    lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                    animationDurationInMs: 300,
+                  }}
+                />
+              </div>
             </div>
           </div>
 

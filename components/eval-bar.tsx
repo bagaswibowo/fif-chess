@@ -39,18 +39,9 @@ function getBarGeometry(isWhiteOrientation: boolean, barPct: number) {
   };
 }
 
-function getSegmentText(isWhiteOrientation: boolean, isWhiteAhead: boolean, label: string, isTop: boolean) {
-  if (label === "0.0") return "";
-  if (isTop) {
-    return isWhiteOrientation ? (!isWhiteAhead ? label : "") : (isWhiteAhead ? label : "");
-  }
-  return isWhiteOrientation ? (isWhiteAhead ? label : "") : (!isWhiteAhead ? label : "");
-}
-
 /**
- * Vertical Dual Black/White Eval Bar for all chessboards.
- * Dynamically moves when a piece is captured, a player gains advantage,
- * or engine evaluation changes.
+ * Vertical Dual Black/White Eval Bar with Score Badge for all chessboards.
+ * Dynamically expands and contracts as pieces are captured or advantage shifts.
  */
 export function EvalBar({
   fen,
@@ -66,48 +57,37 @@ export function EvalBar({
   const isWhiteOrientation = orientation === "white";
   const { topHeight, bottomHeight, topColor, bottomColor } = getBarGeometry(isWhiteOrientation, barPct);
 
-  const topText = getSegmentText(isWhiteOrientation, isWhiteAhead, label, true);
-  const bottomText = getSegmentText(isWhiteOrientation, isWhiteAhead, label, false);
-
   return (
     <div
-      className={`w-3 md:w-3.5 bg-neutral-900 rounded-full overflow-hidden border border-[var(--border)] flex flex-col justify-between shrink-0 shadow-inner relative select-none group ${className}`}
+      className={`flex flex-col items-center justify-between self-stretch shrink-0 py-0.5 select-none gap-1.5 w-6 md:w-7 ${className}`}
       title={`Evaluasi: ${label} (${isWhiteAhead ? "Putih Unggul" : label === "0.0" ? "Seimbang" : "Hitam Unggul"})`}
       aria-label={`Evaluasi ${label}`}
     >
-      {/* Top Half */}
+      {/* Dynamic Score Points Badge (Always clearly visible: 0.0, +1.0, -3.2) */}
       <div
-        className={`w-full transition-all duration-300 ease-out ${topColor} relative flex items-start justify-center overflow-hidden`}
-        style={{ height: `${topHeight}%` }}
+        className={`text-[10px] md:text-[11px] font-mono font-black px-0.5 py-0.5 rounded border border-neutral-700 bg-neutral-900 shadow-sm leading-none shrink-0 w-full text-center tracking-tighter ${
+          isWhiteAhead ? "text-emerald-400" : label === "0.0" ? "text-neutral-400" : "text-sky-400"
+        }`}
       >
-        {topHeight > 25 && topText && (
-          <span
-            className={`text-[9px] font-black font-mono pt-1 leading-none ${
-              isWhiteOrientation ? "text-neutral-400" : "text-neutral-800"
-            }`}
-          >
-            {topText}
-          </span>
-        )}
+        {label}
       </div>
 
-      {/* Dividing Baseline Indicator */}
-      <div className="w-full h-[1.5px] bg-neutral-600/60 shrink-0 z-10" />
+      {/* Dual-Color Vertical Bar (Black & White) */}
+      <div className="w-3.5 md:w-4 flex-1 h-full min-h-[220px] bg-neutral-900 rounded-full overflow-hidden border border-neutral-700 flex flex-col justify-between shadow-inner relative">
+        {/* Top Segment */}
+        <div
+          className={`w-full transition-all duration-300 ease-out ${topColor}`}
+          style={{ height: `${topHeight}%` }}
+        />
 
-      {/* Bottom Half */}
-      <div
-        className={`w-full transition-all duration-300 ease-out ${bottomColor} relative flex items-end justify-center overflow-hidden`}
-        style={{ height: `${bottomHeight}%` }}
-      >
-        {bottomHeight > 25 && bottomText && (
-          <span
-            className={`text-[9px] font-black font-mono pb-1 leading-none ${
-              isWhiteOrientation ? "text-neutral-800" : "text-neutral-400"
-            }`}
-          >
-            {bottomText}
-          </span>
-        )}
+        {/* Center Divider Baseline */}
+        <div className="w-full h-[2px] bg-neutral-500/90 shrink-0 z-10 shadow-sm" />
+
+        {/* Bottom Segment */}
+        <div
+          className={`w-full transition-all duration-300 ease-out ${bottomColor}`}
+          style={{ height: `${bottomHeight}%` }}
+        />
       </div>
     </div>
   );
