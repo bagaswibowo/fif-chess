@@ -427,6 +427,62 @@ export function applyUci(chess: Chess, uci: string): Move {
   return chess.move({ from, to, promotion });
 }
 
+export function isKnightFork(chess: Chess, moveUci: string): boolean {
+  if (moveUci.length < 4) return false;
+  const from = moveUci.slice(0, 2);
+  const to = moveUci.slice(2, 4);
+  const piece = chess.get(from as Square);
+  if (!piece || piece.type !== "n") return false;
+
+  const toCol = to.charCodeAt(0) - 97;
+  const toRow = parseInt(to[1], 10) - 1;
+  const offsets = [
+    [1, 2], [1, -2], [-1, 2], [-1, -2],
+    [2, 1], [2, -1], [-2, 1], [-2, -1]
+  ];
+
+  const opponentColor = chess.turn() === "w" ? "b" : "w";
+  let targets = 0;
+
+  for (const [dc, dr] of offsets) {
+    const c = toCol + dc;
+    const r = toRow + dr;
+    if (c >= 0 && c <= 7 && r >= 0 && r <= 7) {
+      const sq = (String.fromCharCode(97 + c) + (r + 1)) as Square;
+      if (sq === from) continue;
+      const target = chess.get(sq);
+      if (target && target.color === opponentColor) {
+        if (target.type === "k" || target.type === "q" || target.type === "r" || target.type === "b") {
+          targets++;
+        }
+      }
+    }
+  }
+
+  return targets >= 2;
+}
+
+export function isQueenThreatened(chess: Chess): boolean {
+  const currentSide = chess.turn();
+  const board = chess.board();
+  let queenSq: Square | null = null;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = board[r][c];
+      if (sq && sq.color === currentSide && sq.type === "q") {
+        queenSq = (String.fromCharCode(97 + c) + (8 - r)) as Square;
+        break;
+      }
+    }
+    if (queenSq) break;
+  }
+  if (!queenSq) return false;
+
+  const opp = currentSide === "w" ? "b" : "w";
+  return chess.isAttacked(queenSq, opp);
+}
+
 export function isPromotionAttempt(
   chess: Chess,
   from: string,

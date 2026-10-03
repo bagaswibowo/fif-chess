@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { Chess } from "chess.js";
-import { applyUci, describeOutcome, type GameOutcome } from "@/lib/chess";
+import { applyUci, describeOutcome, isKnightFork, isQueenThreatened, type GameOutcome } from "@/lib/chess";
 import { getLearnedMove, isBlunderMove, recordMatchExperience } from "./experience";
 import type { JevPlaySuccess } from "@/lib/jev";
 
@@ -288,7 +288,10 @@ async function guardPromotion(ctx: GuardContext, promoMoves: any[]): Promise<Sto
 function guardQueenLoss(ctx: GuardContext, delta: number): StockfishResult | null {
   const side = ctx.chess.turn();
   const hasQueen = ctx.chess.board().some((row: any[]) => row.some((sq: any) => sq && sq.color === side && sq.type === "q"));
-  if (hasQueen && delta > 150) {
+  if (!hasQueen) return null;
+
+  const queenAttacked = isQueenThreatened(ctx.chess);
+  if ((queenAttacked && delta > 50) || delta > 150) {
     try {
       const applied = applyUci(ctx.chess, ctx.sf.bestMove);
       return {
@@ -344,7 +347,12 @@ async function guardCandidates(ctx: GuardContext): Promise<StockfishResult | nul
     if (candScore === undefined) {
       candScore = (await evalSingleMove(ctx.fen, cand, ctx.guardDepth)) ?? undefined;
     }
-    const isCandSafe = candScore !== undefined && (ctx.sf.bestScore - candScore <= ctx.maxAllowedDiff) && candScore > -20000;
+    if (candScore === undefined || candScore <= -20000) continue;
+
+    const isFork = isKnightFork(ctx.chess, cand);
+    const bonus = isFork ? 75 : 0;
+    const isCandSafe = (ctx.sf.bestScore - (candScore + bonus)) <= ctx.maxAllowedDiff;
+
     if (isCandSafe) {
       try {
         const applied = applyUci(ctx.chess, cand);
@@ -353,7 +361,7 @@ async function guardCandidates(ctx: GuardContext): Promise<StockfishResult | nul
           san: applied.san,
           fen: ctx.chess.fen(),
           probabilities: ctx.jevResult.probabilities,
-          confidence: ctx.jevResult.probabilities[cand] ?? 0.5,
+          confidence: isFork ? 0.95 : (ctx.jevResult.probabilities[cand] ?? 0.5),
           droppedMoveCount: ctx.jevResult.droppedMoveCount,
           outcome: describeOutcome(ctx.chess),
           scoreCp: candScore ?? null,
