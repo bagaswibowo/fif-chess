@@ -13,6 +13,10 @@ import { parseArrays } from "./loader.js";
 import { FlyBrain } from "./flybrain.js";
 // @ts-ignore
 import { encodeBoard, legalMoveIndices, indexToMove } from "./encoding.js";
+// @ts-ignore
+import { runMCTS } from "./mcts.js";
+// @ts-ignore
+import * as enc from "./encoding.js";
 
 let cachedBrain: any = null;
 
@@ -269,4 +273,52 @@ export function playFlyBrainMove(fen: string) {
     outcome: describeOutcome(chess),
     diagnostics: result.diagnostics,
   };
+}
+
+/**
+ * Superfly: FlyBrain with PUCT Monte Carlo Tree Search
+ * As featured on https://fly.eyed.to/ (Drosophila connectome + MCTS simulations)
+ */
+export function playSuperflyMove(fen: string, sims = 30) {
+  try {
+    const brain = getFlyBrain();
+    if (!brain) return playFlyBrainMove(fen);
+
+    const chess = new Chess(fen);
+    if (chess.isGameOver()) return null;
+
+    const mctsRes = runMCTS(brain, chess, enc, { sims, cPuct: 1.5 });
+    if (!mctsRes || !mctsRes.move) return playFlyBrainMove(fen);
+
+    const chessApply = new Chess(fen);
+    const applied = chessApply.move({
+      from: mctsRes.move.slice(0, 2),
+      to: mctsRes.move.slice(2, 4),
+      promotion: mctsRes.move[4] || undefined,
+    });
+
+    const probs: Record<string, number> = {};
+    for (const v of mctsRes.visits || []) {
+      probs[v.uci] = v.n / Math.max(1, mctsRes.sims);
+    }
+
+    return {
+      uci: mctsRes.move,
+      san: applied ? applied.san : mctsRes.move,
+      fen: chessApply.fen(),
+      probabilities: probs,
+      confidence: probs[mctsRes.move] ?? 0.8,
+      droppedMoveCount: 0,
+      scoreCp: Math.round(mctsRes.rootValue * 100),
+      outcome: describeOutcome(chessApply),
+      diagnostics: {
+        sims: mctsRes.sims,
+        rootValue: mctsRes.rootValue,
+        topVisits: mctsRes.visits.slice(0, 5),
+      },
+    };
+  } catch (e) {
+    console.warn("Superfly MCTS fallback to standard FlyBrain:", e);
+    return playFlyBrainMove(fen);
+  }
 }

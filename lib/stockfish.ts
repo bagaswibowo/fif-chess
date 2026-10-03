@@ -282,7 +282,7 @@ async function evaluateGuardedMove(
       const promoUci = pMove.from + pMove.to + chosenPromo;
       let score = sf.candidateScores.get(promoUci);
       if (score === undefined) {
-        score = (await evalSingleMove(fen, promoUci, Math.max(8, guardDepth - 2))) ?? undefined;
+        score = (await evalSingleMove(fen, promoUci, guardDepth)) ?? undefined;
       }
       if (score !== undefined && score > bestPromoScore) {
         bestPromoScore = score;
@@ -319,7 +319,7 @@ async function evaluateGuardedMove(
     const pushUci = pushMove.from + pushMove.to;
     let pushScore = sf.candidateScores.get(pushUci);
     if (pushScore === undefined) {
-      pushScore = (await evalSingleMove(fen, pushUci, Math.max(8, guardDepth - 2))) ?? undefined;
+      pushScore = (await evalSingleMove(fen, pushUci, guardDepth)) ?? undefined;
     }
     if (pushScore !== undefined && pushScore > 150 && (bestScore - pushScore <= maxAllowedDiff)) {
       try {
@@ -358,6 +358,25 @@ async function evaluateGuardedMove(
       };
     } catch {}
   }
+
+  // 4. Endgame Passed Pawn Interception & King Safety Guard
+  // Mencegah blunder seperti 45... Kxb4? di mana raja membiarkan passed-pawn lawan melaju bebas
+  const isEndgame = (fen.match(/[rnbqRNBQ]/g) || []).length <= 4;
+  if (isEndgame && (bestScore <= -150 || delta > 15)) {
+    try {
+      const applied = applyUci(chess, sf.bestMove);
+      return {
+        uci: sf.bestMove,
+        san: applied.san,
+        fen: chess.fen(),
+        probabilities: { [sf.bestMove]: 0.95, ...jevResult.probabilities },
+        confidence: 0.95,
+        droppedMoveCount: jevResult.droppedMoveCount,
+        outcome: describeOutcome(chess),
+        scoreCp: bestScore,
+      };
+    } catch {}
+  }
   const isSafe = jevScore !== undefined && delta <= maxAllowedDiff && jevScore > -20000;
 
   if (isSafe) {
@@ -381,7 +400,7 @@ async function evaluateGuardedMove(
     if (cand === jevResult.uci) continue;
     let candScore = sf.candidateScores.get(cand);
     if (candScore === undefined) {
-      candScore = (await evalSingleMove(fen, cand, Math.max(8, guardDepth - 2))) ?? undefined;
+      candScore = (await evalSingleMove(fen, cand, guardDepth)) ?? undefined;
     }
     if (candScore !== undefined && bestScore - candScore <= maxAllowedDiff && candScore > -20000) {
       try {
@@ -438,12 +457,12 @@ export async function guardJevMove(
 export async function guardJevFlyMove(
   fen: string,
   hybridResult: JevPlaySuccess,
-  depth = 12,
+  depth = 14,
 ): Promise<StockfishResult> {
-  // Ketatkan toleransi di endgame agar tidak kecolongan taktik pion bebas & skakmat
+  // Ketatkan toleransi di endgame (maxDiff 15 cp) agar tidak kecolongan taktik pion bebas & skakmat
   const isEndgame = (fen.match(/[rnbqRNBQ]/g) || []).length <= 4;
-  const maxDiff = isEndgame ? 25 : 35;
-  return evaluateGuardedMove(fen, hybridResult, Math.max(12, depth), maxDiff);
+  const maxDiff = isEndgame ? 15 : 25;
+  return evaluateGuardedMove(fen, hybridResult, Math.max(14, depth), maxDiff);
 }
 
 export async function playStockfishMove(fen: string, depth = 14, playedUci?: string): Promise<StockfishResult> {

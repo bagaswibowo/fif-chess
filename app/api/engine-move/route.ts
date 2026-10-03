@@ -1,4 +1,4 @@
-import { playFlyBrainMove } from "@/lib/flybrain/service";
+import { playFlyBrainMove, playSuperflyMove } from "@/lib/flybrain/service";
 import { NextResponse } from 'next/server';
 import { JevRequestError, playJevMove } from '@/lib/jev';
 import { playStockfishMove, guardJevMove, guardJevFlyMove } from '@/lib/stockfish';
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
   
   if (engine === "fly") {
-    const flyRes = playFlyBrainMove(fen);
+    const flyRes = playSuperflyMove(fen, 30) || playFlyBrainMove(fen);
     if (flyRes) {
       return NextResponse.json(flyRes);
     }
@@ -85,9 +85,9 @@ export async function POST(request: Request) {
       try {
         hybrid = await playJevMove(fen, { apiKey: key, seed, history });
       } catch (jevErr) {
-        // Jev API tak tersedia (SSL/network) — pakai FlyBrain murni sbg hybrid.
-        console.warn("jev-fly: Jev API unavailable, using FlyBrain:", jevErr instanceof Error ? jevErr.message : jevErr);
-        const flyRes = playFlyBrainMove(fen);
+        // Jev API tak tersedia (SSL/network) — pakai Superfly (MCTS Connectome) sbg hybrid.
+        console.warn("jev-fly: Jev API unavailable, using Superfly MCTS:", jevErr instanceof Error ? jevErr.message : jevErr);
+        const flyRes = playSuperflyMove(fen, 30) || playFlyBrainMove(fen);
         if (!flyRes) {
           return NextResponse.json({ error: "Hybrid engine could not compute a move.", retryable: false }, { status: 400 });
         }
@@ -116,10 +116,17 @@ export async function POST(request: Request) {
       });
     } catch (err) {
       console.error("jev-fly execution failed:", err);
-      const flyRes = playFlyBrainMove(fen);
-      if (flyRes) {
-        return NextResponse.json(flyRes);
-      }
+      try {
+        const fallbackRaw = playSuperflyMove(fen, 20) || playFlyBrainMove(fen);
+        if (fallbackRaw) {
+          const guardedFallback = await guardJevFlyMove(fen, {
+            ...fallbackRaw,
+            droppedMoveCount: 0,
+            request: {} as any,
+          }, depth);
+          return NextResponse.json({ ...guardedFallback, engine: "jev-fly" });
+        }
+      } catch {}
       return NextResponse.json({ error: "Hybrid engine failed.", retryable: true }, { status: 502 });
     }
   }
