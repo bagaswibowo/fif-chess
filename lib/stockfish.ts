@@ -386,7 +386,10 @@ export async function guardJevFlyMove(
   hybridResult: JevPlaySuccess,
   depth = 12,
 ): Promise<StockfishResult> {
-  return evaluateGuardedMove(fen, hybridResult, Math.max(10, Math.min(depth, 12)), 60);
+  // Ketatkan toleransi di endgame agar tidak kecolongan taktik pion bebas & skakmat
+  const isEndgame = (fen.match(/[rnbqRNBQ]/g) || []).length <= 4;
+  const maxDiff = isEndgame ? 25 : 35;
+  return evaluateGuardedMove(fen, hybridResult, Math.max(12, depth), maxDiff);
 }
 
 export async function playStockfishMove(fen: string, depth = 14, playedUci?: string): Promise<StockfishResult> {

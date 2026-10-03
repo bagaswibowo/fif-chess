@@ -230,6 +230,17 @@ export function identifyBainTactics(chess: Chess, lastUci: string): TacticalConc
     }
   }
 
+  // --- Chapter 1: Checkmate (Skakmat Mutlak) ---
+  if (chess.isCheckmate() || lastUci.includes("#")) {
+    return {
+      name: "Skakmat Mutlak (Checkmate)",
+      category: "tactic",
+      chapter: 1,
+      description: `Raja lawan di petak ${oppKingSq || "pertahanan"} terkepung tanpa jalan keluar dan perlindungan! Kemenangan mutlak tercapai.`,
+      badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+    };
+  }
+
   // --- Chapter 6: Double Checks (Skak Ganda) ---
   // If in check and more than one piece delivers check simultaneously
   if (chess.isCheck()) {

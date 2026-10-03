@@ -305,7 +305,7 @@ export function SpectatorView({
       const opening = isEarlyOpening ? identifyOpeningOrGambit(chess.history()) : null;
 
       // Ensure explicit tactic name when checkmate or sharp tactic happens
-      if (!tactic && data.san.includes("#")) {
+      if (data.san.includes("#") || chess.isCheckmate()) {
         const isDoubleQueenOrRook = chess.board().flat().filter((p) => p && p.color === (isWhiteTurn ? "w" : "b") && (p.type === "q" || p.type === "r")).length >= 2;
         tactic = {
           name: isDoubleQueenOrRook ? "Taktik: Skakmat Tangga (Ladder Mate)" : "Taktik: Skakmat Mutlak (Checkmate)",
