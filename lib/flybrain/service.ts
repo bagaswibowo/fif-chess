@@ -17,6 +17,7 @@ import { encodeBoard, legalMoveIndices, indexToMove } from "./encoding.js";
 import { runMCTS } from "./mcts.js";
 // @ts-ignore
 import * as enc from "./encoding.js";
+import { getLearnedMove, isBlunderMove } from "../experience.ts";
 
 let cachedBrain: any = null;
 
@@ -281,6 +282,30 @@ export function playFlyBrainMove(fen: string) {
  */
 export function playSuperflyMove(fen: string, sims = 30) {
   try {
+    // 1. Nature 2024 (MBON Valence Recall): Jika posisi sudah dikuasai dari Stockfish, langsung eksekusi
+    const learned = getLearnedMove(fen);
+    if (learned) {
+      const chessL = new Chess(fen);
+      const applied = chessL.move({
+        from: learned.move.slice(0, 2),
+        to: learned.move.slice(2, 4),
+        promotion: learned.move[4] || undefined,
+      });
+      if (applied) {
+        return {
+          uci: learned.move,
+          san: applied.san,
+          fen: chessL.fen(),
+          probabilities: { [learned.move]: 0.99 },
+          confidence: 0.99,
+          droppedMoveCount: 0,
+          scoreCp: learned.score,
+          outcome: describeOutcome(chessL),
+          diagnostics: { source: "mbon-learned", score: learned.score },
+        };
+      }
+    }
+
     const brain = getFlyBrain();
     if (!brain) return playFlyBrainMove(fen);
 
@@ -290,11 +315,18 @@ export function playSuperflyMove(fen: string, sims = 30) {
     const mctsRes = runMCTS(brain, chess, enc, { sims, cPuct: 1.5 });
     if (!mctsRes || !mctsRes.move) return playFlyBrainMove(fen);
 
+    // 2. Nature 2024 (APL / DAN Avoidance Depression): Saring langkah yang tercatat sebagai blunder
+    let chosenMove = mctsRes.move;
+    if (isBlunderMove(fen, chosenMove) && mctsRes.visits && mctsRes.visits.length > 1) {
+      const nonBlunder = mctsRes.visits.find((v: any) => !isBlunderMove(fen, v.uci));
+      if (nonBlunder) chosenMove = nonBlunder.uci;
+    }
+
     const chessApply = new Chess(fen);
     const applied = chessApply.move({
-      from: mctsRes.move.slice(0, 2),
-      to: mctsRes.move.slice(2, 4),
-      promotion: mctsRes.move[4] || undefined,
+      from: chosenMove.slice(0, 2),
+      to: chosenMove.slice(2, 4),
+      promotion: chosenMove[4] || undefined,
     });
 
     const probs: Record<string, number> = {};
