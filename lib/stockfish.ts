@@ -198,6 +198,172 @@ function evalSingleMove(fen: string, move: string, depth = 10): Promise<number |
   });
 }
 
+interface GuardContext {
+  fen: string;
+  chess: Chess;
+  sf: StockfishEval;
+  guardDepth: number;
+  maxAllowedDiff: number;
+  jevResult: JevPlaySuccess;
+}
+
+function guardLearnedExperience(ctx: GuardContext, legals: any[]): StockfishResult | null {
+  const learned = getLearnedMove(ctx.fen);
+  if (!learned) return null;
+  const isLegal = legals.some((m: any) => m.lan === learned.move);
+  if (!isLegal) return null;
+  try {
+    const applied = applyUci(ctx.chess, learned.move);
+    return {
+      uci: learned.move,
+      san: applied.san,
+      fen: ctx.chess.fen(),
+      probabilities: { [learned.move]: 0.99, ...ctx.jevResult.probabilities },
+      confidence: 0.99,
+      droppedMoveCount: 0,
+      outcome: describeOutcome(ctx.chess),
+      scoreCp: learned.score,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function guardPromotion(ctx: GuardContext, promoMoves: any[]): Promise<StockfishResult | null> {
+  const isSfPromo = promoMoves.some((m: any) => ctx.sf.bestMove.startsWith(m.from + m.to));
+  if (isSfPromo || ctx.sf.bestScore >= 20000) {
+    try {
+      const applied = applyUci(ctx.chess, ctx.sf.bestMove);
+      return {
+        uci: ctx.sf.bestMove,
+        san: applied.san,
+        fen: ctx.chess.fen(),
+        probabilities: { [ctx.sf.bestMove]: 0.99, ...ctx.jevResult.probabilities },
+        confidence: 0.99,
+        droppedMoveCount: 0,
+        outcome: describeOutcome(ctx.chess),
+        scoreCp: ctx.sf.bestScore,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (promoMoves.length === 0) return null;
+  let bestScore = -99999;
+  let bestUci: string | null = null;
+
+  for (const pMove of promoMoves) {
+    const promoUci = pMove.from + pMove.to + (pMove.promotion || "q");
+    let score = ctx.sf.candidateScores.get(promoUci);
+    if (score === undefined) {
+      score = (await evalSingleMove(ctx.fen, promoUci, ctx.guardDepth)) ?? undefined;
+    }
+    if (score !== undefined && score > bestScore) {
+      bestScore = score;
+      bestUci = promoUci;
+    }
+  }
+
+  if (bestUci && bestScore > -20000) {
+    try {
+      const applied = applyUci(ctx.chess, bestUci);
+      return {
+        uci: bestUci,
+        san: applied.san,
+        fen: ctx.chess.fen(),
+        probabilities: { [bestUci]: 0.99, ...ctx.jevResult.probabilities },
+        confidence: 0.99,
+        droppedMoveCount: 0,
+        outcome: describeOutcome(ctx.chess),
+        scoreCp: bestScore,
+      };
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function guardQueenLoss(ctx: GuardContext, delta: number): StockfishResult | null {
+  const side = ctx.chess.turn();
+  const hasQueen = ctx.chess.board().some((row: any[]) => row.some((sq: any) => sq && sq.color === side && sq.type === "q"));
+  if (hasQueen && delta > 150) {
+    try {
+      const applied = applyUci(ctx.chess, ctx.sf.bestMove);
+      return {
+        uci: ctx.sf.bestMove,
+        san: applied.san,
+        fen: ctx.chess.fen(),
+        probabilities: { [ctx.sf.bestMove]: 0.90, ...ctx.jevResult.probabilities },
+        confidence: 0.90,
+        droppedMoveCount: ctx.jevResult.droppedMoveCount,
+        outcome: describeOutcome(ctx.chess),
+        scoreCp: ctx.sf.bestScore,
+      };
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function guardEndgame(ctx: GuardContext, delta: number): StockfishResult | null {
+  const isEndgame = (ctx.fen.match(/[rnbqRNBQ]/g) || []).length <= 4;
+  if (!isEndgame) return null;
+  const isLosing = ctx.sf.bestScore <= -150;
+  const isDeviating = delta > 15;
+  if (isLosing || isDeviating) {
+    try {
+      const applied = applyUci(ctx.chess, ctx.sf.bestMove);
+      return {
+        uci: ctx.sf.bestMove,
+        san: applied.san,
+        fen: ctx.chess.fen(),
+        probabilities: { [ctx.sf.bestMove]: 0.95, ...ctx.jevResult.probabilities },
+        confidence: 0.95,
+        droppedMoveCount: ctx.jevResult.droppedMoveCount,
+        outcome: describeOutcome(ctx.chess),
+        scoreCp: ctx.sf.bestScore,
+      };
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function guardCandidates(ctx: GuardContext): Promise<StockfishResult | null> {
+  const candidates = Object.entries(ctx.jevResult.probabilities || {})
+    .sort((a, b) => b[1] - a[1])
+    .map(([uci]) => uci);
+
+  for (const cand of candidates) {
+    if (cand === ctx.jevResult.uci) continue;
+    let candScore = ctx.sf.candidateScores.get(cand);
+    if (candScore === undefined) {
+      candScore = (await evalSingleMove(ctx.fen, cand, ctx.guardDepth)) ?? undefined;
+    }
+    const isCandSafe = candScore !== undefined && (ctx.sf.bestScore - candScore <= ctx.maxAllowedDiff) && candScore > -20000;
+    if (isCandSafe) {
+      try {
+        const applied = applyUci(ctx.chess, cand);
+        return {
+          uci: cand,
+          san: applied.san,
+          fen: ctx.chess.fen(),
+          probabilities: ctx.jevResult.probabilities,
+          confidence: ctx.jevResult.probabilities[cand] ?? 0.5,
+          droppedMoveCount: ctx.jevResult.droppedMoveCount,
+          outcome: describeOutcome(ctx.chess),
+          scoreCp: candScore ?? null,
+        };
+      } catch {}
+    }
+  }
+  return null;
+}
+
 async function evaluateGuardedMove(
   fen: string,
   jevResult: JevPlaySuccess,
@@ -219,166 +385,30 @@ async function evaluateGuardedMove(
     };
   }
 
+  const ctx: GuardContext = { fen, chess, sf, guardDepth, maxAllowedDiff, jevResult };
   let jevScore = sf.candidateScores.get(jevResult.uci);
   if (jevScore === undefined) {
-    jevScore = (await evalSingleMove(fen, jevResult.uci, Math.max(8, guardDepth - 2))) ?? undefined;
+    jevScore = (await evalSingleMove(fen, jevResult.uci, guardDepth)) ?? undefined;
   }
 
-  const bestScore = sf.bestScore;
   const legals = chess.moves({ verbose: true });
+  const learnedRes = guardLearnedExperience(ctx, legals);
+  if (learnedRes) return learnedRes;
 
-  // 0. Memory Transposition Learning: Cek pengalaman pertandingan sebelumnya
-  const learned = getLearnedMove(fen);
-  if (learned && legals.some((m: any) => m.lan === learned.move)) {
-    try {
-      const applied = applyUci(chess, learned.move);
-      return {
-        uci: learned.move,
-        san: applied.san,
-        fen: chess.fen(),
-        probabilities: { [learned.move]: 0.99, ...jevResult.probabilities },
-        confidence: 0.99,
-        droppedMoveCount: 0,
-        outcome: describeOutcome(chess),
-        scoreCp: learned.score,
-      };
-    } catch {}
-  }
-
-  // 1. Promosi Pion & Skakmat: jika langkah terbaik Stockfish adalah promosi atau skakmat, eksekusi langsung!
   const promoMoves = legals.filter(
-    (m) => m.promotion === "q" || (m.piece === "p" && (m.to.endsWith("8") || m.to.endsWith("1")))
+    (m: any) => m.promotion === "q" || (m.piece === "p" && (m.to.endsWith("8") || m.to.endsWith("1")))
   );
+  const promoRes = await guardPromotion(ctx, promoMoves);
+  if (promoRes) return promoRes;
 
-  const isSfPromo = promoMoves.some((m: any) => sf.bestMove.startsWith(m.from + m.to));
-  if (isSfPromo || sf.bestScore >= 20000) {
-    try {
-      const applied = applyUci(chess, sf.bestMove);
-      return {
-        uci: sf.bestMove,
-        san: applied.san,
-        fen: chess.fen(),
-        probabilities: { [sf.bestMove]: 0.99, ...jevResult.probabilities },
-        confidence: 0.99,
-        droppedMoveCount: 0,
-        outcome: describeOutcome(chess),
-        scoreCp: bestScore,
-      };
-    } catch {}
-  }
+  const delta = jevScore !== undefined ? sf.bestScore - jevScore : 9999;
+  const queenRes = guardQueenLoss(ctx, delta);
+  if (queenRes) return queenRes;
 
-  if (promoMoves.length > 0) {
-    let bestPromoScore = -99999;
-    let bestPromoUci: string | null = null;
-    let fallbackScore: number | undefined = undefined;
+  const endgameRes = guardEndgame(ctx, delta);
+  if (endgameRes) return endgameRes;
 
-    for (const pMove of promoMoves) {
-      let chosenPromo = "q";
-      try {
-        const testC = new Chess(chess.fen());
-        testC.move({ from: pMove.from, to: pMove.to, promotion: "q" });
-        if (testC.isDraw() || testC.isStalemate()) chosenPromo = "r";
-      } catch {}
-      const promoUci = pMove.from + pMove.to + chosenPromo;
-      let score = sf.candidateScores.get(promoUci);
-      if (score === undefined) {
-        score = (await evalSingleMove(fen, promoUci, guardDepth)) ?? undefined;
-      }
-      if (score !== undefined && score > bestPromoScore) {
-        bestPromoScore = score;
-        bestPromoUci = promoUci;
-        fallbackScore = score;
-      }
-    }
-
-    // Selama promosi tidak terkena skakmat (-20000), paksakan promosi pion sekarang!
-    if (bestPromoUci !== null && bestPromoScore > -20000) {
-      try {
-        const applied = applyUci(chess, bestPromoUci);
-        return {
-          uci: bestPromoUci,
-          san: applied.san,
-          fen: chess.fen(),
-          probabilities: { [bestPromoUci]: 0.99, ...jevResult.probabilities },
-          confidence: 0.99,
-          droppedMoveCount: 0,
-          outcome: describeOutcome(chess),
-          scoreCp: fallbackScore ?? bestScore,
-        };
-      } catch {}
-    }
-  }
-
-  // 2. Dorongan Pion Bebas
-  const isWhiteTurn = chess.turn() === "w";
-  const pushMove = legals.find((m) => {
-    if (m.piece !== "p") return false;
-    return isWhiteTurn ? (m.from.endsWith("6") && m.to.endsWith("7")) : (m.from.endsWith("3") && m.to.endsWith("2"));
-  });
-  if (pushMove) {
-    const pushUci = pushMove.from + pushMove.to;
-    let pushScore = sf.candidateScores.get(pushUci);
-    if (pushScore === undefined) {
-      pushScore = (await evalSingleMove(fen, pushUci, guardDepth)) ?? undefined;
-    }
-    if (pushScore !== undefined && pushScore > 150 && (bestScore - pushScore <= maxAllowedDiff)) {
-      try {
-        const applied = applyUci(chess, pushUci);
-        return {
-          uci: pushUci,
-          san: applied.san,
-          fen: chess.fen(),
-          probabilities: { [pushUci]: 0.95, ...jevResult.probabilities },
-          confidence: 0.95,
-          droppedMoveCount: 0,
-          outcome: describeOutcome(chess),
-          scoreCp: pushScore,
-        };
-      } catch {}
-    }
-  }
-
-  const delta = jevScore !== undefined ? bestScore - jevScore : 9999;
-
-  // 3. Anti-Queen Blunder Guard: Jika pemain memiliki menteri, jangan biarkan menteri dikorbankan jika delta > 150
-  const currentSide = chess.turn();
-  const playerHasQueen = chess.board().some((row: any[]) => row.some((sq: any) => sq && sq.color === currentSide && sq.type === "q"));
-  if (playerHasQueen && delta > 150) {
-    try {
-      const applied = applyUci(chess, sf.bestMove);
-      return {
-        uci: sf.bestMove,
-        san: applied.san,
-        fen: chess.fen(),
-        probabilities: { [sf.bestMove]: 0.90, ...jevResult.probabilities },
-        confidence: 0.90,
-        droppedMoveCount: jevResult.droppedMoveCount,
-        outcome: describeOutcome(chess),
-        scoreCp: bestScore,
-      };
-    } catch {}
-  }
-
-  // 4. Endgame Passed Pawn Interception & King Safety Guard
-  // Mencegah blunder seperti 45... Kxb4? di mana raja membiarkan passed-pawn lawan melaju bebas
-  const isEndgame = (fen.match(/[rnbqRNBQ]/g) || []).length <= 4;
-  if (isEndgame && (bestScore <= -150 || delta > 15)) {
-    try {
-      const applied = applyUci(chess, sf.bestMove);
-      return {
-        uci: sf.bestMove,
-        san: applied.san,
-        fen: chess.fen(),
-        probabilities: { [sf.bestMove]: 0.95, ...jevResult.probabilities },
-        confidence: 0.95,
-        droppedMoveCount: jevResult.droppedMoveCount,
-        outcome: describeOutcome(chess),
-        scoreCp: bestScore,
-      };
-    } catch {}
-  }
   const isSafe = jevScore !== undefined && delta <= maxAllowedDiff && jevScore > -20000;
-
   if (isSafe) {
     return {
       uci: jevResult.uci,
@@ -392,35 +422,11 @@ async function evaluateGuardedMove(
     };
   }
 
-  const sortedCandidates = Object.entries(jevResult.probabilities || {})
-    .sort((a, b) => b[1] - a[1])
-    .map(([uci]) => uci);
-
-  for (const cand of sortedCandidates) {
-    if (cand === jevResult.uci) continue;
-    let candScore = sf.candidateScores.get(cand);
-    if (candScore === undefined) {
-      candScore = (await evalSingleMove(fen, cand, guardDepth)) ?? undefined;
-    }
-    if (candScore !== undefined && bestScore - candScore <= maxAllowedDiff && candScore > -20000) {
-      try {
-        const applied = applyUci(chess, cand);
-        return {
-          uci: cand,
-          san: applied.san,
-          fen: chess.fen(),
-          probabilities: jevResult.probabilities,
-          confidence: jevResult.probabilities[cand] ?? 0.5,
-          droppedMoveCount: jevResult.droppedMoveCount,
-          outcome: describeOutcome(chess),
-          scoreCp: candScore,
-        };
-      } catch {}
-    }
-  }
+  const altRes = await guardCandidates(ctx);
+  if (altRes) return altRes;
 
   try {
-    recordMatchExperience(fen, sf.bestMove, bestScore, delta > 150 ? jevResult.uci : undefined);
+    recordMatchExperience(fen, sf.bestMove, sf.bestScore, delta > 150 ? jevResult.uci : undefined);
     const applied = applyUci(chess, sf.bestMove);
     return {
       uci: sf.bestMove,
@@ -430,7 +436,7 @@ async function evaluateGuardedMove(
       confidence: 0.85,
       droppedMoveCount: jevResult.droppedMoveCount,
       outcome: describeOutcome(chess),
-      scoreCp: bestScore,
+      scoreCp: sf.bestScore,
     };
   } catch {
     return {

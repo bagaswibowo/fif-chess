@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { getLearnedMove, recordMatchExperience, isBlunderMove } from "../lib/experience.ts";
 
-const fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+const testId = Date.now();
+// Unique board position with isolated pawn on random rank
+const fen = `8/8/8/8/${(testId % 7) + 1}P6/8/8/4K2k w - - 0 1`;
 
 // 1. Initial state: no learned move
 assert.equal(getLearnedMove(fen), null);
