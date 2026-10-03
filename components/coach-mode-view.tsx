@@ -447,22 +447,6 @@ export function CoachModeView({ lang = "id" }: Props) {
         />
       </div>
 
-      <div className="flex w-full shrink-0 gap-2">
-        <Button onClick={handleUndo} variant="outline" size="sm"
-          className="flex-1 border-[var(--border)] bg-[var(--surface)] text-xs font-bold text-neutral-300 hover:bg-[var(--card)]"
-          disabled={history.length < 2 || thinkingRef.current}>
-          ← {lang === "id" ? "Batalkan Langkah" : "Undo"}
-        </Button>
-        {hint && isPlayerTurn && (
-          <Button onClick={() => void tryMove(hint.uci.slice(0, 2), hint.uci.slice(2, 4))} size="sm"
-            className="flex-1 bg-[var(--primary)] text-xs font-bold text-white hover:bg-[var(--primary-hover)]"
-            disabled={thinkingRef.current}>
-            <IconCheck3D size={16} />
-            {lang === "id" ? `Mainkan Rekomendasi (${hint.san})` : `Play Recommendation (${hint.san})`}
-          </Button>
-        )}
-      </div>
-
       {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
       <div className="flex-1 grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-3 items-stretch min-h-0 overflow-y-auto lg:overflow-hidden pt-1">
         {/* LEFT COLUMN: Chessboard strictly anchored */}
@@ -529,31 +513,10 @@ export function CoachModeView({ lang = "id" }: Props) {
               <div className="flex items-center gap-2">
                 <IconLightning3D size={20} />
                 <span className="text-xs font-black uppercase tracking-wider text-[#81b64c]">
-                  {lang === "id" ? "Rekomendasi Coach Jev" : "Coach Jev Recommendation"}
+                  {lang === "id" ? "Rekomendasi Coach JeV+Flybrain" : "Coach JeV+Flybrain Recommendation"}
                 </span>
               </div>
-              {hint && isPlayerTurn && (
-                <Button
-                  onClick={() => setShowHintArrow(v => !v)}
-                  size="sm"
-                  variant="outline"
-                  className={`h-7 px-2.5 text-xs font-bold border-[#81b64c]/40 flex items-center gap-1.5 ${
-                    showHintArrow ? "bg-[#38bdf8] text-black border-[#38bdf8]" : "bg-transparent text-[#81b64c] hover:bg-[#81b64c]/20"
-                  }`}
-                >
-                  {showHintArrow ? (
-                    <>
-                      <IconClose3D size={13} />
-                      <span>Panah Sembunyi</span>
-                    </>
-                  ) : (
-                    <>
-                      <IconTarget3D size={13} />
-                      <span>Tunjukkan Panah</span>
-                    </>
-                  )}
-                </Button>
-              )}
+
             </CardHeader>
             <CardContent className="p-3.5 space-y-2">
               {!outcome.over && isPlayerTurn ? (
@@ -569,6 +532,26 @@ export function CoachModeView({ lang = "id" }: Props) {
                         <span>{principle}</span>
                       </div>
                     )}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Button onClick={handleUndo} variant="outline" size="sm"
+                        className="flex-1 min-w-0 px-2 h-8 border-[#81b64c]/40 bg-transparent text-xs font-bold text-neutral-300 hover:bg-[#81b64c]/20"
+                        disabled={history.length < 2 || thinkingRef.current}>
+                        ← {lang === "id" ? "Batalkan" : "Undo"}
+                      </Button>
+                      <Button onClick={() => void tryMove(hint.uci.slice(0, 2), hint.uci.slice(2, 4))} size="sm"
+                        className="flex-1 min-w-0 px-2 h-8 bg-[#81b64c] text-xs font-bold text-[#1f291e] hover:bg-[#81b64c]/90"
+                        disabled={thinkingRef.current}>
+                        <IconCheck3D size={16} />
+                        {lang === "id" ? `Mainkan` : `Play`}
+                      </Button>
+                      <Button onClick={() => setShowHintArrow(v => !v)} variant="outline" size="sm"
+                        className={`flex-1 min-w-0 px-2 h-8 text-xs font-bold border-[#81b64c]/40 flex gap-1.5 items-center justify-center ${
+                          showHintArrow ? "bg-[#38bdf8] text-[#1f291e] border-[#38bdf8] hover:bg-[#38bdf8]/90" : "bg-transparent text-[#81b64c] hover:bg-[#81b64c]/20"
+                        }`}>
+                        {showHintArrow ? <IconClose3D size={13} /> : <IconTarget3D size={13} />}
+                        <span className="truncate">{showHintArrow ? (lang === "id" ? "Sembunyi" : "Hide") : (lang === "id" ? "Tunjukkan" : "Show")}</span>
+                      </Button>
+                    </div>
                   </>
                 ) : (
                   <div className="text-xs text-neutral-400 py-3 text-center animate-pulse flex items-center justify-center gap-2">

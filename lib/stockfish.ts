@@ -226,34 +226,50 @@ async function evaluateGuardedMove(
   const bestScore = sf.bestScore;
   const legals = chess.moves({ verbose: true });
 
-  // 1. Promosi Pion
-  const promoMove = legals.find(
+  // 1. Promosi Pion (Evaluasi SEMUA kandidat promosi menteri, prioritas maksimal di endgame)
+  const promoMoves = legals.filter(
     (m) => m.promotion === "q" || (m.piece === "p" && (m.to.endsWith("8") || m.to.endsWith("1")))
   );
-  if (promoMove) {
-    let chosenPromo = "q";
-    try {
-      const testC = new Chess(chess.fen());
-      testC.move({ from: promoMove.from, to: promoMove.to, promotion: "q" });
-      if (testC.isDraw() || testC.isStalemate()) chosenPromo = "r";
-    } catch {}
-    const promoUci = promoMove.from + promoMove.to + chosenPromo;
-    let promoScore = sf.candidateScores.get(promoUci);
-    if (promoScore === undefined) {
-      promoScore = (await evalSingleMove(fen, promoUci, Math.max(8, guardDepth - 2))) ?? undefined;
-    }
-    if (promoScore !== undefined && (promoScore > 100 || (bestScore - promoScore <= maxAllowedDiff))) {
+  
+  if (promoMoves.length > 0) {
+    let bestPromoScore = -99999;
+    let bestPromoUci = null;
+    let fallbackScore = undefined;
+    
+    for (const pMove of promoMoves) {
+      let chosenPromo = "q";
       try {
-        const applied = applyUci(chess, promoUci);
+        const testC = new Chess(chess.fen());
+        testC.move({ from: pMove.from, to: pMove.to, promotion: "q" });
+        if (testC.isDraw() || testC.isStalemate()) chosenPromo = "r";
+      } catch {}
+      const promoUci = pMove.from + pMove.to + chosenPromo;
+      let score = sf.candidateScores.get(promoUci);
+      if (score === undefined) {
+        score = (await evalSingleMove(fen, promoUci, Math.max(8, guardDepth - 2))) ?? undefined;
+      }
+      if (score !== undefined) {
+        if (score > bestPromoScore) {
+          bestPromoScore = score;
+          bestPromoUci = promoUci;
+          fallbackScore = score;
+        }
+      }
+    }
+    
+    // Jika promosi itu mengunci kemenangan atau tidak rugi banyak (blunder konyol), paksakan!
+    if (bestPromoUci !== null && (bestPromoScore > 50 || (bestScore - bestPromoScore <= maxAllowedDiff + 200))) {
+      try {
+        const applied = applyUci(chess, bestPromoUci);
         return {
-          uci: promoUci,
+          uci: bestPromoUci,
           san: applied.san,
           fen: chess.fen(),
-          probabilities: { [promoUci]: 0.99, ...jevResult.probabilities },
+          probabilities: { [bestPromoUci]: 0.99, ...jevResult.probabilities },
           confidence: 0.99,
           droppedMoveCount: 0,
           outcome: describeOutcome(chess),
-          scoreCp: promoScore,
+          scoreCp: fallbackScore ?? null,
         };
       } catch {}
     }

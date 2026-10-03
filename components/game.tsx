@@ -64,7 +64,7 @@ const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const AI_LABEL: Record<string, string> = {
   stockfish: "Stockfish 15 NNUE",
   "jev-fly": "Jev + Fly Brain",
-  jev: "Jev System One",
+  jev: "Jev AI Connectome",
   fly: "Fruit Fly Brain",
 };
 
@@ -953,7 +953,7 @@ export function Game() {
                   <div className="min-w-0">
                     <div className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5 truncate">
                       <span>{playMode === "ai"
-                        ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain (Hybrid)" : selectedAiOpponent === "fly" ? "Fruit Fly Brain (134k)" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15 NNUE")
+                        ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain (134k)" : selectedAiOpponent === "jev" ? "Jev AI Connectome" : "Stockfish 15 NNUE")
                         : pvpOpponentName}</span>
                       <span className="text-[11px] font-normal text-neutral-400">
                         ({playMode === "ai" ? "3550" : "PvP Online"})
@@ -1250,7 +1250,7 @@ export function Game() {
                             <div>
                               <span className="text-xs font-bold text-neutral-300 block">
                                 {playMode === "ai"
-                                  ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15")
+                                  ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev AI Connectome" : "Stockfish 15")
                                   : pvpOpponentName}
                               </span>
                               {!humanToMove && <span className="text-[10px] text-[var(--primary)] font-black animate-pulse">Sedang Berpikir...</span>}
@@ -1425,10 +1425,10 @@ export function Game() {
                             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Mode Lawan</div>
                             <div className="grid grid-cols-2 gap-2">
                               {[
-                                { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine Elo 3550+" },
+                                { id: "jev", label: "Jev AI Connectome", sub: "Khusus API (Jev Only)" },
+                                { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine Kuat Elo 3550+" },
+                                { id: "fly", label: "Fruit Fly Brain", sub: "Transkriptomik & Viden" },
                                 { id: "jev-fly", label: "Jev + Fly Brain", sub: "Hybrid Connectome" },
-                                { id: "jev", label: "Jev System One", sub: "Semantik Posisi" },
-                                { id: "fly", label: "Fruit Fly Brain", sub: "134k Neuron Biologis" },
                               ].map((eng) => (
                                 <button
                                   key={eng.id}
