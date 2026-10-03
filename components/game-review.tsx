@@ -98,11 +98,12 @@ type Props = {
   lang?: "id" | "en";
 };
 
-type Engine = "stockfish" | "jev" | "fly";
+type Engine = "stockfish" | "jev" | "fly" | "jev-fly";
 const ENGINE_LABELS: Record<Engine, string> = {
   stockfish: "Stockfish 15 NNUE",
   jev: "Jev AI Connectome",
   fly: "Fruit Fly Brain",
+  "jev-fly": "Jev + Fly Brain",
 };
 type AiEval = {
   bestUci: string;
@@ -447,6 +448,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                     <option value="stockfish">Stockfish 15 NNUE</option>
                     <option value="jev">Jev AI Connectome</option>
                     <option value="fly">Fruit Fly Brain</option>
+                    <option value="jev-fly">Jev + Fly Brain</option>
                   </select>
                 </div>
               </div>
