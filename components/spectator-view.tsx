@@ -129,7 +129,7 @@ export function SpectatorView({
   onTryPosition?: (fen: string, moves: string[]) => void;
 }) {
   const [whiteEngine, setWhiteEngine] = useState<EngineType>("stockfish");
-  const [blackEngine, setBlackEngine] = useState<EngineType>("jev");
+  const [blackEngine, setBlackEngine] = useState<EngineType>("jev-fly");
   const [jevDepth, setJevDepth] = useState(10);
   const [sfDepth, setSfDepth] = useState(10);
 
@@ -693,8 +693,8 @@ export function SpectatorView({
             plyCount={moves.length}
             whiteLabel={ENGINE_LABELS[whiteEngine]}
             blackLabel={ENGINE_LABELS[blackEngine]}
-            className="flex-1 min-h-0 max-lg:max-h-[24rem]"
-            bodyMaxHeightClass=""
+            className="flex-1 min-h-[180px]"
+            bodyMaxHeightClass="max-h-[220px] md:max-h-[280px] lg:max-h-[340px]"
             headerExtra={
               outcome ? (
                 <Badge variant="outline" className="text-[10px] bg-amber-500/20 text-amber-300 border-amber-500/40">

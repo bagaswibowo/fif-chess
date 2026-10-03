@@ -73,8 +73,8 @@ export function NotationTable({
       </div>
 
       {/* Isi tabel */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <div ref={scrollRef} className={`overflow-y-auto font-mono text-[12px] custom-scrollbar ${bodyMaxHeightClass}`}>
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div ref={scrollRef} className={`flex-1 min-h-0 overflow-y-auto font-mono text-[12px] custom-scrollbar ${bodyMaxHeightClass}`}>
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] text-neutral-400 font-sans uppercase tracking-wider">

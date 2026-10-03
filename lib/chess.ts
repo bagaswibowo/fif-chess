@@ -412,7 +412,18 @@ export function applyUci(chess: Chess, uci: string): Move {
   }
   const from = uci.slice(0, 2);
   const to = uci.slice(2, 4);
-  const promotion = uci.length > 4 ? uci[4] : undefined;
+  let promotion = uci.length > 4 ? uci[4] : undefined;
+
+  // Auto-promote to Queen if pawn reaches the back rank without explicit promotion piece
+  if (!promotion) {
+    try {
+      const piece = chess.get(from as any);
+      if (piece && piece.type === "p" && (to.endsWith("8") || to.endsWith("1"))) {
+        promotion = "q";
+      }
+    } catch {}
+  }
+
   return chess.move({ from, to, promotion });
 }
 

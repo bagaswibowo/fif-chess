@@ -226,16 +226,33 @@ async function evaluateGuardedMove(
   const bestScore = sf.bestScore;
   const legals = chess.moves({ verbose: true });
 
-  // 1. Promosi Pion (Evaluasi SEMUA kandidat promosi menteri, prioritas maksimal di endgame)
+  // 1. Promosi Pion & Skakmat: jika langkah terbaik Stockfish adalah promosi atau skakmat, eksekusi langsung!
   const promoMoves = legals.filter(
     (m) => m.promotion === "q" || (m.piece === "p" && (m.to.endsWith("8") || m.to.endsWith("1")))
   );
-  
+
+  const isSfPromo = promoMoves.some((m: any) => sf.bestMove.startsWith(m.from + m.to));
+  if (isSfPromo || sf.bestScore >= 20000) {
+    try {
+      const applied = applyUci(chess, sf.bestMove);
+      return {
+        uci: sf.bestMove,
+        san: applied.san,
+        fen: chess.fen(),
+        probabilities: { [sf.bestMove]: 0.99, ...jevResult.probabilities },
+        confidence: 0.99,
+        droppedMoveCount: 0,
+        outcome: describeOutcome(chess),
+        scoreCp: bestScore,
+      };
+    } catch {}
+  }
+
   if (promoMoves.length > 0) {
     let bestPromoScore = -99999;
-    let bestPromoUci = null;
-    let fallbackScore = undefined;
-    
+    let bestPromoUci: string | null = null;
+    let fallbackScore: number | undefined = undefined;
+
     for (const pMove of promoMoves) {
       let chosenPromo = "q";
       try {
@@ -248,17 +265,15 @@ async function evaluateGuardedMove(
       if (score === undefined) {
         score = (await evalSingleMove(fen, promoUci, Math.max(8, guardDepth - 2))) ?? undefined;
       }
-      if (score !== undefined) {
-        if (score > bestPromoScore) {
-          bestPromoScore = score;
-          bestPromoUci = promoUci;
-          fallbackScore = score;
-        }
+      if (score !== undefined && score > bestPromoScore) {
+        bestPromoScore = score;
+        bestPromoUci = promoUci;
+        fallbackScore = score;
       }
     }
-    
-    // Jika promosi itu mengunci kemenangan atau tidak rugi banyak (blunder konyol), paksakan!
-    if (bestPromoUci !== null && (bestPromoScore > 50 || (bestScore - bestPromoScore <= maxAllowedDiff + 200))) {
+
+    // Selama promosi tidak terkena skakmat (-20000), paksakan promosi pion sekarang!
+    if (bestPromoUci !== null && bestPromoScore > -20000) {
       try {
         const applied = applyUci(chess, bestPromoUci);
         return {
@@ -269,7 +284,7 @@ async function evaluateGuardedMove(
           confidence: 0.99,
           droppedMoveCount: 0,
           outcome: describeOutcome(chess),
-          scoreCp: fallbackScore ?? null,
+          scoreCp: fallbackScore ?? bestScore,
         };
       } catch {}
     }
@@ -305,6 +320,25 @@ async function evaluateGuardedMove(
   }
 
   const delta = jevScore !== undefined ? bestScore - jevScore : 9999;
+
+  // 3. Anti-Queen Blunder Guard: Jika pemain memiliki menteri, jangan biarkan menteri dikorbankan jika delta > 150
+  const currentSide = chess.turn();
+  const playerHasQueen = chess.board().some((row: any[]) => row.some((sq: any) => sq && sq.color === currentSide && sq.type === "q"));
+  if (playerHasQueen && delta > 150) {
+    try {
+      const applied = applyUci(chess, sf.bestMove);
+      return {
+        uci: sf.bestMove,
+        san: applied.san,
+        fen: chess.fen(),
+        probabilities: { [sf.bestMove]: 0.90, ...jevResult.probabilities },
+        confidence: 0.90,
+        droppedMoveCount: jevResult.droppedMoveCount,
+        outcome: describeOutcome(chess),
+        scoreCp: bestScore,
+      };
+    } catch {}
+  }
   const isSafe = jevScore !== undefined && delta <= maxAllowedDiff && jevScore > -20000;
 
   if (isSafe) {

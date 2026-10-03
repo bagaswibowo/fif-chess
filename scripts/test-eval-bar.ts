@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { calculateMaterialCp } from "../lib/chess.ts";
+import { Chess } from "chess.js";
+import { calculateMaterialCp, applyUci } from "../lib/chess.ts";
 
 // 1. Initial position: completely balanced (0 material diff)
 const startFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -14,4 +15,11 @@ const blackExtraQueen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 
 assert.equal(calculateMaterialCp(blackExtraQueen), -900, "Black with extra queen should be -900");
 
 // 4. White takes pawn: instantly swings from 0 to +100
-console.log("eval-bar material tests passed: start=0, extraPawn=+100, extraQueen=-900");
+// 3. Pawn promotion without explicit piece in UCI auto-promotes to Queen
+const promoFen = "8/4P3/8/8/8/8/8/4K2k w - - 0 1";
+const promoChess = new Chess(promoFen);
+const m = applyUci(promoChess, "e7e8");
+assert.equal(m.promotion, "q");
+assert.equal(promoChess.get("e8")?.type, "q");
+
+console.log("eval-bar & promo tests passed: start=0, extraPawn=+100, extraQueen=-900, promo=q");
