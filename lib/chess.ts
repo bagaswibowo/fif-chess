@@ -703,3 +703,24 @@ export function validateMove(
 export function validateTurn(chess: Chess, expectedSide: Side): boolean {
   return sideToMove(chess) === expectedSide;
 }
+
+const PIECE_VALS_CP: Record<string, number> = {
+  p: 100, n: 320, b: 330, r: 500, q: 900,
+};
+
+/** Calculates raw material balance from FEN (in centipawns, White positive). */
+export function calculateMaterialCp(fen: string): number {
+  if (!fen) return 0;
+  const boardPart = fen.split(" ")[0] || "";
+  let white = 0;
+  let black = 0;
+
+  for (const ch of boardPart) {
+    const val = PIECE_VALS_CP[ch.toLowerCase()];
+    if (!val) continue;
+    if (ch >= "A" && ch <= "Z") white += val;
+    else black += val;
+  }
+
+  return white - black;
+}

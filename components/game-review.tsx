@@ -11,6 +11,7 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { BoardControls } from "@/components/board-controls";
 import { NotationTable } from "@/components/notation-table";
+import { EvalBar } from "@/components/eval-bar";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
 import type { GameRecord } from "@/lib/game-history";
@@ -522,42 +523,49 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 }
                 style={{ background: "var(--card)" }}
               >
-                <div
-                  className={
-                    fullscreenReview
-                      ? "w-full aspect-square max-h-[calc(100dvh-200px)] rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] flex items-center justify-center min-h-0"
-                      : "w-full max-w-[min(78dvh,calc(100dvh-18rem),760px)] aspect-square shrink-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]"
-                  }
-                >
-                  <Chessboard
-                    options={{
-                      id: `review-${active.id}`,
-                      position: currentFen,
-                      boardOrientation: flipOrientation ? (active.humanSide === "white" ? "black" : "white") : active.humanSide,
-                      allowDragging: false,
-                      boardStyle: { backgroundColor: "var(--board-dark)" },
-                      darkSquareStyle: { backgroundColor: "var(--board-dark)" },
-                      lightSquareStyle: { backgroundColor: "var(--board-light)" },
-                      arrows: [
-                        // Panah Merah/Orange untuk langkah yang dibuat
-                        ...(playedNow
-                          ? [{
-                              startSquare: playedNow.from,
-                              endSquare: playedNow.to,
-                              color: (evalResult?.deltaCp ?? 0) >= 90 ? "var(--destructive)" : "var(--ring)",
-                            }]
-                          : []),
-                        // Panah Hijau Terang untuk saran terbaik Stockfish
-                        ...(evalResult && evalResult.bestUci.length >= 4 && (!playedNow || evalResult.bestUci.slice(0, 4) !== playedNow.from + playedNow.to)
-                          ? [{
-                              startSquare: evalResult.bestUci.slice(0, 2),
-                              endSquare: evalResult.bestUci.slice(2, 4),
-                              color: "var(--primary)",
-                            }]
-                          : []),
-                      ],
-                    }}
+                <div className="flex gap-2 items-stretch justify-center w-full flex-1 min-h-0">
+                  <EvalBar
+                    fen={currentFen}
+                    scoreCp={evalResult?.scoreCp}
+                    orientation={flipOrientation ? (active.humanSide === "white" ? "black" : "white") : active.humanSide}
                   />
+                  <div
+                    className={
+                      fullscreenReview
+                        ? "w-full aspect-square max-h-[calc(100dvh-200px)] rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] flex items-center justify-center min-h-0"
+                        : "w-full max-w-[min(78dvh,calc(100dvh-18rem),760px)] aspect-square shrink-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]"
+                    }
+                  >
+                    <Chessboard
+                      options={{
+                        id: `review-${active.id}`,
+                        position: currentFen,
+                        boardOrientation: flipOrientation ? (active.humanSide === "white" ? "black" : "white") : active.humanSide,
+                        allowDragging: false,
+                        boardStyle: { backgroundColor: "var(--board-dark)" },
+                        darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                        lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                        arrows: [
+                          // Panah Merah/Orange untuk langkah yang dibuat
+                          ...(playedNow
+                            ? [{
+                                startSquare: playedNow.from,
+                                endSquare: playedNow.to,
+                                color: (evalResult?.deltaCp ?? 0) >= 90 ? "var(--destructive)" : "var(--ring)",
+                              }]
+                            : []),
+                          // Panah Hijau untuk langkah saran engine
+                          ...(evalResult?.bestUci
+                            ? [{
+                                startSquare: evalResult.bestUci.slice(0, 2),
+                                endSquare: evalResult.bestUci.slice(2, 4),
+                                color: "var(--primary)",
+                              }]
+                            : []),
+                        ],
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-center gap-3 flex-wrap w-full pt-1.5 text-[10px]">

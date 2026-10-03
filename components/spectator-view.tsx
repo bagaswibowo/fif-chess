@@ -11,6 +11,7 @@
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { BoardControls } from "@/components/board-controls";
 import { NotationTable } from "@/components/notation-table";
+import { EvalBar } from "@/components/eval-bar";
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -575,33 +576,7 @@ export function SpectatorView({
           {/* 4. Board Container with Sleek Vertical Dual-Bar Eval */}
           <div className="flex gap-2 items-start justify-center w-full">
             {/* Slim Vertical Dual Eval Bar: Black at top, White at bottom (responsive to orientation) */}
-            <div
-              className="w-3 md:w-3.5 bg-neutral-900 rounded-full overflow-hidden border border-[var(--border)] flex flex-col justify-between shrink-0 shadow-inner relative select-none"
-              title={`Evaluasi: ${whiteCp !== null ? (whiteCp > 0 ? `+${(whiteCp/100).toFixed(1)} Putih` : `${(whiteCp/100).toFixed(1)} Hitam`) : "0.0 (Seimbang)"}`}
-            >
-              {/* Top portion (Black if white orientation, White if black orientation) */}
-              <div
-                className={`w-full transition-all duration-500 ease-out ${
-                  boardOrientation === "white"
-                    ? "bg-neutral-900"
-                    : "bg-neutral-100"
-                }`}
-                style={{ height: `${boardOrientation === "white" ? 100 - barPct : barPct}%` }}
-              />
-
-              {/* Dividing Line / Marker */}
-              <div className="w-full h-[1.5px] bg-neutral-600/50 shrink-0 z-10" />
-
-              {/* Bottom portion (White if white orientation, Black if black orientation) */}
-              <div
-                className={`w-full transition-all duration-500 ease-out ${
-                  boardOrientation === "white"
-                    ? "bg-neutral-100"
-                    : "bg-neutral-900"
-                }`}
-                style={{ height: `${boardOrientation === "white" ? barPct : 100 - barPct}%` }}
-              />
-            </div>
+            <EvalBar fen={currentFen} scoreCp={whiteCp} orientation={boardOrientation} />
 
             {/* Chessboard */}
             <div

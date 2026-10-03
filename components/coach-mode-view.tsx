@@ -4,6 +4,7 @@
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { BoardControls } from "@/components/board-controls";
 import { NotationTable } from "@/components/notation-table";
+import { EvalBar } from "@/components/eval-bar";
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -463,32 +464,35 @@ export function CoachModeView({ lang = "id" }: Props) {
             <CapturedPiecesBar fen={fen} side={playerSide === "white" ? "black" : "white"} />
           </div>
 
-          {/* Chessboard: Fixed Aspect Square with key=playerSide to force board orientation rotation */}
-          <div className="aspect-square w-full max-w-[min(100%,calc(100dvh-210px))] mx-auto rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
-            <Chessboard
-              key={`coach-board-${boardOrientation}`}
-              options={{
-                id: `coach-board-${boardOrientation}`,
-                position: fen,
-                boardOrientation: boardOrientation,
-                allowDragging: isPlayerTurn && !thinking,
-                onPieceDrop: handlePieceDrop,
-                onSquareClick: ({ square }) => {
-                  if (selected) {
-                    void tryMove(selected, square);
-                    setSelected(null);
-                  } else {
-                    setSelected(square);
-                  }
-                },
-                squareStyles,
-                arrows,
-                boardStyle: { backgroundColor: "var(--board-dark)" },
-                darkSquareStyle: { backgroundColor: "var(--board-dark)" },
-                lightSquareStyle: { backgroundColor: "var(--board-light)" },
-                animationDurationInMs: 200,
-              }}
-            />
+          {/* Chessboard Row with Vertical Eval Bar */}
+          <div className="flex gap-2 items-stretch justify-center w-full flex-1 min-h-0">
+            <EvalBar fen={fen} scoreCp={evalCp} orientation={boardOrientation} />
+            <div className="aspect-square w-full max-w-[min(100%,calc(100dvh-210px))] mx-auto rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
+              <Chessboard
+                key={`coach-board-${boardOrientation}`}
+                options={{
+                  id: `coach-board-${boardOrientation}`,
+                  position: fen,
+                  boardOrientation: boardOrientation,
+                  allowDragging: isPlayerTurn && !thinking,
+                  onPieceDrop: handlePieceDrop,
+                  onSquareClick: ({ square }) => {
+                    if (selected) {
+                      void tryMove(selected, square);
+                      setSelected(null);
+                    } else {
+                      setSelected(square);
+                    }
+                  },
+                  squareStyles,
+                  arrows,
+                  boardStyle: { backgroundColor: "var(--board-dark)" },
+                  darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                  lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                  animationDurationInMs: 200,
+                }}
+              />
+            </div>
           </div>
 
           {/* Player Status Bar with Hint Action */}

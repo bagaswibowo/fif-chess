@@ -30,6 +30,7 @@ import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import { CoachModeView } from "@/components/coach-mode-view";
 import { SpectatorView } from "@/components/spectator-view";
 import { GameOverModal } from "@/components/game-over-modal";
+import { EvalBar } from "@/components/eval-bar";
 import { useChessClock } from "@/lib/use-chess-clock";
 import {
   IconPawn3D, IconKingWhite3D, IconKingBlack3D, IconDice3D, IconFriends3D, IconMessages3D, IconBell3D, IconSettings3D, IconPlay3D,
@@ -992,25 +993,18 @@ export function Game() {
 
               {/* Board Row with Left Vertical Eval Bar (Chess.com Signature) */}
               <div className="flex gap-2 items-stretch justify-center w-full flex-1 min-h-0 max-h-[calc(100vh-165px)]">
-                {/* Vertical Eval Bar */}
-                <div
-                  className="w-3 md:w-3.5 bg-neutral-900 rounded-full overflow-hidden border border-[var(--border)] flex flex-col justify-between shrink-0 shadow-inner relative select-none"
-                  title={`Evaluasi: ${evalScoreDisplay}`}
-                >
-                  <div
-                    className={`w-full transition-all duration-300 ease-out ${
-                      humanSide === "white" ? "bg-neutral-900" : "bg-neutral-100"
-                    }`}
-                    style={{ height: `${humanSide === "white" ? 100 - evalBarPercent : evalBarPercent}%` }}
-                  />
-                  <div className="w-full h-[1.5px] bg-neutral-600/50 shrink-0 z-10" />
-                  <div
-                    className={`w-full transition-all duration-300 ease-out ${
-                      humanSide === "white" ? "bg-neutral-100" : "bg-neutral-900"
-                    }`}
-                    style={{ height: `${humanSide === "white" ? evalBarPercent : 100 - evalBarPercent}%` }}
-                  />
-                </div>
+                {/* Vertical Eval Bar: Responsif instan terhadap makan pion & evaluasi engine */}
+                <EvalBar
+                  fen={fen}
+                  scoreCp={
+                    typeof analysis?.scoreCp === "number"
+                      ? humanSide === "white"
+                        ? analysis.scoreCp
+                        : -analysis.scoreCp
+                      : null
+                  }
+                  orientation={humanSide}
+                />
 
                 {/* Chessboard Container */}
                 <div className="w-full max-w-[min(95vw,calc(100vh-240px))] aspect-square mx-auto rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative shrink-0">
