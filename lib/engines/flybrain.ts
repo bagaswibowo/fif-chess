@@ -20,7 +20,7 @@ export class PureSuperflyEngine implements IChessEngine {
     // Online background learning from Stockfish: saves superior moves to experience.json
     const prediction = await getStockfishPrediction(flyRes.fen);
     if (prediction && prediction.uci) {
-      recordMatchExperience(req.fen, prediction.uci, prediction.scoreCp ?? 0);
+      recordMatchExperience(flyRes.fen, prediction.uci, prediction.scoreCp ?? 0);
     }
 
     return {

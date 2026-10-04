@@ -9,7 +9,7 @@ interface ExperienceEntry {
   timesEncountered?: number;
 }
 
-const DB_PATH = path.join(process.cwd(), "data", "experience.json");
+const DB_PATH = path.join(process.env.JEV_DATA_DIR || path.join(process.cwd(), "data"), "experience.json");
 let memCache: Record<string, ExperienceEntry> | null = null;
 
 function loadDb(): Record<string, ExperienceEntry> {
@@ -60,21 +60,29 @@ export function recordMatchExperience(
   score?: number,
   blunderedMove?: string,
 ): void {
-  const db = loadDb();
-  const key = normalizeFen(fen);
-  const entry = db[key] || { timesEncountered: 0 };
+  try {
+    const ch = new Chess(fen);
+    const legal = new Set(ch.moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion || "")));
 
-  entry.timesEncountered = (entry.timesEncountered || 0) + 1;
+    const db = loadDb();
+    const key = normalizeFen(fen);
+    const entry = db[key] || { timesEncountered: 0 };
 
-  if (provenMove && typeof provenMove === "string" && provenMove.length >= 4) {
-    entry.bestMove = provenMove;
-    if (typeof score === "number") entry.score = score;
+    entry.timesEncountered = (entry.timesEncountered || 0) + 1;
+
+    // Pastikan langkah yang disimpan memang legal untuk FEN ini
+    if (provenMove && legal.has(provenMove)) {
+      entry.bestMove = provenMove;
+      if (typeof score === "number") entry.score = score;
+    }
+
+    if (blunderedMove && legal.has(blunderedMove) && blunderedMove !== entry.bestMove) {
+      entry.blunders = Array.from(new Set([...(entry.blunders || []), blunderedMove]));
+    }
+
+    db[key] = entry;
+    saveDb();
+  } catch {
+    // Ignore invalid FEN
   }
-
-  if (blunderedMove && blunderedMove !== entry.bestMove) {
-    entry.blunders = Array.from(new Set([...(entry.blunders || []), blunderedMove]));
-  }
-
-  db[key] = entry;
-  saveDb();
 }

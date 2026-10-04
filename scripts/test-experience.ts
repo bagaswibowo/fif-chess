@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { getLearnedMove, recordMatchExperience, isBlunderMove, normalizeFen } from "../lib/experience.ts";
 
-const fen = "8/8/8/8/8/8/8/4K2k w - - 0 1";
+const fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
 
 // Clean initial state for this test key
 const dbFile = path.join(process.env.JEV_DATA_DIR || path.join(process.cwd(), "data"), "experience.json");

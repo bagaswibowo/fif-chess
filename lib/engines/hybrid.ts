@@ -171,7 +171,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
 
     const prediction = await getStockfishPrediction(hybridRaw.fen);
     if (prediction?.uci) {
-      recordMatchExperience(req.fen, prediction.uci, prediction.scoreCp ?? 0);
+      recordMatchExperience(hybridRaw.fen, prediction.uci, prediction.scoreCp ?? 0);
     }
 
     return {

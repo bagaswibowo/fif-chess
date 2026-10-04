@@ -359,16 +359,38 @@ export function predictOpponentHarm(chess: Chess, uci?: string): number {
       if (oppM.captured) {
         harm += PIECE_VALS[oppM.captured] ?? 100;
       }
+
+      // Pion musuh maju mendekati petak promosi (ancaman menteri baru)
+      if (oppM.piece === "p") {
+        const destRank = parseInt(oppM.to[1], 10);
+        if ((oppM.color === "b" && destRank === 2) || (oppM.color === "w" && destRank === 7)) {
+          harm += 800;
+        }
+      }
+
       chess.move(oppM);
       if (chess.isCheckmate()) {
         harm += 10000;
       } else if (chess.inCheck()) {
-        harm += 60;
+        harm += 300;
+      }
+
+      // Hitung apakah kita punya balasan taktis langsung (pertukaran yang menguntungkan)
+      let bestCounter = 0;
+      if (!chess.isGameOver()) {
+        const myReplies = chess.moves({ verbose: true });
+        for (const rep of myReplies) {
+          if (rep.captured) {
+            const cVal = PIECE_VALS[rep.captured] ?? 100;
+            if (cVal > bestCounter) bestCounter = cVal;
+          }
+        }
       }
       chess.undo();
 
-      if (harm > maxHarm) {
-        maxHarm = harm;
+      const netHarm = harm - bestCounter;
+      if (netHarm > maxHarm) {
+        maxHarm = netHarm;
         if (maxHarm >= 1000) break;
       }
     }
@@ -422,6 +444,19 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
     }
 
     let punishment = calculateBoardPunishment(chess, moverColor, oppColor);
+
+    // snedea/flybrain Anti-Shuffle Opening Drive: Hindari memindahkan kuda ke pinggir atau balik ke petak asal
+    const totalHalfMoves = chess.history().length;
+    if (totalHalfMoves <= 12) {
+      const toSq = uci.slice(2, 4);
+      const homeSquares = ["b8", "g8", "c8", "f8", "b1", "g1", "c1", "f1"];
+      if (homeSquares.includes(toSq) && !wasAttacked) {
+        punishment += 250;
+      }
+      if (moved.piece === "n" && (toSq.startsWith("a") || toSq.startsWith("h"))) {
+        punishment += 120;
+      }
+    }
 
     // Google Research / Nature 2026 Cerebellum Forward Prediction (2-ply threat)
     const oppHarm = predictOpponentHarm(chess);

@@ -122,7 +122,7 @@ export class PureJevEngine implements IChessEngine {
     // 3. Online Learning from Stockfish (Background Observer)
     const prediction = await getStockfishPrediction(nextFen);
     if (prediction && prediction.uci) {
-      recordMatchExperience(req.fen, prediction.uci, prediction.scoreCp ?? 0);
+      recordMatchExperience(nextFen, prediction.uci, prediction.scoreCp ?? 0);
     }
 
     return {
