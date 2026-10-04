@@ -375,8 +375,9 @@ export function predictOpponentHarm(chess: Chess, uci?: string): number {
         harm += 300;
       }
 
-      // Hitung apakah kita punya balasan taktis langsung (pertukaran yang menguntungkan)
+      // Cek apakah balasan taktis langsung bisa menyeimbangkan pertukaran
       let bestCounter = 0;
+      let followupHarm = 0;
       if (!chess.isGameOver()) {
         const myReplies = chess.moves({ verbose: true });
         for (const rep of myReplies) {
@@ -384,11 +385,22 @@ export function predictOpponentHarm(chess: Chess, uci?: string): number {
             const cVal = PIECE_VALS[rep.captured] ?? 100;
             if (cVal > bestCounter) bestCounter = cVal;
           }
+          // Cek horizon lanjutan untuk langkah forcing
+          if (oppM.captured || oppM.piece === "p") {
+            chess.move(rep);
+            for (const fup of chess.moves({ verbose: true })) {
+              if (fup.captured) {
+                const fVal = PIECE_VALS[fup.captured] ?? 100;
+                if (fVal > followupHarm) followupHarm = fVal;
+              }
+            }
+            chess.undo();
+          }
         }
       }
       chess.undo();
 
-      const netHarm = harm - bestCounter;
+      const netHarm = (harm + followupHarm) - bestCounter;
       if (netHarm > maxHarm) {
         maxHarm = netHarm;
         if (maxHarm >= 1000) break;
@@ -456,6 +468,19 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
       if (moved.piece === "n" && (toSq.startsWith("a") || toSq.startsWith("h"))) {
         punishment += 120;
       }
+    }
+
+    // King Safety & Castling Drive:
+    if (moved.san === "O-O" || moved.san === "O-O-O") {
+      reward += 180; // Reward rokade
+    }
+    if (totalPieces > 14 && moved.piece === "k" && moved.san !== "O-O" && moved.san !== "O-O-O") {
+      const destRank = parseInt(uci[3], 10);
+      if (moverColor === "w" && destRank >= 2) punishment += 350; // Jangan jalan raja ke tengah
+      if (moverColor === "b" && destRank <= 7) punishment += 350;
+    }
+    if (totalHalfMoves <= 10 && moved.piece === "p" && (uci.startsWith("f2") || uci.startsWith("f7"))) {
+      punishment += 180; // Jangan buka diagonal raja di pembukaan
     }
 
     // Google Research / Nature 2026 Cerebellum Forward Prediction (2-ply threat)
