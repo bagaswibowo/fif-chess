@@ -942,9 +942,9 @@ export function Game() {
         {navTab === "admin" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><AdminPanel user={currentUser} /></div>}
 
         {navTab === "play" && (
-          <div className="h-full max-h-full min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-3 md:gap-4 items-center w-full">
+          <div className="h-full max-h-full min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-2 md:gap-2.5 items-center w-full">
             {/* CENTER CHESSBOARD ARENA */}
-            <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[calc(100vh-90px)] mx-auto space-y-1.5 md:space-y-2">
+            <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[calc(100vh-90px)] mx-auto space-y-1 md:space-y-1.5">
               {/* Opponent Card (Top) with 3D Bot Icon / Player Icon */}
               <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -1311,16 +1311,16 @@ export function Game() {
                         </div>
                       ) : (
                         /* SETUP — Chess.com Dark Interface */
-                        <div className="space-y-3.5">
-                          <div className="space-y-1.5">
-                            <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Pilih lawan</div>
-                            <div className="flex w-full rounded-full border border-[var(--border)] bg-[var(--surface)] p-1" role="tablist" aria-label="Jenis lawan">
+                        <div className="space-y-2">
+                          <div className="space-y-1">
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Pilih lawan</div>
+                            <div className="flex w-full rounded-full border border-[var(--border)] bg-[var(--surface)] p-0.5" role="tablist" aria-label="Jenis lawan">
                               <button
                                 type="button"
                                 role="tab"
                                 aria-selected={playMode === "ai"}
                                 onClick={() => setPlayMode("ai")}
-                                className={`flex-1 rounded-full py-2 text-xs font-black transition-all ${playMode === "ai" ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"}`}
+                                className={`flex-1 rounded-full py-1 text-xs font-black transition-all ${playMode === "ai" ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"}`}
                               >
                                 Lawan Engine AI
                               </button>
@@ -1329,7 +1329,7 @@ export function Game() {
                                 role="tab"
                                 aria-selected={playMode === "pvp"}
                                 onClick={() => setPlayMode("pvp")}
-                                className={`flex-1 rounded-full py-2 text-xs font-black transition-all ${playMode === "pvp" ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"}`}
+                                className={`flex-1 rounded-full py-1 text-xs font-black transition-all ${playMode === "pvp" ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"}`}
                               >
                                 Lawan Pemain
                               </button>
@@ -1337,14 +1337,14 @@ export function Game() {
                           </div>
 
                           {/* Format Waktu (Time Control Pills) */}
-                          <div className="space-y-1.5">
-                            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center justify-between">
+                          <div className="space-y-1">
+                            <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider flex items-center justify-between">
                               <span>Format Waktu</span>
-                              <span className="text-xs text-[var(--primary)] font-black font-mono">
+                              <span className="text-[11px] text-[var(--primary)] font-black font-mono">
                                 {timeMode === "unlimited" ? "Tanpa Batas" : `${timeMode}`}
                               </span>
                             </div>
-                            <div className="grid grid-cols-3 gap-1.5">
+                            <div className="grid grid-cols-3 gap-1">
                                 {[
                                   { id: "5m", label: "5 mnt", sub: "Kilat" },
                                   { id: "10m", label: "10 mnt", sub: "Cepat" },
@@ -1357,69 +1357,69 @@ export function Game() {
                                   key={t.id}
                                   type="button"
                                   onClick={() => setTimeMode(t.id)}
-                                  className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                                  className={`p-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                                     timeMode === t.id
                                       ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white shadow-sm ring-1 ring-[var(--primary)]"
                                       : "bg-[var(--background)] border-[var(--border)] text-neutral-400 hover:border-neutral-500 hover:text-white"
                                   }`}
                                 >
                                   <div className="text-xs font-black leading-tight text-white">{t.label}</div>
-                                  <div className="text-[10px] text-neutral-400 font-medium">{t.sub}</div>
+                                  <div className="text-[9px] text-neutral-400 font-medium">{t.sub}</div>
                                 </button>
                               ))}
                             </div>
                           </div>
 
                           {/* Sisi Bidak (Chess.com 3-Card Visual Selector) */}
-                          <div className="space-y-1.5">
-                            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Pilih Sisi Bidak</div>
-                            <div className="grid grid-cols-3 gap-2">
+                          <div className="space-y-1">
+                            <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Pilih Sisi Bidak</div>
+                            <div className="grid grid-cols-3 gap-1">
                               <button
                                 type="button"
                                 onClick={() => { setSideChoice("white"); setHumanSide("white"); }}
-                                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                                className={`p-1.5 rounded-lg border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
                                   sideChoice === "white"
                                     ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
                                     : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
                                 }`}
                               >
-                                <IconKingWhite3D size={26} />
+                                <IconKingWhite3D size={22} />
                                 <span className="text-xs font-bold text-white">Putih</span>
-                                <span className="text-[9px] text-neutral-400 font-medium">Main Pertama</span>
+                                <span className="text-[8px] text-neutral-400 font-medium">Main Pertama</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setSideChoice("random")}
-                                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                                className={`p-1.5 rounded-lg border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
                                   sideChoice === "random"
                                     ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
                                     : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
                                 }`}
                               >
-                                <IconDice3D size={26} />
+                                <IconDice3D size={22} />
                                 <span className="text-xs font-bold text-white">Acak</span>
-                                <span className="text-[9px] text-neutral-400 font-medium">Otomatis</span>
+                                <span className="text-[8px] text-neutral-400 font-medium">Otomatis</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => { setSideChoice("black"); setHumanSide("black"); }}
-                                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                                className={`p-1.5 rounded-lg border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
                                   sideChoice === "black"
                                     ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
                                     : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
                                 }`}
                               >
-                                <IconKingBlack3D size={26} />
+                                <IconKingBlack3D size={22} />
                                 <span className="text-xs font-bold text-white">Hitam</span>
-                                <span className="text-[9px] text-neutral-400 font-medium">Main Kedua</span>
+                                <span className="text-[8px] text-neutral-400 font-medium">Main Kedua</span>
                               </button>
                             </div>
                           </div>
 
                           {/* Pilihan Engine hanya untuk mode AI */}
-                          {playMode === "ai" && <div className="space-y-1.5">
-                            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Mode Lawan</div>
-                            <div className="grid grid-cols-2 gap-2">
+                          {playMode === "ai" && <div className="space-y-1">
+                            <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Mode Lawan</div>
+                            <div className="grid grid-cols-2 gap-1">
                               {[
                                 { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine Elo 3550+" },
                                 { id: "jev-fly", label: "Jev + Fly Brain", sub: "Hybrid Connectome" },
@@ -1430,14 +1430,14 @@ export function Game() {
                                   key={eng.id}
                                   type="button"
                                   onClick={() => { setPlayMode("ai"); setSelectedAiOpponent(eng.id as any); }}
-                                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                  className={`p-1.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
                                     playMode === "ai" && selectedAiOpponent === eng.id
                                       ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white shadow-sm ring-1 ring-[var(--primary)]"
                                       : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
                                   }`}
                                 >
                                   <span className="text-xs font-bold text-white leading-snug">{eng.label}</span>
-                                  <span className="text-[10px] text-neutral-400">{eng.sub}</span>
+                                  <span className="text-[9px] text-neutral-400">{eng.sub}</span>
                                 </button>
                               ))}
                             </div>
@@ -1455,8 +1455,8 @@ export function Game() {
                           ) : (
                             <>
                               {/* Tingkat Kesulitan AI */}
-                              <div className="space-y-1.5">
-                                <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Kedalaman Mesin</div>
+                              <div className="space-y-1">
+                                <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Kedalaman Mesin</div>
                                 <div className="grid grid-cols-3 gap-1.5">
                                   {[
                                     { depth: 3, label: "Mudah", elo: "~800" },
