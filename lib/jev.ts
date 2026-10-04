@@ -47,6 +47,7 @@ export type JevState = {
   has_passed_pawns: boolean;
   opp_has_passed_pawns: boolean;
   is_endgame: boolean;
+  pieces_on_board?: string[];
   fly_brain_top_moves: string[];
   strategic_mandate: string;
   tactical_situation: string;
@@ -310,6 +311,9 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
         has_passed_pawns: hasPassedPawns,
         opp_has_passed_pawns: oppHasPassedPawns,
         is_endgame: isEndgame,
+        pieces_on_board: chess.board().flatMap((row: any[], r: number) =>
+          row.flatMap((sq: any, c: number) => (sq ? [`${sq.color === "w" ? "White" : "Black"} ${sq.type.toUpperCase()} at ${String.fromCharCode(97 + c)}${8 - r}`] : []))
+        ),
         fly_brain_top_moves: flyTop3.map((m) => `${m.san} (${(m.prob * 100).toFixed(0)}%)`),
         strategic_mandate: strategicMandate,
         tactical_situation: tacticalSituation,

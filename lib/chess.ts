@@ -483,6 +483,68 @@ export function isQueenThreatened(chess: Chess): boolean {
   return chess.isAttacked(queenSq, opp);
 }
 
+/**
+ * Detects if the Queen is in the direct line of sight (X-ray) of an enemy Rook, Bishop, or Queen
+ * with 0 or 1 intervening piece (discovered attack threat).
+ */
+export function isQueenXrayed(chess: Chess): boolean {
+  const currentSide = chess.turn();
+  const board = chess.board();
+  let qFile = -1;
+  let qRank = -1;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (p && p.color === currentSide && p.type === "q") {
+        qRank = r;
+        qFile = c;
+        break;
+      }
+    }
+    if (qFile !== -1) break;
+  }
+  if (qFile === -1) return false;
+
+  const opp = currentSide === "w" ? "b" : "w";
+  const dirs = [
+    { dr: -1, dc: 0, ortho: true },
+    { dr: 1, dc: 0, ortho: true },
+    { dr: 0, dc: -1, ortho: true },
+    { dr: 0, dc: 1, ortho: true },
+    { dr: -1, dc: -1, ortho: false },
+    { dr: -1, dc: 1, ortho: false },
+    { dr: 1, dc: -1, ortho: false },
+    { dr: 1, dc: 1, ortho: false },
+  ];
+
+  for (const { dr, dc, ortho } of dirs) {
+    let pieces = 0;
+    let r = qRank + dr;
+    let c = qFile + dc;
+    while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+      const p = board[r][c];
+      if (p) {
+        if (pieces === 1) {
+          if (p.color === opp && (p.type === "q" || (ortho ? p.type === "r" : p.type === "b"))) {
+            return true;
+          }
+          break;
+        }
+        if (pieces === 0) {
+          if (p.color === opp && (p.type === "q" || (ortho ? p.type === "r" : p.type === "b"))) {
+            return true;
+          }
+          pieces++;
+        }
+      }
+      r += dr;
+      c += dc;
+    }
+  }
+  return false;
+}
+
 export function isPromotionAttempt(
   chess: Chess,
   from: string,

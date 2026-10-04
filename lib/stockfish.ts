@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { Chess } from "chess.js";
-import { applyUci, describeOutcome, isKnightFork, isQueenThreatened, type GameOutcome } from "@/lib/chess";
+import { applyUci, describeOutcome, isKnightFork, isQueenThreatened, isQueenXrayed, type GameOutcome } from "@/lib/chess";
 import { getLearnedMove, isBlunderMove, recordMatchExperience } from "./experience";
 import type { JevPlaySuccess } from "@/lib/jev";
 
@@ -290,16 +290,16 @@ function guardQueenLoss(ctx: GuardContext, delta: number): StockfishResult | nul
   const hasQueen = ctx.chess.board().some((row: any[]) => row.some((sq: any) => sq && sq.color === side && sq.type === "q"));
   if (!hasQueen) return null;
 
-  const queenAttacked = isQueenThreatened(ctx.chess);
-  if ((queenAttacked && delta > 50) || delta > 150) {
+  const queenThreatened = isQueenThreatened(ctx.chess) || isQueenXrayed(ctx.chess);
+  if ((queenThreatened && delta > 30) || delta > 120) {
     try {
       const applied = applyUci(ctx.chess, ctx.sf.bestMove);
       return {
         uci: ctx.sf.bestMove,
         san: applied.san,
         fen: ctx.chess.fen(),
-        probabilities: { [ctx.sf.bestMove]: 0.90, ...ctx.jevResult.probabilities },
-        confidence: 0.90,
+        probabilities: { [ctx.sf.bestMove]: 0.95, ...ctx.jevResult.probabilities },
+        confidence: 0.95,
         droppedMoveCount: ctx.jevResult.droppedMoveCount,
         outcome: describeOutcome(ctx.chess),
         scoreCp: ctx.sf.bestScore,

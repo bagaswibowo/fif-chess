@@ -21,6 +21,27 @@ function parseEngine(bodyObj: Record<string, unknown>): 'stockfish' | 'jev' | 'f
   return 'stockfish';
 }
 
+async function getStockfishPrediction(fen: string) {
+  try {
+    const chess = new Chess(fen);
+    if (chess.isGameOver()) return null;
+    const sf = await playStockfishMove(fen, 10);
+    const side = chess.turn() === "w" ? "Putih" : "Hitam";
+    const evalStr = sf.scoreCp !== null ? `${(sf.scoreCp / 100).toFixed(1)}` : "0.0";
+    return {
+      engine: "stockfish",
+      uci: sf.uci,
+      san: sf.san,
+      from: sf.uci.slice(0, 2),
+      to: sf.uci.slice(2, 4),
+      scoreCp: sf.scoreCp,
+      description: `Stockfish 15 NNUE memprediksi balasan terbaik ${side}: ${sf.san} (${evalStr})`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 
 
 export async function POST(request: Request) {
@@ -69,7 +90,8 @@ export async function POST(request: Request) {
   if (engine === "fly") {
     const flyRes = playSuperflyMove(fen, 30) || playFlyBrainMove(fen);
     if (flyRes) {
-      return NextResponse.json(flyRes);
+      const prediction = await getStockfishPrediction(flyRes.fen);
+      return NextResponse.json({ ...flyRes, prediction });
     }
     return NextResponse.json({ error: "FlyBrain could not compute move for position.", retryable: false }, { status: 400 });
   }
@@ -103,6 +125,7 @@ export async function POST(request: Request) {
         };
       }
       const guarded = await guardJevFlyMove(fen, hybrid, depth);
+      const prediction = await getStockfishPrediction(guarded.fen);
       return NextResponse.json({
         uci: guarded.uci,
         san: guarded.san,
@@ -113,6 +136,7 @@ export async function POST(request: Request) {
         outcome: guarded.outcome,
         scoreCp: (guarded as any).scoreCp ?? null,
         engine: "jev-fly",
+        prediction,
       });
     } catch (err) {
       console.error("jev-fly execution failed:", err);
@@ -124,7 +148,8 @@ export async function POST(request: Request) {
             droppedMoveCount: 0,
             request: {} as any,
           }, depth);
-          return NextResponse.json({ ...guardedFallback, engine: "jev-fly" });
+          const prediction = await getStockfishPrediction(guardedFallback.fen);
+          return NextResponse.json({ ...guardedFallback, engine: "jev-fly", prediction });
         }
       } catch {}
       return NextResponse.json({ error: "Hybrid engine failed.", retryable: true }, { status: 502 });
@@ -135,6 +160,7 @@ export async function POST(request: Request) {
     try {
       const playedUci = typeof bodyObj.playedUci === 'string' ? bodyObj.playedUci : undefined;
       const result = await playStockfishMove(fen, depth, playedUci);
+      const prediction = await getStockfishPrediction(result.fen);
       return NextResponse.json({
         uci: result.uci,
         san: result.san,
@@ -146,6 +172,7 @@ export async function POST(request: Request) {
         scoreCp: (result as any).scoreCp ?? null,
         playedScoreCp: result.playedScoreCp ?? null,
         deltaCp: result.deltaCp ?? null,
+        prediction,
       });
     } catch (err) {
       console.error("Stockfish fallback execution:", err);
@@ -208,6 +235,7 @@ export async function POST(request: Request) {
     const jevRaw = await playJevMove(fen, { apiKey: key, seed, history });
     // Hybrid evaluation: Stockfish tactically guards Jev's move so it never blunders or hangs pieces
     const result = await guardJevMove(fen, jevRaw, depth);
+    const prediction = await getStockfishPrediction(result.fen);
     return NextResponse.json({
       uci: result.uci,
       san: result.san,
@@ -217,6 +245,7 @@ export async function POST(request: Request) {
       droppedMoveCount: result.droppedMoveCount,
       outcome: result.outcome,
       scoreCp: result.scoreCp ?? null,
+      prediction,
     });
   } catch (error) {
     // Jev tidak selalu tersedia (API eksternal bisa down / sertifikat SSL

@@ -144,6 +144,8 @@ export function SpectatorView({
   const [threatInfo, setThreatInfo] = useState<{ from: string; to: string; sq: string } | null>(null);
   const [predictedMove, setPredictedMove] = useState<{ from: string; to: string } | null>(null);
   const [commentary, setCommentary] = useState<Commentary | null>(null);
+  const pendingPredictionRef = useRef<{ uci: string; san: string } | null>(null);
+  const [predictionComparison, setPredictionComparison] = useState<string | null>(null);
 
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
   const [fullscreenSpectator, setFullscreenSpectator] = useState(false);
@@ -218,8 +220,39 @@ export function SpectatorView({
       }
 
       if (!res.ok || abortRef.current) break;
-      const data = (await res.json()) as { uci: string; san: string; scoreCp: number | null };
+      const data = (await res.json()) as {
+        uci: string;
+        san: string;
+        scoreCp: number | null;
+        prediction?: {
+          engine: string;
+          uci: string;
+          san: string;
+          from: string;
+          to: string;
+          scoreCp: number | null;
+          description: string;
+        } | null;
+      };
       if (!data.uci) break;
+
+      // Bandingkan langkah aktual yang baru saja dieksekusi dengan prediksi Stockfish sebelumnya
+      if (pendingPredictionRef.current) {
+        if (data.uci === pendingPredictionRef.current.uci) {
+          setPredictionComparison(`✓ Tepat sesuai prediksi Stockfish: ${data.san}`);
+        } else {
+          setPredictionComparison(`⚡ AI memilih ${data.san} (Prediksi Stockfish sebelumnya: ${pendingPredictionRef.current.san})`);
+        }
+      } else {
+        setPredictionComparison(null);
+      }
+
+      // Simpan prediksi respons lawan dari Stockfish untuk perbandingan berikutnya
+      if (data.prediction?.uci && data.prediction?.san) {
+        pendingPredictionRef.current = { uci: data.prediction.uci, san: data.prediction.san };
+      } else {
+        pendingPredictionRef.current = null;
+      }
 
       const move = findLegalMove(
         chess,
@@ -249,19 +282,38 @@ export function SpectatorView({
       let foundThreat: { from: string; to: string; sq: string } | null = null;
       let threatDesc = "";
 
-      const legalAttacks = getAttackedSquares(chess, toSq);
-      const valMap: Record<string, number> = { k: 1000, q: 9, r: 5, b: 3, n: 3, p: 1 };
-      let maxVal = 0;
+      if (chess.isCheck()) {
+        const board = chess.board();
+        let kingSq = "";
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const p = board[r][c];
+            if (p && p.color === nextTurnColor && p.type === "k") {
+              kingSq = String.fromCharCode(97 + c) + (8 - r);
+              break;
+            }
+          }
+          if (kingSq) break;
+        }
+        if (kingSq) {
+          foundThreat = { from: toSq, to: kingSq, sq: kingSq };
+          threatDesc = `Skak tajam mengancam Raja lawan di ${kingSq}!`;
+        }
+      } else {
+        const legalAttacks = getAttackedSquares(chess, toSq);
+        const valMap: Record<string, number> = { k: 1000, q: 9, r: 5, b: 3, n: 3, p: 1 };
+        let maxVal = 0;
 
-      for (const targetSq of legalAttacks) {
-        const targetPiece = chess.get(targetSq as any);
-        if (targetPiece && targetPiece.color === nextTurnColor) {
-          const v = valMap[targetPiece.type] || 0;
-          if (v > maxVal) {
-            maxVal = v;
-            foundThreat = { from: toSq, to: targetSq, sq: targetSq };
-            const pNames: Record<string, string> = { k: "Raja", q: "Menteri", r: "Benteng", b: "Gajah", n: "Kuda", p: "Pion" };
-            threatDesc = `Mengancam ${pNames[targetPiece.type] || "bidak"} lawan di ${targetSq}!`;
+        for (const targetSq of legalAttacks) {
+          const targetPiece = chess.get(targetSq as any);
+          if (targetPiece && targetPiece.color === nextTurnColor) {
+            const v = valMap[targetPiece.type] || 0;
+            if (v > maxVal) {
+              maxVal = v;
+              foundThreat = { from: toSq, to: targetSq, sq: targetSq };
+              const pNames: Record<string, string> = { k: "Raja", q: "Menteri", r: "Benteng", b: "Gajah", n: "Kuda", p: "Pion" };
+              threatDesc = `Mengancam ${pNames[targetPiece.type] || "bidak"} lawan di ${targetSq}!`;
+            }
           }
         }
       }
@@ -270,31 +322,25 @@ export function SpectatorView({
       // Tektokkan Exchange Prediction
       const tektokkan = computeTektokkanExchange(chess, data.uci);
 
-      // Next Move Prediction
-      const legals = chess.moves({ verbose: true });
+      // Next Move Prediction (utamakan analisis presisi dari Stockfish 15 NNUE)
       let chosenPred: { from: string; to: string; san: string } | null = null;
       let predDesc = "";
 
-      if (tektokkan.hasExchange && tektokkan.defenderFrom && tektokkan.targetSq) {
+      if (data.prediction && data.prediction.from && data.prediction.to) {
+        chosenPred = {
+          from: data.prediction.from,
+          to: data.prediction.to,
+          san: data.prediction.san,
+        };
+        predDesc = data.prediction.description;
+      } else if (tektokkan.hasExchange && tektokkan.defenderFrom && tektokkan.targetSq) {
         chosenPred = { from: tektokkan.defenderFrom, to: tektokkan.targetSq, san: `x${tektokkan.targetSq}` };
         predDesc = tektokkan.explanation || "";
-      } else if (legals.length > 0) {
-        const recapture = legals.find((m) => m.to === toSq && m.captured);
-        if (recapture) {
-          chosenPred = { from: recapture.from, to: recapture.to, san: recapture.san };
-          predDesc = `Lawan diprediksi membalas memakan ${data.san} di ${toSq} via ${recapture.san}!`;
-        } else if (chess.isCheck()) {
-          const escape = legals.find((m) => m.piece === "k") || legals[0];
-          chosenPred = { from: escape.from, to: escape.to, san: escape.san };
-          predDesc = `Raja lawan terpaksa menghindar atau menutup skak via ${escape.san}.`;
-        } else {
-          const captures = legals
-            .filter((m) => m.captured)
-            .sort((a, b) => (valMap[b.captured || "p"] || 0) - (valMap[a.captured || "p"] || 0));
-          const bestMove = captures[0] || legals.find((m) => m.san.includes("+")) || legals[0];
-          chosenPred = { from: bestMove.from, to: bestMove.to, san: bestMove.san };
-          predDesc = `Ditebak lawan merespons dengan ${bestMove.san} untuk mengimbangi posisi.`;
-        }
+      } else if (chess.moves().length > 0) {
+        const legals = chess.moves({ verbose: true });
+        const bestMove = legals.find((m: any) => m.captured) || legals.find((m: any) => m.san.includes("+")) || legals[0];
+        chosenPred = { from: bestMove.from, to: bestMove.to, san: bestMove.san };
+        predDesc = `Ditebak lawan merespons dengan ${bestMove.san} untuk mengimbangi posisi.`;
       }
 
       setPredictedMove(chosenPred ? { from: chosenPred.from, to: chosenPred.to } : null);
@@ -391,6 +437,8 @@ export function SpectatorView({
     setThreatInfo(null);
     setPredictedMove(null);
     setCommentary(null);
+    pendingPredictionRef.current = null;
+    setPredictionComparison(null);
     setSeed((s) => s + 1);
   };
 
@@ -678,6 +726,13 @@ export function SpectatorView({
                       {commentary.prediction}
                     </div>
                   </div>
+
+                  {/* Stockfish Prediction Verification Indicator */}
+                  {predictionComparison && (
+                    <div className="p-2 rounded-xl border border-neutral-700/60 text-[11px] font-bold bg-neutral-900/60 text-neutral-200 flex items-center gap-1.5 shadow-sm">
+                      <span>{predictionComparison}</span>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-6 text-neutral-400 font-medium italic text-[12px]">
