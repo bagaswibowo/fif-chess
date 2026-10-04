@@ -106,7 +106,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
             for (const uci of built.legalUcis) {
               const pJev = resolved.probabilities[uci] ?? 0;
               const pFly = mctsProbs[uci] ?? 0;
-              fusedProbs[uci] = Number((0.7 * pJev + 0.3 * pFly).toFixed(4));
+              fusedProbs[uci] = Number((0.5 * pJev + 0.5 * pFly).toFixed(4));
             }
 
             const sortedMoves = Object.entries(fusedProbs).sort((a, b) => b[1] - a[1]);

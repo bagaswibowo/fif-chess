@@ -201,7 +201,7 @@ export function SpectatorView({
         endpoint = "/api/engine-move";
         body = {
           fen: chess.fen(),
-          engine: "jev",
+          engine: actor,
           depth: jevDepth,
           seed: seed + chess.history().length,
           history: historyList.slice(-10),

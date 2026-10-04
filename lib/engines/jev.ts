@@ -8,6 +8,8 @@ import {
   TYPESAFE_ENDPOINT,
   type JevPlaySuccess,
 } from "@/lib/jev";
+import { playFlyBrainMove } from "@/lib/flybrain/service";
+import { guardJevMove } from "@/lib/stockfish";
 import { getStockfishPrediction } from "./stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
@@ -18,6 +20,24 @@ export class PureJevEngine implements IChessEngine {
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
     const key = req.apiKey || process.env.TYPESAFE_API_KEY;
     if (!key) {
+      const fb = playFlyBrainMove(req.fen);
+      if (fb) {
+        const guarded = await guardJevMove(req.fen, fb as any, Math.max(12, req.depth ?? 12));
+        const prediction = await getStockfishPrediction(guarded.fen);
+        return {
+          engine: this.id,
+          uci: guarded.uci,
+          san: guarded.san,
+          fen: guarded.fen,
+          probabilities: guarded.probabilities,
+          confidence: guarded.confidence,
+          droppedMoveCount: guarded.droppedMoveCount,
+          outcome: guarded.outcome,
+          scoreCp: guarded.scoreCp,
+          prediction,
+          metadata: { fallback: "flybrain_connectome", model: "jev-latest" },
+        };
+      }
       throw new JevRequestError("TYPESAFE_API_KEY not set", 503, false);
     }
 
@@ -60,25 +80,40 @@ export class PureJevEngine implements IChessEngine {
       throw new JevRequestError(resolved.error, 422, true);
     }
 
-    // Pure Jev — direct RLCD decision without external blending
+    // Jev RLCD decision + Tactical Guard (melindungi dari blunder gantung perwira)
     const chess = new Chess(req.fen);
     const applied = applyUci(chess, resolved.uci);
     const nextFen = chess.fen();
-    const prediction = await getStockfishPrediction(nextFen);
 
-    return {
-      engine: this.id,
+    const jevRaw: JevPlaySuccess = {
       uci: resolved.uci,
       san: applied.san,
       fen: nextFen,
       probabilities: resolved.probabilities,
-      confidence: resolved.confidence,
+      confidence: resolved.confidence ?? 0.8,
       droppedMoveCount: built.droppedUcis.length,
       outcome: describeOutcome(chess),
-      scoreCp: undefined,
+      request: built.request,
+    };
+
+    const depth = Math.max(12, req.depth ?? 12);
+    const guarded = await guardJevMove(req.fen, jevRaw, depth);
+    const prediction = await getStockfishPrediction(guarded.fen);
+
+    return {
+      engine: this.id,
+      uci: guarded.uci,
+      san: guarded.san,
+      fen: guarded.fen,
+      probabilities: guarded.probabilities,
+      confidence: guarded.confidence,
+      droppedMoveCount: guarded.droppedMoveCount,
+      outcome: guarded.outcome,
+      scoreCp: guarded.scoreCp,
       prediction,
       metadata: {
         rawChoice: resolved.uci,
+        guarded: guarded.uci !== resolved.uci,
         model: "jev-latest",
       },
     };
