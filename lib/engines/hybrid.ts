@@ -8,8 +8,8 @@ import {
   TYPESAFE_ENDPOINT,
   type JevPlaySuccess,
 } from "@/lib/jev";
-import { playSuperflyMove, playFlyBrainMove } from "@/lib/flybrain/service";
-import { guardJevFlyMove } from "@/lib/stockfish";
+import { playSuperflyMove, playFlyBrainMove, isPredationTrap } from "@/lib/flybrain/service";
+import { getLearnedMove, isBlunderMove, recordMatchExperience } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
@@ -144,24 +144,46 @@ export class JevSuperflyHybridEngine implements IChessEngine {
       };
     }
 
-    // Guard with Stockfish 15 NNUE (depth 14, 10cp endgame tolerance)
-    const guarded = await guardJevFlyMove(req.fen, hybridRaw, depth);
-    const prediction = await getStockfishPrediction(guarded.fen);
+    // 2. Nature 2024 VNC Descending Premotor Veto (Zero Stockfish Intervention)
+    let finalUci = hybridRaw.uci;
+    const isBadMove = (m: string) => isBlunderMove(req.fen, m) || isPredationTrap(req.fen, m);
+
+    if (isBadMove(finalUci)) {
+      recordMatchExperience(req.fen, undefined, undefined, finalUci);
+      const sorted = Object.entries(hybridRaw.probabilities || {}).sort((a, b) => b[1] - a[1]);
+      const safeAlt = sorted.find(([move]) => !isBadMove(move));
+      if (safeAlt) {
+        finalUci = safeAlt[0];
+        const chApplied = new Chess(req.fen);
+        const app = applyUci(chApplied, finalUci);
+        hybridRaw.uci = finalUci;
+        hybridRaw.san = app.san;
+        hybridRaw.fen = chApplied.fen();
+        hybridRaw.outcome = describeOutcome(chApplied);
+      }
+    }
+
+    // 3. Online Learning from Stockfish (Background Teacher / Continuous Learning)
+    const prediction = await getStockfishPrediction(hybridRaw.fen);
+    if (prediction && prediction.uci) {
+      recordMatchExperience(req.fen, prediction.uci, prediction.scoreCp ?? 0);
+    }
 
     return {
       engine: this.id,
-      uci: guarded.uci,
-      san: guarded.san,
-      fen: guarded.fen,
-      probabilities: guarded.probabilities,
-      confidence: guarded.confidence,
-      droppedMoveCount: guarded.droppedMoveCount,
-      outcome: guarded.outcome,
-      scoreCp: guarded.scoreCp,
+      uci: hybridRaw.uci,
+      san: hybridRaw.san,
+      fen: hybridRaw.fen,
+      probabilities: hybridRaw.probabilities,
+      confidence: hybridRaw.confidence,
+      droppedMoveCount: hybridRaw.droppedMoveCount,
+      outcome: hybridRaw.outcome,
+      scoreCp: (hybridRaw as any).scoreCp ?? undefined,
       prediction,
       metadata: {
-        hybridType: key ? "rlcd_connectome_fusion" : "superfly_mcts_guarded",
+        hybridType: key ? "rlcd_connectome_fusion" : "superfly_mcts_pure",
         simulations: sims,
+        vncVetoed: finalUci !== hybridRaw.uci,
       },
     };
   }

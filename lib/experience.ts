@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { Chess } from "chess.js";
 
 interface ExperienceEntry {
   bestMove?: string;
@@ -55,8 +56,8 @@ export function isBlunderMove(fen: string, move: string): boolean {
 
 export function recordMatchExperience(
   fen: string,
-  provenMove: string,
-  score: number,
+  provenMove?: string,
+  score?: number,
   blunderedMove?: string,
 ): void {
   const db = loadDb();
@@ -64,10 +65,13 @@ export function recordMatchExperience(
   const entry = db[key] || { timesEncountered: 0 };
 
   entry.timesEncountered = (entry.timesEncountered || 0) + 1;
-  entry.bestMove = provenMove;
-  entry.score = score;
 
-  if (blunderedMove && blunderedMove !== provenMove) {
+  if (provenMove && typeof provenMove === "string" && provenMove.length >= 4) {
+    entry.bestMove = provenMove;
+    if (typeof score === "number") entry.score = score;
+  }
+
+  if (blunderedMove && blunderedMove !== entry.bestMove) {
     entry.blunders = Array.from(new Set([...(entry.blunders || []), blunderedMove]));
   }
 

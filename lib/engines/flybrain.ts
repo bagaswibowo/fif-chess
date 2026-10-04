@@ -1,6 +1,7 @@
 import { Chess } from "chess.js";
 import { applyUci, describeOutcome } from "@/lib/chess";
 import { playSuperflyMove, playFlyBrainMove } from "@/lib/flybrain/service";
+import { recordMatchExperience } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
@@ -9,14 +10,18 @@ export class PureSuperflyEngine implements IChessEngine {
   readonly name = "Superfly Connectome (PUCT MCTS)";
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
-    const sims = Math.max(10, Math.min(100, req.simulations ?? 35));
-    // 100% Pure Drosophila Connectome PUCT MCTS
+    const sims = Math.max(10, Math.min(100, req.simulations ?? 40));
+    // 100% Pure Drosophila Connectome PUCT MCTS with Nature 2024 Circuits
     const flyRes = playSuperflyMove(req.fen, sims) || playFlyBrainMove(req.fen);
     if (!flyRes) {
       throw new Error("Superfly engine failed to evaluate position.");
     }
 
+    // Online background learning from Stockfish: saves superior moves to experience.json
     const prediction = await getStockfishPrediction(flyRes.fen);
+    if (prediction && prediction.uci) {
+      recordMatchExperience(req.fen, prediction.uci, prediction.scoreCp ?? 0);
+    }
 
     return {
       engine: this.id,

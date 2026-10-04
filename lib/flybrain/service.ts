@@ -17,7 +17,7 @@ import { encodeBoard, legalMoveIndices, indexToMove } from "./encoding.js";
 import { runMCTS } from "./mcts.js";
 // @ts-ignore
 import * as enc from "./encoding.js";
-import { getLearnedMove, isBlunderMove } from "../experience.ts";
+import { getLearnedMove, isBlunderMove, recordMatchExperience } from "../experience.ts";
 
 let cachedBrain: any = null;
 
@@ -277,33 +277,92 @@ export function playFlyBrainMove(fen: string) {
 }
 
 /**
+ * Nature 2024 (FlyWire connectome - Descending Neurons Premotor Veto):
+ * Detects if a move creates catastrophic immediate material loss (attacked by pawn or undefended piece >= 3 pts).
+ */
+export function isPredationTrap(fen: string, uci: string): boolean {
+  try {
+    const chess = new Chess(fen);
+    const moved = chess.move({
+      from: uci.slice(0, 2),
+      to: uci.slice(2, 4),
+      promotion: uci[4] || undefined,
+    });
+    if (!moved) return false;
+    if (chess.isGameOver()) return false;
+
+    const oppColor = chess.turn();
+    const myColor = oppColor === "w" ? "b" : "w";
+    const pieceVal: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 1000 };
+
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const piece = chess.board()[r][c];
+        if (piece && piece.color === myColor) {
+          const val = pieceVal[piece.type] ?? 1;
+          const square = piece.square;
+          const attackers = chess.attackers(square, oppColor);
+          if (!attackers || attackers.length === 0) continue;
+
+          let minOppVal = 1000;
+          for (const attSq of attackers) {
+            const attPiece = chess.get(attSq);
+            if (attPiece) {
+              const aVal = pieceVal[attPiece.type] ?? 1;
+              if (aVal < minOppVal) minOppVal = aVal;
+            }
+          }
+
+          const defenders = chess.attackers(square, myColor);
+          const hasDefender = defenders && defenders.length > 0;
+
+          // 1. Attacked by piece of lower value (e.g. pawn attacks knight/bishop)
+          if (minOppVal < val) {
+            return true;
+          }
+          // 2. Completely undefended major/minor piece
+          if (!hasDefender && val >= 3) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Superfly: FlyBrain with PUCT Monte Carlo Tree Search
  * As featured on https://fly.eyed.to/ (Drosophila connectome + MCTS simulations)
  */
-export function playSuperflyMove(fen: string, sims = 30) {
+export function playSuperflyMove(fen: string, sims = 40) {
   try {
     // 1. Nature 2024 (MBON Valence Recall): Jika posisi sudah dikuasai dari Stockfish, langsung eksekusi
     const learned = getLearnedMove(fen);
-    if (learned) {
-      const chessL = new Chess(fen);
-      const applied = chessL.move({
-        from: learned.move.slice(0, 2),
-        to: learned.move.slice(2, 4),
-        promotion: learned.move[4] || undefined,
-      });
-      if (applied) {
-        return {
-          uci: learned.move,
-          san: applied.san,
-          fen: chessL.fen(),
-          probabilities: { [learned.move]: 0.99 },
-          confidence: 0.99,
-          droppedMoveCount: 0,
-          scoreCp: learned.score,
-          outcome: describeOutcome(chessL),
-          diagnostics: { source: "mbon-learned", score: learned.score },
-        };
-      }
+    if (learned && learned.move) {
+      try {
+        const chessL = new Chess(fen);
+        const applied = chessL.move({
+          from: learned.move.slice(0, 2),
+          to: learned.move.slice(2, 4),
+          promotion: learned.move[4] || undefined,
+        });
+        if (applied) {
+          return {
+            uci: learned.move,
+            san: applied.san,
+            fen: chessL.fen(),
+            probabilities: { [learned.move]: 0.99 },
+            confidence: 0.99,
+            droppedMoveCount: 0,
+            scoreCp: learned.score,
+            outcome: describeOutcome(chessL),
+            diagnostics: { source: "mbon-learned", score: learned.score },
+          };
+        }
+      } catch {}
     }
 
     const brain = getFlyBrain();
@@ -315,11 +374,18 @@ export function playSuperflyMove(fen: string, sims = 30) {
     const mctsRes = runMCTS(brain, chess, enc, { sims, cPuct: 1.5 });
     if (!mctsRes || !mctsRes.move) return playFlyBrainMove(fen);
 
-    // 2. Nature 2024 (APL / DAN Avoidance Depression): Saring langkah yang tercatat sebagai blunder
+    // 2. Nature 2024 (APL / DAN Avoidance Depression & VNC Descending Premotor Veto)
     let chosenMove = mctsRes.move;
-    if (isBlunderMove(fen, chosenMove) && mctsRes.visits && mctsRes.visits.length > 1) {
-      const nonBlunder = mctsRes.visits.find((v: any) => !isBlunderMove(fen, v.uci));
-      if (nonBlunder) chosenMove = nonBlunder.uci;
+    const isBadMove = (m: string) => isBlunderMove(fen, m) || isPredationTrap(fen, m);
+
+    if (isBadMove(chosenMove) && mctsRes.visits && mctsRes.visits.length > 1) {
+      // Rekam langsung ke memori pengalaman agar sirkuit APL/DAN mengingatnya permanen
+      recordMatchExperience(fen, undefined, undefined, chosenMove);
+
+      const safeAlternative = mctsRes.visits.find((v: any) => !isBadMove(v.uci));
+      if (safeAlternative) {
+        chosenMove = safeAlternative.uci;
+      }
     }
 
     const chessApply = new Chess(fen);
@@ -335,11 +401,11 @@ export function playSuperflyMove(fen: string, sims = 30) {
     }
 
     return {
-      uci: mctsRes.move,
-      san: applied ? applied.san : mctsRes.move,
+      uci: chosenMove,
+      san: applied ? applied.san : chosenMove,
       fen: chessApply.fen(),
       probabilities: probs,
-      confidence: probs[mctsRes.move] ?? 0.8,
+      confidence: probs[chosenMove] ?? 0.8,
       droppedMoveCount: 0,
       scoreCp: Math.round(mctsRes.rootValue * 100),
       outcome: describeOutcome(chessApply),

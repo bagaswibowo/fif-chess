@@ -6,10 +6,9 @@ import {
   mapHttpError,
   JevRequestError,
   TYPESAFE_ENDPOINT,
-  type JevPlaySuccess,
 } from "@/lib/jev";
-import { playFlyBrainMove } from "@/lib/flybrain/service";
-import { guardJevMove } from "@/lib/stockfish";
+import { playSuperflyMove, playFlyBrainMove, isPredationTrap } from "@/lib/flybrain/service";
+import { getLearnedMove, isBlunderMove, recordMatchExperience } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
@@ -19,23 +18,46 @@ export class PureJevEngine implements IChessEngine {
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
     const key = req.apiKey || process.env.TYPESAFE_API_KEY;
+
+    // 1. Nature 2024 MBON Learned Recall: Ingat langkah terbaik jika sudah pernah dipelajari
+    const learned = getLearnedMove(req.fen);
+    if (learned) {
+      const chL = new Chess(req.fen);
+      const appL = applyUci(chL, learned.move);
+      const nextFenL = chL.fen();
+      const prediction = await getStockfishPrediction(nextFenL);
+      return {
+        engine: this.id,
+        uci: learned.move,
+        san: appL.san,
+        fen: nextFenL,
+        probabilities: { [learned.move]: 0.99 },
+        confidence: 0.99,
+        droppedMoveCount: 0,
+        outcome: describeOutcome(chL),
+        scoreCp: learned.score,
+        prediction,
+        metadata: { source: "mbon-learned", model: "jev-latest" },
+      };
+    }
+
     if (!key) {
-      const fb = playFlyBrainMove(req.fen);
+      // Fallback: use Superfly connectome MCTS
+      const fb = playSuperflyMove(req.fen, 40) || playFlyBrainMove(req.fen);
       if (fb) {
-        const guarded = await guardJevMove(req.fen, fb as any, Math.max(12, req.depth ?? 12));
-        const prediction = await getStockfishPrediction(guarded.fen);
+        const prediction = await getStockfishPrediction(fb.fen);
         return {
           engine: this.id,
-          uci: guarded.uci,
-          san: guarded.san,
-          fen: guarded.fen,
-          probabilities: guarded.probabilities,
-          confidence: guarded.confidence,
-          droppedMoveCount: guarded.droppedMoveCount,
-          outcome: guarded.outcome,
-          scoreCp: guarded.scoreCp,
+          uci: fb.uci,
+          san: fb.san,
+          fen: fb.fen,
+          probabilities: fb.probabilities,
+          confidence: fb.confidence,
+          droppedMoveCount: fb.droppedMoveCount,
+          outcome: fb.outcome,
+          scoreCp: fb.scoreCp,
           prediction,
-          metadata: { fallback: "flybrain_connectome", model: "jev-latest" },
+          metadata: { fallback: "superfly_mcts", model: "jev-latest" },
         };
       }
       throw new JevRequestError("TYPESAFE_API_KEY not set", 503, false);
@@ -80,40 +102,43 @@ export class PureJevEngine implements IChessEngine {
       throw new JevRequestError(resolved.error, 422, true);
     }
 
-    // Jev RLCD decision + Tactical Guard (melindungi dari blunder gantung perwira)
+    // 2. Nature 2024 VNC Descending Premotor Veto (Murni biologis, tanpa intervensi Stockfish)
+    let chosenUci = resolved.uci;
+    const isBadMove = (m: string) => isBlunderMove(req.fen, m) || isPredationTrap(req.fen, m);
+
+    if (isBadMove(chosenUci)) {
+      recordMatchExperience(req.fen, undefined, undefined, chosenUci);
+      const sortedProbs = Object.entries(resolved.probabilities).sort((a, b) => b[1] - a[1]);
+      const safeCandidate = sortedProbs.find(([move]) => !isBadMove(move));
+      if (safeCandidate) {
+        chosenUci = safeCandidate[0];
+      }
+    }
+
     const chess = new Chess(req.fen);
-    const applied = applyUci(chess, resolved.uci);
+    const applied = applyUci(chess, chosenUci);
     const nextFen = chess.fen();
 
-    const jevRaw: JevPlaySuccess = {
-      uci: resolved.uci,
+    // 3. Online Learning from Stockfish (Background Observer)
+    const prediction = await getStockfishPrediction(nextFen);
+    if (prediction && prediction.uci) {
+      recordMatchExperience(req.fen, prediction.uci, prediction.scoreCp ?? 0);
+    }
+
+    return {
+      engine: this.id,
+      uci: chosenUci,
       san: applied.san,
       fen: nextFen,
       probabilities: resolved.probabilities,
       confidence: resolved.confidence ?? 0.8,
       droppedMoveCount: built.droppedUcis.length,
       outcome: describeOutcome(chess),
-      request: built.request,
-    };
-
-    const depth = Math.max(12, req.depth ?? 12);
-    const guarded = await guardJevMove(req.fen, jevRaw, depth);
-    const prediction = await getStockfishPrediction(guarded.fen);
-
-    return {
-      engine: this.id,
-      uci: guarded.uci,
-      san: guarded.san,
-      fen: guarded.fen,
-      probabilities: guarded.probabilities,
-      confidence: guarded.confidence,
-      droppedMoveCount: guarded.droppedMoveCount,
-      outcome: guarded.outcome,
-      scoreCp: guarded.scoreCp,
+      scoreCp: undefined,
       prediction,
       metadata: {
         rawChoice: resolved.uci,
-        guarded: guarded.uci !== resolved.uci,
+        vncVetoed: chosenUci !== resolved.uci,
         model: "jev-latest",
       },
     };
