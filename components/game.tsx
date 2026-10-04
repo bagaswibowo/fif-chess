@@ -942,9 +942,9 @@ export function Game() {
         {navTab === "admin" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><AdminPanel user={currentUser} /></div>}
 
         {navTab === "play" && (
-          <div className="h-full max-h-full min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-2 md:gap-2.5 items-center w-full">
+          <div className="h-full max-h-full min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-2 md:gap-3 items-center justify-center w-full">
             {/* CENTER CHESSBOARD ARENA */}
-            <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[calc(100vh-90px)] mx-auto space-y-1 md:space-y-1.5">
+            <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[min(100%,calc(100vh-175px))] mx-auto space-y-1 md:space-y-1.5">
               {/* Opponent Card (Top) with 3D Bot Icon / Player Icon */}
               <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -992,8 +992,8 @@ export function Game() {
               />
 
               {/* Board Row with Left Vertical Eval Bar (Chess.com Signature) */}
-              <div className="flex justify-center w-full flex-1 min-h-0 max-h-[calc(100vh-165px)]">
-                <div className="flex gap-2 md:gap-3 items-stretch w-full max-w-[min(95vw,calc(100vh-240px))]">
+              <div className="flex justify-center w-full flex-1 min-h-0">
+                <div className="flex gap-2 md:gap-2.5 items-stretch w-full">
                   {/* Vertical Eval Bar: Responsif instan terhadap makan pion & evaluasi engine */}
                   <EvalBar
                     fen={fen}
