@@ -643,6 +643,85 @@ export function Game() {
         ? `${(scoreCp / 100).toFixed(1)}`
         : "0.0";
 
+  const [copiedPgn, setCopiedPgn] = useState(false);
+
+  const getFullPgn = useCallback(() => {
+    const whitePlayerName = humanSide === "white"
+      ? me.name
+      : playMode === "ai"
+        ? selectedAiOpponent === "jev-fly"
+          ? "Jev + Fly Brain"
+          : selectedAiOpponent === "fly"
+            ? "Fruit Fly Brain"
+            : selectedAiOpponent === "jev"
+              ? "Jev"
+              : "Stockfish 15 NNUE"
+        : pvpOpponentName;
+
+    const blackPlayerName = humanSide === "black"
+      ? me.name
+      : playMode === "ai"
+        ? selectedAiOpponent === "jev-fly"
+          ? "Jev + Fly Brain"
+          : selectedAiOpponent === "fly"
+            ? "Fruit Fly Brain"
+            : selectedAiOpponent === "jev"
+              ? "Jev"
+              : "Stockfish 15 NNUE"
+        : pvpOpponentName;
+
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, ".");
+    let resultStr = "*";
+    if (effectiveOutcome?.over) {
+      if (effectiveOutcome.winner === "white") resultStr = "1-0";
+      else if (effectiveOutcome.winner === "black") resultStr = "0-1";
+      else resultStr = "1/2-1/2";
+    }
+
+    const headers = [
+      `[Event "FIF Chess Match"]`,
+      `[Site "Telkom University (FIF)"]`,
+      `[Date "${dateStr}"]`,
+      `[Round "1"]`,
+      `[White "${whitePlayerName}"]`,
+      `[Black "${blackPlayerName}"]`,
+      `[Result "${resultStr}"]`,
+      effectiveOutcome?.label ? `[Termination "${effectiveOutcome.label}"]` : "",
+    ].filter(Boolean).join("\n");
+
+    const movePairs: string[] = [];
+    for (let i = 0; i < moves.length; i += 2) {
+      const moveNo = Math.floor(i / 2) + 1;
+      const w = moves[i]?.san || "";
+      const b = moves[i + 1]?.san || "";
+      if (b) {
+        movePairs.push(`${moveNo}. ${w} ${b}`);
+      } else if (w) {
+        movePairs.push(`${moveNo}. ${w}`);
+      }
+    }
+
+    return `${headers}\n\n${movePairs.join(" ")} ${resultStr}`.trim();
+  }, [humanSide, me.name, playMode, selectedAiOpponent, pvpOpponentName, effectiveOutcome, moves]);
+
+  const copyGamePgn = useCallback(() => {
+    const pgn = getFullPgn();
+    navigator.clipboard.writeText(pgn);
+    setCopiedPgn(true);
+    setTimeout(() => setCopiedPgn(false), 2000);
+  }, [getFullPgn]);
+
+  const downloadGamePgn = useCallback(() => {
+    const pgn = getFullPgn();
+    const blob = new Blob([pgn], { type: "application/x-chess-pgn" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fif-chess-match-${Date.now()}.pgn`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [getFullPgn]);
+
   return (
     <div className="flex flex-col md:flex-row h-screen max-h-screen overflow-hidden bg-[var(--background)] text-white select-none">
       {/* MOBILE TOP BAR (Hidden on Desktop) */}
@@ -1454,31 +1533,33 @@ export function Game() {
                             />
                           ) : (
                             <>
-                              {/* Tingkat Kesulitan AI */}
-                              <div className="space-y-1">
-                                <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Kedalaman Mesin</div>
-                                <div className="grid grid-cols-3 gap-1.5">
-                                  {[
-                                    { depth: 3, label: "Mudah", elo: "~800" },
-                                    { depth: 8, label: "Sedang", elo: "~1600" },
-                                    { depth: 14, label: "Expert", elo: "3550+" },
-                                  ].map((lvl) => (
-                                    <button
-                                      key={lvl.depth}
-                                      type="button"
-                                      onClick={() => setAiDepth(lvl.depth)}
-                                      className={`p-1.5 rounded-lg border text-center transition-all cursor-pointer ${
-                                        aiDepth === lvl.depth
-                                          ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white ring-1 ring-[var(--primary)]"
-                                          : "bg-[var(--background)] border-[var(--border)] text-neutral-400 hover:text-white"
-                                      }`}
-                                    >
-                                      <div className="text-xs font-bold text-white">{lvl.label}</div>
-                                      <div className="text-[10px] text-neutral-400">{lvl.elo}</div>
-                                    </button>
-                                  ))}
+                              {/* Tingkat Kesulitan AI (Hanya untuk Stockfish 15) */}
+                              {selectedAiOpponent === "stockfish" && (
+                                <div className="space-y-1">
+                                  <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Kedalaman Stockfish</div>
+                                  <div className="grid grid-cols-3 gap-1.5">
+                                    {[
+                                      { depth: 3, label: "Mudah", elo: "~800" },
+                                      { depth: 8, label: "Sedang", elo: "~1600" },
+                                      { depth: 14, label: "Expert", elo: "3550+" },
+                                    ].map((lvl) => (
+                                      <button
+                                        key={lvl.depth}
+                                        type="button"
+                                        onClick={() => setAiDepth(lvl.depth)}
+                                        className={`p-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                                          aiDepth === lvl.depth
+                                            ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white ring-1 ring-[var(--primary)]"
+                                            : "bg-[var(--background)] border-[var(--border)] text-neutral-400 hover:text-white"
+                                        }`}
+                                      >
+                                        <div className="text-xs font-bold text-white">{lvl.label}</div>
+                                        <div className="text-[10px] text-neutral-400">{lvl.elo}</div>
+                                      </button>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
+                              )}
 
                               {/* GIANT CHESS.COM GREEN CTA BUTTON */}
                               <button
@@ -1510,8 +1591,30 @@ export function Game() {
                   {/* TAB 3: MOVES */}
                   {rightTab === "moves" && (
                     <div className="h-full flex flex-col min-h-0 space-y-2">
-                      <div className="text-xs text-neutral-400 font-bold uppercase tracking-wider mb-1 shrink-0">
-                        {lang === "id" ? "Notasi Langkah Catur (FEN/SAN):" : "Chess Notation (FEN/SAN):"}
+                      <div className="flex items-center justify-between shrink-0 mb-1">
+                        <div className="text-xs text-neutral-400 font-bold uppercase tracking-wider">
+                          {lang === "id" ? "Notasi Langkah Catur:" : "Chess Notation:"}
+                        </div>
+                        {moves.length > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={copyGamePgn}
+                              className="px-2 py-0.5 rounded text-[11px] font-bold bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-[var(--border)] transition-colors cursor-pointer"
+                              title="Salin PGN lengkap dengan metadata pertandingan"
+                            >
+                              📋 {copiedPgn ? "Tersalin!" : "Salin PGN"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={downloadGamePgn}
+                              className="px-2 py-0.5 rounded text-[11px] font-bold bg-[var(--primary)] hover:bg-[var(--primary-strong)] text-white transition-colors cursor-pointer"
+                              title="Unduh file .pgn"
+                            >
+                              ⬇ Unduh .pgn
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 min-h-0">
                         <MoveList
@@ -1618,6 +1721,7 @@ export function Game() {
         open={showGameOverModal}
         onClose={() => setShowGameOverModal(false)}
         onNewGame={() => startGame(humanSide)}
+        onExportPgn={downloadGamePgn}
       />
 
       <PromotionDialog

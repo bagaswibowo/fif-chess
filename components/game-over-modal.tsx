@@ -13,6 +13,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onNewGame: () => void;
+  onExportPgn?: () => void;
 };
 
 export function GameOverModal({
@@ -22,6 +23,7 @@ export function GameOverModal({
   open,
   onClose,
   onNewGame,
+  onExportPgn,
 }: Props) {
   if (!open || !outcome.over) return null;
 
@@ -129,6 +131,15 @@ export function GameOverModal({
             >
               {lang === "id" ? "Main Lagi" : "Play Again"}
             </Button>
+            {onExportPgn && (
+              <Button
+                variant="outline"
+                onClick={onExportPgn}
+                className="border-emerald-600/50 hover:bg-emerald-600/10 text-emerald-400 text-sm font-semibold flex items-center justify-center gap-1.5"
+              >
+                <span>⬇ Export PGN</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={onClose}

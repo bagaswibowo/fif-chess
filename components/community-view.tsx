@@ -51,16 +51,16 @@ export function CommunityView({ user, lang = "id" }: Props) {
   const [showGameImportPicker, setShowGameImportPicker] = useState(false);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
 
-  const categories: ForumCategory[] = [
-    { id: "general", name: "Diskusi Umum Catur", description: "Opini catur, perdebatan menarik, dan topik santai", threadsCount: 1420 },
-    { id: "telu", name: "Komunitas Tel-U / FIF CHESS", description: "Pengumuman kampus, turnamen civitas, dan jadwal latihan UKM", threadsCount: 380 },
-    { id: "analysis", name: "Analisis Permainan & Taktik", description: "Bagikan partai brilian, evaluasi engine, dan koleksi blunder", threadsCount: 890 },
-    { id: "beginner", name: "Untuk Pemula & Latihan", description: "Tanya jawab pemula, trik garpu kuda, dan panduan taktik dasar", threadsCount: 512 },
-  ];
-
   // Threads Data
   const [threads, setThreads] = useState<ForumThread[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const categories: ForumCategory[] = useMemo(() => [
+    { id: "general", name: "Diskusi Umum Catur", description: "Opini catur, perdebatan menarik, dan topik santai", threadsCount: threads.filter((t) => t.categoryId === "general").length },
+    { id: "telu", name: "Komunitas Tel-U / FIF CHESS", description: "Pengumuman kampus, turnamen civitas, dan jadwal latihan UKM", threadsCount: threads.filter((t) => t.categoryId === "telu").length },
+    { id: "analysis", name: "Analisis Permainan & Taktik", description: "Bagikan partai brilian, evaluasi engine, dan koleksi blunder", threadsCount: threads.filter((t) => t.categoryId === "analysis").length },
+    { id: "beginner", name: "Untuk Pemula & Latihan", description: "Tanya jawab pemula, trik garpu kuda, dan panduan taktik dasar", threadsCount: threads.filter((t) => t.categoryId === "beginner").length },
+  ], [threads]);
 
   useEffect(() => {
     fetch("/api/community")

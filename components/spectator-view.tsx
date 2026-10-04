@@ -550,21 +550,23 @@ export function SpectatorView({
             </Button>
           )}
 
-          {/* Depth Selector */}
-          <div className="flex items-center gap-1 bg-[var(--background)] px-1.5 h-9 rounded-xl border border-[var(--border)]">
-            <span className="text-[10px] text-[var(--muted-foreground)] font-bold px-1 hidden sm:inline">Depth:</span>
-            {[6, 10, 14].map((d) => (
-              <button
-                key={d}
-                onClick={() => { setJevDepth(d); setSfDepth(d); }}
-                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
-                  jevDepth === d ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"
-                }`}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
+          {/* Depth Selector (Hanya muncul jika Stockfish terlibat dalam pertandingan) */}
+          {(whiteEngine === "stockfish" || blackEngine === "stockfish") && (
+            <div className="flex items-center gap-1 bg-[var(--background)] px-1.5 h-9 rounded-xl border border-[var(--border)]">
+              <span className="text-[10px] text-[var(--muted-foreground)] font-bold px-1 hidden sm:inline">SF Depth:</span>
+              {[6, 10, 14].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => { setJevDepth(d); setSfDepth(d); }}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
+                    sfDepth === d ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

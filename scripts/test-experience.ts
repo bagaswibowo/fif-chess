@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
-import { getLearnedMove, recordMatchExperience, isBlunderMove } from "../lib/experience.ts";
+import fs from "node:fs";
+import path from "node:path";
+import { getLearnedMove, recordMatchExperience, isBlunderMove, normalizeFen } from "../lib/experience.ts";
 
-const testId = Date.now();
-// Unique ep square ensuring unique key in parts[0..3] across test executions
-const fen = `8/8/8/8/8/8/8/4K2k w - a${(testId % 6) + 2} 0 1`;
+const fen = "8/8/8/8/8/8/8/4K2k w - - 0 1";
+
+// Clean initial state for this test key
+const dbFile = path.join(process.env.JEV_DATA_DIR || path.join(process.cwd(), "data"), "experience.json");
+try {
+  const db = JSON.parse(fs.readFileSync(dbFile, "utf-8"));
+  delete db[normalizeFen(fen)];
+  fs.writeFileSync(dbFile, JSON.stringify(db, null, 2));
+} catch {}
 
 // 1. Initial state: no learned move
 assert.equal(getLearnedMove(fen), null);

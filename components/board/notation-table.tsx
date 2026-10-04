@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export type NotationRow = {
   /** Nomor langkah (1., 2., ...) */
@@ -49,6 +49,19 @@ export function NotationTable({
   const scrollRef = useRef<HTMLDivElement>(null);
   const totalPly = plyCount ?? rows.reduce((acc, r) => acc + (r.white ? 1 : 0) + (r.black ? 1 : 0), 0);
   const selectable = typeof onSelect === "function";
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyPgn = () => {
+    const movePairs: string[] = [];
+    for (const r of rows) {
+      if (r.white && r.black) movePairs.push(`${r.no}. ${r.white} ${r.black}`);
+      else if (r.white) movePairs.push(`${r.no}. ${r.white}`);
+    }
+    const pgn = `[Event "FIF Chess Match"]\n[White "${whiteLabel}"]\n[Black "${blackLabel}"]\n\n${movePairs.join(" ")}`;
+    navigator.clipboard.writeText(pgn);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Auto-scroll ke baris terakhir saat ada langkah baru
   useEffect(() => {
@@ -69,7 +82,19 @@ export function NotationTable({
         <span className="text-xs font-black uppercase tracking-wider text-neutral-300">
           {title} ({totalPly})
         </span>
-        {headerExtra}
+        <div className="flex items-center gap-1.5">
+          {rows.length > 0 && (
+            <button
+              type="button"
+              onClick={handleCopyPgn}
+              className="text-[10px] px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-[var(--border)] transition-colors cursor-pointer font-bold"
+              title="Salin notasi PGN ke clipboard"
+            >
+              {copied ? "✓ Tersalin" : "📋 PGN"}
+            </button>
+          )}
+          {headerExtra}
+        </div>
       </div>
 
       {/* Isi tabel */}
