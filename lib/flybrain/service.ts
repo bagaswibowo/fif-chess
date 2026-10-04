@@ -334,16 +334,20 @@ export function isPredationTrap(fen: string, uci: string): boolean {
  * Nature 2026 / Google Research Cerebellum-like Forward Sensory Prediction:
  * Predicts the opponent's strongest immediate replies (efference copy) to detect 2-ply traps.
  */
-export function predictOpponentHarm(chess: Chess, uci: string): number {
+export function predictOpponentHarm(chess: Chess, uci?: string): number {
   try {
-    const moved = chess.move({
-      from: uci.slice(0, 2),
-      to: uci.slice(2, 4),
-      promotion: uci[4] || undefined,
-    });
-    if (!moved) return 10000;
+    let moved = null;
+    if (uci) {
+      moved = chess.move({
+        from: uci.slice(0, 2),
+        to: uci.slice(2, 4),
+        promotion: uci[4] || undefined,
+      });
+      if (!moved) return 10000;
+    }
+
     if (chess.isGameOver()) {
-      chess.undo();
+      if (uci) chess.undo();
       return chess.isCheckmate() ? -10000 : 0;
     }
 
@@ -369,7 +373,7 @@ export function predictOpponentHarm(chess: Chess, uci: string): number {
       }
     }
 
-    chess.undo();
+    if (uci) chess.undo();
     return maxHarm;
   } catch {
     return 10000;
@@ -420,7 +424,7 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
     let punishment = calculateBoardPunishment(chess, moverColor, oppColor);
 
     // Google Research / Nature 2026 Cerebellum Forward Prediction (2-ply threat)
-    const oppHarm = predictOpponentHarm(chess, uci);
+    const oppHarm = predictOpponentHarm(chess);
     if (oppHarm >= 200) {
       punishment += oppHarm;
     }
