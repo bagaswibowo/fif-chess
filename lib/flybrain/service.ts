@@ -276,6 +276,43 @@ export function playFlyBrainMove(fen: string) {
   };
 }
 
+const PIECE_VALS: Record<string, number> = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+
+function getSquareThreat(chess: Chess, sq: any, myColor: any, oppColor: any) {
+  const attackers = chess.attackers(sq, oppColor);
+  if (!attackers || attackers.length === 0) return null;
+
+  let minOppVal = 10000;
+  for (const a of attackers) {
+    const p = chess.get(a);
+    if (p) minOppVal = Math.min(minOppVal, PIECE_VALS[p.type] ?? 100);
+  }
+  const defenders = chess.attackers(sq, myColor);
+  return { minOppVal, hasDefender: defenders && defenders.length > 0 };
+}
+
+function calculateBoardPunishment(chess: Chess, myColor: any, oppColor: any): number {
+  let punishment = 0;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = chess.board()[r][c];
+      if (!piece || piece.color !== myColor) continue;
+
+      const val = PIECE_VALS[piece.type] ?? 100;
+      const threat = getSquareThreat(chess, piece.square, myColor, oppColor);
+      if (!threat) continue;
+
+      if (threat.minOppVal < val) {
+        punishment += val - threat.minOppVal;
+      } else if (!threat.hasDefender) {
+        const isWingPawn = piece.type === "p" && (piece.square === "g7" || piece.square === "b7" || piece.square === "g2" || piece.square === "b2");
+        punishment += isWingPawn ? 300 : val;
+      }
+    }
+  }
+  return punishment;
+}
+
 /**
  * Nature 2024 (FlyWire connectome - Descending Neurons Premotor Veto):
  * Detects if a move creates catastrophic immediate material loss (attacked by pawn or undefended piece >= 3 pts).
@@ -283,53 +320,52 @@ export function playFlyBrainMove(fen: string) {
 export function isPredationTrap(fen: string, uci: string): boolean {
   try {
     const chess = new Chess(fen);
+    if (!chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })) return false;
+    if (chess.isGameOver()) return false;
+    const opp = chess.turn();
+    const mine = opp === "w" ? "b" : "w";
+    return calculateBoardPunishment(chess, mine, opp) >= 200;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Nature 2024 Biological Reward & Punishment System:
+ * - MBON Reward: Material capture (+100 to +900), Threat evasion (+150), Defending under threat (+120), Check (+80).
+ * - DAN/APL Punishment: Hanging pieces (-100 to -900), Neglecting active threats (-300 to -500), Unbalanced trades.
+ */
+export function calculateBiologicalValence(chess: Chess, uci: string): number {
+  try {
     const moved = chess.move({
       from: uci.slice(0, 2),
       to: uci.slice(2, 4),
       promotion: uci[4] || undefined,
     });
-    if (!moved) return false;
-    if (chess.isGameOver()) return false;
+    if (!moved) return -1000;
 
+    const moverColor = moved.color;
     const oppColor = chess.turn();
-    const myColor = oppColor === "w" ? "b" : "w";
-    const pieceVal: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 1000 };
 
-    for (let r = 0; r < 8; r++) {
-      for (let c = 0; c < 8; c++) {
-        const piece = chess.board()[r][c];
-        if (piece && piece.color === myColor) {
-          const val = pieceVal[piece.type] ?? 1;
-          const square = piece.square;
-          const attackers = chess.attackers(square, oppColor);
-          if (!attackers || attackers.length === 0) continue;
+    let reward = 0;
+    if (moved.captured) reward += PIECE_VALS[moved.captured] ?? 100;
+    if (chess.inCheck()) reward += 80;
 
-          let minOppVal = 1000;
-          for (const attSq of attackers) {
-            const attPiece = chess.get(attSq);
-            if (attPiece) {
-              const aVal = pieceVal[attPiece.type] ?? 1;
-              if (aVal < minOppVal) minOppVal = aVal;
-            }
-          }
+    const fromSquare = uci.slice(0, 2) as any;
+    const toSquare = uci.slice(2, 4) as any;
+    chess.undo();
+    const wasAttacked = chess.isAttacked(fromSquare, oppColor);
+    chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || undefined });
 
-          const defenders = chess.attackers(square, myColor);
-          const hasDefender = defenders && defenders.length > 0;
-
-          // 1. Attacked by piece of lower value (e.g. pawn attacks knight/bishop)
-          if (minOppVal < val) {
-            return true;
-          }
-          // 2. Completely undefended major/minor piece
-          if (!hasDefender && val >= 3) {
-            return true;
-          }
-        }
-      }
+    if (wasAttacked && !chess.isAttacked(toSquare, oppColor)) {
+      reward += 150;
     }
-    return false;
+
+    const punishment = calculateBoardPunishment(chess, moverColor, oppColor);
+    chess.undo();
+    return reward - punishment;
   } catch {
-    return false;
+    return -1000;
   }
 }
 
@@ -374,18 +410,20 @@ export function playSuperflyMove(fen: string, sims = 40) {
     const mctsRes = runMCTS(brain, chess, enc, { sims, cPuct: 1.5 });
     if (!mctsRes || !mctsRes.move) return playFlyBrainMove(fen);
 
-    // 2. Nature 2024 (APL / DAN Avoidance Depression & VNC Descending Premotor Veto)
-    let chosenMove = mctsRes.move;
-    const isBadMove = (m: string) => isBlunderMove(fen, m) || isPredationTrap(fen, m);
+    // 2. Nature 2024 (MBON Valence Reward + DAN/APL Depression Integration)
+    const chEval = new Chess(fen);
+    const scoredVisits = (mctsRes.visits || []).map((v: any) => {
+      const valence = calculateBiologicalValence(chEval, v.uci);
+      const isBlunder = isBlunderMove(fen, v.uci);
+      const penalty = isBlunder ? -1000 : 0;
+      const bioScore = v.n + (valence / 40) + penalty;
+      return { ...v, valence, bioScore };
+    });
+    scoredVisits.sort((a: any, b: any) => b.bioScore - a.bioScore);
 
-    if (isBadMove(chosenMove) && mctsRes.visits && mctsRes.visits.length > 1) {
-      // Rekam langsung ke memori pengalaman agar sirkuit APL/DAN mengingatnya permanen
-      recordMatchExperience(fen, undefined, undefined, chosenMove);
-
-      const safeAlternative = mctsRes.visits.find((v: any) => !isBadMove(v.uci));
-      if (safeAlternative) {
-        chosenMove = safeAlternative.uci;
-      }
+    let chosenMove = scoredVisits.length > 0 ? scoredVisits[0].uci : mctsRes.move;
+    if (scoredVisits.length > 0 && scoredVisits[0].valence <= -250) {
+      recordMatchExperience(fen, undefined, undefined, scoredVisits[0].uci);
     }
 
     const chessApply = new Chess(fen);
@@ -412,7 +450,7 @@ export function playSuperflyMove(fen: string, sims = 40) {
       diagnostics: {
         sims: mctsRes.sims,
         rootValue: mctsRes.rootValue,
-        topVisits: mctsRes.visits.slice(0, 5),
+        topVisits: scoredVisits.slice(0, 5),
       },
     };
   } catch (e) {

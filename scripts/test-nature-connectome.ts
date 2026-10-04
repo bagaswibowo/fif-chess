@@ -38,6 +38,16 @@ async function main() {
   }
   console.log("  ✓ PASS: Hybrid avoided catastrophic predation trap!");
 
+  // Test 3b: Move 5 Defense against 5. Qg4 (protecting g7)
+  console.log("\nTest 3b - Hybrid Defense Against 5. Qg4 threat on g7:");
+  const fen5 = "rnbqk1nr/pppp1ppp/8/2b1P3/4P1Q1/2N5/PPP2PPP/R1B1KBNR b KQkq - 2 5";
+  const defMove = await playEngineMove("jev-fly", { fen: fen5, simulations: 40 });
+  console.log("  Hybrid move against 5. Qg4:", defMove.uci, defMove.san);
+  if (defMove.uci === "d7d5") {
+    throw new Error("Hybrid blundered d5 leaving g7/h8 undefended!");
+  }
+  console.log("  ✓ PASS: Hybrid defended threat on g7!");
+
   // Test 4: Online Experience Memory Learning
   console.log("\nTest 4 - Online Synaptic Plasticity Learning:");
   recordMatchExperience(fen3, "b4c5", -50, "b8c6");

@@ -8,7 +8,7 @@ import {
   TYPESAFE_ENDPOINT,
   type JevPlaySuccess,
 } from "@/lib/jev";
-import { playSuperflyMove, playFlyBrainMove, isPredationTrap } from "@/lib/flybrain/service";
+import { playSuperflyMove, playFlyBrainMove, isPredationTrap, calculateBiologicalValence } from "@/lib/flybrain/service";
 import { getLearnedMove, isBlunderMove, recordMatchExperience } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
@@ -133,10 +133,13 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         const mctsProbs = superfly?.probabilities || {};
 
         const fusedProbs: Record<string, number> = {};
+        const chValence = new Chess(req.fen);
         for (const uci of jevData.legalUcis) {
           const pJev = jevData.resolved.probabilities[uci] ?? 0;
           const pFly = mctsProbs[uci] ?? 0;
-          fusedProbs[uci] = Number((0.5 * pJev + 0.5 * pFly).toFixed(4));
+          const valence = calculateBiologicalValence(chValence, uci);
+          const valenceFactor = valence < 0 ? Math.max(0.01, 1 + valence / 500) : 1 + valence / 300;
+          fusedProbs[uci] = Number(((0.5 * pJev + 0.5 * pFly) * valenceFactor).toFixed(4));
         }
 
         const sortedMoves = Object.entries(fusedProbs).sort((a, b) => b[1] - a[1]);
