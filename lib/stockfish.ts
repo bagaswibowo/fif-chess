@@ -312,10 +312,10 @@ function guardQueenLoss(ctx: GuardContext, delta: number): StockfishResult | nul
 }
 
 function guardEndgame(ctx: GuardContext, delta: number): StockfishResult | null {
-  const isEndgame = (ctx.fen.match(/[rnbqRNBQ]/g) || []).length <= 4;
+  const isEndgame = (ctx.fen.match(/[rnbqRNBQ]/g) || []).length <= 6;
   if (!isEndgame) return null;
-  const isLosing = ctx.sf.bestScore <= -150;
-  const isDeviating = delta > 15;
+  const isLosing = ctx.sf.bestScore <= -120;
+  const isDeviating = delta > 10;
   if (isLosing || isDeviating) {
     try {
       const applied = applyUci(ctx.chess, ctx.sf.bestMove);
@@ -474,8 +474,8 @@ export async function guardJevFlyMove(
   depth = 14,
 ): Promise<StockfishResult> {
   // Ketatkan toleransi di endgame (maxDiff 15 cp) agar tidak kecolongan taktik pion bebas & skakmat
-  const isEndgame = (fen.match(/[rnbqRNBQ]/g) || []).length <= 4;
-  const maxDiff = isEndgame ? 15 : 25;
+  const isEndgame = (fen.match(/[rnbqRNBQ]/g) || []).length <= 6;
+  const maxDiff = isEndgame ? 10 : 20;
   return evaluateGuardedMove(fen, hybridResult, Math.max(14, depth), maxDiff);
 }
 
