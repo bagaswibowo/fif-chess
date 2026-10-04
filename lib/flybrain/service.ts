@@ -336,7 +336,7 @@ export function isPredationTrap(fen: string, uci: string): boolean {
  */
 export function predictOpponentHarm(chess: Chess, uci?: string): number {
   try {
-    let moved = null;
+    let moved: any = null;
     if (uci) {
       moved = chess.move({
         from: uci.slice(0, 2),
@@ -351,6 +351,7 @@ export function predictOpponentHarm(chess: Chess, uci?: string): number {
       return chess.isCheckmate() ? -10000 : 0;
     }
 
+    // Fast O(M) sensory scan: evaluate direct opponent forcing moves from verbose list
     const oppMoves = chess.moves({ verbose: true });
     let maxHarm = 0;
 
@@ -368,41 +369,14 @@ export function predictOpponentHarm(chess: Chess, uci?: string): number {
         }
       }
 
-      chess.move(oppM);
-      if (chess.isCheckmate()) {
+      if (oppM.san.includes("#")) {
         harm += 10000;
-      } else if (chess.inCheck()) {
+      } else if (oppM.san.includes("+")) {
         harm += 300;
       }
 
-      // Cek apakah balasan taktis langsung bisa menyeimbangkan pertukaran
-      let bestCounter = 0;
-      let followupHarm = 0;
-      if (!chess.isGameOver()) {
-        const myReplies = chess.moves({ verbose: true });
-        for (const rep of myReplies) {
-          if (rep.captured) {
-            const cVal = PIECE_VALS[rep.captured] ?? 100;
-            if (cVal > bestCounter) bestCounter = cVal;
-          }
-          // Cek horizon lanjutan untuk langkah forcing
-          if (oppM.captured || oppM.piece === "p") {
-            chess.move(rep);
-            for (const fup of chess.moves({ verbose: true })) {
-              if (fup.captured) {
-                const fVal = PIECE_VALS[fup.captured] ?? 100;
-                if (fVal > followupHarm) followupHarm = fVal;
-              }
-            }
-            chess.undo();
-          }
-        }
-      }
-      chess.undo();
-
-      const netHarm = (harm + followupHarm) - bestCounter;
-      if (netHarm > maxHarm) {
-        maxHarm = netHarm;
+      if (harm > maxHarm) {
+        maxHarm = harm;
         if (maxHarm >= 1000) break;
       }
     }
@@ -447,41 +421,76 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
       reward += 150;
     }
 
-    // snedea/flybrain Internal Drives (Endgame Promotion Hunger)
-    const totalPieces = chess.board().flat().filter(Boolean).length;
-    if (totalPieces <= 14 && moved.piece === "p") {
-      const targetRank = parseInt(uci[3], 10);
-      const promoDist = moverColor === "w" ? 8 - targetRank : targetRank - 1;
-      reward += (7 - promoDist) * 35;
-    }
-
-    let punishment = calculateBoardPunishment(chess, moverColor, oppColor);
-
-    // snedea/flybrain Anti-Shuffle Opening Drive: Hindari memindahkan kuda ke pinggir atau balik ke petak asal
     const totalHalfMoves = chess.history().length;
-    if (totalHalfMoves <= 12) {
-      const toSq = uci.slice(2, 4);
-      const homeSquares = ["b8", "g8", "c8", "f8", "b1", "g1", "c1", "f1"];
-      if (homeSquares.includes(toSq) && !wasAttacked) {
-        punishment += 250;
+    const totalPieces = chess.board().flat().filter(Boolean).length;
+    let punishment = 0;
+
+    // FASE 1: OPENING / FIRST GAME (Langkah <= 16 half-moves)
+    // - Mainkan pion kecil dulu di awal untuk mengaktifkan perwira
+    // - Aktifkan perwira minor (kuda & gajah ke petak aktif)
+    // - Awasi serangan lawan jangan sampai dimakan cuma-cuma
+    if (totalHalfMoves <= 16) {
+      if (moved.piece === "p") {
+        const centerFiles = ["c", "d", "e"];
+        if (centerFiles.includes(uci[2])) {
+          reward += 160; // Buka jalur untuk gajah dan menteri
+        }
       }
-      if (moved.piece === "n" && (toSq.startsWith("a") || toSq.startsWith("h"))) {
-        punishment += 120;
+      if (moved.piece === "n" || moved.piece === "b") {
+        reward += 120; // Mengaktifkan perwira
+      }
+      const homeSquares = ["b8", "g8", "c8", "f8", "b1", "g1", "c1", "f1"];
+      if (homeSquares.includes(toSquare) && !wasAttacked) {
+        punishment += 250; // Jangan balik ke petak asal
+      }
+      if (moved.piece === "n" && (toSquare.startsWith("a") || toSquare.startsWith("h"))) {
+        punishment += 180; // Kuda di pinggir papan buruk
+      }
+      if (moved.piece === "k" && moved.san !== "O-O" && moved.san !== "O-O-O") {
+        punishment += 400; // Jangan gerakkan raja di awal
+      }
+      if (moved.piece === "p" && (uci.startsWith("f2") || uci.startsWith("f7"))) {
+        punishment += 180; // Jangan buka diagonal raja
       }
     }
 
-    // King Safety & Castling Drive:
-    if (moved.san === "O-O" || moved.san === "O-O-O") {
-      reward += 180; // Reward rokade
+    // FASE 2: MIDDLE GAME (Langkah > 16 dan total perwira > 12)
+    // - Mengamankan raja dengan rokade
+    // - Cegah raja keluyuran ke tengah
+    if (totalHalfMoves > 16 && totalPieces > 12) {
+      if (moved.san === "O-O" || moved.san === "O-O-O") {
+        reward += 250; // Amankan raja dengan rokade
+      }
+      if (moved.piece === "k" && moved.san !== "O-O" && moved.san !== "O-O-O") {
+        const destRank = parseInt(uci[3], 10);
+        if (moverColor === "w" && destRank >= 2) punishment += 350;
+        if (moverColor === "b" && destRank <= 7) punishment += 350;
+      }
     }
-    if (totalPieces > 14 && moved.piece === "k" && moved.san !== "O-O" && moved.san !== "O-O-O") {
-      const destRank = parseInt(uci[3], 10);
-      if (moverColor === "w" && destRank >= 2) punishment += 350; // Jangan jalan raja ke tengah
-      if (moverColor === "b" && destRank <= 7) punishment += 350;
+
+    // FASE 3: END GAME (Total perwira <= 12)
+    // - Menyerang sambil memperhitungkan skak raja
+    // - Dorongan makan & promosi pion bebas
+    if (totalPieces <= 12) {
+      if (chess.inCheck()) {
+        reward += 200; // Skak raja lawan di babak akhir
+      }
+      if (moved.piece === "p") {
+        const targetRank = parseInt(uci[3], 10);
+        const promoDist = moverColor === "w" ? 8 - targetRank : targetRank - 1;
+        reward += (7 - promoDist) * 50;
+      }
     }
-    if (totalHalfMoves <= 10 && moved.piece === "p" && (uci.startsWith("f2") || uci.startsWith("f7"))) {
-      punishment += 180; // Jangan buka diagonal raja di pembukaan
+
+    // Proteksi perwira: Cek apakah mendarat di petak yang diserang tanpa pelindung (hanging piece)
+    const isDestAttacked = chess.isAttacked(toSquare, oppColor);
+    const isDestDefended = chess.isAttacked(toSquare, moverColor);
+    if (isDestAttacked && !isDestDefended) {
+      punishment += (PIECE_VALS[moved.piece] ?? 100) * 1.5;
     }
+
+    let punishmentBoard = calculateBoardPunishment(chess, moverColor, oppColor);
+    punishment += punishmentBoard;
 
     // Google Research / Nature 2026 Cerebellum Forward Prediction (2-ply threat)
     const oppHarm = predictOpponentHarm(chess);
