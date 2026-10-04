@@ -331,9 +331,57 @@ export function isPredationTrap(fen: string, uci: string): boolean {
 }
 
 /**
+ * Nature 2026 / Google Research Cerebellum-like Forward Sensory Prediction:
+ * Predicts the opponent's strongest immediate replies (efference copy) to detect 2-ply traps.
+ */
+export function predictOpponentHarm(chess: Chess, uci: string): number {
+  try {
+    const moved = chess.move({
+      from: uci.slice(0, 2),
+      to: uci.slice(2, 4),
+      promotion: uci[4] || undefined,
+    });
+    if (!moved) return 10000;
+    if (chess.isGameOver()) {
+      chess.undo();
+      return chess.isCheckmate() ? -10000 : 0;
+    }
+
+    const oppMoves = chess.moves({ verbose: true });
+    let maxHarm = 0;
+
+    for (const oppM of oppMoves) {
+      let harm = 0;
+      if (oppM.captured) {
+        harm += PIECE_VALS[oppM.captured] ?? 100;
+      }
+      chess.move(oppM);
+      if (chess.isCheckmate()) {
+        harm += 10000;
+      } else if (chess.inCheck()) {
+        harm += 60;
+      }
+      chess.undo();
+
+      if (harm > maxHarm) {
+        maxHarm = harm;
+        if (maxHarm >= 1000) break;
+      }
+    }
+
+    chess.undo();
+    return maxHarm;
+  } catch {
+    return 10000;
+  }
+}
+
+/**
  * Nature 2024 Biological Reward & Punishment System:
  * - MBON Reward: Material capture (+100 to +900), Threat evasion (+150), Defending under threat (+120), Check (+80).
  * - DAN/APL Punishment: Hanging pieces (-100 to -900), Neglecting active threats (-300 to -500), Unbalanced trades.
+ * - Nature 2026 / Google Research Cerebellum Forward Prediction: Suppresses 2-ply opponent traps.
+ * - snedea/flybrain Drives: Pawn promotion hunger in endgame.
  */
 export function calculateBiologicalValence(chess: Chess, uci: string): number {
   try {
@@ -361,7 +409,22 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
       reward += 150;
     }
 
-    const punishment = calculateBoardPunishment(chess, moverColor, oppColor);
+    // snedea/flybrain Internal Drives (Endgame Promotion Hunger)
+    const totalPieces = chess.board().flat().filter(Boolean).length;
+    if (totalPieces <= 14 && moved.piece === "p") {
+      const targetRank = parseInt(uci[3], 10);
+      const promoDist = moverColor === "w" ? 8 - targetRank : targetRank - 1;
+      reward += (7 - promoDist) * 35;
+    }
+
+    let punishment = calculateBoardPunishment(chess, moverColor, oppColor);
+
+    // Google Research / Nature 2026 Cerebellum Forward Prediction (2-ply threat)
+    const oppHarm = predictOpponentHarm(chess, uci);
+    if (oppHarm >= 200) {
+      punishment += oppHarm;
+    }
+
     chess.undo();
     return reward - punishment;
   } catch {
