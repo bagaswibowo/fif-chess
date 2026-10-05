@@ -1,7 +1,7 @@
 import { Chess, type Square } from "chess.js";
 import { playStockfishMove } from "@/lib/stockfish";
 import { applyUci } from "@/lib/chess";
-import type { IChessEngine, EngineMoveRequest, EngineMoveResponse, EnginePrediction } from "./types";
+import type { IChessEngine, EngineMoveRequest, EngineMoveResponse, EnginePrediction, StrategicStep } from "./types";
 
 function describeStrategicIntention(chess: Chess, uci: string, san: string): string {
   const from = uci.slice(0, 2);
@@ -116,29 +116,88 @@ export async function getStockfishPrediction(fen: string, lastUci?: string): Pro
     const threat = identifyThreatWithStockfish(chess, lastUci);
 
     // 2. Prediksi Balasan Lawan (Stockfish 15 NNUE)
-    const sf = await playStockfishMove(fen, 10);
+    const sf = await playStockfishMove(fen, 12);
     const side = chess.turn() === "w" ? "Putih" : "Hitam";
     const evalStr = sf.scoreCp !== null ? `${(sf.scoreCp / 100).toFixed(1)}` : "0.0";
     
-    // 3. Langkah Strategis (taktik kelanjutan Stockfish: niat dia mau ke mana)
-    let strategicMove: { uci: string; san: string; from: string; to: string; intention: string } | null = null;
-    try {
-      const continuationChess = new Chess(fen);
-      applyUci(continuationChess, sf.uci);
-      if (!continuationChess.isGameOver()) {
-        const stratSf = await playStockfishMove(continuationChess.fen(), 8);
-        const stratFrom = stratSf.uci.slice(0, 2);
-        const stratTo = stratSf.uci.slice(2, 4);
-        const intention = describeStrategicIntention(continuationChess, stratSf.uci, stratSf.san);
-        strategicMove = {
-          uci: stratSf.uci,
-          san: stratSf.san,
-          from: stratFrom,
-          to: stratTo,
-          intention,
-        };
+    // 3. Proyeksi Garis Strategis hingga 15 Langkah Masa Depan (Deep Future Trajectory)
+    const futureChess = new Chess(fen);
+    const futureLine: StrategicStep[] = [];
+    const pvMoves: string[] = [];
+    const candidateMoves = [...(sf.pvLine || [])];
+    if (candidateMoves.length === 0 && sf.uci) candidateMoves.push(sf.uci);
+
+    for (let step = 0; step < 15; step++) {
+      if (futureChess.isGameOver()) break;
+      let nextUci = candidateMoves[step];
+      if (!nextUci) {
+        const legals = futureChess.moves({ verbose: true });
+        if (legals.length === 0) break;
+        const pick = legals.find((m: any) => m.captured) || legals.find((m: any) => m.san.includes("+")) || legals[0];
+        nextUci = pick.from + pick.to + (pick.promotion || "");
       }
-    } catch (_) {}
+
+      try {
+        const from = nextUci.slice(0, 2) as Square;
+        const to = nextUci.slice(2, 4) as Square;
+        const promotion = nextUci[4] || undefined;
+        const color = futureChess.turn();
+        const pObj = futureChess.get(from);
+        const piece = pObj ? pObj.type : "p";
+        const app = futureChess.move({ from, to, promotion });
+        if (!app) break;
+
+        const intention = describeStrategicIntention(futureChess, nextUci, app.san);
+        futureLine.push({
+          uci: nextUci,
+          san: app.san,
+          from,
+          to,
+          ply: step + 1,
+          color,
+          piece,
+          intention,
+        });
+        pvMoves.push(app.san);
+      } catch {
+        break;
+      }
+    }
+
+    let strategicMove: { uci: string; san: string; from: string; to: string; intention: string } | null = null;
+    if (futureLine.length > 1) {
+      strategicMove = {
+        uci: futureLine[1].uci,
+        san: futureLine[1].san,
+        from: futureLine[1].from,
+        to: futureLine[1].to,
+        intention: futureLine[1].intention || "Melanjutkan rantai manuver taktis posisi.",
+      };
+    } else if (futureLine.length === 1) {
+      strategicMove = {
+        uci: futureLine[0].uci,
+        san: futureLine[0].san,
+        from: futureLine[0].from,
+        to: futureLine[0].to,
+        intention: futureLine[0].intention || "Langkah taktis tunggal.",
+      };
+    }
+
+    // Bangun teks PGN PV lengkap (misal: 1... e5 2. Nf3 Nc6 ...)
+    const isStartBlack = chess.turn() === "b";
+    const startMoveNum = Math.floor(chess.history().length / 2) + 1;
+    let pvText = "";
+    pvMoves.forEach((san, idx) => {
+      const isBlackMove = isStartBlack ? idx % 2 === 0 : idx % 2 === 1;
+      const moveNum = startMoveNum + Math.floor((idx + (isStartBlack ? 1 : 0)) / 2);
+      if (idx === 0) {
+        pvText += isBlackMove ? `${moveNum}... ${san}` : `${moveNum}. ${san}`;
+      } else if (!isBlackMove) {
+        pvText += ` ${moveNum}. ${san}`;
+      } else {
+        pvText += ` ${san}`;
+      }
+    });
 
     return {
       engine: "stockfish",
@@ -150,6 +209,9 @@ export async function getStockfishPrediction(fen: string, lastUci?: string): Pro
       summary: `Stockfish 15 NNUE memprediksi balasan terbaik ${side}: ${sf.san} (${evalStr})`,
       threat,
       strategicMove,
+      futureLine,
+      pvMoves,
+      pvText,
     };
   } catch {
     return null;

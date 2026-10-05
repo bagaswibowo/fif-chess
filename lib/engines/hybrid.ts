@@ -190,7 +190,26 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         }
 
         const sortedMoves = Object.entries(fusedProbs).sort((a, b) => b[1] - a[1]);
-        const chosenUci = sortedMoves.length > 0 ? sortedMoves[0][0] : jevData.resolved.uci;
+        let chosenUci = sortedMoves.length > 0 ? sortedMoves[0][0] : jevData.resolved.uci;
+
+        // Pemilihan Pembukaan Natural Acak & Adaptif terhadap Langkah Lawan (Non-deterministik)
+        const isOpening = (req.history?.length ?? 0) <= 8;
+        if (isOpening && sortedMoves.length > 1) {
+          const topCandidates = sortedMoves
+            .slice(0, Math.min(5, sortedMoves.length))
+            .filter(([u, p]) => p > 0.05 && !isBlunderMove(req.fen, u) && !isPredationTrap(req.fen, u));
+          if (topCandidates.length > 1) {
+            const totalProb = topCandidates.reduce((sum, [, p]) => sum + p, 0);
+            let rand = Math.random() * totalProb;
+            for (const [candUci, candProb] of topCandidates) {
+              if (rand <= candProb) {
+                chosenUci = candUci;
+                break;
+              }
+              rand -= candProb;
+            }
+          }
+        }
 
         const ch = new Chess(req.fen);
         const applied = applyUci(ch, chosenUci);

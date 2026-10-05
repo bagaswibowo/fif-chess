@@ -15,6 +15,7 @@ export type StockfishResult = {
   outcome: GameOutcome;
   playedScoreCp?: number | null;
   deltaCp?: number | null;
+  pvLine?: string[];
 };
 
 type StockfishEval = {
@@ -71,11 +72,12 @@ function getStockfishEval(fen: string, depth = 12, multipv = 5): Promise<Stockfi
           }
         }
 
-        const pvMatch = line.match(/^info\s+.*multipv\s+(\d+)\s+.*score\s+(cp|mate)\s+(-?\d+).*pv\s+([a-h][1-8][a-h][1-8][qrbn]?)/);
+        const pvMatch = line.match(/^info\s+.*multipv\s+(\d+)\s+.*score\s+(cp|mate)\s+(-?\d+).*pv\s+(.+)$/);
         if (pvMatch) {
           const type = pvMatch[2];
           const val = parseInt(pvMatch[3], 10);
-          const uci = pvMatch[4];
+          const rawPv = pvMatch[4].trim().split(/\s+/);
+          const uci = rawPv[0];
           const score = type === "mate" ? (val > 0 ? 30000 - val * 100 : -30000 - val * 100) : val;
           candidateScores.set(uci, score);
           if (pvMatch[1] === "1") {
@@ -495,6 +497,7 @@ export async function playStockfishMove(fen: string, depth = 14, playedUci?: str
     let out = "";
     const topMoves = new Map<number, string>();
     const topScores = new Map<number, number>();
+    let topPvLine: string[] = [];
     let settled = false;
 
     const cleanup = () => {
@@ -532,10 +535,16 @@ export async function playStockfishMove(fen: string, depth = 14, playedUci?: str
       out = lines.pop() || "";
 
       for (const line of lines) {
-        const pvMatch = line.match(/^info\s+.*multipv\s+(\d+)\s+.*pv\s+((?:[a-h][1-8])+[qrbn]?)/);
+        const pvMatch = line.match(/^info\s+.*multipv\s+(\d+)\s+.*pv\s+(.+)$/);
         if (pvMatch) {
           const pvId = parseInt(pvMatch[1], 10);
-          topMoves.set(pvId, pvMatch[2]);
+          const rawPv = pvMatch[2].trim().split(/\s+/);
+          if (rawPv.length > 0) {
+            topMoves.set(pvId, rawPv[0]);
+            if (pvId === 1) {
+              topPvLine = rawPv;
+            }
+          }
           const cpMatch = line.match(/score cp (-?\d+)/);
           const mateMatch = line.match(/score mate (-?\d+)/);
           if (cpMatch) topScores.set(pvId, parseInt(cpMatch[1], 10));
@@ -609,6 +618,7 @@ export async function playStockfishMove(fen: string, depth = 14, playedUci?: str
                 confidence,
                 droppedMoveCount: 0,
                 outcome: describeOutcome(chess),
+                pvLine: topPvLine,
               });
             })().catch((err) => reject(err));
           } catch (applyErr) {

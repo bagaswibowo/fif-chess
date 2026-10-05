@@ -49,6 +49,8 @@ type Commentary = {
   strategicPlan?: string;
   tacticalBadge?: TacticalConcept | null;
   tektokkan?: TektokkanPrediction | null;
+  futureLine?: any[];
+  pvText?: string;
 };
 
 const MOVE_DELAY_MS = 850;
@@ -370,9 +372,11 @@ export function SpectatorView({
 
       setPredictedMove(chosenPred ? { from: chosenPred.from, to: chosenPred.to } : null);
 
-      // 3. Langkah Strategis (Taktik langkah diambil, niat mau kemana) — Dibaca menggunakan machine Stockfish
+      // 3. Langkah Strategis (Taktik langkah diambil, proyeksi 15 langkah ke depan)
       let stratMoveObj: { from: string; to: string } | null = null;
       let stratPlanText = "";
+      const futureLine = (data.prediction as any)?.futureLine || [];
+      const pvText = (data.prediction as any)?.pvText || "";
 
       if (data.prediction?.strategicMove) {
         stratMoveObj = {
@@ -380,6 +384,9 @@ export function SpectatorView({
           to: data.prediction.strategicMove.to,
         };
         stratPlanText = `${data.prediction.strategicMove.san}: ${data.prediction.strategicMove.intention}`;
+      } else if (futureLine.length > 1) {
+        stratMoveObj = { from: futureLine[1].from, to: futureLine[1].to };
+        stratPlanText = `${futureLine[1].san}: ${futureLine[1].intention || "Melanjutkan rantai manuver taktis posisi."}`;
       } else {
         stratPlanText = "Mengonsolidasikan struktur perwira dan memperkuat kontrol sentral lanjutan.";
       }
@@ -446,6 +453,8 @@ export function SpectatorView({
         strategicPlan: stratPlanText,
         tacticalBadge: activeConcept,
         tektokkan,
+        futureLine,
+        pvText,
       });
 
       const out = describeOutcome(chess);
@@ -505,7 +514,24 @@ export function SpectatorView({
     } else if (predictedMove) {
       list.push({ startSquare: predictedMove.from, endSquare: predictedMove.to, color: "#38bdf8" });
     }
-    if (strategicMove && strategicMove.from !== strategicMove.to) {
+    // Proyeksi Panah Strategis Multi-Langkah Masa Depan (Hingga 15 Langkah)
+    if (commentary?.futureLine && commentary.futureLine.length > 0) {
+      commentary.futureLine.forEach((step: any, idx: number) => {
+        // Step 0 adalah balasan lawan (sudah ditandai biru langit)
+        // Step 1 sampai 14 adalah rentetan proyeksi langkah strategis
+        if (idx > 0 && step.from && step.to && step.from !== step.to) {
+          const color =
+            idx === 1
+              ? "#10b981"
+              : idx <= 3
+              ? "#059669cc"
+              : idx <= 7
+              ? "#34d39999"
+              : "#6ee7b766";
+          list.push({ startSquare: step.from, endSquare: step.to, color });
+        }
+      });
+    } else if (strategicMove && strategicMove.from !== strategicMove.to) {
       list.push({ startSquare: strategicMove.from, endSquare: strategicMove.to, color: "#10b981" });
     }
     return list;
@@ -786,6 +812,28 @@ export function SpectatorView({
                       {commentary.prediction}
                     </div>
                   </div>
+
+                  {/* Strategi 15-Langkah Masa Depan */}
+                  {commentary.strategicPlan && (
+                    <div className="p-2.5 rounded-xl border border-emerald-500/40 text-[12px] shadow-inner" style={{ background: "rgba(6, 40, 28, 0.7)" }}>
+                      <div className="font-bold text-emerald-400 text-[11px] flex items-center justify-between mb-1">
+                        <span>Strategi ({commentary.futureLine && commentary.futureLine.length > 0 ? commentary.futureLine.length : 15} Langkah Masa Depan):</span>
+                        {commentary.futureLine && commentary.futureLine.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-semibold border border-emerald-500/30">
+                            {commentary.futureLine.length} plies
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-emerald-100 font-medium leading-relaxed mb-1.5">
+                        {commentary.strategicPlan}
+                      </div>
+                      {commentary.pvText && (
+                        <div className="font-mono text-[10.5px] p-2 rounded-lg bg-emerald-950/70 border border-emerald-500/25 text-emerald-200/90 leading-relaxed break-words">
+                          {commentary.pvText}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Stockfish Prediction Verification Indicator */}
                   {predictionComparison && (

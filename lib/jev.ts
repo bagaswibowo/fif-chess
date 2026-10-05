@@ -17,13 +17,15 @@ export const MOVE_QUESTION_ID = "move";
 
 export const MOVE_INSTRUCTIONS =
   "You are an elite Grandmaster chess engine playing with ruthless tactical precision, spatial dominance, and deep endgame mastery (10,000 Elo ambition). " +
-  "SPATIAL REASONING PROTOCOL (Chessigma): " +
-  "1. EXPLOIT HANGING OPPONENTS: If enemy_hanging_pieces are present, capture or attack them immediately. " +
-  "2. RESCUE HANGING PIECES: If any our_hanging_pieces exist, protect, trade, or escape them immediately. " +
-  "3. SEIZE OPEN FILES & EMPTY SQUARES: Occupy open_files and semi_open_files with Rooks; establish Knights/Bishops on key_empty_squares in the center. " +
-  "4. PASSED PAWN PROMOTION: Advance passed pawns relentlessly toward rank 8 to create a Queen! Escort them with your King. " +
-  "5. BLOCKADE ENEMY PASSED PAWNS: Put Rooks behind enemy passed pawns and blockade promotion squares. " +
-  "6. NEVER SACRIFICE MATERIAL WITHOUT DIRECT CHECKMATE: Avoid losing Rooks or blundering piece parity. 7. TACTICS: Forks, pins, skewers, and double attacks.";
+  "GRANDMASTER DECISION HIERARCHY (choxos/jevchess & Nature connectome): " +
+  "1. IMMEDIATE MATE: Always play a move that delivers checkmate! " +
+  "2. SURVIVAL & MATE PREVENTION: NEVER choose a move that allows the opponent to checkmate next turn. " +
+  "3. PRESERVE MATERIAL: Never hang pieces for free or sacrifice material without forced mate. " +
+  "4. EXPLOIT HANGING OPPONENTS: If enemy_hanging_pieces are present, capture or attack them immediately. " +
+  "5. RESCUE HANGING PIECES: If any our_hanging_pieces exist, protect, trade, or escape them immediately. " +
+  "6. SEIZE OPEN FILES & EMPTY SQUARES: Occupy open_files and semi_open_files with Rooks; establish Knights/Bishops on key_empty_squares in the center. " +
+  "7. PASSED PAWN PROMOTION: Advance passed pawns relentlessly toward rank 8 to create a Queen! Escort them with your King. " +
+  "8. TACTICS: Forks, pins, skewers, and double attacks.";
 
 export const PIECE_VALUES: Record<string, number> = {
   p: 1,
@@ -339,31 +341,50 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
       (raw?.piece === "r" || raw?.piece === "k") &&
       oppPassedSquares.some((osq) => osq[0] === toFile);
 
-    // Multi-attack & Queen attacks
+    // Multi-attack, Queen attacks, Opponent Mate Check & Hanging Check (choxos/jevchess)
+    let allowsOpponentMate = false;
+    let hangsPieceFree = false;
     let attacksMultiple = false;
     let attacksOppQueen = false;
     try {
       const simChess = new Chess(fen);
-      simChess.move({ from: move.uci.slice(0, 2), to: move.uci.slice(2, 4), promotion: move.uci[4] });
-      let attackedCount = 0;
-      const bSim = simChess.board();
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-          const pt = bSim[r]?.[c];
-          if (pt && pt.color === oppColor) {
-            const sqSim = (String.fromCharCode(97 + c) + (8 - r)) as Square;
-            if (simChess.isAttacked(sqSim, myColor)) {
-              attackedCount++;
-              if (pt.type === "q") attacksOppQueen = true;
+      const appliedSim = simChess.move({ from: move.uci.slice(0, 2), to: move.uci.slice(2, 4), promotion: move.uci[4] });
+      if (appliedSim) {
+        const oppReplies = simChess.moves({ verbose: true });
+        allowsOpponentMate = oppReplies.some((r: any) => r.san.includes("#"));
+
+        // Periksa apakah bidak masuk ke petak serang lawan tanpa perlindungan kawan
+        if (destAttacked && !move.isCheckmate) {
+          const defenders = simChess.attackers(move.to as Square, myColor);
+          if (defenders.length === 0 && pVal > 1) {
+            hangsPieceFree = true;
+          }
+        }
+
+        let attackedCount = 0;
+        const bSim = simChess.board();
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const pt = bSim[r]?.[c];
+            if (pt && pt.color === oppColor) {
+              const sqSim = (String.fromCharCode(97 + c) + (8 - r)) as Square;
+              if (simChess.isAttacked(sqSim, myColor)) {
+                attackedCount++;
+                if (pt.type === "q") attacksOppQueen = true;
+              }
             }
           }
         }
+        attacksMultiple = attackedCount >= 2;
       }
-      attacksMultiple = attackedCount >= 2;
     } catch {}
 
-    if (move.isCheckmate) {
+    if (allowsOpponentMate) {
+      desc += "[CRITICAL DANGER: ALLOWS IMMEDIATE CHECKMATE] DO NOT PLAY! Allows opponent to deliver checkmate on the next move! (VETO)";
+    } else if (move.isCheckmate) {
       desc += "[FATAL CHECKMATE] DELIVERS IMMEDIATE CHECKMATE! Wins the game!";
+    } else if (hangsPieceFree) {
+      desc += `[CRITICAL BLUNDER: HANGS PIECE FOR FREE] Moves ${pName} to ${move.to} where it is undefended and will be captured for free! (AVOID)`;
     } else if (move.isPromotion) {
       desc += "[QUEEN PROMOTION] PROMOTES PAWN TO QUEEN! Decisive game-winning promotion!";
     } else if (isPassed && ((myColor === "w" && toRank >= 6) || (myColor === "b" && toRank <= 3))) {

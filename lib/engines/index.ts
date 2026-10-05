@@ -33,30 +33,34 @@ export async function playEngineMove(
   id: EngineId,
   req: EngineMoveRequest,
 ): Promise<EngineMoveResponse> {
-  // Classical Master Opening Book (tersedia untuk seluruh engine pada fase pembukaan)
-  const bookMove = getOpeningBookMove(req.fen, req.seed ?? 0);
-  if (bookMove) {
-    try {
-      const ch = new Chess(req.fen);
-      const app = applyUci(ch, bookMove);
-      if (app) {
-        const prediction = await getStockfishPrediction(ch.fen(), bookMove);
-        return {
-          engine: id,
-          uci: bookMove,
-          san: app.san,
-          fen: ch.fen(),
-          probabilities: { [bookMove]: 1.0 },
-          confidence: 1.0,
-          droppedMoveCount: 0,
-          outcome: describeOutcome(ch),
-          prediction,
-          metadata: {
-            source: "master_opening_book",
-          },
-        };
-      }
-    } catch {}
+  // Hanya Stockfish yang menggunakan buku pembukaan terstruktur jika diperlukan;
+  // Seluruh engine bio-AI (Jev, Fly, Jev-Fly) memainkan langkah pembukaan secara natural & acak,
+  // membaca gerakan lawan secara adaptif tanpa terikat teori pembukaan kaku.
+  if (id === "stockfish") {
+    const bookMove = getOpeningBookMove(req.fen, req.seed ?? 0);
+    if (bookMove) {
+      try {
+        const ch = new Chess(req.fen);
+        const app = applyUci(ch, bookMove);
+        if (app) {
+          const prediction = await getStockfishPrediction(ch.fen(), bookMove);
+          return {
+            engine: id,
+            uci: bookMove,
+            san: app.san,
+            fen: ch.fen(),
+            probabilities: { [bookMove]: 1.0 },
+            confidence: 1.0,
+            droppedMoveCount: 0,
+            outcome: describeOutcome(ch),
+            prediction,
+            metadata: {
+              source: "master_opening_book",
+            },
+          };
+        }
+      } catch {}
+    }
   }
 
   const engine = getEngine(id);

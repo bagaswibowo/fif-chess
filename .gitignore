@@ -43,5 +43,9 @@ next-env.d.ts
 models/*.flyb
 chesscog-service/models/*.pt
 artefacts/
-/data/
+# data
+/data/*
+!/data/experience.json
+!/data/training-10-matches.json
+!/data/training-20-matches.json
 models/

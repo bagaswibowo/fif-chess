@@ -11,6 +11,17 @@ export interface EngineMoveRequest {
   simulations?: number;
 }
 
+export interface StrategicStep {
+  uci: string;
+  san: string;
+  from: string;
+  to: string;
+  ply: number;
+  color: "w" | "b";
+  piece?: string;
+  intention?: string;
+}
+
 export interface EnginePrediction {
   engine: "stockfish";
   uci: string;
@@ -33,6 +44,9 @@ export interface EnginePrediction {
     to: string;
     intention: string;
   } | null;
+  futureLine?: StrategicStep[];
+  pvMoves?: string[];
+  pvText?: string;
 }
 
 export interface EngineMoveResponse {
