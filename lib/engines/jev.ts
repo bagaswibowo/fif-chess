@@ -10,6 +10,7 @@ import {
 import { playSuperflyMove, playFlyBrainMove, isPredationTrap } from "@/lib/flybrain/service";
 import { getLearnedMove, isBlunderMove, recordMatchExperience, reinforceMatchDopamine } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
+import { evalSingleMove, playStockfishMove } from "../stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
 export class PureJevEngine implements IChessEngine {
@@ -144,6 +145,18 @@ export class PureJevEngine implements IChessEngine {
         chosenUci = safeCandidate;
       }
     }
+
+    // Grandmaster Anti-Blunder Tactical Gate
+    try {
+      const score = await evalSingleMove(req.fen, chosenUci, 8);
+      if (score !== null && score <= -200) {
+        const sfBest = await playStockfishMove(req.fen, 10);
+        if (sfBest?.uci && sfBest.uci !== chosenUci) {
+          recordMatchExperience(req.fen, sfBest.uci, 50, chosenUci);
+          chosenUci = sfBest.uci;
+        }
+      }
+    } catch (_) {}
 
     const chess = new Chess(req.fen);
     const applied = applyUci(chess, chosenUci);
