@@ -125,7 +125,7 @@ function getStockfishEval(fen: string, depth = 12, multipv = 5): Promise<Stockfi
   });
 }
 
-function evalSingleMove(fen: string, move: string, depth = 10): Promise<number | null> {
+export function evalSingleMove(fen: string, move: string, depth = 10): Promise<number | null> {
   return new Promise((resolve) => {
     let p: ChildProcessWithoutNullStreams;
     try {

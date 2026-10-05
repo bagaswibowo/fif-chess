@@ -12,6 +12,7 @@ import { playSuperflyMove, playFlyBrainMove, isPredationTrap, calculateBiologica
 import { evaluateConnectomeNetwork } from "@/lib/flybrain/connectome-network";
 import { getLearnedMove, isBlunderMove, recordMatchExperience, reinforceMatchDopamine } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
+import { evalSingleMove, playStockfishMove } from "../stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
 export interface BoardPieceScan {
@@ -157,6 +158,54 @@ function applyVncDescendingVeto(fen: string, hybridRaw: JevPlaySuccess): boolean
   return false;
 }
 
+async function ensureTacticalSafety(
+  fen: string,
+  candidateUci: string,
+  legalUcis: string[]
+): Promise<{ uci: string; vetoed: boolean; reason?: string }> {
+  if (legalUcis.length <= 1) return { uci: candidateUci, vetoed: false };
+
+  // 1. Cek langsung: apakah candidateUci membiarkan lawan skakmat di ply berikutnya?
+  try {
+    const testCh = new Chess(fen);
+    const testApp = testCh.move({
+      from: candidateUci.slice(0, 2),
+      to: candidateUci.slice(2, 4),
+      promotion: candidateUci[4],
+    });
+    if (testApp) {
+      const oppMoves = testCh.moves({ verbose: true });
+      if (oppMoves.some((m: any) => m.san.includes("#"))) {
+        const safeMoves = legalUcis.filter((u) => {
+          const c2 = new Chess(fen);
+          try {
+            if (!c2.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] })) return false;
+            return !c2.moves({ verbose: true }).some((om: any) => om.san.includes("#"));
+          } catch {
+            return false;
+          }
+        });
+        if (safeMoves.length > 0) {
+          return { uci: safeMoves[0], vetoed: true, reason: "checkmate_in_1_prevented" };
+        }
+      }
+    }
+  } catch (_) {}
+
+  // 2. Evaluasi Taktis Stockfish (depth 8): Deteksi Blunder Berat / Kehilangan Perwira
+  try {
+    const score = await evalSingleMove(fen, candidateUci, 8);
+    if (score !== null && score <= -200) {
+      const sfBest = await playStockfishMove(fen, 10);
+      if (sfBest?.uci && sfBest.uci !== candidateUci) {
+        return { uci: sfBest.uci, vetoed: true, reason: `tactical_blunder_vetoed (eval was ${score}cp)` };
+      }
+    }
+  } catch (_) {}
+
+  return { uci: candidateUci, vetoed: false };
+}
+
 export class JevSuperflyHybridEngine implements IChessEngine {
   readonly id = "jev-fly" as const;
   readonly name = "Jev AI + Superfly Connectome Hybrid";
@@ -220,26 +269,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         }
 
         const sortedMoves = Object.entries(fusedProbs).sort((a, b) => b[1] - a[1]);
-        let chosenUci = sortedMoves.length > 0 ? sortedMoves[0][0] : jevData.resolved.uci;
-
-        // Pemilihan Pembukaan Natural Acak & Adaptif terhadap Langkah Lawan (Non-deterministik)
-        const isOpening = (req.history?.length ?? 0) <= 8;
-        if (isOpening && sortedMoves.length > 1) {
-          const topCandidates = sortedMoves
-            .slice(0, Math.min(5, sortedMoves.length))
-            .filter(([u, p]) => p > 0.05 && !isBlunderMove(req.fen, u) && !isPredationTrap(req.fen, u));
-          if (topCandidates.length > 1) {
-            const totalProb = topCandidates.reduce((sum, [, p]) => sum + p, 0);
-            let rand = Math.random() * totalProb;
-            for (const [candUci, candProb] of topCandidates) {
-              if (rand <= candProb) {
-                chosenUci = candUci;
-                break;
-              }
-              rand -= candProb;
-            }
-          }
-        }
+        const chosenUci = sortedMoves.length > 0 ? sortedMoves[0][0] : jevData.resolved.uci;
 
         const ch = new Chess(req.fen);
         const applied = applyUci(ch, chosenUci);
@@ -264,6 +294,21 @@ export class JevSuperflyHybridEngine implements IChessEngine {
     }
 
     const vncVetoed = applyVncDescendingVeto(req.fen, hybridRaw);
+
+    // Grandmaster Anti-Blunder Tactical Gate (Proteksi Blunder Fatal, Kehilangan Perwira, & Skakmat)
+    const chLegals = new Chess(req.fen).moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
+    const safeCheck = await ensureTacticalSafety(req.fen, hybridRaw.uci, chLegals);
+    if (safeCheck.vetoed && safeCheck.uci !== hybridRaw.uci) {
+      const oldBlunder = hybridRaw.uci;
+      const chNew = new Chess(req.fen);
+      const appNew = applyUci(chNew, safeCheck.uci);
+      hybridRaw.uci = safeCheck.uci;
+      hybridRaw.san = appNew.san;
+      hybridRaw.fen = chNew.fen();
+      hybridRaw.outcome = describeOutcome(chNew);
+      hybridRaw.probabilities = { [safeCheck.uci]: 1.0 };
+      recordMatchExperience(req.fen, safeCheck.uci, 50, oldBlunder);
+    }
 
     const prediction = await getStockfishPrediction(hybridRaw.fen, hybridRaw.uci);
     if (prediction?.uci) {
