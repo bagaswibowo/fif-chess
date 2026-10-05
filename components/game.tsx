@@ -160,7 +160,7 @@ export function Game() {
   const [rightTab, setRightTab] = useState<RightTab>("game-setup");
   const [commentatorEnabled, setCommentatorEnabled] = useState(true);
   const [lang, setLang] = useState<"id" | "en">("id");
-  const [timeMode, setTimeMode] = useState<string>("5m");
+  const [timeMode, setTimeMode] = useState<string>("unlimited");
 
   // Identitas: satu session server-side (cookie httpOnly). Tidak ada lagi
   // identitas client-side yang bisa dipalsukan.
@@ -274,6 +274,8 @@ export function Game() {
   }, [effectiveOutcome.over, moves, playMode, humanSide, effectiveOutcome.kind, effectiveOutcome.winner, pvpOpponentName, selectedAiOpponent, timeMode, recordGameResult]);
 
   const onTimeout = useCallback((loser: Side) => {
+    // Sesi latihan / lawan AI bebas batas waktu berfikir: tidak ada timeout game over
+    if (playMode === "ai" || timeMode === "unlimited") return;
     setCustomOutcome({
       over: true,
       winner: loser === "white" ? "black" : "white",
@@ -282,7 +284,7 @@ export function Game() {
         ? (lang === "id" ? "Waktu Putih Habis" : "White ran out of time")
         : (lang === "id" ? "Waktu Hitam Habis" : "Black ran out of time"),
     });
-  }, [lang]);
+  }, [lang, playMode, timeMode]);
 
   const { resetClocks, formattedWhiteTime, formattedBlackTime } = useChessClock(timeMode, turn, effectiveOutcome.over, onTimeout);
 
@@ -1108,6 +1110,10 @@ export function Game() {
                         onPieceDrop,
                         boardStyle: {
                           backgroundColor: "var(--board-dark)",
+                          gridTemplateRows: "repeat(8, 1fr)",
+                          gap: 0,
+                          width: "100%",
+                          height: "100%",
                         },
                         onSquareClick: ({ square }) => {
                           if (!humanToMove) return;
@@ -1435,12 +1441,12 @@ export function Game() {
                             </div>
                             <div className="grid grid-cols-3 gap-1">
                                 {[
-                                  { id: "5m", label: "5 mnt", sub: "Kilat" },
+                                  { id: "unlimited", label: "Bebas", sub: "Tanpa Batas" },
                                   { id: "10m", label: "10 mnt", sub: "Cepat" },
+                                  { id: "5m", label: "5 mnt", sub: "Kilat" },
                                   { id: "3m", label: "3 mnt", sub: "Kilat" },
                                   { id: "1m", label: "1 mnt", sub: "Peluru" },
                                   { id: "30m", label: "30 mnt", sub: "Klasik" },
-                                  { id: "unlimited", label: "Bebas", sub: "Tanpa Batas" },
                                 ].map((t) => (
                                 <button
                                   key={t.id}

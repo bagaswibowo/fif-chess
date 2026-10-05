@@ -9,6 +9,7 @@ import {
   type JevPlaySuccess,
 } from "@/lib/jev";
 import { playSuperflyMove, playFlyBrainMove, isPredationTrap, calculateBiologicalValence } from "@/lib/flybrain/service";
+import { evaluateConnectomeNetwork } from "@/lib/flybrain/connectome-network";
 import { getLearnedMove, isBlunderMove, recordMatchExperience, reinforceMatchDopamine } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
@@ -241,6 +242,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         vncVetoed,
         weights: { jev: 0.6, flybrain: 0.4 },
         spatialInsights: (hybridRaw.request?.state as any)?.spatial_insights ?? null,
+        connectomeNetwork: evaluateConnectomeNetwork(new Chess(req.fen), hybridRaw.uci),
       },
     };
   }

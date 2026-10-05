@@ -18,6 +18,7 @@ import { runMCTS } from "./mcts.js";
 // @ts-ignore
 import * as enc from "./encoding.js";
 import { getLearnedMove, isBlunderMove, recordMatchExperience } from "../experience.ts";
+import { evaluateConnectomeNetwork } from "./connectome-network.ts";
 
 let cachedBrain: any = null;
 
@@ -406,6 +407,7 @@ export function predictOpponentHarm(chess: Chess, uci?: string): number {
  */
 export function calculateBiologicalValence(chess: Chess, uci: string): number {
   try {
+    const preFen = chess.fen();
     const moved = chess.move({
       from: uci.slice(0, 2),
       to: uci.slice(2, 4),
@@ -576,6 +578,14 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
     const oppHarm = predictOpponentHarm(chess);
     if (oppHarm >= 200) {
       punishment += oppHarm;
+    }
+
+    // Lin, Yang et al. bioRxiv / Nature 2024 Connectome Network Statistics (Reciprocity, Triads, NSRNs, Rich-Club)
+    const connectomeStats = evaluateConnectomeNetwork(new Chess(preFen), uci);
+    if (connectomeStats.netScore > 0) {
+      reward += connectomeStats.netScore;
+    } else if (connectomeStats.netScore < 0) {
+      punishment += Math.abs(connectomeStats.netScore);
     }
 
     chess.undo();

@@ -10,6 +10,7 @@ import { PUZZLES, QUEST_CHAPTERS } from "../lib/puzzle-data.ts";
 import { replaySanList, isKnightFork, isQueenThreatened, isQueenXrayed, calculateMaterialCp, applyUci } from "../lib/chess.ts";
 import { buildLivePuzzle, isPlayablePuzzle } from "../lib/puzzle-store.ts";
 import { recordMatchExperience, getLearnedMove, isBlunderMove } from "../lib/experience.ts";
+import { evaluateConnectomeNetwork } from "../lib/flybrain/connectome-network.ts";
 
 const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 const PIECE_NAME = { p: "pion", n: "knight", b: "gajah", r: "menara", q: "sekertaris" };
@@ -167,4 +168,10 @@ recordMatchExperience(testFen, "g1f3", 35, "f1c4");
 assert.equal(getLearnedMove(testFen)?.move, "g1f3");
 assert.equal(isBlunderMove(testFen, "f1c4"), true);
 
-console.log("  Invariants catur & taktik: royal_fork=ok, eval_bar=ok, promo=ok, memory=ok.");
+// 8. Connectome Network Statistics (bioRxiv/Nature 2024: Reciprocity, Triads, NSRNs)
+const connectomeTestChess = new Chess("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+const netStats = evaluateConnectomeNetwork(connectomeTestChess, "e7e5");
+assert.ok(typeof netStats.netScore === "number", "connectome netScore must be number");
+assert.ok(Array.isArray(netStats.diagnostics), "connectome diagnostics must be array");
+
+console.log("  Invariants catur & taktik: royal_fork=ok, eval_bar=ok, promo=ok, memory=ok, connectome=ok.");

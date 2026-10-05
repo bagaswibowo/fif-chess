@@ -531,7 +531,13 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
                   void tryMove(sourceSquare, targetSquare);
                   return true;
                 },
-                boardStyle: { backgroundColor: "var(--board-dark)" },
+                boardStyle: {
+                  backgroundColor: "var(--board-dark)",
+                  gridTemplateRows: "repeat(8, 1fr)",
+                  gap: 0,
+                  width: "100%",
+                  height: "100%",
+                },
                 onSquareClick: ({ square }) => {
                   if (selectedSquare) {
                     void tryMove(selectedSquare, square);
