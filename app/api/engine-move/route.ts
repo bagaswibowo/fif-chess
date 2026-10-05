@@ -3,6 +3,7 @@ import { validateFen } from "@/lib/chess";
 import { GATE_COOKIE, gateConfigured, readCookie, sessionValid } from "@/lib/gate";
 import { JevRequestError } from "@/lib/jev";
 import { playEngineMove, type EngineId } from "@/lib/engines";
+import { reinforceMatchDopamine } from "@/lib/experience";
 
 export const runtime = 'nodejs';
 
@@ -63,6 +64,12 @@ export async function POST(request: Request) {
       seed,
       history,
     });
+
+    // Reinforcement Learning: Bila pertandingan selesai, beri reward dopamin ke rangkaian langkah pemenang
+    if (result.outcome?.over && (result.outcome.winner === "white" || result.outcome.winner === "black")) {
+      reinforceMatchDopamine([...history, result.san], result.outcome.winner);
+    }
+
     return NextResponse.json(result);
   } catch (err: unknown) {
     if (err instanceof JevRequestError) {

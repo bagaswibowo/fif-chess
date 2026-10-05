@@ -5,6 +5,7 @@ import { Chess } from "chess.js";
 interface ExperienceEntry {
   bestMove?: string;
   score?: number;
+  dopamine?: number;
   blunders?: string[];
   timesEncountered?: number;
 }
@@ -39,11 +40,11 @@ export function normalizeFen(fen: string): string {
   return parts.slice(0, 4).join(" ");
 }
 
-export function getLearnedMove(fen: string): { move: string; score: number } | null {
+export function getLearnedMove(fen: string): { move: string; score: number; dopamine: number } | null {
   const db = loadDb();
   const entry = db[normalizeFen(fen)];
   if (entry?.bestMove) {
-    return { move: entry.bestMove, score: entry.score ?? 0 };
+    return { move: entry.bestMove, score: entry.score ?? 0, dopamine: entry.dopamine ?? 0 };
   }
   return null;
 }
@@ -92,4 +93,70 @@ export function recordMatchExperience(
   } catch {
     // Ignore invalid FEN
   }
+}
+
+/**
+ * PAM-DAN Mushroom Body Dopamine Reinforcement:
+ * Ketika pertandingan selesai dengan kemenangan, lonjakan dopamin (+400 PAM) diberikan
+ * ke seluruh rangkaian langkah yang membawa kemenangan, memperkuat plastisitas sinaptik.
+ * Langkah pihak yang kalah dipotong dopaminnya (-300 PPL1) dan langkah terakhir dicatat sebagai blunder.
+ */
+export function reinforceMatchDopamine(history: string[], winningColor: "white" | "black"): void {
+  if (!Array.isArray(history) || history.length === 0) return;
+  try {
+    const ch = new Chess();
+    const winningMoves: { fen: string; uci: string }[] = [];
+    const losingMoves: { fen: string; uci: string }[] = [];
+
+    for (const moveStr of history) {
+      const fenBefore = ch.fen();
+      const turn = ch.turn() === "w" ? "white" : "black";
+      let applied = null;
+      try {
+        applied = ch.move(moveStr);
+      } catch {
+        try {
+          applied = ch.move({
+            from: moveStr.slice(0, 2),
+            to: moveStr.slice(2, 4),
+            promotion: moveStr[4] || undefined,
+          });
+        } catch {}
+      }
+      if (!applied) break;
+
+      const uci = applied.from + applied.to + (applied.promotion || "");
+      if (turn === winningColor) {
+        winningMoves.push({ fen: fenBefore, uci });
+      } else {
+        losingMoves.push({ fen: fenBefore, uci });
+      }
+    }
+
+    const db = loadDb();
+
+    // 1. Dopamine Surge (+400 PAM) untuk langkah pemenang
+    for (const item of winningMoves) {
+      const key = normalizeFen(item.fen);
+      const entry = db[key] || { timesEncountered: 0 };
+      entry.timesEncountered = (entry.timesEncountered || 0) + 1;
+      entry.dopamine = Math.min(1000, (entry.dopamine || 0) + 400);
+      entry.bestMove = item.uci;
+      entry.score = Math.max(entry.score ?? 50, 100);
+      db[key] = entry;
+    }
+
+    // 2. Aversive Depression (-300 PPL1) untuk langkah terakhir yang menyebabkan kekalahan
+    if (losingMoves.length > 0) {
+      const fatalMove = losingMoves[losingMoves.length - 1];
+      const key = normalizeFen(fatalMove.fen);
+      const entry = db[key] || { timesEncountered: 0 };
+      entry.timesEncountered = (entry.timesEncountered || 0) + 1;
+      entry.dopamine = Math.max(-1000, (entry.dopamine || 0) - 300);
+      entry.blunders = Array.from(new Set([...(entry.blunders || []), fatalMove.uci]));
+      db[key] = entry;
+    }
+
+    saveDb();
+  } catch {}
 }

@@ -548,12 +548,14 @@ export function playSuperflyMove(fen: string, sims = 15) {
 
     // 2. Nature 2024 (MBON Valence Reward + DAN/APL Depression Integration)
     const chEval = new Chess(fen);
+    const learnedPos = getLearnedMove(fen);
     const scoredVisits = (mctsRes.visits || []).map((v: any) => {
       const valence = calculateBiologicalValence(chEval, v.uci);
       const isBlunder = isBlunderMove(fen, v.uci);
       const penalty = isBlunder ? -1000 : 0;
-      const bioScore = v.n + (valence / 40) + penalty;
-      return { ...v, valence, bioScore };
+      const dopamineBonus = (learnedPos && learnedPos.move === v.uci) ? (learnedPos.dopamine ?? 0) / 20 : 0;
+      const bioScore = v.n + (valence / 40) + dopamineBonus + penalty;
+      return { ...v, valence, bioScore, dopamineBonus };
     });
     scoredVisits.sort((a: any, b: any) => b.bioScore - a.bioScore);
 
