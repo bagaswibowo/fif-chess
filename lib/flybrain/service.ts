@@ -503,6 +503,14 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
       if (moved.piece === "p" && (uci.startsWith("f2") || uci.startsWith("f7"))) {
         punishment += 180;
       }
+
+      // 8. Jangan halangi pion sentral (e/d) sendiri dengan gajah sebelum pion itu maju! (misal Be6 memblokir e7)
+      if (moved.piece === "b") {
+        if (moverColor === "b" && toSquare === "e6" && chess.get("e7" as any)?.type === "p") punishment += 300;
+        if (moverColor === "b" && toSquare === "d6" && chess.get("d7" as any)?.type === "p") punishment += 300;
+        if (moverColor === "w" && toSquare === "e3" && chess.get("e2" as any)?.type === "p") punishment += 300;
+        if (moverColor === "w" && toSquare === "d3" && chess.get("d2" as any)?.type === "p") punishment += 300;
+      }
     }
 
     // FASE 2: MIDDLE GAME (Langkah > 16 dan total perwira > 12)

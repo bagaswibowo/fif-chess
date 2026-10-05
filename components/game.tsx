@@ -248,8 +248,7 @@ export function Game() {
     }
   }, [effectiveOutcome.over]);
 
-  // Catat permainan selesai ke riwayat. playedAt = epoch ms supaya tab
-  // Riwayat bisa mengurutkan dan menampilkan tanggal+jam dengan benar.
+  // Catat permainan selesai ke riwayat & trigger pembelajaran sinaptik backend (PAM/DAN Dopamine)
   useEffect(() => {
     if (!effectiveOutcome.over || moves.length === 0) return;
     recordGameResult({
@@ -261,6 +260,17 @@ export function Game() {
       mode: playMode,
       timeMode,
     });
+
+    if (effectiveOutcome.winner === "white" || effectiveOutcome.winner === "black") {
+      fetch("/api/match-result", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          history: moves.map((m: any) => m.san),
+          winner: effectiveOutcome.winner,
+        }),
+      }).catch((e) => console.warn("Match learning sync failed:", e));
+    }
   }, [effectiveOutcome.over, moves, playMode, humanSide, effectiveOutcome.kind, effectiveOutcome.winner, pvpOpponentName, selectedAiOpponent, timeMode, recordGameResult]);
 
   const onTimeout = useCallback((loser: Side) => {

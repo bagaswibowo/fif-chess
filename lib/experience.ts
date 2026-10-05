@@ -146,15 +146,18 @@ export function reinforceMatchDopamine(history: string[], winningColor: "white" 
       db[key] = entry;
     }
 
-    // 2. Aversive Depression (-300 PPL1) untuk langkah terakhir yang menyebabkan kekalahan
+    // 2. Aversive Depression (-300 PPL1) untuk rangkaian langkah kritis pihak yang kalah
     if (losingMoves.length > 0) {
-      const fatalMove = losingMoves[losingMoves.length - 1];
-      const key = normalizeFen(fatalMove.fen);
-      const entry = db[key] || { timesEncountered: 0 };
-      entry.timesEncountered = (entry.timesEncountered || 0) + 1;
-      entry.dopamine = Math.max(-1000, (entry.dopamine || 0) - 300);
-      entry.blunders = Array.from(new Set([...(entry.blunders || []), fatalMove.uci]));
-      db[key] = entry;
+      // Rekam hingga 6 langkah terakhir pihak yang kalah sebagai zona blunder kritis
+      const recentLosing = losingMoves.slice(-6);
+      for (const fatalMove of recentLosing) {
+        const key = normalizeFen(fatalMove.fen);
+        const entry = db[key] || { timesEncountered: 0 };
+        entry.timesEncountered = (entry.timesEncountered || 0) + 1;
+        entry.dopamine = Math.max(-1000, (entry.dopamine || 0) - 300);
+        entry.blunders = Array.from(new Set([...(entry.blunders || []), fatalMove.uci]));
+        db[key] = entry;
+      }
     }
 
     saveDb();
