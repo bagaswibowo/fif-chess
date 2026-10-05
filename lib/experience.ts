@@ -48,7 +48,14 @@ export function getLearnedMove(fen: string): { move: string; score: number } | n
   return null;
 }
 
+const START_FEN_NORMALIZED = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
+
 export function isBlunderMove(fen: string, move: string): boolean {
+  // Posisi awal catur tidak pernah memiliki blunder pada langkah ke-1
+  if (normalizeFen(fen) === START_FEN_NORMALIZED) {
+    return false;
+  }
+
   const db = loadDb();
   const entry = db[normalizeFen(fen)];
   return Array.isArray(entry?.blunders) && entry.blunders.includes(move);
