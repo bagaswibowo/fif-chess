@@ -164,8 +164,61 @@ export async function getStockfishPrediction(fen: string, lastUci?: string): Pro
       }
     }
 
+    // 3. Proyeksi Strategi Khusus Bidak/Pion yang Melangkah Saja (Bukan semua bidak di papan)
+    const movedSq = lastUci && lastUci.length >= 4 ? (lastUci.slice(2, 4) as Square) : null;
+    const pieceTrajectory: StrategicStep[] = [];
+    let trackSq = movedSq;
+
+    if (trackSq) {
+      // Telusuri pergerakan lanjutan khusus untuk bidak ini dari futureLine
+      for (const step of futureLine) {
+        if (step.from === trackSq) {
+          pieceTrajectory.push(step);
+          trackSq = step.to as Square;
+        }
+      }
+
+      // Jika bidak ini belum melangkah di PV, cari kelanjutan taktis terbaik khusus untuk bidak ini
+      if (pieceTrajectory.length === 0) {
+        const continuationChess = new Chess(fen);
+        if (sf.uci) {
+          try { applyUci(continuationChess, sf.uci); } catch (_) {}
+        }
+        if (!continuationChess.isGameOver()) {
+          const pieceMoves = continuationChess.moves({ verbose: true }).filter((m: any) => m.from === movedSq);
+          if (pieceMoves.length > 0) {
+            pieceMoves.sort((a: any, b: any) => {
+              const scoreM = (m: any) => (m.captured ? 10 : 0) + (m.san.includes("+") ? 5 : 0) + (["d4","e4","d5","e5"].includes(m.to) ? 3 : 1);
+              return scoreM(b) - scoreM(a);
+            });
+            const bestPieceMove = pieceMoves[0];
+            const pUci = bestPieceMove.from + bestPieceMove.to + (bestPieceMove.promotion || "");
+            const intention = describeStrategicIntention(continuationChess, pUci, bestPieceMove.san);
+            pieceTrajectory.push({
+              uci: pUci,
+              san: bestPieceMove.san,
+              from: bestPieceMove.from,
+              to: bestPieceMove.to,
+              ply: 2,
+              color: continuationChess.turn(),
+              piece: bestPieceMove.piece,
+              intention,
+            });
+          }
+        }
+      }
+    }
+
     let strategicMove: { uci: string; san: string; from: string; to: string; intention: string } | null = null;
-    if (futureLine.length > 1) {
+    if (pieceTrajectory.length > 0) {
+      strategicMove = {
+        uci: pieceTrajectory[0].uci,
+        san: pieceTrajectory[0].san,
+        from: pieceTrajectory[0].from,
+        to: pieceTrajectory[0].to,
+        intention: pieceTrajectory[0].intention || "Melanjutkan manuver taktis bidak ini.",
+      };
+    } else if (futureLine.length > 1) {
       strategicMove = {
         uci: futureLine[1].uci,
         san: futureLine[1].san,
@@ -210,6 +263,7 @@ export async function getStockfishPrediction(fen: string, lastUci?: string): Pro
       threat,
       strategicMove,
       futureLine,
+      pieceTrajectory,
       pvMoves,
       pvText,
     };

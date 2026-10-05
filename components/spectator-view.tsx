@@ -50,6 +50,7 @@ type Commentary = {
   tacticalBadge?: TacticalConcept | null;
   tektokkan?: TektokkanPrediction | null;
   futureLine?: any[];
+  pieceTrajectory?: any[];
   pvText?: string;
 };
 
@@ -376,9 +377,13 @@ export function SpectatorView({
       let stratMoveObj: { from: string; to: string } | null = null;
       let stratPlanText = "";
       const futureLine = (data.prediction as any)?.futureLine || [];
+      const pieceTrajectory = (data.prediction as any)?.pieceTrajectory || [];
       const pvText = (data.prediction as any)?.pvText || "";
 
-      if (data.prediction?.strategicMove) {
+      if (pieceTrajectory.length > 0) {
+        stratMoveObj = { from: pieceTrajectory[0].from, to: pieceTrajectory[0].to };
+        stratPlanText = `${pieceTrajectory[0].san}: ${pieceTrajectory[0].intention || "Manuver lanjutan bidak ini."}`;
+      } else if (data.prediction?.strategicMove) {
         stratMoveObj = {
           from: data.prediction.strategicMove.from,
           to: data.prediction.strategicMove.to,
@@ -454,6 +459,7 @@ export function SpectatorView({
         tacticalBadge: activeConcept,
         tektokkan,
         futureLine,
+        pieceTrajectory,
         pvText,
       });
 
@@ -514,24 +520,20 @@ export function SpectatorView({
     } else if (predictedMove) {
       list.push({ startSquare: predictedMove.from, endSquare: predictedMove.to, color: "#38bdf8" });
     }
-    // Proyeksi Panah Strategis Multi-Langkah Masa Depan (Hingga 15 Langkah)
-    if (commentary?.futureLine && commentary.futureLine.length > 0) {
-      commentary.futureLine.forEach((step: any, idx: number) => {
-        // Step 0 adalah balasan lawan (sudah ditandai biru langit)
-        // Step 1 sampai 14 adalah rentetan proyeksi langkah strategis
-        if (idx > 0 && step.from && step.to && step.from !== step.to) {
-          const color =
-            idx === 1
-              ? "#10b981"
-              : idx <= 3
-              ? "#059669cc"
-              : idx <= 7
-              ? "#34d39999"
-              : "#6ee7b766";
+    // Proyeksi Panah Strategis Khusus untuk Bidak/Pion yang Melangkah Saja
+    const activeSq = lastMoveUci && lastMoveUci.length >= 4 ? lastMoveUci.slice(2, 4) : "";
+    const trajectory = commentary?.pieceTrajectory && commentary.pieceTrajectory.length > 0
+      ? commentary.pieceTrajectory
+      : (commentary?.futureLine ? commentary.futureLine.filter((step: any) => step.from === activeSq) : []);
+
+    if (trajectory && trajectory.length > 0) {
+      trajectory.forEach((step: any, idx: number) => {
+        if (step.from && step.to && step.from !== step.to) {
+          const color = idx === 0 ? "#10b981" : "#059669cc";
           list.push({ startSquare: step.from, endSquare: step.to, color });
         }
       });
-    } else if (strategicMove && strategicMove.from !== strategicMove.to) {
+    } else if (strategicMove && strategicMove.from !== strategicMove.to && (!activeSq || strategicMove.from === activeSq)) {
       list.push({ startSquare: strategicMove.from, endSquare: strategicMove.to, color: "#10b981" });
     }
     return list;
@@ -813,14 +815,14 @@ export function SpectatorView({
                     </div>
                   </div>
 
-                  {/* Strategi 15-Langkah Masa Depan */}
+                  {/* Strategi Khusus Bidak/Pion yang Melangkah */}
                   {commentary.strategicPlan && (
                     <div className="p-2.5 rounded-xl border border-emerald-500/40 text-[12px] shadow-inner" style={{ background: "rgba(6, 40, 28, 0.7)" }}>
                       <div className="font-bold text-emerald-400 text-[11px] flex items-center justify-between mb-1">
-                        <span>Strategi ({commentary.futureLine && commentary.futureLine.length > 0 ? commentary.futureLine.length : 15} Langkah Masa Depan):</span>
-                        {commentary.futureLine && commentary.futureLine.length > 0 && (
+                        <span>Strategi Bidak ({commentary.moveSan}):</span>
+                        {commentary.pieceTrajectory && commentary.pieceTrajectory.length > 0 && (
                           <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-semibold border border-emerald-500/30">
-                            {commentary.futureLine.length} plies
+                            {commentary.pieceTrajectory.length} langkah maju
                           </span>
                         )}
                       </div>
@@ -829,6 +831,7 @@ export function SpectatorView({
                       </div>
                       {commentary.pvText && (
                         <div className="font-mono text-[10.5px] p-2 rounded-lg bg-emerald-950/70 border border-emerald-500/25 text-emerald-200/90 leading-relaxed break-words">
+                          <span className="text-emerald-400 font-sans text-[10px] font-bold block mb-0.5">Kontekstual PV Global:</span>
                           {commentary.pvText}
                         </div>
                       )}

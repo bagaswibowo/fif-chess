@@ -45,6 +45,7 @@ export interface EnginePrediction {
     intention: string;
   } | null;
   futureLine?: StrategicStep[];
+  pieceTrajectory?: StrategicStep[];
   pvMoves?: string[];
   pvText?: string;
 }
