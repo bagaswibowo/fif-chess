@@ -10,7 +10,7 @@ export class PureSuperflyEngine implements IChessEngine {
   readonly name = "Superfly Connectome (PUCT MCTS)";
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
-    const sims = Math.max(10, Math.min(100, req.simulations ?? 40));
+    const sims = Math.max(12, req.simulations ?? 15);
     // 100% Pure Drosophila Connectome PUCT MCTS with Nature 2024 Circuits
     const flyRes = playSuperflyMove(req.fen, sims) || playFlyBrainMove(req.fen);
     if (!flyRes) {

@@ -509,7 +509,7 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
  * Superfly: FlyBrain with PUCT Monte Carlo Tree Search
  * As featured on https://fly.eyed.to/ (Drosophila connectome + MCTS simulations)
  */
-export function playSuperflyMove(fen: string, sims = 40) {
+export function playSuperflyMove(fen: string, sims = 15) {
   try {
     // 1. Nature 2024 (MBON Valence Recall): Jika posisi sudah dikuasai dari Stockfish, langsung eksekusi
     const learned = getLearnedMove(fen);

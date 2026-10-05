@@ -122,14 +122,18 @@ export class JevSuperflyHybridEngine implements IChessEngine {
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
     const key = req.apiKey || process.env.TYPESAFE_API_KEY;
-    const sims = Math.max(25, req.simulations ?? 40);
+    const sims = Math.max(12, req.simulations ?? 15);
 
     let hybridRaw: JevPlaySuccess | null = null;
 
     if (key) {
-      const jevData = await queryJevPriors(req.fen, req.seed, req.history, key);
+      // Jalankan Jev Priors (LLM) dan Superfly MCTS (Connectome) secara paralel agar responsif (<3s)
+      const [jevData, superfly] = await Promise.all([
+        queryJevPriors(req.fen, req.seed, req.history, key),
+        Promise.resolve().then(() => playSuperflyMove(req.fen, sims)),
+      ]);
+
       if (jevData) {
-        const superfly = playSuperflyMove(req.fen, sims);
         const mctsProbs = superfly?.probabilities || {};
 
         const fusedProbs: Record<string, number> = {};
