@@ -16,7 +16,14 @@ export const JEV_MODEL = "jev-latest";
 export const MOVE_QUESTION_ID = "move";
 
 export const MOVE_INSTRUCTIONS =
-  "You are an elite Grandmaster chess engine playing with ruthless tactical precision and deep endgame mastery (10,000 Elo ambition). WINNING LAWS: 1. PASSED PAWN PROMOTION: Advance passed pawns relentlessly toward rank 8 to create a Queen! Escort them with your King. 2. BLOCKADE ENEMY PASSED PAWNS: If the opponent has passed pawns, place your Rooks behind them and blockade their promotion square immediately! Never allow enemy pawns to promote unchecked. 3. NEVER SACRIFICE MATERIAL WITHOUT DIRECT CHECKMATE: Do not lose Rooks or wander your King into enemy mating nets. 4. KILLER TACTICS: Forks, pins, skewers, and decisive passed pawn creation.";
+  "You are an elite Grandmaster chess engine playing with ruthless tactical precision, spatial dominance, and deep endgame mastery (10,000 Elo ambition). " +
+  "SPATIAL REASONING PROTOCOL (Chessigma): " +
+  "1. EXPLOIT HANGING OPPONENTS: If enemy_hanging_pieces are present, capture or attack them immediately. " +
+  "2. RESCUE HANGING PIECES: If any our_hanging_pieces exist, protect, trade, or escape them immediately. " +
+  "3. SEIZE OPEN FILES & EMPTY SQUARES: Occupy open_files and semi_open_files with Rooks; establish Knights/Bishops on key_empty_squares in the center. " +
+  "4. PASSED PAWN PROMOTION: Advance passed pawns relentlessly toward rank 8 to create a Queen! Escort them with your King. " +
+  "5. BLOCKADE ENEMY PASSED PAWNS: Put Rooks behind enemy passed pawns and blockade promotion squares. " +
+  "6. NEVER SACRIFICE MATERIAL WITHOUT DIRECT CHECKMATE: Avoid losing Rooks or blundering piece parity. 7. TACTICS: Forks, pins, skewers, and double attacks.";
 
 export const PIECE_VALUES: Record<string, number> = {
   p: 1,
@@ -36,6 +43,16 @@ export const PIECE_NAMES: Record<string, string> = {
   k: "king",
 };
 
+export interface ChessigmaSpatialInsights {
+  our_piece_positions: string[];
+  opponent_piece_positions: string[];
+  our_hanging_pieces: string[];
+  enemy_hanging_pieces: string[];
+  open_files: string[];
+  semi_open_files: string[];
+  key_empty_squares: string[];
+}
+
 export type JevState = {
   fen: string;
   side_to_move: "white" | "black";
@@ -49,6 +66,14 @@ export type JevState = {
   opp_has_passed_pawns: boolean;
   is_endgame: boolean;
   pieces_on_board?: string[];
+  spatial_insights?: ChessigmaSpatialInsights;
+  our_piece_positions?: string[];
+  opponent_piece_positions?: string[];
+  our_hanging_pieces?: string[];
+  enemy_hanging_pieces?: string[];
+  open_files?: string[];
+  semi_open_files?: string[];
+  key_empty_squares?: string[];
   fly_brain_top_moves: string[];
   strategic_mandate: string;
   tactical_situation: string;
@@ -103,6 +128,102 @@ function isPassedPawn(chess: Chess, fromSq: string, targetColor?: "w" | "b"): bo
   return true;
 }
 
+export function extractChessigmaSpatialInsights(chess: Chess): ChessigmaSpatialInsights {
+  const myColor = chess.turn();
+  const oppColor = myColor === "w" ? "b" : "w";
+  const board = chess.board();
+  const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
+
+  const ourPieces: string[] = [];
+  const oppPieces: string[] = [];
+  const ourHanging: string[] = [];
+  const oppHanging: string[] = [];
+
+  const pawnCountPerFile: Record<"w" | "b", Record<string, number>> = {
+    w: { a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, g: 0, h: 0 },
+    b: { a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, g: 0, h: 0 },
+  };
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (!p) continue;
+      const sq = (files[c] + (8 - r)) as Square;
+
+      if (p.type === "p") {
+        pawnCountPerFile[p.color as "w" | "b"][files[c]]++;
+      }
+
+      const isDef = chess.isAttacked(sq, p.color);
+      const isThreat = chess.isAttacked(sq, p.color === "w" ? "b" : "w");
+
+      const pDesc = `${p.type.toUpperCase()} on ${sq} ${
+        isThreat
+          ? isDef
+            ? "[ATTACKED-DEFENDED]"
+            : "[HANGING!]"
+          : isDef
+          ? "(defended)"
+          : "(quiet)"
+      }`;
+
+      if (p.color === myColor) {
+        ourPieces.push(pDesc);
+        if (isThreat && !isDef && p.type !== "k") {
+          ourHanging.push(`${p.type.toUpperCase()} on ${sq}`);
+        }
+      } else {
+        oppPieces.push(pDesc);
+        if (isThreat && !isDef && p.type !== "k") {
+          oppHanging.push(`${p.type.toUpperCase()} on ${sq}`);
+        }
+      }
+    }
+  }
+
+  const openFiles: string[] = [];
+  const semiOpenFiles: string[] = [];
+  files.forEach((f) => {
+    if (pawnCountPerFile.w[f] === 0 && pawnCountPerFile.b[f] === 0) {
+      openFiles.push(`${f}-file (OPEN)`);
+    } else if (pawnCountPerFile[myColor as "w" | "b"][f] === 0 && pawnCountPerFile[oppColor as "w" | "b"][f] > 0) {
+      semiOpenFiles.push(`${f}-file (semi-open for us)`);
+    }
+  });
+
+  const centerSquares: Square[] = ["d4", "d5", "e4", "e5", "c4", "c5", "f4", "f5"];
+  const keyEmptySquares: string[] = [];
+  centerSquares.forEach((sq) => {
+    const fIdx = files.indexOf(sq[0]);
+    const rIdx = 8 - parseInt(sq[1], 10);
+    if (!board[rIdx][fIdx]) {
+      const myCtrl = chess.isAttacked(sq, myColor);
+      const oppCtrl = chess.isAttacked(sq, oppColor);
+      keyEmptySquares.push(
+        `${sq} [EMPTY - ${
+          myCtrl && oppCtrl
+            ? "CONTESTED"
+            : myCtrl
+            ? "WE CONTROL"
+            : oppCtrl
+            ? "OPPONENT CONTROLS"
+            : "UNCONTROLLED"
+        }]`,
+      );
+    }
+  });
+
+  return {
+    our_piece_positions: ourPieces,
+    opponent_piece_positions: oppPieces,
+    our_hanging_pieces: ourHanging,
+    enemy_hanging_pieces: oppHanging,
+    open_files: openFiles,
+    semi_open_files: semiOpenFiles,
+    key_empty_squares: keyEmptySquares,
+  };
+}
+
 export function buildJevRequest(fen: string, seed?: number, history: string[] = []): BuiltJevRequest {
   const chess = parseFen(fen);
   if (chess.isGameOver()) {
@@ -143,6 +264,7 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
   }
 
   const isEndgame = totalQueens === 0 || ply >= 35;
+  const spatial = extractChessigmaSpatialInsights(chess);
 
   // 1. Fly Brain Sensory Forward Pass (134k Drosophila neurons)
   const flyResult = evaluateWithFlyBrain(fen, isEndgame);
@@ -305,6 +427,17 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
       }
     }
 
+    // Chessigma Spatial & Tactical Awareness
+    if (raw && spatial.our_hanging_pieces.some((h) => h.includes(move.from))) {
+      desc += ` [RESCUE HANGING PIECE] Safely rescues undefended ${pName} on ${move.from} from enemy threats!`;
+    } else if (move.isCapture && spatial.enemy_hanging_pieces.some((h) => h.includes(move.to))) {
+      desc += ` [CAPTURE HANGING ENEMY] Strikes free undefended opponent target on ${move.to}! Wins material!`;
+    } else if ((raw as any)?.piece === "r" && spatial.open_files.some((f) => f.startsWith(toFile))) {
+      desc += ` [SEIZE OPEN FILE] Deploys Rook to open ${toFile}-file for maximum vertical board penetration!`;
+    } else if (spatial.key_empty_squares.some((es) => es.startsWith(move.to) && es.includes("WE CONTROL"))) {
+      desc += ` [OCCUPY CONTROLLED CENTRAL OUTPOST] Dominates key empty central square ${move.to}!`;
+    }
+
     criteria[move.uci] = desc;
   }
 
@@ -323,8 +456,16 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
         opp_has_passed_pawns: oppHasPassedPawns,
         is_endgame: isEndgame,
         pieces_on_board: chess.board().flatMap((row: any[], r: number) =>
-          row.flatMap((sq: any, c: number) => (sq ? [`${sq.color === "w" ? "White" : "Black"} ${sq.type.toUpperCase()} at ${String.fromCharCode(97 + c)}${8 - r}`] : []))
+          row.flatMap((sq: any, c: number) => (sq ? [`${sq.color === "w" ? "White" : "Black"} ${sq.type.toUpperCase()} at ${String.fromCharCode(97 + c)}${8 - r}`] : [])),
         ),
+        spatial_insights: spatial,
+        our_piece_positions: spatial.our_piece_positions,
+        opponent_piece_positions: spatial.opponent_piece_positions,
+        our_hanging_pieces: spatial.our_hanging_pieces,
+        enemy_hanging_pieces: spatial.enemy_hanging_pieces,
+        open_files: spatial.open_files,
+        semi_open_files: spatial.semi_open_files,
+        key_empty_squares: spatial.key_empty_squares,
         fly_brain_top_moves: flyTop3.map((m) => `${m.san} (${(m.prob * 100).toFixed(0)}%)`),
         strategic_mandate: strategicMandate,
         tactical_situation: tacticalSituation,

@@ -178,12 +178,14 @@ export class JevSuperflyHybridEngine implements IChessEngine {
 
         const fusedProbs: Record<string, number> = {};
         const chValence = new Chess(req.fen);
+        const weightJev = 0.6;
+        const weightFly = 0.4;
         for (const uci of jevData.legalUcis) {
           const pJev = jevData.resolved.probabilities[uci] ?? 0;
           const pFly = mctsProbs[uci] ?? 0;
           const valence = calculateBiologicalValence(chValence, uci);
           const valenceFactor = valence < 0 ? Math.max(0.01, 1 + valence / 500) : 1 + valence / 300;
-          fusedProbs[uci] = Number(((0.5 * pJev + 0.5 * pFly) * valenceFactor).toFixed(4));
+          fusedProbs[uci] = Number(((weightJev * pJev + weightFly * pFly) * valenceFactor).toFixed(4));
         }
 
         const sortedMoves = Object.entries(fusedProbs).sort((a, b) => b[1] - a[1]);
@@ -237,6 +239,8 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         hybridType: key ? "rlcd_connectome_fusion" : "superfly_mcts_pure",
         simulations: sims,
         vncVetoed,
+        weights: { jev: 0.6, flybrain: 0.4 },
+        spatialInsights: (hybridRaw.request?.state as any)?.spatial_insights ?? null,
       },
     };
   }
