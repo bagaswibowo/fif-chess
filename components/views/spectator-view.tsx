@@ -727,21 +727,21 @@ export function SpectatorView({
 
             <CardContent className="p-3 space-y-2 text-[12px] leading-relaxed overflow-y-auto flex-1 min-h-0 custom-scrollbar">
               {/* 4 Label Pertanda Visual di dalam card Komentator AI */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[10px] font-bold">
-                <div className="flex items-center gap-1.5 text-neutral-300">
-                  <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300 shrink-0" />
-                  <span className="truncate">Langkah Sekarang</span>
+              <div className="grid grid-cols-4 gap-1 p-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[10px] font-bold">
+                <div className="flex items-center justify-center gap-1 text-neutral-300">
+                  <span className="w-2 h-2 rounded bg-yellow-500 border border-yellow-300 shrink-0" />
+                  <span className="truncate">Langkah</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-red-400">
-                  <span className="w-2.5 h-2.5 rounded bg-red-500 border border-red-300 shrink-0" />
+                <div className="flex items-center justify-center gap-1 text-red-400">
+                  <span className="w-2 h-2 rounded bg-red-500 border border-red-300 shrink-0" />
                   <span className="truncate">Ancaman</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-sky-400">
-                  <span className="w-2.5 h-2.5 rounded bg-sky-400 border border-sky-300 shrink-0" />
+                <div className="flex items-center justify-center gap-1 text-sky-400">
+                  <span className="w-2 h-2 rounded bg-sky-400 border border-sky-300 shrink-0" />
                   <span className="truncate">Prediksi</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-emerald-400">
-                  <span className="w-2.5 h-2.5 rounded bg-emerald-500 border border-emerald-300 shrink-0" />
+                <div className="flex items-center justify-center gap-1 text-emerald-400">
+                  <span className="w-2 h-2 rounded bg-emerald-500 border border-emerald-300 shrink-0" />
                   <span className="truncate">Strategi</span>
                 </div>
               </div>
