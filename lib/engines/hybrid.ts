@@ -174,6 +174,27 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         Promise.resolve().then(() => playSuperflyMove(req.fen, sims)),
       ]);
 
+      // 1. Nature 2024 MBON Recall: Eksekusi instan langkah Stockfish depth 14 jika sudah dipelajari
+      const learned = getLearnedMove(req.fen);
+      if (learned && !isBlunderMove(req.fen, learned.move)) {
+        const chL = new Chess(req.fen);
+        const applied = applyUci(chL, learned.move);
+        const prediction = await getStockfishPrediction(chL.fen(), learned.move);
+        return {
+          engine: this.id,
+          uci: learned.move,
+          san: applied.san,
+          fen: chL.fen(),
+          probabilities: { [learned.move]: 0.99 },
+          confidence: 0.99,
+          droppedMoveCount: 0,
+          outcome: describeOutcome(chL),
+          scoreCp: learned.score,
+          prediction,
+          metadata: { source: "mbon-learned", model: "jev-fly-hybrid" },
+        };
+      }
+
       if (jevData) {
         const mctsProbs = superfly?.probabilities || {};
 
@@ -186,7 +207,16 @@ export class JevSuperflyHybridEngine implements IChessEngine {
           const pFly = mctsProbs[uci] ?? 0;
           const valence = calculateBiologicalValence(chValence, uci);
           const valenceFactor = valence < 0 ? Math.max(0.01, 1 + valence / 500) : 1 + valence / 300;
-          fusedProbs[uci] = Number(((weightJev * pJev + weightFly * pFly) * valenceFactor).toFixed(4));
+          let prob = (weightJev * pJev + weightFly * pFly) * valenceFactor;
+
+          // Lonjakan Dopamin PAM jika cocok dengan database pembelajaran Stockfish
+          if (learned?.move === uci) {
+            prob *= 1 + Math.max(0.5, (learned.dopamine || 350) / 400);
+          }
+          if (isBlunderMove(req.fen, uci)) {
+            prob *= 0.05;
+          }
+          fusedProbs[uci] = Number(prob.toFixed(4));
         }
 
         const sortedMoves = Object.entries(fusedProbs).sort((a, b) => b[1] - a[1]);
