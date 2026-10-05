@@ -39,7 +39,7 @@ MODEL_PATH = os.environ.get("YOLO_MODEL_PATH", "/app/models/best.pt")
 CONF_THRESHOLD = float(os.environ.get("YOLO_CONF_THRESHOLD", "0.25"))
 
 # Kelas YOLO -> karakter FEN. Nama kelas di dataset harus persis seperti ini
-# (lihat scripts/train-yolo11.md untuk detail dataset & pelatihan).
+# (lihat docs/train-yolo11.md untuk detail dataset & pelatihan).
 CLASS_TO_FEN = {
     "white-pawn": "P", "white-knight": "N", "white-bishop": "B",
     "white-rook": "R", "white-queen": "Q", "white-king": "K",

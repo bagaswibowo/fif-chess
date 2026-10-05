@@ -6,7 +6,7 @@ otomatis mengunduh pretrained chess model (yolo11n fine-tune, 12 kelas
 di `models/yolo11/best.pt` (volume, jadi hanya diunduh sekali).
 
 Sumber default bisa diganti via env `YOLO_MODEL_URL`, atau timpa dengan model
-hasil latihan sendiri di `models/yolo11/best.pt` (lihat scripts/train-yolo11.md).
+hasil latihan sendiri di `models/yolo11/best.pt` (lihat docs/train-yolo11.md).
 
 1. Jalankan bersama seluruh stack:
    ```

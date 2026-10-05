@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --port 43173 --hostname 127.0.0.1",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --no-warnings scripts/check-core.ts",
+    "test": "npx tsx scripts/check-core.ts",
     "test:watch": "npm test"
   },
   "dependencies": {

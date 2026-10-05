@@ -7,8 +7,9 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { Chess } from "chess.js";
 import { PUZZLES, QUEST_CHAPTERS } from "../lib/puzzle-data.ts";
-import { replaySanList } from "../lib/chess.ts";
+import { replaySanList, isKnightFork, isQueenThreatened, isQueenXrayed, calculateMaterialCp, applyUci } from "../lib/chess.ts";
 import { buildLivePuzzle, isPlayablePuzzle } from "../lib/puzzle-store.ts";
+import { recordMatchExperience, getLearnedMove, isBlunderMove } from "../lib/experience.ts";
 
 const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 const PIECE_NAME = { p: "pion", n: "knight", b: "gajah", r: "menara", q: "sekertaris" };
@@ -143,3 +144,27 @@ for (const f of readdirSync(compDir)) {
 const undefinedClasses = [...custom].filter((c) => !cssText.includes("." + c)).sort();
 assert.deepEqual(undefinedClasses, [], `kelas dipakai tapi tidak ada di globals.css: ${undefinedClasses.join(", ")}`);
 console.log(`  ${custom.size} kelas kustom, semua terdefinisi.`);
+
+// 5. Tactics fork & queen threat tests
+const forkChess = new Chess("r3k3/8/8/3N4/8/8/8/4K3 w - - 0 1");
+assert.equal(isKnightFork(forkChess, "d5c7"), true, "d5c7 must be detected as Royal Fork");
+assert.equal(isKnightFork(forkChess, "d5b6"), false, "d5b6 is not a fork");
+const rayChess = new Chess("2r2rk1/pp6/7b/3n1p2/3q1B2/5Q2/PP4PP/3R1R1K b - - 0 27");
+assert.equal(isQueenThreatened(rayChess), true, "Queen on d4 is attacked");
+const safeChess = new Chess("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+assert.equal(isQueenThreatened(safeChess), false, "Starting queen is not attacked");
+
+// 6. Eval bar & pawn promotion tests
+assert.equal(calculateMaterialCp("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), 0);
+assert.equal(calculateMaterialCp("rnbqkbnr/ppppppp1/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), 100);
+const promoChess = new Chess("8/4P3/8/8/8/8/8/4K2k w - - 0 1");
+const promoMove = applyUci(promoChess, "e7e8");
+assert.equal(promoMove.promotion, "q");
+
+// 7. Experience memory & blunder filter test
+const testFen = "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2";
+recordMatchExperience(testFen, "g1f3", 35, "f1c4");
+assert.equal(getLearnedMove(testFen)?.move, "g1f3");
+assert.equal(isBlunderMove(testFen, "f1c4"), true);
+
+console.log("  Invariants catur & taktik: royal_fork=ok, eval_bar=ok, promo=ok, memory=ok.");

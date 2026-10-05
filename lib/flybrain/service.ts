@@ -417,7 +417,14 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
     const oppColor = chess.turn();
 
     let reward = 0;
-    if (moved.captured) reward += PIECE_VALS[moved.captured] ?? 100;
+    if (moved.captured) {
+      const capVal = PIECE_VALS[moved.captured] ?? 100;
+      reward += capVal;
+      // Memakan lawan dengan pion kecil: efisien, membuka ruang, dan minim risiko rugi material
+      if (moved.piece === "p") {
+        reward += 160;
+      }
+    }
     if (chess.inCheck()) reward += 80;
 
     const fromSquare = uci.slice(0, 2) as any;
@@ -428,6 +435,23 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
 
     if (wasAttacked && !chess.isAttacked(toSquare, oppColor)) {
       reward += 150;
+    }
+
+    // Deteksi pelindung petak tujuan (terutama pelindung berupa pion kawan)
+    const defenders = chess.attackers(toSquare, moverColor);
+    let isProtectedByPawn = false;
+    if (defenders && defenders.length > 0) {
+      for (const d of defenders) {
+        const p = chess.get(d as any);
+        if (p && p.type === "p") {
+          isProtectedByPawn = true;
+          break;
+        }
+      }
+    }
+    // Perwira yang melangkah ke petak bertumpu/terlindungi pion (outpost solid)
+    if (moved.piece !== "p" && isProtectedByPawn) {
+      reward += 120;
     }
 
     const totalHalfMoves = chess.history().length;
@@ -509,11 +533,32 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
       }
     }
 
-    // Proteksi perwira: Cek apakah mendarat di petak yang diserang tanpa pelindung (hanging piece)
+    // Proteksi perwira & evaluasi pertukaran (Static Exchange Parity)
     const isDestAttacked = chess.isAttacked(toSquare, oppColor);
-    const isDestDefended = chess.isAttacked(toSquare, moverColor);
-    if (isDestAttacked && !isDestDefended) {
-      punishment += (PIECE_VALS[moved.piece] ?? 100) * 1.5;
+    const isDestDefended = defenders && defenders.length > 0;
+    const myVal = PIECE_VALS[moved.piece] ?? 100;
+
+    if (isDestAttacked) {
+      if (!isDestDefended) {
+        // Melangkah ke petak gantung tanpa pelindung: hukuman keras!
+        punishment += myVal * 1.5;
+      } else {
+        // Ada pelindung: cek apakah diserang oleh bidak bernilai lebih murah (misal kuda diserang pion)
+        const oppAttackers = chess.attackers(toSquare, oppColor);
+        let minOppVal = 10000;
+        for (const a of oppAttackers) {
+          const p = chess.get(a as any);
+          if (p) minOppVal = Math.min(minOppVal, PIECE_VALS[p.type] ?? 100);
+        }
+        const capVal = moved.captured ? (PIECE_VALS[moved.captured] ?? 100) : 0;
+        if (minOppVal < myVal && capVal < myVal) {
+          // Pertukaran timpang: perwira mahal ditukar perwira murah lawan
+          punishment += (myVal - minOppVal) * 1.2;
+        } else if (isProtectedByPawn) {
+          // Dilindungi pion dan pertukaran setara: struktur solid!
+          reward += 80;
+        }
+      }
     }
 
     let punishmentBoard = calculateBoardPunishment(chess, moverColor, oppColor);
