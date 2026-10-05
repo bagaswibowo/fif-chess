@@ -33,32 +33,30 @@ export async function playEngineMove(
   id: EngineId,
   req: EngineMoveRequest,
 ): Promise<EngineMoveResponse> {
-  // Classical Master Opening Book (untuk Jev, Fly, dan Hybrid)
-  if (id !== "stockfish") {
-    const bookMove = getOpeningBookMove(req.fen);
-    if (bookMove) {
-      try {
-        const ch = new Chess(req.fen);
-        const app = applyUci(ch, bookMove);
-        if (app) {
-          const prediction = await getStockfishPrediction(ch.fen());
-          return {
-            engine: id,
-            uci: bookMove,
-            san: app.san,
-            fen: ch.fen(),
-            probabilities: { [bookMove]: 1.0 },
-            confidence: 1.0,
-            droppedMoveCount: 0,
-            outcome: describeOutcome(ch),
-            prediction,
-            metadata: {
-              source: "master_opening_book",
-            },
-          };
-        }
-      } catch {}
-    }
+  // Classical Master Opening Book (tersedia untuk seluruh engine pada fase pembukaan)
+  const bookMove = getOpeningBookMove(req.fen, req.seed ?? 0);
+  if (bookMove) {
+    try {
+      const ch = new Chess(req.fen);
+      const app = applyUci(ch, bookMove);
+      if (app) {
+        const prediction = await getStockfishPrediction(ch.fen(), bookMove);
+        return {
+          engine: id,
+          uci: bookMove,
+          san: app.san,
+          fen: ch.fen(),
+          probabilities: { [bookMove]: 1.0 },
+          confidence: 1.0,
+          droppedMoveCount: 0,
+          outcome: describeOutcome(ch),
+          prediction,
+          metadata: {
+            source: "master_opening_book",
+          },
+        };
+      }
+    } catch {}
   }
 
   const engine = getEngine(id);

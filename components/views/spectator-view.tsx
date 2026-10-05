@@ -717,7 +717,7 @@ export function SpectatorView({
         <div className="lg:col-span-5 flex flex-col gap-2 min-h-0 lg:max-h-[calc(100dvh-11rem)] lg:overflow-y-auto lg:pr-1 custom-scrollbar">
           
           {/* LIVE AI COMMENTATOR & TACTICS CARD - Typography 12px with bold & italic */}
-          <Card className="panel border-[var(--border)] text-white shadow-xl overflow-hidden shrink-0 max-h-[46%] flex flex-col" style={{ background: "var(--card)" }}>
+          <Card className="panel border-[var(--border)] text-white shadow-xl overflow-hidden shrink-0 max-h-[42%] flex flex-col" style={{ background: "var(--card)" }}>
             <CardHeader className="py-2 px-3.5 border-b border-[var(--border)] flex items-center justify-between shrink-0" style={{ background: "var(--surface)" }}>
               <CardTitle className="text-xs md:text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
                 <IconBot3D size={18} className="shrink-0" />
@@ -726,11 +726,31 @@ export function SpectatorView({
             </CardHeader>
 
             <CardContent className="p-3 space-y-2 text-[12px] leading-relaxed overflow-y-auto flex-1 min-h-0 custom-scrollbar">
+              {/* 4 Label Pertanda Visual di dalam card Komentator AI */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[10px] font-bold">
+                <div className="flex items-center gap-1.5 text-neutral-300">
+                  <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300 shrink-0" />
+                  <span className="truncate">Langkah Sekarang</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-red-400">
+                  <span className="w-2.5 h-2.5 rounded bg-red-500 border border-red-300 shrink-0" />
+                  <span className="truncate">Ancaman</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-sky-400">
+                  <span className="w-2.5 h-2.5 rounded bg-sky-400 border border-sky-300 shrink-0" />
+                  <span className="truncate">Prediksi</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-emerald-400">
+                  <span className="w-2.5 h-2.5 rounded bg-emerald-500 border border-emerald-300 shrink-0" />
+                  <span className="truncate">Strategi</span>
+                </div>
+              </div>
+
               {commentary ? (
                 <>
                   {/* Badge Taktis diletakkan di bawah judul di dalam card */}
                   {commentary.tacticalBadge && (
-                    <div className="flex items-center gap-2 pb-0.5">
+                    <div className="flex items-center gap-2 pt-0.5">
                       <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-sm inline-block ${commentary.tacticalBadge.badgeColor}`}>
                         {commentary.tacticalBadge.name}
                       </span>
@@ -751,36 +771,19 @@ export function SpectatorView({
                     <span className="text-white font-bold leading-snug">{commentary.summary}</span>
                   </div>
 
-                  {/* 1. Target Diancam — Dibaca menggunakan Machine Stockfish */}
-                  <div className="p-2.5 rounded-xl border border-red-500/40 text-[12px] shadow-sm" style={{ background: "rgba(45, 14, 18, 0.65)" }}>
-                    <div className="font-bold text-red-400 text-[11px] flex items-center gap-1.5 mb-0.5">
-                      <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
-                      <span className="uppercase tracking-wider">Target Diancam (Stockfish)</span>
-                    </div>
-                    <div className="text-red-100 font-medium leading-relaxed">
-                      {commentary.target}
-                    </div>
+                  {/* Target & Threat */}
+                  <div className="flex items-start gap-2 text-[12px]">
+                    <span className="text-red-400 font-bold shrink-0">Ancaman:</span>
+                    <span className="text-neutral-200 font-medium leading-snug">{commentary.target}</span>
                   </div>
 
-                  {/* 2. Prediksi Balasan — Dibaca menggunakan Machine Stockfish */}
-                  <div className="p-2.5 rounded-xl border border-sky-500/40 text-[12px] shadow-sm" style={{ background: "rgba(14, 34, 48, 0.65)" }}>
-                    <div className="font-bold text-sky-400 text-[11px] flex items-center gap-1.5 mb-0.5">
-                      <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
-                      <span className="uppercase tracking-wider">Prediksi Balasan (Stockfish)</span>
+                  {/* Prediction */}
+                  <div className="p-2.5 rounded-xl border border-sky-500/40 text-[12px] shadow-inner" style={{ background: "rgba(14, 34, 48, 0.7)" }}>
+                    <div className="font-bold text-sky-400 text-[11px] flex items-center gap-1 mb-0.5">
+                      <span>Prediksi Respons Lawan:</span>
                     </div>
                     <div className="text-sky-100 italic font-medium leading-relaxed">
                       {commentary.prediction}
-                    </div>
-                  </div>
-
-                  {/* 3. Langkah Strategis (Taktik langkah diambil, niat mau kemana) — Dibaca menggunakan Machine Stockfish, warna hijau */}
-                  <div className="p-2.5 rounded-xl border border-emerald-500/40 text-[12px] shadow-sm" style={{ background: "rgba(10, 40, 25, 0.65)" }}>
-                    <div className="font-bold text-emerald-400 text-[11px] flex items-center gap-1.5 mb-0.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                      <span className="uppercase tracking-wider">Langkah Strategis (Stockfish)</span>
-                    </div>
-                    <div className="text-emerald-100 font-medium leading-relaxed">
-                      {commentary.strategicPlan || "Mengonsolidasikan struktur perwira dan memperkuat kontrol sentral lanjutan."}
                     </div>
                   </div>
 
