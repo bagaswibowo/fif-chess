@@ -1035,7 +1035,7 @@ export function Game() {
         {navTab === "play" && (
           <div className="h-full max-h-full min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-2 md:gap-3 items-center justify-center w-full">
             {/* CENTER CHESSBOARD ARENA */}
-            <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[min(100%,calc(100vh-175px))] mx-auto space-y-1 md:space-y-1.5">
+            <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[min(100%,calc(100dvh-200px))] mx-auto space-y-1 md:space-y-1.5">
               {/* Opponent Card (Top) with 3D Bot Icon / Player Icon */}
               <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -1083,8 +1083,8 @@ export function Game() {
               />
 
               {/* Board Row with Left Vertical Eval Bar (Chess.com Signature) */}
-              <div className="flex justify-center w-full flex-1 min-h-0">
-                <div className="flex gap-2 md:gap-2.5 items-stretch w-full">
+              <div className="flex justify-center items-center w-full flex-1 min-h-0">
+                <div className="flex gap-2 md:gap-2.5 items-center justify-center h-full max-h-full max-w-full flex-1 min-h-0 min-w-0">
                   {/* Vertical Eval Bar: Responsif instan terhadap makan pion & evaluasi engine */}
                   <EvalBar
                     fen={fen}
@@ -1098,8 +1098,8 @@ export function Game() {
                     orientation={humanSide}
                   />
 
-                  {/* Chessboard Container */}
-                  <div className="aspect-square flex-1 min-w-0 rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative">
+                  {/* Chessboard Container: strict aspect-square bound by both height & width */}
+                  <div className="aspect-square h-full max-h-full max-w-full min-w-0 rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative flex items-center justify-center">
                     <Chessboard
                       options={{
                         id: "fif-chess-main",
@@ -1111,9 +1111,23 @@ export function Game() {
                         boardStyle: {
                           backgroundColor: "var(--board-dark)",
                           gridTemplateRows: "repeat(8, 1fr)",
+                          gridTemplateColumns: "repeat(8, 1fr)",
                           gap: 0,
                           width: "100%",
                           height: "100%",
+                          aspectRatio: "1 / 1",
+                        },
+                        alphaNotationStyle: {
+                          bottom: "3px",
+                          right: "5px",
+                          fontSize: "12px",
+                          fontWeight: "bold",
+                        },
+                        numericNotationStyle: {
+                          top: "3px",
+                          left: "4px",
+                          fontSize: "12px",
+                          fontWeight: "bold",
                         },
                         onSquareClick: ({ square }) => {
                           if (!humanToMove) return;
