@@ -9,7 +9,7 @@ import {
   type JevPlaySuccess,
 } from "@/lib/jev";
 import { playSuperflyMove, playFlyBrainMove, isPredationTrap, calculateBiologicalValence } from "@/lib/flybrain/service";
-import { getLearnedMove, isBlunderMove, recordMatchExperience } from "@/lib/experience";
+import { getLearnedMove, isBlunderMove, recordMatchExperience, reinforceMatchDopamine } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
@@ -176,6 +176,10 @@ export class JevSuperflyHybridEngine implements IChessEngine {
     const prediction = await getStockfishPrediction(hybridRaw.fen);
     if (prediction?.uci) {
       recordMatchExperience(hybridRaw.fen, prediction.uci, prediction.scoreCp ?? 0);
+    }
+
+    if (hybridRaw.outcome?.over && (hybridRaw.outcome.winner === "white" || hybridRaw.outcome.winner === "black")) {
+      reinforceMatchDopamine([...(req.history ?? []), hybridRaw.san], hybridRaw.outcome.winner);
     }
 
     return {

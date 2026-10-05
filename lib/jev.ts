@@ -9,6 +9,7 @@ import {
   type GameOutcome,
 } from "@/lib/chess";
 import { evaluateWithFlyBrain, type FlyMoveScore } from "@/lib/flybrain/service";
+import { getLearnedMove, isBlunderMove } from "@/lib/experience";
 
 export const TYPESAFE_ENDPOINT = "https://api.typesafe.ai/v1/systemone";
 export const JEV_MODEL = "jev-latest";
@@ -292,6 +293,16 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
       desc += `[DEVELOPMENT] Deploys ${pName} forward to ${move.to}`;
     } else {
       desc += `[POSITIONAL] Moves ${pName} to ${move.to}`;
+    }
+
+    // In-Context Cognitive Plasticity: Pembelajaran dari kesalahan dan kemenangan masa lalu
+    if (isBlunderMove(fen, move.uci)) {
+      desc += " [PAST BLUNDER - AVOID] In prior match from this position, this move caused a decisive loss or material deficit! DO NOT SELECT!";
+    } else {
+      const pastLearned = getLearnedMove(fen);
+      if (pastLearned && pastLearned.move === move.uci && (pastLearned.dopamine > 0 || pastLearned.score > 0)) {
+        desc += ` [PROVEN WINNING CONTINUATION - DOPAMINE +${pastLearned.dopamine}] Verified successful continuation in prior matches! Highly recommended!`;
+      }
     }
 
     criteria[move.uci] = desc;

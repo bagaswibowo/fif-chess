@@ -8,7 +8,7 @@ import {
   TYPESAFE_ENDPOINT,
 } from "@/lib/jev";
 import { playSuperflyMove, playFlyBrainMove, isPredationTrap } from "@/lib/flybrain/service";
-import { getLearnedMove, isBlunderMove, recordMatchExperience } from "@/lib/experience";
+import { getLearnedMove, isBlunderMove, recordMatchExperience, reinforceMatchDopamine } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
@@ -125,6 +125,11 @@ export class PureJevEngine implements IChessEngine {
       recordMatchExperience(nextFen, prediction.uci, prediction.scoreCp ?? 0);
     }
 
+    const outcome = describeOutcome(chess);
+    if (outcome.over && (outcome.winner === "white" || outcome.winner === "black")) {
+      reinforceMatchDopamine([...(req.history ?? []), applied.san], outcome.winner);
+    }
+
     return {
       engine: this.id,
       uci: chosenUci,
@@ -133,7 +138,7 @@ export class PureJevEngine implements IChessEngine {
       probabilities: resolved.probabilities,
       confidence: resolved.confidence ?? 0.8,
       droppedMoveCount: built.droppedUcis.length,
-      outcome: describeOutcome(chess),
+      outcome,
       scoreCp: undefined,
       prediction,
       metadata: {
