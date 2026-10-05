@@ -48,4 +48,5 @@ artefacts/
 !/data/experience.json
 !/data/training-10-matches.json
 !/data/training-20-matches.json
+!/data/training-sf20-parallel.json
 models/
