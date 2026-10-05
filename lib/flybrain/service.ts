@@ -430,27 +430,45 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
     // - Aktifkan perwira minor (kuda & gajah ke petak aktif)
     // - Awasi serangan lawan jangan sampai dimakan cuma-cuma
     if (totalHalfMoves <= 16) {
+      const homeRank = moverColor === "w" ? "1" : "8";
+      const fromRank = uci[1];
+
+      // 1. Dorongan pion sentral membuka jalur gajah dan menteri
       if (moved.piece === "p") {
         const centerFiles = ["c", "d", "e"];
         if (centerFiles.includes(uci[2])) {
-          reward += 160; // Buka jalur untuk gajah dan menteri
+          reward += 180;
         }
       }
-      if (moved.piece === "n" || moved.piece === "b") {
-        reward += 120; // Mengaktifkan perwira
+
+      // 2. Kembangkan perwira minor BARU dari baris asal (kuda & gajah)
+      if ((moved.piece === "n" || moved.piece === "b") && fromRank === homeRank) {
+        reward += 180; // Prioritaskan perwira yang belum pernah jalan!
       }
-      const homeSquares = ["b8", "g8", "c8", "f8", "b1", "g1", "c1", "f1"];
-      if (homeSquares.includes(toSquare) && !wasAttacked) {
-        punishment += 250; // Jangan balik ke petak asal
+
+      // 3. Larang knight dancing: jangan gerakkan perwira yang sama berulang kali di pembukaan
+      if ((moved.piece === "n" || moved.piece === "b") && fromRank !== homeRank && !wasAttacked) {
+        punishment += 180;
       }
+
+      // 4. Larang memajukan Menteri terlalu cepat di pembukaan (Queen out early)
+      if (moved.piece === "q") {
+        punishment += 250;
+      }
+
+      // 5. Anti-rim knight
       if (moved.piece === "n" && (toSquare.startsWith("a") || toSquare.startsWith("h"))) {
-        punishment += 180; // Kuda di pinggir papan buruk
+        punishment += 180;
       }
+
+      // 6. Jangan jalankan raja di awal kecuali rokade
       if (moved.piece === "k" && moved.san !== "O-O" && moved.san !== "O-O-O") {
-        punishment += 400; // Jangan gerakkan raja di awal
+        punishment += 400;
       }
+
+      // 7. Jangan buka diagonal raja di pembukaan
       if (moved.piece === "p" && (uci.startsWith("f2") || uci.startsWith("f7"))) {
-        punishment += 180; // Jangan buka diagonal raja
+        punishment += 180;
       }
     }
 
