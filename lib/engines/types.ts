@@ -15,9 +15,24 @@ export interface EnginePrediction {
   engine: "stockfish";
   uci: string;
   san: string;
+  from?: string;
+  to?: string;
   scoreCp?: number | null;
   mate?: number | null;
   summary?: string;
+  threat?: {
+    from: string;
+    to: string;
+    sq: string;
+    description: string;
+  } | null;
+  strategicMove?: {
+    uci: string;
+    san: string;
+    from: string;
+    to: string;
+    intention: string;
+  } | null;
 }
 
 export interface EngineMoveResponse {

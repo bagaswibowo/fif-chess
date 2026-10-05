@@ -46,6 +46,7 @@ type Commentary = {
   summary: string;
   target: string;
   prediction: string;
+  strategicPlan?: string;
   tacticalBadge?: TacticalConcept | null;
   tektokkan?: TektokkanPrediction | null;
 };
@@ -143,6 +144,7 @@ export function SpectatorView({
   const [lastMoveUci, setLastMoveUci] = useState<string | null>(null);
   const [threatInfo, setThreatInfo] = useState<{ from: string; to: string; sq: string } | null>(null);
   const [predictedMove, setPredictedMove] = useState<{ from: string; to: string } | null>(null);
+  const [strategicMove, setStrategicMove] = useState<{ from: string; to: string } | null>(null);
   const [commentary, setCommentary] = useState<Commentary | null>(null);
   const pendingPredictionRef = useRef<{ uci: string; san: string } | null>(null);
   const [predictionComparison, setPredictionComparison] = useState<string | null>(null);
@@ -228,10 +230,24 @@ export function SpectatorView({
           engine: string;
           uci: string;
           san: string;
-          from: string;
-          to: string;
-          scoreCp: number | null;
-          description: string;
+          from?: string;
+          to?: string;
+          scoreCp?: number | null;
+          summary?: string;
+          description?: string;
+          threat?: {
+            from: string;
+            to: string;
+            sq: string;
+            description: string;
+          } | null;
+          strategicMove?: {
+            uci: string;
+            san: string;
+            from: string;
+            to: string;
+            intention: string;
+          } | null;
         } | null;
       };
       if (!data.uci) break;
@@ -279,10 +295,19 @@ export function SpectatorView({
       setLastMoveUci(data.uci);
 
       const nextTurnColor = chess.turn();
+      
+      // 1. Target Diancam — Dibaca langsung menggunakan machine Stockfish
       let foundThreat: { from: string; to: string; sq: string } | null = null;
       let threatDesc = "";
 
-      if (chess.isCheck()) {
+      if (data.prediction?.threat) {
+        foundThreat = {
+          from: data.prediction.threat.from,
+          to: data.prediction.threat.to,
+          sq: data.prediction.threat.sq,
+        };
+        threatDesc = data.prediction.threat.description;
+      } else if (chess.isCheck()) {
         const board = chess.board();
         let kingSq = "";
         for (let r = 0; r < 8; r++) {
@@ -322,7 +347,7 @@ export function SpectatorView({
       // Tektokkan Exchange Prediction
       const tektokkan = computeTektokkanExchange(chess, data.uci);
 
-      // Next Move Prediction (utamakan analisis presisi dari Stockfish 15 NNUE)
+      // 2. Prediksi Balasan — Dibaca langsung menggunakan machine Stockfish
       let chosenPred: { from: string; to: string; san: string } | null = null;
       let predDesc = "";
 
@@ -332,7 +357,7 @@ export function SpectatorView({
           to: data.prediction.to,
           san: data.prediction.san,
         };
-        predDesc = data.prediction.description;
+        predDesc = data.prediction.summary || data.prediction.description || `Stockfish 15 NNUE memprediksi balasan terbaik: ${data.prediction.san}`;
       } else if (tektokkan.hasExchange && tektokkan.defenderFrom && tektokkan.targetSq) {
         chosenPred = { from: tektokkan.defenderFrom, to: tektokkan.targetSq, san: `x${tektokkan.targetSq}` };
         predDesc = tektokkan.explanation || "";
@@ -344,6 +369,22 @@ export function SpectatorView({
       }
 
       setPredictedMove(chosenPred ? { from: chosenPred.from, to: chosenPred.to } : null);
+
+      // 3. Langkah Strategis (Taktik langkah diambil, niat mau kemana) — Dibaca menggunakan machine Stockfish
+      let stratMoveObj: { from: string; to: string } | null = null;
+      let stratPlanText = "";
+
+      if (data.prediction?.strategicMove) {
+        stratMoveObj = {
+          from: data.prediction.strategicMove.from,
+          to: data.prediction.strategicMove.to,
+        };
+        stratPlanText = `${data.prediction.strategicMove.san}: ${data.prediction.strategicMove.intention}`;
+      } else {
+        stratPlanText = "Mengonsolidasikan struktur perwira dan memperkuat kontrol sentral lanjutan.";
+      }
+
+      setStrategicMove(stratMoveObj);
 
       // Recognize Tactics with Explicit Named Motifs
       const plyCount = chess.history().length;
@@ -402,6 +443,7 @@ export function SpectatorView({
         summary: summaryText,
         target: targetText,
         prediction: predDesc || "Menunggu respon lawan.",
+        strategicPlan: stratPlanText,
         tacticalBadge: activeConcept,
         tektokkan,
       });
@@ -436,6 +478,7 @@ export function SpectatorView({
     setLastMoveUci(null);
     setThreatInfo(null);
     setPredictedMove(null);
+    setStrategicMove(null);
     setCommentary(null);
     pendingPredictionRef.current = null;
     setPredictionComparison(null);
@@ -462,8 +505,11 @@ export function SpectatorView({
     } else if (predictedMove) {
       list.push({ startSquare: predictedMove.from, endSquare: predictedMove.to, color: "#38bdf8" });
     }
+    if (strategicMove && strategicMove.from !== strategicMove.to) {
+      list.push({ startSquare: strategicMove.from, endSquare: strategicMove.to, color: "#10b981" });
+    }
     return list;
-  }, [lastMoveUci, threatInfo, predictedMove, commentary]);
+  }, [lastMoveUci, threatInfo, predictedMove, strategicMove, commentary]);
 
   const squareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
@@ -586,23 +632,7 @@ export function SpectatorView({
             showShortcuts={true}
           />
 
-          {/* 2. Visual Arrows Legend (selalu tampil di atas papan) */}
-          <div className="panel px-3 py-1.5 rounded-xl border border-[var(--border)] flex items-center justify-around text-xs font-bold text-neutral-300 shadow-sm shrink-0 flex-wrap gap-y-1" style={{ background: "var(--surface)" }}>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-yellow-500 border border-yellow-300" />
-              <span className="font-semibold text-neutral-300">Langkah Terkini</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-red-500 border border-red-300" />
-              <span className="font-bold text-red-400">Target Diancam</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-sky-400 border border-sky-300" />
-              <span className="font-bold text-sky-400">Prediksi Balasan</span>
-            </span>
-          </div>
-
-          {/* 3. Top Player (Black) with 1-Click Engine Selector & Captured Pieces */}
+          {/* 2. Top Player (Black) with 1-Click Engine Selector & Captured Pieces */}
           <div className="panel px-3 py-1.5 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm shrink-0" style={{ background: "var(--card)" }}>
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-3.5 h-3.5 rounded-full bg-neutral-900 border-2 border-neutral-600 shrink-0" />
@@ -687,24 +717,26 @@ export function SpectatorView({
         <div className="lg:col-span-5 flex flex-col gap-2 min-h-0 lg:max-h-[calc(100dvh-11rem)] lg:overflow-y-auto lg:pr-1 custom-scrollbar">
           
           {/* LIVE AI COMMENTATOR & TACTICS CARD - Typography 12px with bold & italic */}
-          <Card className="panel border-[var(--border)] text-white shadow-xl overflow-hidden shrink-0 max-h-[38%] flex flex-col" style={{ background: "var(--card)" }}>
-            <CardHeader className="py-2 px-3.5 border-b border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 shrink-0" style={{ background: "var(--surface)" }}>
+          <Card className="panel border-[var(--border)] text-white shadow-xl overflow-hidden shrink-0 max-h-[46%] flex flex-col" style={{ background: "var(--card)" }}>
+            <CardHeader className="py-2 px-3.5 border-b border-[var(--border)] flex items-center justify-between shrink-0" style={{ background: "var(--surface)" }}>
               <CardTitle className="text-xs md:text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
                 <IconBot3D size={18} className="shrink-0" />
                 <span>Komentator &amp; Taktik AI</span>
               </CardTitle>
-              {commentary?.tacticalBadge && (
-                <div className="self-start sm:self-auto shrink-0">
-                  <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-sm inline-block ${commentary.tacticalBadge.badgeColor}`}>
-                    {commentary.tacticalBadge.name}
-                  </span>
-                </div>
-              )}
             </CardHeader>
 
             <CardContent className="p-3 space-y-2 text-[12px] leading-relaxed overflow-y-auto flex-1 min-h-0 custom-scrollbar">
               {commentary ? (
                 <>
+                  {/* Badge Taktis diletakkan di bawah judul di dalam card */}
+                  {commentary.tacticalBadge && (
+                    <div className="flex items-center gap-2 pb-0.5">
+                      <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-sm inline-block ${commentary.tacticalBadge.badgeColor}`}>
+                        {commentary.tacticalBadge.name}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Tactical Concept Explanation with Explicit Name */}
                   {commentary.tacticalBadge && (
                     <div className="p-2 rounded-xl border border-amber-500/40 text-[12px] text-neutral-200 leading-relaxed" style={{ background: "var(--surface)" }}>
@@ -719,19 +751,36 @@ export function SpectatorView({
                     <span className="text-white font-bold leading-snug">{commentary.summary}</span>
                   </div>
 
-                  {/* Target & Threat */}
-                  <div className="flex items-start gap-2 text-[12px]">
-                    <span className="text-red-400 font-bold shrink-0">Ancaman:</span>
-                    <span className="text-neutral-200 font-medium leading-snug">{commentary.target}</span>
+                  {/* 1. Target Diancam — Dibaca menggunakan Machine Stockfish */}
+                  <div className="p-2.5 rounded-xl border border-red-500/40 text-[12px] shadow-sm" style={{ background: "rgba(45, 14, 18, 0.65)" }}>
+                    <div className="font-bold text-red-400 text-[11px] flex items-center gap-1.5 mb-0.5">
+                      <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                      <span className="uppercase tracking-wider">Target Diancam (Stockfish)</span>
+                    </div>
+                    <div className="text-red-100 font-medium leading-relaxed">
+                      {commentary.target}
+                    </div>
                   </div>
 
-                  {/* Prediction */}
-                  <div className="p-2.5 rounded-xl border border-sky-500/40 text-[12px] shadow-inner" style={{ background: "rgba(14, 34, 48, 0.7)" }}>
-                    <div className="font-bold text-sky-400 text-[11px] flex items-center gap-1 mb-0.5">
-                      <span>Prediksi Respons Lawan:</span>
+                  {/* 2. Prediksi Balasan — Dibaca menggunakan Machine Stockfish */}
+                  <div className="p-2.5 rounded-xl border border-sky-500/40 text-[12px] shadow-sm" style={{ background: "rgba(14, 34, 48, 0.65)" }}>
+                    <div className="font-bold text-sky-400 text-[11px] flex items-center gap-1.5 mb-0.5">
+                      <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
+                      <span className="uppercase tracking-wider">Prediksi Balasan (Stockfish)</span>
                     </div>
                     <div className="text-sky-100 italic font-medium leading-relaxed">
                       {commentary.prediction}
+                    </div>
+                  </div>
+
+                  {/* 3. Langkah Strategis (Taktik langkah diambil, niat mau kemana) — Dibaca menggunakan Machine Stockfish, warna hijau */}
+                  <div className="p-2.5 rounded-xl border border-emerald-500/40 text-[12px] shadow-sm" style={{ background: "rgba(10, 40, 25, 0.65)" }}>
+                    <div className="font-bold text-emerald-400 text-[11px] flex items-center gap-1.5 mb-0.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                      <span className="uppercase tracking-wider">Langkah Strategis (Stockfish)</span>
+                    </div>
+                    <div className="text-emerald-100 font-medium leading-relaxed">
+                      {commentary.strategicPlan || "Mengonsolidasikan struktur perwira dan memperkuat kontrol sentral lanjutan."}
                     </div>
                   </div>
 

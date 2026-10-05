@@ -216,7 +216,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
 
     const vncVetoed = applyVncDescendingVeto(req.fen, hybridRaw);
 
-    const prediction = await getStockfishPrediction(hybridRaw.fen);
+    const prediction = await getStockfishPrediction(hybridRaw.fen, hybridRaw.uci);
     if (prediction?.uci) {
       recordMatchExperience(hybridRaw.fen, prediction.uci, prediction.scoreCp ?? 0);
     }
