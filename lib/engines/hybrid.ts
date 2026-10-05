@@ -98,20 +98,60 @@ async function queryJevPriors(
 }
 
 function applyVncDescendingVeto(fen: string, hybridRaw: JevPlaySuccess): boolean {
-  const isBadMove = (m: string) => isBlunderMove(fen, m) || isPredationTrap(fen, m);
-  if (!isBadMove(hybridRaw.uci)) return false;
+  const chBefore = new Chess(fen);
+  const legalUcis = chBefore.moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
 
-  recordMatchExperience(fen, undefined, undefined, hybridRaw.uci);
-  const sorted = Object.entries(hybridRaw.probabilities || {}).sort((a, b) => b[1] - a[1]);
-  const safeAlt = sorted.find(([move]) => !isBadMove(move));
-  if (safeAlt) {
+  const allowsMate = (uci: string): boolean => {
+    try {
+      const c = new Chess(fen);
+      if (!c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })) return true;
+      return c.moves({ verbose: true }).some((m: any) => m.san.includes("#"));
+    } catch {
+      return true;
+    }
+  };
+
+  const currentUci = hybridRaw.uci;
+  const currentAllowsMate = allowsMate(currentUci);
+  const currentIsTrap = isPredationTrap(fen, currentUci);
+  const currentIsBlunder = isBlunderMove(fen, currentUci);
+
+  // Jika langkah saat ini aman dari skakmat, jebakan, dan blunder, pertahankan!
+  if (!currentAllowsMate && !currentIsTrap && !currentIsBlunder) return false;
+
+  recordMatchExperience(fen, undefined, undefined, currentUci);
+
+  // Cari kandidat teraman:
+  // TIER 1: Bebas skakmat, bebas jebakan material, bebas blunder
+  // TIER 2: Bebas skakmat (prioritas mutlak bertahan hidup melawan skakmat)
+  const candidatesTier1: string[] = [];
+  const candidatesTier2: string[] = [];
+
+  for (const uci of legalUcis) {
+    if (!allowsMate(uci)) {
+      candidatesTier2.push(uci);
+      if (!isPredationTrap(fen, uci) && !isBlunderMove(fen, uci)) {
+        candidatesTier1.push(uci);
+      }
+    }
+  }
+
+  const probs = hybridRaw.probabilities || {};
+  candidatesTier1.sort((a, b) => (probs[b] ?? 0) - (probs[a] ?? 0));
+  candidatesTier2.sort((a, b) => (probs[b] ?? 0) - (probs[a] ?? 0));
+
+  const bestCandidate = candidatesTier1[0] || candidatesTier2[0];
+  if (bestCandidate && bestCandidate !== currentUci) {
     const ch = new Chess(fen);
-    const app = applyUci(ch, safeAlt[0]);
-    hybridRaw.uci = safeAlt[0];
-    hybridRaw.san = app.san;
-    hybridRaw.fen = ch.fen();
-    hybridRaw.outcome = describeOutcome(ch);
-    return true;
+    const app = applyUci(ch, bestCandidate);
+    if (app) {
+      hybridRaw.uci = bestCandidate;
+      hybridRaw.san = app.san;
+      hybridRaw.fen = ch.fen();
+      hybridRaw.outcome = describeOutcome(ch);
+      hybridRaw.probabilities = { [bestCandidate]: 1.0 };
+      return true;
+    }
   }
   return false;
 }

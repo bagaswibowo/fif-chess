@@ -322,6 +322,15 @@ export function isPredationTrap(fen: string, uci: string): boolean {
     const chess = new Chess(fen);
     if (!chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })) return false;
     if (chess.isGameOver()) return false;
+
+    // 1. FATAL CHECKMATE CHECK: Jika langkah ini membiarkan lawan skakmat di giliran berikutnya, WAJIB VETO!
+    const oppMoves = chess.moves({ verbose: true });
+    for (const oppM of oppMoves) {
+      if (oppM.san.includes("#")) {
+        return true;
+      }
+    }
+
     const opp = chess.turn();
     const mine = opp === "w" ? "b" : "w";
     return calculateBoardPunishment(chess, mine, opp) >= 200;

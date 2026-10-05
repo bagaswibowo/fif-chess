@@ -103,15 +103,45 @@ export class PureJevEngine implements IChessEngine {
     }
 
     // 2. Nature 2024 VNC Descending Premotor Veto (Murni biologis, tanpa intervensi Stockfish)
-    let chosenUci = resolved.uci;
-    const isBadMove = (m: string) => isBlunderMove(req.fen, m) || isPredationTrap(req.fen, m);
+    const chBefore = new Chess(req.fen);
+    const legalUcis = chBefore.moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
 
-    if (isBadMove(chosenUci)) {
+    const allowsMate = (uci: string): boolean => {
+      try {
+        const c = new Chess(req.fen);
+        if (!c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })) return true;
+        return c.moves({ verbose: true }).some((m: any) => m.san.includes("#"));
+      } catch {
+        return true;
+      }
+    };
+
+    let chosenUci = resolved.uci;
+    const currentAllowsMate = allowsMate(chosenUci);
+    const currentIsTrap = isPredationTrap(req.fen, chosenUci);
+    const currentIsBlunder = isBlunderMove(req.fen, chosenUci);
+
+    if (currentAllowsMate || currentIsTrap || currentIsBlunder) {
       recordMatchExperience(req.fen, undefined, undefined, chosenUci);
-      const sortedProbs = Object.entries(resolved.probabilities).sort((a, b) => b[1] - a[1]);
-      const safeCandidate = sortedProbs.find(([move]) => !isBadMove(move));
+      const candidatesTier1: string[] = [];
+      const candidatesTier2: string[] = [];
+
+      for (const uci of legalUcis) {
+        if (!allowsMate(uci)) {
+          candidatesTier2.push(uci);
+          if (!isPredationTrap(req.fen, uci) && !isBlunderMove(req.fen, uci)) {
+            candidatesTier1.push(uci);
+          }
+        }
+      }
+
+      const probs = resolved.probabilities || {};
+      candidatesTier1.sort((a, b) => (probs[b] ?? 0) - (probs[a] ?? 0));
+      candidatesTier2.sort((a, b) => (probs[b] ?? 0) - (probs[a] ?? 0));
+
+      const safeCandidate = candidatesTier1[0] || candidatesTier2[0];
       if (safeCandidate) {
-        chosenUci = safeCandidate[0];
+        chosenUci = safeCandidate;
       }
     }
 
