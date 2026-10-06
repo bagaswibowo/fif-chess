@@ -401,6 +401,43 @@ export function isKingWeakeningMove(chess: Chess, uci: string): boolean {
   }
 }
 
+export function isMoveSuicidalPieceLoss(
+  chess: Chess,
+  uci: string,
+): { isSuicidal: boolean; piece?: string; netLoss?: number } {
+  try {
+    const from = uci.slice(0, 2);
+    const to = uci.slice(2, 4);
+    const piece = chess.get(from as any);
+    if (!piece) return { isSuicidal: false };
+
+    const values: Record<string, number> = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 20000 };
+    const pieceVal = values[piece.type] || 0;
+    const targetPiece = chess.get(to as any);
+    const capturedVal = targetPiece ? values[targetPiece.type] || 0 : 0;
+
+    const clone = new Chess(chess.fen());
+    const m = clone.move({ from, to, promotion: uci[4] || undefined });
+    if (!m) return { isSuicidal: false };
+    if (clone.isCheckmate()) return { isSuicidal: false };
+
+    const oppMoves = clone.moves({ verbose: true });
+    const capturesOfTarget = oppMoves.filter((om: any) => om.to === to);
+    if (capturesOfTarget.length > 0) {
+      const netLoss = pieceVal - capturedVal;
+      if (
+        (piece.type === "q" && netLoss >= 300) ||
+        (piece.type === "r" && netLoss >= 250) ||
+        (piece.type === "b" && netLoss >= 150) ||
+        (piece.type === "n" && netLoss >= 150)
+      ) {
+        return { isSuicidal: true, piece: piece.type, netLoss };
+      }
+    }
+  } catch (_) {}
+  return { isSuicidal: false };
+}
+
 const DB_PATH = path.join(process.env.JEV_DATA_DIR || path.join(process.cwd(), "data"), "experience.json");
 let memCache: Record<string, ExperienceEntry> | null = null;
 

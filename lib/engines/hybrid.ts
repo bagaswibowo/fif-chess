@@ -19,6 +19,7 @@ import {
   recallMotifValence,
   isMoveSteppingIntoAbsolutePin,
   isKingWeakeningMove,
+  isMoveSuicidalPieceLoss,
 } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import { evalSingleMove, playStockfishMove } from "../stockfish";
@@ -296,7 +297,25 @@ async function ensureTacticalSafety(
     }
   } catch (_) {}
 
-  // 3. Evaluasi Taktis Stockfish (depth 8): Deteksi Blunder Berat / Kehilangan Pion & Perwira
+  // 3. Suicidal Piece Blunder Gate: Veto blunder mengorbankan Menteri/Benteng/Perwira demi pion kecil (seperti 37... Qxb4??)
+  try {
+    const chBefore = new Chess(fen);
+    const suicidal = isMoveSuicidalPieceLoss(chBefore, candidateUci);
+    if (suicidal.isSuicidal) {
+      const safeMoves = legalUcis.filter((u) => !isMoveSuicidalPieceLoss(chBefore, u).isSuicidal);
+      if (safeMoves.length > 0) {
+        const sfBest = await playStockfishMove(fen, 10);
+        const chosenSafe = sfBest?.uci && safeMoves.includes(sfBest.uci) ? sfBest.uci : safeMoves[0];
+        return {
+          uci: chosenSafe,
+          vetoed: true,
+          reason: `suicidal_piece_loss_vetoed (${suicidal.piece?.toUpperCase()} hung for -${suicidal.netLoss}cp)`,
+        };
+      }
+    }
+  } catch (_) {}
+
+  // 4. Evaluasi Taktis Stockfish (depth 8): Deteksi Blunder Berat / Kehilangan Pion & Perwira
   try {
     const score = await evalSingleMove(fen, candidateUci, 8);
     if (score !== null && score <= -100) {
@@ -307,8 +326,9 @@ async function ensureTacticalSafety(
         const isDangerousPin = pin.isPinned && (pin.piece === "q" || pin.piece === "r");
         const allowsMate = doesAllowMate(fen, sfBest.uci);
         const allowsPromo = allowsUnsafeEnemyPromotion(fen, sfBest.uci);
+        const isSuicide = isMoveSuicidalPieceLoss(chB, sfBest.uci).isSuicidal;
 
-        if (!isDangerousPin && !allowsMate && !allowsPromo) {
+        if (!isDangerousPin && !allowsMate && !allowsPromo && !isSuicide) {
           return { uci: sfBest.uci, vetoed: true, reason: `tactical_blunder_vetoed (eval was ${score}cp)` };
         }
       }
@@ -405,6 +425,10 @@ export class JevSuperflyHybridEngine implements IChessEngine {
           }
           if (isKingWeakeningMove(chValence, uci)) {
             prob *= 0.05;
+          }
+          const suicidalMv = isMoveSuicidalPieceLoss(chValence, uci);
+          if (suicidalMv.isSuicidal) {
+            prob *= 0.001;
           }
 
           // Lonjakan Dopamin PAM jika cocok dengan database pembelajaran Stockfish
