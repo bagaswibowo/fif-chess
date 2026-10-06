@@ -125,8 +125,19 @@ function getStockfishEval(fen: string, depth = 12, multipv = 5): Promise<Stockfi
   });
 }
 
-export function evalSingleMove(fen: string, move: string, depth = 10): Promise<number | null> {
+export function evalSingleMove(fen: string, move: string, depth = 8): Promise<number | null> {
   return new Promise((resolve) => {
+    let nextFen = fen;
+    try {
+      const c = new Chess(fen);
+      const app = c.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: move[4] || undefined });
+      if (!app) return resolve(null);
+      if (c.isCheckmate()) return resolve(30000);
+      nextFen = c.fen();
+    } catch {
+      return resolve(null);
+    }
+
     let p: ChildProcessWithoutNullStreams;
     try {
       p = spawn("/usr/games/stockfish") as ChildProcessWithoutNullStreams;
@@ -190,8 +201,10 @@ export function evalSingleMove(fen: string, move: string, depth = 10): Promise<n
     });
 
     try {
-      p.stdin.write(`position fen ${fen} moves ${move}\n`);
-      p.stdin.write(`go depth ${depth} movetime 1200\n`);
+      p.stdin.write("uci\n");
+      p.stdin.write("isready\n");
+      p.stdin.write(`position fen ${nextFen}\n`);
+      p.stdin.write(`go depth ${depth} movetime 800\n`);
     } catch {
       clearTimeout(timer);
       cleanup();

@@ -165,7 +165,7 @@ async function ensureTacticalSafety(
 ): Promise<{ uci: string; vetoed: boolean; reason?: string }> {
   if (legalUcis.length <= 1) return { uci: candidateUci, vetoed: false };
 
-  // 1. Cek langsung: apakah candidateUci membiarkan lawan skakmat di ply berikutnya?
+  // 1. Cek langsung: apakah candidateUci membiarkan lawan skakmat ATAU promosi menjadi Menteri di giliran berikutnya?
   try {
     const testCh = new Chess(fen);
     const testApp = testCh.move({
@@ -175,18 +175,29 @@ async function ensureTacticalSafety(
     });
     if (testApp) {
       const oppMoves = testCh.moves({ verbose: true });
-      if (oppMoves.some((m: any) => m.san.includes("#"))) {
+      const allowsMate = oppMoves.some((m: any) => m.san.includes("#"));
+      const allowsPromo = oppMoves.some((m: any) => m.san.includes("=Q") || m.promotion === "q");
+
+      if (allowsMate || allowsPromo) {
+        // Cari langkah alternatif yang bebas skakmat & bebas promosi lawan
         const safeMoves = legalUcis.filter((u) => {
           const c2 = new Chess(fen);
           try {
             if (!c2.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] })) return false;
-            return !c2.moves({ verbose: true }).some((om: any) => om.san.includes("#"));
+            const om = c2.moves({ verbose: true });
+            return !om.some((m: any) => (allowsMate ? m.san.includes("#") : false) || m.san.includes("=Q") || m.promotion === "q");
           } catch {
             return false;
           }
         });
         if (safeMoves.length > 0) {
-          return { uci: safeMoves[0], vetoed: true, reason: "checkmate_in_1_prevented" };
+          const sfBest = await playStockfishMove(fen, 10);
+          const chosenSafe = sfBest?.uci && safeMoves.includes(sfBest.uci) ? sfBest.uci : safeMoves[0];
+          return {
+            uci: chosenSafe,
+            vetoed: true,
+            reason: allowsMate ? "checkmate_in_1_prevented" : "enemy_queen_promotion_prevented",
+          };
         }
       }
     }
@@ -226,21 +237,24 @@ export class JevSuperflyHybridEngine implements IChessEngine {
       // 1. Nature 2024 MBON Recall: Eksekusi instan langkah Stockfish depth 14 jika sudah dipelajari
       const learned = getLearnedMove(req.fen);
       if (learned && !isBlunderMove(req.fen, learned.move)) {
+        const legals = new Chess(req.fen).moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
+        const safeCheck = await ensureTacticalSafety(req.fen, learned.move, legals);
+        const finalUci = safeCheck.vetoed ? safeCheck.uci : learned.move;
         const chL = new Chess(req.fen);
-        const applied = applyUci(chL, learned.move);
-        const prediction = await getStockfishPrediction(chL.fen(), learned.move);
+        const applied = applyUci(chL, finalUci);
+        const prediction = await getStockfishPrediction(chL.fen(), finalUci);
         return {
           engine: this.id,
-          uci: learned.move,
+          uci: finalUci,
           san: applied.san,
           fen: chL.fen(),
-          probabilities: { [learned.move]: 0.99 },
+          probabilities: { [finalUci]: 0.99 },
           confidence: 0.99,
           droppedMoveCount: 0,
           outcome: describeOutcome(chL),
           scoreCp: learned.score,
           prediction,
-          metadata: { source: "mbon-learned", model: "jev-fly-hybrid" },
+          metadata: { source: safeCheck.vetoed ? "tactical-override" : "mbon-learned", model: "jev-fly-hybrid" },
         };
       }
 
