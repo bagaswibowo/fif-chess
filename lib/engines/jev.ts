@@ -18,6 +18,31 @@ export class PureJevEngine implements IChessEngine {
   readonly name = "Jev AI Connectome (Pure)";
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
+    const chStart = new Chess(req.fen);
+
+    // 0. Killer Instinct (Insting Pembunuh - Eksekusi Skakmat Mutlak):
+    // Jika ada langkah legal yang langsung SKAKMAT lawan di giliran ini, EKSEKUSI SEGERA 100%!
+    const legalMoves = chStart.moves({ verbose: true });
+    for (const lm of legalMoves) {
+      const cMate = new Chess(req.fen);
+      const appMate = cMate.move(lm);
+      if (appMate && cMate.isCheckmate()) {
+        const mateUci = lm.from + lm.to + (lm.promotion || "");
+        return {
+          engine: this.id,
+          uci: mateUci,
+          san: appMate.san,
+          fen: cMate.fen(),
+          probabilities: { [mateUci]: 1.0 },
+          confidence: 1.0,
+          droppedMoveCount: 0,
+          outcome: describeOutcome(cMate),
+          scoreCp: 30000,
+          metadata: { source: "instant-checkmate", model: "jev-latest" },
+        };
+      }
+    }
+
     const key = req.apiKey || process.env.TYPESAFE_API_KEY;
 
     // 1. Nature 2024 MBON Learned Recall: Ingat langkah terbaik jika sudah pernah dipelajari

@@ -343,6 +343,31 @@ export class JevSuperflyHybridEngine implements IChessEngine {
   readonly name = "Jev AI + Superfly Connectome Hybrid";
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
+    const chStart = new Chess(req.fen);
+
+    // 0. Killer Instinct (Insting Pembunuh - Eksekusi Skakmat Mutlak):
+    // Jika ada langkah legal yang langsung SKAKMAT lawan di giliran ini, EKSEKUSI SEGERA 100%!
+    const legalMoves = chStart.moves({ verbose: true });
+    for (const lm of legalMoves) {
+      const cMate = new Chess(req.fen);
+      const appMate = cMate.move(lm);
+      if (appMate && cMate.isCheckmate()) {
+        const mateUci = lm.from + lm.to + (lm.promotion || "");
+        return {
+          engine: this.id,
+          uci: mateUci,
+          san: appMate.san,
+          fen: cMate.fen(),
+          probabilities: { [mateUci]: 1.0 },
+          confidence: 1.0,
+          droppedMoveCount: 0,
+          outcome: describeOutcome(cMate),
+          scoreCp: 30000,
+          metadata: { source: "instant-checkmate", model: "jev-fly-hybrid" },
+        };
+      }
+    }
+
     const key = req.apiKey || process.env.TYPESAFE_API_KEY;
     const sims = Math.max(12, req.simulations ?? 15);
 
@@ -462,8 +487,26 @@ export class JevSuperflyHybridEngine implements IChessEngine {
 
     if (!hybridRaw) {
       const flyFallback = playSuperflyMove(req.fen, sims) || playFlyBrainMove(req.fen);
-      if (!flyFallback) throw new Error("Hybrid engine failed to generate move.");
-      hybridRaw = { ...flyFallback, request: {} as any };
+      if (!flyFallback) {
+        const sfEmergency = await playStockfishMove(req.fen, 10);
+        const chEm = new Chess(req.fen);
+        const fallbackMoves = chEm.moves({ verbose: true });
+        const defaultUci = fallbackMoves[0] ? fallbackMoves[0].from + fallbackMoves[0].to + (fallbackMoves[0].promotion || "") : "";
+        const chosenUci = sfEmergency?.uci || defaultUci;
+        const appEm = applyUci(chEm, chosenUci);
+        hybridRaw = {
+          uci: chosenUci,
+          san: appEm.san,
+          fen: chEm.fen(),
+          probabilities: { [chosenUci]: 1.0 },
+          confidence: 0.5,
+          droppedMoveCount: 0,
+          outcome: describeOutcome(chEm),
+          request: {} as any,
+        };
+      } else {
+        hybridRaw = { ...flyFallback, request: {} as any };
+      }
     }
 
     const vncVetoed = applyVncDescendingVeto(req.fen, hybridRaw);
