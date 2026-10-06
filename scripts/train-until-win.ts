@@ -38,10 +38,9 @@ async function runTrainingUntilWin() {
     console.log(`[Match #${matchIndex}] Jev+FlyBrain (${jfColor.toUpperCase()}) vs Stockfish (${jfColor === "white" ? "BLACK" : "WHITE"})`);
 
     const history: string[] = [];
-    const maxMoves = 50; // 100 plies limit per game
-    let moveCount = 0;
 
-    while (!chess.isGameOver() && moveCount < maxMoves) {
+    // Unlimited plies: game continues until natural FIDE game over (checkmate / draw)
+    while (!chess.isGameOver()) {
       const turn = chess.turn();
       const currentEngine = turn === "w" ? whiteEngine : blackEngine;
       const fenBefore = chess.fen();
@@ -65,7 +64,6 @@ async function runTrainingUntilWin() {
         if (!applied) break;
 
         history.push(res.san);
-        if (turn === "b") moveCount++;
       } catch (err: any) {
         console.error(`  Error in Match #${matchIndex} on turn ${turn}:`, err?.message);
         break;
@@ -78,11 +76,11 @@ async function runTrainingUntilWin() {
     if (chess.isCheckmate()) {
       winner = chess.turn() === "w" ? "black" : "white";
       isCheckmate = true;
-    } else if (chess.isDraw() || chess.isStalemate() || chess.isThreefoldRepetition() || moveCount >= maxMoves) {
+    } else if (chess.isDraw() || chess.isStalemate() || chess.isThreefoldRepetition() || chess.isInsufficientMaterial()) {
       winner = "draw";
     }
 
-    console.log(`  -> Match #${matchIndex} Result: Winner = ${winner.toUpperCase()} (${isCheckmate ? "CHECKMATE" : "DRAW/CAP"}), Plies: ${history.length}, DB Size: ${getDbSize()}`);
+    console.log(`  -> Match #${matchIndex} Result: Winner = ${winner.toUpperCase()} (${isCheckmate ? "CHECKMATE" : "DRAW"}), Plies: ${history.length}, DB Size: ${getDbSize()}`);
 
     // Update Dopamine & Aversive Learning langsung ke experience.json
     if (winner !== "draw") {
