@@ -20,6 +20,7 @@ import {
   isMoveSteppingIntoAbsolutePin,
   isKingWeakeningMove,
   isMoveSuicidalPieceLoss,
+  doesMoveLeaveAttackedPieceHanging,
 } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import { evalSingleMove, playStockfishMove } from "../stockfish";
@@ -315,7 +316,25 @@ async function ensureTacticalSafety(
     }
   } catch (_) {}
 
-  // 4. Evaluasi Taktis Stockfish (depth 8): Deteksi Blunder Berat / Kehilangan Pion & Perwira
+  // 4. Hanging Piece Protection Gate: Veto membiarkan perwira kita dimakan gratis oleh lawan (seperti 32... Rb8?? membiarkan Ra5 dimakan b4xa5)
+  try {
+    const chBefore = new Chess(fen);
+    const hanging = doesMoveLeaveAttackedPieceHanging(chBefore, candidateUci);
+    if (hanging.leavesHanging) {
+      const safeMoves = legalUcis.filter((u) => !doesMoveLeaveAttackedPieceHanging(chBefore, u).leavesHanging);
+      if (safeMoves.length > 0) {
+        const sfBest = await playStockfishMove(fen, 10);
+        const chosenSafe = sfBest?.uci && safeMoves.includes(sfBest.uci) ? sfBest.uci : safeMoves[0];
+        return {
+          uci: chosenSafe,
+          vetoed: true,
+          reason: `hanging_piece_vetoed (${hanging.piece?.toUpperCase()} left to be captured for -${hanging.lostValue}cp)`,
+        };
+      }
+    }
+  } catch (_) {}
+
+  // 5. Evaluasi Taktis Stockfish (depth 8): Deteksi Blunder Berat / Kehilangan Pion & Perwira
   try {
     const score = await evalSingleMove(fen, candidateUci, 8);
     if (score !== null && score <= -100) {
@@ -327,8 +346,9 @@ async function ensureTacticalSafety(
         const allowsMate = doesAllowMate(fen, sfBest.uci);
         const allowsPromo = allowsUnsafeEnemyPromotion(fen, sfBest.uci);
         const isSuicide = isMoveSuicidalPieceLoss(chB, sfBest.uci).isSuicidal;
+        const isHang = doesMoveLeaveAttackedPieceHanging(chB, sfBest.uci).leavesHanging;
 
-        if (!isDangerousPin && !allowsMate && !allowsPromo && !isSuicide) {
+        if (!isDangerousPin && !allowsMate && !allowsPromo && !isSuicide && !isHang) {
           return { uci: sfBest.uci, vetoed: true, reason: `tactical_blunder_vetoed (eval was ${score}cp)` };
         }
       }
@@ -454,6 +474,10 @@ export class JevSuperflyHybridEngine implements IChessEngine {
           const suicidalMv = isMoveSuicidalPieceLoss(chValence, uci);
           if (suicidalMv.isSuicidal) {
             prob *= 0.001;
+          }
+          const hangingMv = doesMoveLeaveAttackedPieceHanging(chValence, uci);
+          if (hangingMv.leavesHanging) {
+            prob *= 0.005;
           }
 
           // Lonjakan Dopamin PAM jika cocok dengan database pembelajaran Stockfish

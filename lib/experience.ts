@@ -438,6 +438,38 @@ export function isMoveSuicidalPieceLoss(
   return { isSuicidal: false };
 }
 
+export function doesMoveLeaveAttackedPieceHanging(
+  chess: Chess,
+  uci: string,
+): { leavesHanging: boolean; piece?: string; lostValue?: number } {
+  try {
+    const values: Record<string, number> = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 20000 };
+    const clone = new Chess(chess.fen());
+    const m = clone.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || undefined });
+    if (!m) return { leavesHanging: false };
+    if (clone.isCheckmate()) return { leavesHanging: false };
+
+    const oppMoves = clone.moves({ verbose: true });
+    for (const om of oppMoves) {
+      if (om.captured && om.captured !== "p") {
+        const victimVal = values[om.captured] || 0;
+        // Kasus 1: Perwira kita dipukul pion lawan (seperti b4xa5 makan Benteng)
+        if (om.piece === "p" && victimVal >= 300) {
+          return { leavesHanging: true, piece: om.captured, lostValue: victimVal - 100 };
+        }
+        // Kasus 2: Perwira kita dipukul gratis tanpa ada balasan (seperti Qxb7 makan Gajah gratis)
+        const testCap = new Chess(clone.fen());
+        testCap.move(om);
+        const recaptures = testCap.moves({ verbose: true }).filter((rec: any) => rec.to === om.to);
+        if (recaptures.length === 0 && victimVal >= 300) {
+          return { leavesHanging: true, piece: om.captured, lostValue: victimVal };
+        }
+      }
+    }
+  } catch (_) {}
+  return { leavesHanging: false };
+}
+
 const DB_PATH = path.join(process.env.JEV_DATA_DIR || path.join(process.cwd(), "data"), "experience.json");
 let memCache: Record<string, ExperienceEntry> | null = null;
 
