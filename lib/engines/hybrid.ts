@@ -21,6 +21,7 @@ import {
   isKingWeakeningMove,
   isMoveSuicidalPieceLoss,
   doesMoveLeaveAttackedPieceHanging,
+  normalizeFen,
 } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import { evalSingleMove, playStockfishMove } from "../stockfish";
@@ -400,9 +401,10 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         Promise.resolve().then(() => playSuperflyMove(req.fen, sims)),
       ]);
 
-      // 1. Nature 2024 MBON Recall: Eksekusi instan langkah Stockfish depth 14 jika sudah dipelajari
+      // 1. Nature 2024 MBON Recall: Eksekusi instan langkah terbukti jika sudah dipelajari & bernilai dopamin positif
       const learned = getLearnedMove(req.fen);
-      if (learned && !isBlunderMove(req.fen, learned.move)) {
+      const isStartPos = normalizeFen(req.fen) === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
+      if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) >= 0 && !isStartPos) {
         const legals = new Chess(req.fen).moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
         const safeCheck = await ensureTacticalSafety(req.fen, learned.move, legals);
         const finalUci = safeCheck.vetoed ? safeCheck.uci : learned.move;

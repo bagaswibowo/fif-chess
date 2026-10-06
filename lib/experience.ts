@@ -472,16 +472,21 @@ export function doesMoveLeaveAttackedPieceHanging(
 
 const DB_PATH = path.join(process.env.JEV_DATA_DIR || path.join(process.cwd(), "data"), "experience.json");
 let memCache: Record<string, ExperienceEntry> | null = null;
+let lastDbMtime: number = 0;
 
 function loadDb(): Record<string, ExperienceEntry> {
-  if (memCache) return memCache;
   try {
     if (fs.existsSync(DB_PATH)) {
+      const stat = fs.statSync(DB_PATH);
+      if (memCache && stat.mtimeMs === lastDbMtime) {
+        return memCache;
+      }
       memCache = JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
+      lastDbMtime = stat.mtimeMs;
       return memCache!;
     }
   } catch {}
-  memCache = {};
+  if (!memCache) memCache = {};
   return memCache;
 }
 
@@ -491,6 +496,9 @@ function saveDb(): void {
     const dir = path.dirname(DB_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(DB_PATH, JSON.stringify(memCache, null, 2), "utf-8");
+    try {
+      lastDbMtime = fs.statSync(DB_PATH).mtimeMs;
+    } catch {}
   } catch {}
 }
 
@@ -503,7 +511,7 @@ export function normalizeFen(fen: string): string {
 export function getLearnedMove(fen: string): { move: string; score: number; dopamine: number } | null {
   const db = loadDb();
   const entry = db[normalizeFen(fen)];
-  if (entry?.bestMove) {
+  if (entry?.bestMove && (entry.dopamine ?? 0) >= 0) {
     return { move: entry.bestMove, score: entry.score ?? 0, dopamine: entry.dopamine ?? 0 };
   }
   return null;

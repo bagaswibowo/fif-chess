@@ -468,6 +468,17 @@ export function SpectatorView({
         setOutcome(out);
         setStatus("finished");
         if (out.winner) setShowConfetti(true);
+        // Sinkronisasi otomatis: Laporkan hasil laga ke database pembelajaran & dopamin
+        try {
+          fetch("/api/match-result", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              history: chess.history(),
+              winner: out.winner || "draw",
+            }),
+          }).catch(() => {});
+        } catch (_) {}
         return;
       }
 
