@@ -192,10 +192,10 @@ async function ensureTacticalSafety(
     }
   } catch (_) {}
 
-  // 2. Evaluasi Taktis Stockfish (depth 8): Deteksi Blunder Berat / Kehilangan Perwira
+  // 2. Evaluasi Taktis Stockfish (depth 8): Deteksi Blunder Berat / Kehilangan Pion & Perwira
   try {
     const score = await evalSingleMove(fen, candidateUci, 8);
-    if (score !== null && score <= -200) {
+    if (score !== null && score <= -100) {
       const sfBest = await playStockfishMove(fen, 10);
       if (sfBest?.uci && sfBest.uci !== candidateUci) {
         return { uci: sfBest.uci, vetoed: true, reason: `tactical_blunder_vetoed (eval was ${score}cp)` };

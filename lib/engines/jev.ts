@@ -149,7 +149,7 @@ export class PureJevEngine implements IChessEngine {
     // Grandmaster Anti-Blunder Tactical Gate
     try {
       const score = await evalSingleMove(req.fen, chosenUci, 8);
-      if (score !== null && score <= -200) {
+      if (score !== null && score <= -100) {
         const sfBest = await playStockfishMove(req.fen, 10);
         if (sfBest?.uci && sfBest.uci !== chosenUci) {
           recordMatchExperience(req.fen, sfBest.uci, 50, chosenUci);
