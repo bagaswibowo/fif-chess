@@ -9,7 +9,15 @@ import { Chess } from "chess.js";
 import { PUZZLES, QUEST_CHAPTERS } from "../lib/puzzle-data.ts";
 import { replaySanList, isKnightFork, isQueenThreatened, isQueenXrayed, calculateMaterialCp, applyUci } from "../lib/chess.ts";
 import { buildLivePuzzle, isPlayablePuzzle } from "../lib/puzzle-store.ts";
-import { recordMatchExperience, getLearnedMove, isBlunderMove } from "../lib/experience.ts";
+import {
+  recordMatchExperience,
+  getLearnedMove,
+  isBlunderMove,
+  extractPositionMotifs,
+  recallMotifValence,
+  isMoveSteppingIntoAbsolutePin,
+  isKingWeakeningMove,
+} from "../lib/experience.ts";
 import { evaluateConnectomeNetwork } from "../lib/flybrain/connectome-network.ts";
 
 const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
@@ -174,4 +182,19 @@ const netStats = evaluateConnectomeNetwork(connectomeTestChess, "e7e5");
 assert.ok(typeof netStats.netScore === "number", "connectome netScore must be number");
 assert.ok(Array.isArray(netStats.diagnostics), "connectome diagnostics must be array");
 
-console.log("  Invariants catur & taktik: royal_fork=ok, eval_bar=ok, promo=ok, memory=ok, connectome=ok.");
+// 9. Kenyon Cell (KC) Motif Generalization & Tactical Safety (King vulnerability, enemy passed pawn, absolute pin)
+const weakKingChess = new Chess("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
+assert.equal(isKingWeakeningMove(weakKingChess, "f7f6"), true, "f7f6 must be flagged as king-weakening");
+assert.equal(isKingWeakeningMove(weakKingChess, "b8c6"), false, "b8c6 is developing and not king-weakening");
+
+const pinChess = new Chess("4rk2/pp2q1pp/8/8/8/8/PPPPP1PP/5R1K b - - 0 1");
+const pinCheck = isMoveSteppingIntoAbsolutePin(pinChess, "e7f7");
+assert.equal(pinCheck.isPinned, true, "Qf7 stepping into absolute pin to king must be detected");
+assert.equal(pinCheck.piece, "q");
+
+const passedPawnChess = new Chess("8/3P4/8/8/8/8/4k3/4K3 b - - 0 1");
+const passedMotifs = extractPositionMotifs(passedPawnChess);
+assert.equal(passedMotifs.enemyPassedPawnRank, 7, "Enemy passed pawn on rank 7 must be detected");
+assert.ok(recallMotifValence(passedPawnChess) < 0, "Aversive motif valence recalled for enemy rank 7 passed pawn");
+
+console.log("  Invariants catur & taktik: royal_fork=ok, eval_bar=ok, promo=ok, memory=ok, connectome=ok, kc_motifs=ok.");

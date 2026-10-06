@@ -10,7 +10,16 @@ import {
 } from "@/lib/jev";
 import { playSuperflyMove, playFlyBrainMove, isPredationTrap, calculateBiologicalValence } from "@/lib/flybrain/service";
 import { evaluateConnectomeNetwork } from "@/lib/flybrain/connectome-network";
-import { getLearnedMove, isBlunderMove, recordMatchExperience, reinforceMatchDopamine } from "@/lib/experience";
+import {
+  getLearnedMove,
+  isBlunderMove,
+  recordMatchExperience,
+  reinforceMatchDopamine,
+  extractPositionMotifs,
+  recallMotifValence,
+  isMoveSteppingIntoAbsolutePin,
+  isKingWeakeningMove,
+} from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import { evalSingleMove, playStockfishMove } from "../stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
@@ -99,32 +108,37 @@ async function queryJevPriors(
   }
 }
 
+function doesAllowMate(fen: string, uci: string): boolean {
+  try {
+    const c = new Chess(fen);
+    if (!c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })) return true;
+    return c.moves({ verbose: true }).some((m: any) => m.san.includes("#"));
+  } catch {
+    return true;
+  }
+}
+
 function applyVncDescendingVeto(fen: string, hybridRaw: JevPlaySuccess): boolean {
   const chBefore = new Chess(fen);
   const legalUcis = chBefore.moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
 
-  const allowsMate = (uci: string): boolean => {
-    try {
-      const c = new Chess(fen);
-      if (!c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })) return true;
-      return c.moves({ verbose: true }).some((m: any) => m.san.includes("#"));
-    } catch {
-      return true;
-    }
-  };
+  const allowsMate = (uci: string): boolean => doesAllowMate(fen, uci);
 
   const currentUci = hybridRaw.uci;
   const currentAllowsMate = allowsMate(currentUci);
   const currentIsTrap = isPredationTrap(fen, currentUci);
   const currentIsBlunder = isBlunderMove(fen, currentUci);
+  const currentPin = isMoveSteppingIntoAbsolutePin(chBefore, currentUci);
+  const currentIsAbsolutePin = currentPin.isPinned && (currentPin.piece === "q" || currentPin.piece === "r");
+  const currentIsWeakening = isKingWeakeningMove(chBefore, currentUci);
 
-  // Jika langkah saat ini aman dari skakmat, jebakan, dan blunder, pertahankan!
-  if (!currentAllowsMate && !currentIsTrap && !currentIsBlunder) return false;
+  // Jika langkah saat ini aman dari skakmat, jebakan, blunder, pin mutlak, dan pelemahan raja, pertahankan!
+  if (!currentAllowsMate && !currentIsTrap && !currentIsBlunder && !currentIsAbsolutePin && !currentIsWeakening) return false;
 
   recordMatchExperience(fen, undefined, undefined, currentUci);
 
   // Cari kandidat teraman:
-  // TIER 1: Bebas skakmat, bebas jebakan material, bebas blunder
+  // TIER 1: Bebas skakmat, bebas jebakan material, bebas blunder, bebas pin mutlak, bebas pelemahan raja
   // TIER 2: Bebas skakmat (prioritas mutlak bertahan hidup melawan skakmat)
   const candidatesTier1: string[] = [];
   const candidatesTier2: string[] = [];
@@ -132,7 +146,10 @@ function applyVncDescendingVeto(fen: string, hybridRaw: JevPlaySuccess): boolean
   for (const uci of legalUcis) {
     if (!allowsMate(uci)) {
       candidatesTier2.push(uci);
-      if (!isPredationTrap(fen, uci) && !isBlunderMove(fen, uci)) {
+      const pin = isMoveSteppingIntoAbsolutePin(chBefore, uci);
+      const isAbsPin = pin.isPinned && (pin.piece === "q" || pin.piece === "r");
+      const isWeak = isKingWeakeningMove(chBefore, uci);
+      if (!isPredationTrap(fen, uci) && !isBlunderMove(fen, uci) && !isAbsPin && !isWeak) {
         candidatesTier1.push(uci);
       }
     }
@@ -158,6 +175,49 @@ function applyVncDescendingVeto(fen: string, hybridRaw: JevPlaySuccess): boolean
   return false;
 }
 
+function allowsUnsafeEnemyPromotion(fen: string, uci: string): boolean {
+  try {
+    const c = new Chess(fen);
+    const app = c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+    if (!app) return true;
+
+    // Check if opponent can promote to Queen safely (i.e. not immediately recaptured)
+    const promoMoves = c.moves({ verbose: true }).filter((m: any) => m.san.includes("=Q") || m.promotion === "q");
+    for (const pm of promoMoves) {
+      const cPromo = new Chess(c.fen());
+      cPromo.move(pm);
+      const recapturesQ = cPromo.moves({ verbose: true }).some((rm: any) => rm.to === pm.to && rm.captured === "q");
+      if (!recapturesQ) return true;
+    }
+
+    // If our move gave check, check if enemy has an advanced passed pawn on 7th/2nd rank
+    // that we failed to control or attack
+    if (c.inCheck()) {
+      const currentSide = c.turn();
+      const myColor = currentSide === "w" ? "b" : "w";
+      const targetRank = currentSide === "w" ? "7" : "2";
+      const promoRank = currentSide === "w" ? "8" : "1";
+      for (let r = 0; r < 8; r++) {
+        for (let col = 0; col < 8; col++) {
+          const piece = c.board()[r][col];
+          if (piece && piece.color === currentSide && piece.type === "p") {
+            const sq = piece.square;
+            if (sq[1] === targetRank) {
+              const promoSq = (sq[0] + promoRank) as any;
+              if (!c.isAttacked(promoSq, myColor) && !c.isAttacked(sq, myColor)) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 async function ensureTacticalSafety(
   fen: string,
   candidateUci: string,
@@ -176,19 +236,24 @@ async function ensureTacticalSafety(
     if (testApp) {
       const oppMoves = testCh.moves({ verbose: true });
       const allowsMate = oppMoves.some((m: any) => m.san.includes("#"));
-      const allowsPromo = oppMoves.some((m: any) => m.san.includes("=Q") || m.promotion === "q");
+      const allowsPromo = allowsUnsafeEnemyPromotion(fen, candidateUci);
 
       if (allowsMate || allowsPromo) {
         // Cari langkah alternatif yang bebas skakmat & bebas promosi lawan
         const safeMoves = legalUcis.filter((u) => {
-          const c2 = new Chess(fen);
-          try {
-            if (!c2.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] })) return false;
-            const om = c2.moves({ verbose: true });
-            return !om.some((m: any) => (allowsMate ? m.san.includes("#") : false) || m.san.includes("=Q") || m.promotion === "q");
-          } catch {
-            return false;
+          if (allowsMate) {
+            const c2 = new Chess(fen);
+            try {
+              if (!c2.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] })) return false;
+              if (c2.moves({ verbose: true }).some((om: any) => om.san.includes("#"))) return false;
+            } catch {
+              return false;
+            }
           }
+          if (allowsPromo) {
+            if (allowsUnsafeEnemyPromotion(fen, u)) return false;
+          }
+          return true;
         });
         if (safeMoves.length > 0) {
           const sfBest = await playStockfishMove(fen, 10);
@@ -203,13 +268,49 @@ async function ensureTacticalSafety(
     }
   } catch (_) {}
 
-  // 2. Evaluasi Taktis Stockfish (depth 8): Deteksi Blunder Berat / Kehilangan Pion & Perwira
+  // 2. Motif-level Tactical Gate: Cek Absolute Pin (seperti Qf7) & King Weakening (seperti f7-f6)
+  try {
+    const chBefore = new Chess(fen);
+    const pin = isMoveSteppingIntoAbsolutePin(chBefore, candidateUci);
+    const isWeak = isKingWeakeningMove(chBefore, candidateUci);
+    const isDangerousPin = pin.isPinned && (pin.piece === "q" || pin.piece === "r");
+
+    if (isDangerousPin || isWeak) {
+      const safeMoves = legalUcis.filter((u) => {
+        const p = isMoveSteppingIntoAbsolutePin(chBefore, u);
+        const w = isKingWeakeningMove(chBefore, u);
+        return (!p.isPinned || (p.piece !== "q" && p.piece !== "r")) && !w;
+      });
+
+      if (safeMoves.length > 0) {
+        const sfBest = await playStockfishMove(fen, 10);
+        const chosenSafe = sfBest?.uci && safeMoves.includes(sfBest.uci) ? sfBest.uci : safeMoves[0];
+        return {
+          uci: chosenSafe,
+          vetoed: true,
+          reason: isDangerousPin
+            ? `absolute_pin_vetoed (${pin.piece?.toUpperCase()} pinned to king)`
+            : "king_weakening_vetoed (f-pawn shield collapse)",
+        };
+      }
+    }
+  } catch (_) {}
+
+  // 3. Evaluasi Taktis Stockfish (depth 8): Deteksi Blunder Berat / Kehilangan Pion & Perwira
   try {
     const score = await evalSingleMove(fen, candidateUci, 8);
     if (score !== null && score <= -100) {
       const sfBest = await playStockfishMove(fen, 10);
       if (sfBest?.uci && sfBest.uci !== candidateUci) {
-        return { uci: sfBest.uci, vetoed: true, reason: `tactical_blunder_vetoed (eval was ${score}cp)` };
+        const chB = new Chess(fen);
+        const pin = isMoveSteppingIntoAbsolutePin(chB, sfBest.uci);
+        const isDangerousPin = pin.isPinned && (pin.piece === "q" || pin.piece === "r");
+        const allowsMate = doesAllowMate(fen, sfBest.uci);
+        const allowsPromo = allowsUnsafeEnemyPromotion(fen, sfBest.uci);
+
+        if (!isDangerousPin && !allowsMate && !allowsPromo) {
+          return { uci: sfBest.uci, vetoed: true, reason: `tactical_blunder_vetoed (eval was ${score}cp)` };
+        }
       }
     }
   } catch (_) {}
@@ -268,9 +369,43 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         for (const uci of jevData.legalUcis) {
           const pJev = jevData.resolved.probabilities[uci] ?? 0;
           const pFly = mctsProbs[uci] ?? 0;
-          const valence = calculateBiologicalValence(chValence, uci);
+          let valence = calculateBiologicalValence(chValence, uci);
+
+          // Kenyon Cell (KC) Motif-Level Associative Penalty & Learned Valence Recall:
+          // 1. Absolute pins (like Qf7): stepping Queen or Rook into an absolute pin to the King
+          const pinCheck = isMoveSteppingIntoAbsolutePin(chValence, uci);
+          if (pinCheck.isPinned) {
+            if (pinCheck.piece === "q") {
+              valence -= 450; // Severe penalty for pinned Queen (like Qf7)
+            } else if (pinCheck.piece === "r") {
+              valence -= 250;
+            } else {
+              valence -= 150;
+            }
+          }
+
+          // 2. King weakening moves (like f7-f6): unprovoked king pawn shield rupture
+          if (isKingWeakeningMove(chValence, uci)) {
+            valence -= 280; // Associative penalty for exposing king diagonals
+          }
+
+          // 3. Post-move motif-level learned valence recall (Nature 2024 MBON readouts)
+          const testCh = new Chess(req.fen);
+          if (testCh.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || undefined })) {
+            const motifValence = recallMotifValence(testCh);
+            valence += motifValence * 0.5;
+          }
+
           const valenceFactor = valence < 0 ? Math.max(0.01, 1 + valence / 500) : 1 + valence / 300;
           let prob = (weightJev * pJev + weightFly * pFly) * valenceFactor;
+
+          // Hard probability squashing for critical motif blunders
+          if (pinCheck.isPinned && pinCheck.piece === "q") {
+            prob *= 0.02;
+          }
+          if (isKingWeakeningMove(chValence, uci)) {
+            prob *= 0.05;
+          }
 
           // Lonjakan Dopamin PAM jika cocok dengan database pembelajaran Stockfish
           if (learned?.move === uci) {
