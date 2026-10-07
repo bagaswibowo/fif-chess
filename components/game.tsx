@@ -598,7 +598,15 @@ export function Game() {
   );
 
   const squareStyles = useMemo(() => {
+    // v5: seam painted by every square itself, so pieces jumping between
+    // squares never expose the white board background.
+    const seam: React.CSSProperties = { border: "1px solid var(--board-light)" };
     const styles: Record<string, React.CSSProperties> = {};
+    for (const row of ["1", "2", "3", "4", "5", "6", "7", "8"]) {
+      for (const file of ["a", "b", "c", "d", "e", "f", "g", "h"]) {
+        styles[`${file}${row}` as Square] = { ...seam };
+      }
+    }
     if (selectedSquare) {
       styles[selectedSquare] = {
         boxShadow: "inset 0 0 0 4px var(--primary)",
@@ -1099,7 +1107,7 @@ export function Game() {
                   />
 
                   {/* Chessboard Container: strict aspect-square bound by both height & width */}
-                  <div className="aspect-square h-full max-h-full max-w-full min-w-0 rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative flex items-center justify-center">
+                  <div className="aspect-square h-full max-h-full max-w-full min-w-0 rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-white shadow-2xl relative">
                     <Chessboard
                       options={{
                         id: "fif-chess-main",
@@ -1108,15 +1116,6 @@ export function Game() {
                         allowDragging: humanToMove,
                         canDragPiece,
                         onPieceDrop,
-                        boardStyle: {
-                          backgroundColor: "var(--board-dark)",
-                          gridTemplateRows: "repeat(8, 1fr)",
-                          gridTemplateColumns: "repeat(8, 1fr)",
-                          gap: 0,
-                          width: "100%",
-                          height: "100%",
-                          aspectRatio: "1 / 1",
-                        },
                         alphaNotationStyle: {
                           bottom: "3px",
                           right: "5px",
