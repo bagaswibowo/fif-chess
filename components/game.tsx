@@ -598,15 +598,7 @@ export function Game() {
   );
 
   const squareStyles = useMemo(() => {
-    // v5: seam painted by every square itself, so pieces jumping between
-    // squares never expose the white board background.
-    const seam: React.CSSProperties = { border: "1px solid var(--board-light)" };
     const styles: Record<string, React.CSSProperties> = {};
-    for (const row of ["1", "2", "3", "4", "5", "6", "7", "8"]) {
-      for (const file of ["a", "b", "c", "d", "e", "f", "g", "h"]) {
-        styles[`${file}${row}` as Square] = { ...seam };
-      }
-    }
     if (selectedSquare) {
       styles[selectedSquare] = {
         boxShadow: "inset 0 0 0 4px var(--primary)",
