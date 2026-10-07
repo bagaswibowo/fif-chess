@@ -1099,7 +1099,7 @@ export function Game() {
                   />
 
                   {/* Chessboard Container: strict aspect-square bound by both height & width */}
-                  <div className="aspect-square h-full max-h-full max-w-full min-w-0 rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-white shadow-2xl relative">
+                  <div className="aspect-square h-full max-h-full max-w-full min-w-0 rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative">
                     <Chessboard
                       options={{
                         id: "fif-chess-main",
