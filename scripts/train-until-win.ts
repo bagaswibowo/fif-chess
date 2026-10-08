@@ -59,11 +59,15 @@ async function runTrainingUntilWin() {
       const fenBefore = chess.fen();
 
       try {
+        // PARAM PERSIS LIVE (components/game.tsx -> /api/engine-move):
+        // seed:0 + history slice(-10) + depth:14. seed & history masuk prompt Jev
+        // (buildJevRequest), jadi harus sama agar hasil training == live.
         const res = await playEngineMove(currentEngine as any, {
           fen: fenBefore,
-          depth: 10,
+          depth: 14,
           simulations: 15,
-          history,
+          seed: 0,
+          history: history.slice(-10),
         });
 
         if (!res?.uci) break;
