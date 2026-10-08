@@ -4,6 +4,19 @@ import { recordMatchExperience, reinforceMatchDopamine } from "../lib/experience
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
+// ROOT-CAUSE FIX: the live app runs with TYPESAFE_API_KEY set (via docker-compose
+// .env), but this loop was historically launched WITHOUT it, so the hybrid engine's
+// entire Jev-LLM layer (hybrid.ts `if (key)`) was skipped and only the Superfly MCTS
+// fallback trained. That is why live play (full hybrid) diverged from training results.
+// Loading .env here makes training use the SAME secret as live. Existing env vars
+// (a launcher-provided key) take precedence, so this never overrides the container.
+try {
+  process.loadEnvFile?.(join(process.cwd(), ".env"));
+} catch {}
+// ponytail: loadEnvFile does not overwrite existing vars, so a launcher-supplied
+// key still wins; if a future launcher needs to FORCE a different key, export it
+// before the call (env precedence handles it) — no code change needed.
+
 const DB_PATH = join(process.env.JEV_DATA_DIR || join(process.cwd(), "data"), "experience.json");
 
 function getDbSize(): number {
