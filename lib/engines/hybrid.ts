@@ -493,7 +493,14 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         }
 
         const sortedMoves = Object.entries(fusedProbs).sort((a, b) => b[1] - a[1]);
-        const chosenUci = sortedMoves.length > 0 ? sortedMoves[0][0] : jevData.resolved.uci;
+        // Baseline MCTS: pilih ANTARA top-3 PUCT MCTS saja; LLM hanya tie-breaker
+        // di dalamnya. Mengagresifkan LLM (bobot 0.6) membuat hybrid ke-skakmat SF
+        // 10/10 sementara MCTS keyless bisa remis 31% -> MCTS jadi basis, LLM penjelajah.
+        // ponytail: top-3 cutoff hardcoded; kalau wantunya "LLM bebas memilih" balik
+        // ke sortedMoves[0], kalau wantunya murni MCTS hapus gated sama sekali.
+        const flyTop3 = new Set(Object.entries(mctsProbs).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([u]) => u));
+        const gated = sortedMoves.filter(([u]) => flyTop3.has(u));
+        const chosenUci = gated.length > 0 ? gated[0][0] : sortedMoves.length > 0 ? sortedMoves[0][0] : jevData.resolved.uci;
 
         const ch = new Chess(req.fen);
         const applied = applyUci(ch, chosenUci);
