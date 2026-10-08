@@ -1,7 +1,7 @@
 import { Chess } from "chess.js";
 import { applyUci, describeOutcome } from "@/lib/chess";
 import { playSuperflyMove, playFlyBrainMove } from "@/lib/flybrain/service";
-import { recordMatchExperience } from "@/lib/experience";
+import { recordMatchExperience, getLearnedMove, isBlunderMove } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
@@ -11,6 +11,32 @@ export class PureSuperflyEngine implements IChessEngine {
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
     const sims = Math.max(12, req.simulations ?? 15);
+
+    // MBON Learned Recall: pakai hasil training (experience.json) di posisi yang
+    // pernah dikunjungi. Mirip engines/jev.ts — sebelumnya engine fly HANYA menulis
+    // DB, tidak pernah membaca, sehingga belajar dari training tidak memengaruhinya.
+    const learned = getLearnedMove(req.fen);
+    if (learned && !isBlunderMove(req.fen, learned.move)) {
+      const chL = new Chess(req.fen);
+      const appL = applyUci(chL, learned.move);
+      if (appL) {
+        const prediction = await getStockfishPrediction(chL.fen());
+        return {
+          engine: this.id,
+          uci: learned.move,
+          san: appL.san,
+          fen: chL.fen(),
+          probabilities: { [learned.move]: 0.99 },
+          confidence: 0.99,
+          droppedMoveCount: 0,
+          outcome: describeOutcome(chL),
+          scoreCp: learned.score,
+          prediction,
+          metadata: { source: "mbon-learned", model: "superfly-pure" },
+        };
+      }
+    }
+
     // 100% Pure Drosophila Connectome PUCT MCTS with Nature 2024 Circuits
     const flyRes = playSuperflyMove(req.fen, sims) || playFlyBrainMove(req.fen);
     if (!flyRes) {
