@@ -1183,19 +1183,21 @@ export function Game() {
                 </div>
               </div>
 
-              {lastMove && lastMove.by !== "human" && (
-                <button
-                  type="button"
-                  onClick={saveOpponentTrick}
-                  className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 shrink-0 ${
-                    opponentTacticSaved
-                      ? "bg-emerald-950/80 border-emerald-500 text-emerald-300"
+              {/* Persistent: always visible above board, disabled when no opponent trick yet */}
+              <button
+                type="button"
+                onClick={saveOpponentTrick}
+                disabled={!lastMove || lastMove.by === "human" || !gameActive}
+                className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 shrink-0 ${
+                  opponentTacticSaved
+                    ? "bg-emerald-950/80 border-emerald-500 text-emerald-300"
+                    : !lastMove || lastMove.by === "human" || !gameActive
+                      ? "bg-[var(--card)] border-[var(--border)] text-neutral-600 cursor-not-allowed"
                       : "bg-[var(--card)] border-[var(--border)] text-neutral-300 hover:text-white hover:border-[var(--primary)]"
-                  }`}
-                >
-                  <span>{opponentTacticSaved ? "Trik lawan disimpan" : "Simpan trik lawan"}</span>
-                </button>
-              )}
+                }`}
+              >
+                <span>{opponentTacticSaved ? "Trik lawan disimpan" : "Simpan trik lawan"}</span>
+              </button>
               {fullscreenClocks && (
                 <ClockMovesFullscreen
                   fen={fen}
@@ -1280,6 +1282,29 @@ export function Game() {
                   </div>
                 </CardHeader>
 
+                {/* Persistent Komentator on/off: always available, never disappears with tabs */}
+                <div className="shrink-0 flex items-center justify-between gap-2 px-3 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
+                  <span className="flex items-center gap-2 text-[11px] font-bold text-neutral-300">
+                    <IconBot3D size={16} /> Komentator
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={commentatorEnabled}
+                    onClick={() => setCommentatorEnabled((e) => !e)}
+                    className={`inline-flex h-7 shrink-0 items-center gap-2 rounded-full border px-2 text-[10px] font-black transition-colors ${
+                      commentatorEnabled
+                        ? "border-[var(--primary)]/60 bg-[var(--primary)]/15 text-emerald-300"
+                        : "border-[var(--border)] bg-[var(--background)] text-neutral-500"
+                    }`}
+                  >
+                    <span className={`relative h-3.5 w-6 rounded-full transition-colors ${commentatorEnabled ? "bg-[var(--primary)]" : "bg-neutral-700"}`}>
+                      <span className={`absolute top-0.5 h-2.5 w-2.5 rounded-full bg-white shadow transition-transform ${commentatorEnabled ? "translate-x-3" : "translate-x-0.5"}`} />
+                    </span>
+                    <span>{commentatorEnabled ? "ON" : "OFF"}</span>
+                  </button>
+                </div>
+
                 <CardContent className="p-3.5 flex-1 min-h-0 overflow-y-auto space-y-3 custom-scrollbar">
                   {/* TAB 1: GAME SETUP OR ACTIVE MATCH HUB */}
                   {rightTab === "game-setup" && (
@@ -1291,27 +1316,9 @@ export function Game() {
                           {(() => {
                             return (
                               <div className="p-3 bg-[var(--surface)] rounded-xl border border-[var(--border)] shadow-sm space-y-2 animate-in fade-in">
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex min-w-0 items-center gap-2">
-                                    <IconBot3D size={18} />
-                                    <span className="truncate text-xs font-bold text-white">Komentator {AI_LABEL[selectedAiOpponent]}</span>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={commentatorEnabled}
-                                    onClick={() => setCommentatorEnabled((enabled) => !enabled)}
-                                    className={`inline-flex h-8 shrink-0 items-center gap-2 rounded-full border px-2.5 text-[10px] font-black transition-colors ${
-                                      commentatorEnabled
-                                        ? "border-[var(--primary)]/60 bg-[var(--primary)]/15 text-emerald-300"
-                                        : "border-[var(--border)] bg-[var(--background)] text-neutral-500"
-                                    }`}
-                                  >
-                                    <span className={`relative h-4 w-7 rounded-full transition-colors ${commentatorEnabled ? "bg-[var(--primary)]" : "bg-neutral-700"}`}>
-                                      <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${commentatorEnabled ? "translate-x-3.5" : "translate-x-0.5"}`} />
-                                    </span>
-                                    <span>{commentatorEnabled ? "ON" : "OFF"}</span>
-                                  </button>
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <IconBot3D size={18} />
+                                  <span className="truncate text-xs font-bold text-white">Komentator {AI_LABEL[selectedAiOpponent]}</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2">
                                   <span className="text-xs font-bold leading-snug text-white">{commentatorEnabled ? matchCommentary.headline : "Komentator dinonaktifkan"}</span>
