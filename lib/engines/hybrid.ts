@@ -26,6 +26,8 @@ import {
 import { getStockfishPrediction } from "./stockfish";
 import { evalSingleMove, playStockfishMove } from "../stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
+import { fenEngineCache } from "./lru-cache";
+import { mctsConcurrencyGate } from "./concurrency-gate";
 
 export interface BoardPieceScan {
   square: Square;
@@ -364,6 +366,10 @@ export class JevSuperflyHybridEngine implements IChessEngine {
   readonly name = "Jev AI + Superfly Connectome Hybrid";
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
+    const cached = fenEngineCache.get(req.fen);
+    if (cached) {
+      return cached;
+    }
     const chStart = new Chess(req.fen);
 
     // 0. Killer Instinct (Insting Pembunuh - Eksekusi Skakmat Mutlak):
@@ -390,28 +396,23 @@ export class JevSuperflyHybridEngine implements IChessEngine {
     }
 
     const key = req.apiKey || process.env.TYPESAFE_API_KEY;
-    const sims = Math.max(12, req.simulations ?? 15);
+    const baseSims = Math.max(10, req.simulations ?? 15);
+    const sims = mctsConcurrencyGate.getAdaptiveSimulations(baseSims);
 
     let hybridRaw: JevPlaySuccess | null = null;
 
     if (key) {
-      // Jalankan Jev Priors (LLM) dan Superfly MCTS (Connectome) secara paralel agar responsif (<3s)
-      const [jevData, superfly] = await Promise.all([
-        queryJevPriors(req.fen, req.seed, req.history, key),
-        Promise.resolve().then(() => playSuperflyMove(req.fen, sims)),
-      ]);
-
       // 1. Nature 2024 MBON Recall: Eksekusi instan langkah terbukti jika sudah dipelajari & bernilai dopamin positif
       const learned = getLearnedMove(req.fen);
       const isStartPos = normalizeFen(req.fen) === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
-      if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) >= 0 && !isStartPos) {
+      if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) > 0 && (learned.score ?? 0) >= 0 && !isStartPos) {
         const legals = new Chess(req.fen).moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
         const safeCheck = await ensureTacticalSafety(req.fen, learned.move, legals);
         const finalUci = safeCheck.vetoed ? safeCheck.uci : learned.move;
         const chL = new Chess(req.fen);
         const applied = applyUci(chL, finalUci);
         const prediction = await getStockfishPrediction(chL.fen(), finalUci);
-        return {
+        const mbonResp: EngineMoveResponse = {
           engine: this.id,
           uci: finalUci,
           san: applied.san,
@@ -424,96 +425,32 @@ export class JevSuperflyHybridEngine implements IChessEngine {
           prediction,
           metadata: { source: safeCheck.vetoed ? "tactical-override" : "mbon-learned", model: "jev-fly-hybrid" },
         };
+        fenEngineCache.set(req.fen, mbonResp);
+        return mbonResp;
       }
 
-      if (jevData) {
-        const mctsProbs = superfly?.probabilities || {};
+      // Jev memberi bobot awal (prior) -> MCTS rollout dibatasi Concurrency Gate -> Move terbaik MCTS dieksekusi
+      const jevData = await queryJevPriors(req.fen, req.seed, req.history, key);
+      const jevPriors = jevData?.resolved?.probabilities;
 
-        const fusedProbs: Record<string, number> = {};
-        const chValence = new Chess(req.fen);
-        const weightJev = 0.6;
-        const weightFly = 0.4;
-        for (const uci of jevData.legalUcis) {
-          const pJev = jevData.resolved.probabilities[uci] ?? 0;
-          const pFly = mctsProbs[uci] ?? 0;
-          let valence = calculateBiologicalValence(chValence, uci);
+      const superfly = await mctsConcurrencyGate.run(async () => {
+        return playSuperflyMove(
+          req.fen,
+          sims,
+          jevPriors ? { rootPriors: jevPriors, rootPriorWeight: 0.15 } : {}
+        );
+      });
 
-          // Kenyon Cell (KC) Motif-Level Associative Penalty & Learned Valence Recall:
-          // 1. Absolute pins (like Qf7): stepping Queen or Rook into an absolute pin to the King
-          const pinCheck = isMoveSteppingIntoAbsolutePin(chValence, uci);
-          if (pinCheck.isPinned) {
-            if (pinCheck.piece === "q") {
-              valence -= 450; // Severe penalty for pinned Queen (like Qf7)
-            } else if (pinCheck.piece === "r") {
-              valence -= 250;
-            } else {
-              valence -= 150;
-            }
-          }
-
-          // 2. King weakening moves (like f7-f6): unprovoked king pawn shield rupture
-          if (isKingWeakeningMove(chValence, uci)) {
-            valence -= 280; // Associative penalty for exposing king diagonals
-          }
-
-          // 3. Post-move motif-level learned valence recall (Nature 2024 MBON readouts)
-          const testCh = new Chess(req.fen);
-          if (testCh.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || undefined })) {
-            const motifValence = recallMotifValence(testCh);
-            valence += motifValence * 0.5;
-          }
-
-          const valenceFactor = valence < 0 ? Math.max(0.01, 1 + valence / 500) : 1 + valence / 300;
-          let prob = (weightJev * pJev + weightFly * pFly) * valenceFactor;
-
-          // Hard probability squashing for critical motif blunders
-          if (pinCheck.isPinned && pinCheck.piece === "q") {
-            prob *= 0.02;
-          }
-          if (isKingWeakeningMove(chValence, uci)) {
-            prob *= 0.05;
-          }
-          const suicidalMv = isMoveSuicidalPieceLoss(chValence, uci);
-          if (suicidalMv.isSuicidal) {
-            prob *= 0.001;
-          }
-          const hangingMv = doesMoveLeaveAttackedPieceHanging(chValence, uci);
-          if (hangingMv.leavesHanging) {
-            prob *= 0.005;
-          }
-
-          // Lonjakan Dopamin PAM jika cocok dengan database pembelajaran Stockfish
-          if (learned?.move === uci) {
-            prob *= 1 + Math.max(0.5, (learned.dopamine || 350) / 400);
-          }
-          if (isBlunderMove(req.fen, uci)) {
-            prob *= 0.05;
-          }
-          fusedProbs[uci] = Number(prob.toFixed(4));
-        }
-
-        const sortedMoves = Object.entries(fusedProbs).sort((a, b) => b[1] - a[1]);
-        // Baseline MCTS: pilih ANTARA top-3 PUCT MCTS saja; LLM hanya tie-breaker
-        // di dalamnya. Mengagresifkan LLM (bobot 0.6) membuat hybrid ke-skakmat SF
-        // 10/10 sementara MCTS keyless bisa remis 31% -> MCTS jadi basis, LLM penjelajah.
-        // ponytail: top-3 cutoff hardcoded; kalau wantunya "LLM bebas memilih" balik
-        // ke sortedMoves[0], kalau wantunya murni MCTS hapus gated sama sekali.
-        const flyTop3 = new Set(Object.entries(mctsProbs).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([u]) => u));
-        const gated = sortedMoves.filter(([u]) => flyTop3.has(u));
-        const chosenUci = gated.length > 0 ? gated[0][0] : sortedMoves.length > 0 ? sortedMoves[0][0] : jevData.resolved.uci;
-
-        const ch = new Chess(req.fen);
-        const applied = applyUci(ch, chosenUci);
-
+      if (superfly) {
         hybridRaw = {
-          uci: chosenUci,
-          san: applied.san,
-          fen: ch.fen(),
-          probabilities: fusedProbs,
-          confidence: fusedProbs[chosenUci] ?? jevData.resolved.confidence,
+          uci: superfly.uci,
+          san: superfly.san,
+          fen: superfly.fen,
+          probabilities: superfly.probabilities,
+          confidence: superfly.confidence,
           droppedMoveCount: 0,
-          outcome: describeOutcome(ch),
-          request: jevData.request,
+          outcome: superfly.outcome,
+          request: jevData?.request ?? ({} as any),
         };
       }
     }
@@ -568,7 +505,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
       reinforceMatchDopamine([...(req.history ?? []), hybridRaw.san], hybridRaw.outcome.winner);
     }
 
-    return {
+    const finalResp: EngineMoveResponse = {
       engine: this.id,
       uci: hybridRaw.uci,
       san: hybridRaw.san,
@@ -588,6 +525,8 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         connectomeNetwork: evaluateConnectomeNetwork(new Chess(req.fen), hybridRaw.uci),
       },
     };
+    fenEngineCache.set(req.fen, finalResp);
+    return finalResp;
   }
 }
 

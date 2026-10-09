@@ -50,3 +50,4 @@ artefacts/
 !/data/training-20-matches.json
 !/data/training-sf20-parallel.json
 models/
+*.log

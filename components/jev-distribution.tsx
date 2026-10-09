@@ -43,7 +43,7 @@ export function JevDistribution({ analysis, thinking }: Props) {
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">
           chose {analysis.chosenSan}
-          <span className="ml-1 font-mono text-[10px] opacity-70">{analysis.chosenUci}</span>
+          <span className="ml-1 font-mono text-xs opacity-70">{analysis.chosenUci}</span>
         </Badge>
         {analysis.confidence !== null && (
           <Badge variant="outline">

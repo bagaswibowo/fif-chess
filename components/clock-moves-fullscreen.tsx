@@ -111,7 +111,7 @@ export function ClockMovesFullscreen({
           <h2 className="text-xs sm:text-sm font-black text-white m-0 tracking-wide uppercase truncate">
             Arena Fokus Catur (1 Layar)
           </h2>
-          <div className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-[var(--surface)] border border-[var(--border)] text-[var(--primary)]">
+          <div className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--surface)] border border-[var(--border)] text-[var(--primary)]">
             {activeSide ? `● Giliran ${activeSide === "white" ? "Putih" : "Hitam"}` : "Selesai"}
           </div>
         </div>
@@ -202,7 +202,7 @@ export function ClockMovesFullscreen({
                   height: currentOrientation === "white" ? `${whiteWinningPercent}%` : `${100 - whiteWinningPercent}%`,
                 }}
               />
-              <span className="absolute inset-x-0 bottom-1 text-[8px] font-mono font-bold text-center text-black pointer-events-none select-none">
+              <span className="absolute inset-x-0 bottom-1 text-xs font-mono font-bold text-center text-black pointer-events-none select-none">
                 {Math.abs(evalValue).toFixed(1)}
               </span>
             </div>

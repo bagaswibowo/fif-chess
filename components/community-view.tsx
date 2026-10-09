@@ -3,6 +3,7 @@
 export type { ForumCategory, ForumPost, ForumThread } from "./community/types";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { ArrowLeft } from "lucide-react";
 import type { SessionUser } from "@/lib/use-session";
 import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import {
@@ -284,7 +285,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
               onClick={() => setViewMode("index")}
               className="ctl ctl-sm ctl-quiet flex items-center gap-1"
             >
-              <span>← Kembali</span>
+              <span className="flex items-center gap-1.5"><ArrowLeft size={16} className="shrink-0" /><span>Kembali</span></span>
             </button>
           )}
 

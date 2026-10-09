@@ -8,6 +8,7 @@ import { EvalBar } from "@/components/eval-bar";
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
+import { Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confetti } from "@/components/confetti";
@@ -403,7 +404,7 @@ export function CoachModeView({ lang = "id" }: Props) {
             <h2 className="text-xs md:text-sm font-black text-white truncate">
               {lang === "id" ? "AI Coach — Mode Latih" : "AI Coach — Training"}
             </h2>
-            <div className="text-[10px] md:text-xs text-neutral-400 truncate">
+            <div className="text-xs md:text-xs text-neutral-400 truncate">
               Lawan: Stockfish 15 NNUE
             </div>
           </div>
@@ -466,7 +467,7 @@ export function CoachModeView({ lang = "id" }: Props) {
 
           {/* Chessboard Row with Vertical Eval Bar */}
           <div className="flex justify-center w-full flex-1 min-h-0">
-            <div className="flex gap-2.5 items-stretch w-full max-w-[min(100%,calc(100dvh-210px))]">
+            <div className="flex gap-2.5 items-center w-full max-w-[min(100%,calc(100dvh-210px))]">
               <EvalBar fen={fen} scoreCp={evalCp} orientation={boardOrientation} />
               <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
                 <Chessboard
@@ -508,7 +509,7 @@ export function CoachModeView({ lang = "id" }: Props) {
             <div className="flex items-center gap-2">
               <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-white border-neutral-300" : "bg-neutral-800 border-neutral-600"}`} />
               <span className="text-xs md:text-sm font-bold text-white">Anda (Player)</span>
-              {isPlayerTurn && <span className="text-[10px] text-[var(--primary)] font-black animate-pulse">Giliran</span>}
+              {isPlayerTurn && <span className="text-xs text-[var(--primary)] font-black animate-pulse">Giliran</span>}
             </div>
             <div className="flex items-center gap-2">
               <CapturedPiecesBar fen={fen} side={playerSide} />
@@ -548,7 +549,7 @@ export function CoachModeView({ lang = "id" }: Props) {
                       <Button onClick={handleUndo} variant="outline" size="sm"
                         className="flex-1 min-w-0 px-2 h-8 border-[#81b64c]/40 bg-transparent text-xs font-bold text-neutral-300 hover:bg-[#81b64c]/20"
                         disabled={history.length < 2 || thinkingRef.current}>
-                        ← {lang === "id" ? "Batalkan" : "Undo"}
+                        <Undo2 size={14} className="shrink-0" /><span>{lang === "id" ? "Batalkan" : "Undo"}</span>
                       </Button>
                       <Button onClick={() => void tryMove(hint.uci.slice(0, 2), hint.uci.slice(2, 4))} size="sm"
                         className="flex-1 min-w-0 px-2 h-8 bg-[#81b64c] text-xs font-bold text-[#1f291e] hover:bg-[#81b64c]/90"
@@ -599,7 +600,7 @@ export function CoachModeView({ lang = "id" }: Props) {
             <CardHeader className="py-2.5 px-4 border-b border-[#36322d]">
               <CardTitle className="text-xs font-bold text-neutral-300 flex items-center justify-between">
                 <span>{lang === "id" ? "Review Langkah Terakhir" : "Move Evaluation"}</span>
-                {feedback && <span className="text-[10px] font-mono text-[#81b64c]">Active</span>}
+                {feedback && <span className="text-xs font-mono text-[#81b64c]">Active</span>}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3.5 space-y-2.5">
@@ -625,7 +626,7 @@ export function CoachModeView({ lang = "id" }: Props) {
                   )}
                   {feedback.bestSan && (
                     <div className="p-2.5 rounded-lg bg-[#0f2231] border border-[#38bdf8]/30 space-y-0.5">
-                      <div className="text-[11px] font-bold text-sky-300">
+                      <div className="text-xs font-bold text-sky-300">
                         {lang === "id" ? "Langkah Terbaik Seharusnya:" : "Optimal Choice Was:"}
                       </div>
                       <div className="font-mono text-base font-black text-sky-200">
@@ -637,7 +638,7 @@ export function CoachModeView({ lang = "id" }: Props) {
               ) : (
                 <div className="text-xs text-neutral-400 py-4 text-center space-y-1">
                   <div>{lang === "id" ? "Silakan jalankan langkah pertama." : "Make your first move."}</div>
-                  <div className="text-[11px] text-neutral-500">
+                  <div className="text-xs text-neutral-500">
                     {lang === "id" ? "AI Coach akan menilai kualitas dan akurasimu." : "AI Coach will rate move precision."}
                   </div>
                 </div>

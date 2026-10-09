@@ -403,7 +403,7 @@ export function CoachModeView({ lang = "id" }: Props) {
             <h2 className="text-xs md:text-sm font-black text-white truncate">
               {lang === "id" ? "AI Coach — Mode Latih" : "AI Coach — Training"}
             </h2>
-            <div className="text-[10px] md:text-xs text-neutral-400 truncate">
+            <div className="text-xs md:text-xs text-neutral-400 truncate">
               Lawan: Stockfish 15 NNUE
             </div>
           </div>
@@ -508,7 +508,7 @@ export function CoachModeView({ lang = "id" }: Props) {
             <div className="flex items-center gap-2">
               <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-white border-neutral-300" : "bg-neutral-800 border-neutral-600"}`} />
               <span className="text-xs md:text-sm font-bold text-white">Anda (Player)</span>
-              {isPlayerTurn && <span className="text-[10px] text-[var(--primary)] font-black animate-pulse">Giliran</span>}
+              {isPlayerTurn && <span className="text-xs text-[var(--primary)] font-black animate-pulse">Giliran</span>}
             </div>
             <div className="flex items-center gap-2">
               <CapturedPiecesBar fen={fen} side={playerSide} />
@@ -599,7 +599,7 @@ export function CoachModeView({ lang = "id" }: Props) {
             <CardHeader className="py-2.5 px-4 border-b border-[#36322d]">
               <CardTitle className="text-xs font-bold text-neutral-300 flex items-center justify-between">
                 <span>{lang === "id" ? "Review Langkah Terakhir" : "Move Evaluation"}</span>
-                {feedback && <span className="text-[10px] font-mono text-[#81b64c]">Active</span>}
+                {feedback && <span className="text-xs font-mono text-[#81b64c]">Active</span>}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3.5 space-y-2.5">
@@ -625,7 +625,7 @@ export function CoachModeView({ lang = "id" }: Props) {
                   )}
                   {feedback.bestSan && (
                     <div className="p-2.5 rounded-lg bg-[#0f2231] border border-[#38bdf8]/30 space-y-0.5">
-                      <div className="text-[11px] font-bold text-sky-300">
+                      <div className="text-xs font-bold text-sky-300">
                         {lang === "id" ? "Langkah Terbaik Seharusnya:" : "Optimal Choice Was:"}
                       </div>
                       <div className="font-mono text-base font-black text-sky-200">
@@ -637,7 +637,7 @@ export function CoachModeView({ lang = "id" }: Props) {
               ) : (
                 <div className="text-xs text-neutral-400 py-4 text-center space-y-1">
                   <div>{lang === "id" ? "Silakan jalankan langkah pertama." : "Make your first move."}</div>
-                  <div className="text-[11px] text-neutral-500">
+                  <div className="text-xs text-neutral-500">
                     {lang === "id" ? "AI Coach akan menilai kualitas dan akurasimu." : "AI Coach will rate move precision."}
                   </div>
                 </div>

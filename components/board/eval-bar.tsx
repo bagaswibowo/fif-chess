@@ -65,7 +65,7 @@ export function EvalBar({
     >
       {/* Dynamic Score Points Badge (Always clearly visible: 0.0, +1.0, -3.2) */}
       <div
-        className={`text-[10px] md:text-[11px] font-mono font-black px-0.5 py-0.5 rounded border border-neutral-700 bg-neutral-900 shadow-sm leading-none shrink-0 w-full text-center tracking-tighter ${
+        className={`text-xs md:text-xs font-mono font-black px-0.5 py-0.5 rounded border border-neutral-700 bg-neutral-900 shadow-sm leading-none shrink-0 w-full text-center tracking-tighter ${
           isWhiteAhead ? "text-emerald-400" : label === "0.0" ? "text-neutral-400" : "text-sky-400"
         }`}
       >

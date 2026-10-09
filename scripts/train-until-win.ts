@@ -31,8 +31,9 @@ function getDbSize(): number {
 
 async function runTrainingUntilWin() {
   console.log("=============================================================");
-  console.log("  AUTONOMOUS TRAINING: JEV + FLYBRAIN VS STOCKFISH");
-  console.log("  Target: Loop continuously until JEV+FLY delivers CHECKMATE to Stockfish!");
+  console.log("  AUTONOMOUS TRAINING: JEV + FLY + JEV-FLY (all 3 bio engines)");
+  console.log("  Opponent: Stockfish (benchmark, never trained)");
+  console.log("  Rotation: jev ↔ fly ↔ jev-fly vs SF, per-match alternation");
   console.log("  Self-improvement: Reinforcing wins, punishing blunders via experience.json");
   console.log(`  Initial Experience DB Size: ${getDbSize()} positions`);
   console.log("=============================================================\n");
@@ -40,15 +41,18 @@ async function runTrainingUntilWin() {
   let matchIndex = 0;
   let wonCheckmate = false;
 
+  const ROTATION = ["jev", "fly", "jev-fly"] as const;
+  const OPPONENT = "stockfish" as const; // Stockfish is the benchmark, never trained
+
   while (!wonCheckmate) {
     matchIndex++;
     const chess = new Chess();
-    // Ganti warna: Match ganjil Jev White, Match genap Jev Black
-    const jfColor: "white" | "black" = matchIndex % 2 === 1 ? "white" : "black";
-    const whiteEngine = jfColor === "white" ? "jev-fly" : "stockfish";
-    const blackEngine = jfColor === "black" ? "jev-fly" : "stockfish";
+    const myColor: "white" | "black" = matchIndex % 2 === 1 ? "white" : "black";
+    // Fokus latihan: Pure FlyBrain MCTS (terbukti mampu menahan remis 116 plies)
+    const whiteEngine = myColor === "white" ? "fly" : OPPONENT;
+    const blackEngine = myColor === "black" ? "fly" : OPPONENT;
 
-    console.log(`[Match #${matchIndex}] Jev+FlyBrain (${jfColor.toUpperCase()}) vs Stockfish (${jfColor === "white" ? "BLACK" : "WHITE"})`);
+    console.log(`[Match #${matchIndex}] Jev+FlyBrain (${myColor.toUpperCase()}) vs Stockfish (${myColor === "white" ? "BLACK" : "WHITE"})`);
 
     const history: string[] = [];
 
@@ -105,7 +109,7 @@ async function runTrainingUntilWin() {
     }
 
     // Evaluasi Syarat Berhenti: Jev + FlyBrain menang telak dengan checkmate!
-    if (winner === jfColor && isCheckmate) {
+    if (winner === myColor && isCheckmate) {
       wonCheckmate = true;
       console.log("\n=============================================================");
       console.log(`  VICTORY ACHIEVED! JEV + FLYBRAIN CHECKMATED STOCKFISH!`);

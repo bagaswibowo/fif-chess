@@ -5,6 +5,7 @@ import { BoardControls } from "@/components/board-controls";
 import { EvalBar } from "@/components/eval-bar";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
+import { Undo2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -407,7 +408,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
             <h2 className="text-xs md:text-sm font-black text-white truncate">
               {lang === "id" ? "Latihan Dipandu Jev" : "Jev Guided Practice"}
             </h2>
-            <p className="text-[10px] text-neutral-400 truncate">
+            <p className="text-xs text-neutral-400 truncate">
               {lang === "id"
                 ? "Jev memandu tiap langkahmu + peringatan ancaman"
                 : "Jev coaches every move + warns of threats"}
@@ -506,7 +507,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
             <Button onClick={handleUndo} variant="outline" size="sm"
               className="flex-1 border-[var(--border)] bg-[var(--surface)] text-xs font-bold text-neutral-300 hover:bg-[var(--card)]"
               disabled={history.length < 2 || thinkingRef.current}>
-              ← {lang === "id" ? "Undo" : "Undo"}
+              <Undo2 size={14} className="shrink-0" /><span>Undo</span>
             </Button>
             {bestArrow && (
               <Button onClick={() => setShowBestArrow(v => !v)} variant="outline" size="sm"

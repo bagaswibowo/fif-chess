@@ -811,7 +811,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             >
               <IconScan3D size={28} />
               <span className="text-sm font-black">Kamera</span>
-              <span className="text-[11px] font-medium text-white/85 leading-snug">Ambil foto posisi via kamera HP / webcam</span>
+              <span className="text-xs font-medium text-white/85 leading-snug">Ambil foto posisi via kamera HP / webcam</span>
             </button>
 
             {/* UPLOAD FOTO */}
@@ -822,7 +822,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             >
               <IconVision3D size={28} />
               <span className="text-sm font-black text-white">{isProcessingImage ? "Memproses AI..." : "Upload Foto"}</span>
-              <span className="text-[11px] font-medium text-neutral-400 leading-snug">Pindai foto papan / screenshot</span>
+              <span className="text-xs font-medium text-neutral-400 leading-snug">Pindai foto papan / screenshot</span>
             </button>
 
             {/* LIVE DETECTION */}
@@ -836,7 +836,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                 <IconLightning3D size={28} />
               </span>
               <span className="text-sm font-black text-emerald-300">Live Detection</span>
-              <span className="text-[11px] font-medium text-emerald-200/70 leading-snug">Deteksi papan fisik secara kontinu</span>
+              <span className="text-xs font-medium text-emerald-200/70 leading-snug">Deteksi papan fisik secara kontinu</span>
             </button>
           </div>
         </div>
@@ -862,7 +862,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                   ))}
                 </div>
                 {liveDetectFen && (
-                  <div className="absolute bottom-2 left-2 right-2 px-2 py-1.5 rounded-lg bg-black/70 text-[10px] font-mono text-emerald-300 truncate" title={liveDetectFen}>
+                  <div className="absolute bottom-2 left-2 right-2 px-2 py-1.5 rounded-lg bg-black/70 text-xs font-mono text-emerald-300 truncate" title={liveDetectFen}>
                     {liveDetectFen}
                   </div>
                 )}
@@ -1028,7 +1028,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             />
           </div>
           <div className="row-between items-center pt-1">
-            <span className="text-[10px] text-[var(--muted-foreground)]">
+            <span className="text-xs text-[var(--muted-foreground)]">
               *Otomatis dikompresi & dimaksimalkan agar cepat diproses AI
             </span>
             <button
@@ -1206,7 +1206,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                     }}
                   />
                   {isEngineCalculating && (
-                    <div className="absolute top-2 right-2 bg-black/85 px-2 py-0.5 rounded text-[10px] text-[var(--primary)] font-bold border border-[var(--primary)] animate-pulse">
+                    <div className="absolute top-2 right-2 bg-black/85 px-2 py-0.5 rounded text-xs text-[var(--primary)] font-bold border border-[var(--primary)] animate-pulse">
                       Engine Menghitung...
                     </div>
                   )}

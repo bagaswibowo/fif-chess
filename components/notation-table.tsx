@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Copy, Check } from "lucide-react";
 
 export type NotationRow = {
   /** Nomor langkah (1., 2., ...) */
@@ -87,10 +88,10 @@ export function NotationTable({
             <button
               type="button"
               onClick={handleCopyPgn}
-              className="text-[10px] px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-[var(--border)] transition-colors cursor-pointer font-bold"
+              className="text-xs px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-[var(--border)] transition-colors cursor-pointer font-bold flex items-center gap-1"
               title="Salin notasi PGN ke clipboard"
             >
-              {copied ? "✓ Tersalin" : "📋 PGN"}
+              {copied ? (<><Check size={11} className="text-emerald-400" /> <span>Tersalin</span></>) : (<><Copy size={11} /> <span>PGN</span></>)}
             </button>
           )}
           {headerExtra}
@@ -102,7 +103,7 @@ export function NotationTable({
         <div ref={scrollRef} className={`flex-1 min-h-0 overflow-y-auto font-mono text-[12px] custom-scrollbar ${bodyMaxHeightClass}`}>
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] text-neutral-400 font-sans uppercase tracking-wider">
+              <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-xs text-neutral-400 font-sans uppercase tracking-wider">
                 <th className="py-1 px-2 text-center w-8">#</th>
                 <th className="py-1 px-2.5 text-left border-r border-[var(--border)]">
                   Putih: <strong className="text-white">{whiteLabel}</strong>
@@ -112,10 +113,10 @@ export function NotationTable({
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border)]/60 text-[11px]">
+            <tbody className="divide-y divide-[var(--border)]/60 text-xs">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="text-center py-8 text-neutral-500 italic text-[11px]">
+                  <td colSpan={3} className="text-center py-8 text-neutral-500 italic text-xs">
                     {emptyText}
                   </td>
                 </tr>
@@ -177,7 +178,7 @@ function MoveCell({ san, scoreCp, latest }: { san: string; scoreCp?: number | nu
   return (
     <div className="flex items-center justify-between">
       <span className={`font-bold ${latest ? "text-[var(--primary)]" : "text-white"}`}>{san}</span>
-      <span className="text-[10px] text-neutral-400 font-mono">
+      <span className="text-xs text-neutral-400 font-mono">
         {scoreCp !== null && scoreCp !== undefined
           ? `${scoreCp > 0 ? "+" : ""}${(scoreCp / 100).toFixed(1)}`
           : ""}

@@ -233,9 +233,9 @@ export function DockModals({
                         : "bg-[#262421] border border-[#383530] text-neutral-200"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2 font-bold text-[11px] text-neutral-400">
+                    <div className="flex items-center justify-between gap-2 font-bold text-xs text-neutral-400">
                       <span>{m.senderName}</span>
-                      <span className="text-[10px]">{m.createdAt}</span>
+                      <span className="text-xs">{m.createdAt}</span>
                     </div>
                     <p className="text-sm leading-relaxed">{m.text}</p>
                   </div>
@@ -271,7 +271,7 @@ export function DockModals({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-bold text-white">{n.title}</div>
-                      <div className="text-[11px] text-neutral-400">{n.createdAt}</div>
+                      <div className="text-xs text-neutral-400">{n.createdAt}</div>
                     </div>
                     <p className="text-xs text-neutral-300 mt-1 leading-relaxed">{n.message}</p>
                   </div>

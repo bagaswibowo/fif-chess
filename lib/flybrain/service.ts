@@ -599,11 +599,11 @@ export function calculateBiologicalValence(chess: Chess, uci: string): number {
  * Superfly: FlyBrain with PUCT Monte Carlo Tree Search
  * As featured on https://fly.eyed.to/ (Drosophila connectome + MCTS simulations)
  */
-export function playSuperflyMove(fen: string, sims = 15) {
+export function playSuperflyMove(fen: string, sims = 15, mctsOpts: Record<string, any> = {}) {
   try {
     // 1. Nature 2024 (MBON Valence Recall): Jika posisi sudah dikuasai dari Stockfish, langsung eksekusi
     const learned = getLearnedMove(fen);
-    if (learned && learned.move) {
+    if (learned && learned.move && (learned.dopamine ?? 0) > 0 && (learned.score ?? 0) >= 0 && !isBlunderMove(fen, learned.move)) {
       try {
         const chessL = new Chess(fen);
         const applied = chessL.move({
@@ -633,7 +633,7 @@ export function playSuperflyMove(fen: string, sims = 15) {
     const chess = new Chess(fen);
     if (chess.isGameOver()) return null;
 
-    const mctsRes = runMCTS(brain, chess, enc, { sims, cPuct: 1.5 });
+    const mctsRes = runMCTS(brain, chess, enc, { sims, cPuct: 1.5, ...mctsOpts });
     if (!mctsRes || !mctsRes.move) return playFlyBrainMove(fen);
 
     // 2. Nature 2024 (MBON Valence Reward + DAN/APL Depression Integration)

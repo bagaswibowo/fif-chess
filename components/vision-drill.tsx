@@ -129,7 +129,7 @@ export function VisionDrill({ lang = "id" }: { lang?: "id" | "en" }) {
                   >
                     {/* Only show edge labels when inactive as a study guide */}
                     {!isActive && (
-                      <span className="opacity-40 text-[10px] font-semibold">{square}</span>
+                      <span className="opacity-40 text-xs font-semibold">{square}</span>
                     )}
                   </button>
                 );

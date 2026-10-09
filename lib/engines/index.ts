@@ -1,11 +1,12 @@
 import { Chess } from "chess.js";
-import { applyUci, describeOutcome } from "@/lib/chess";
+import { applyUci, describeOutcome } from "../chess";
 import type { EngineId, IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 import { stockfishEngine, getStockfishPrediction } from "./stockfish";
 import { pureJevEngine } from "./jev";
 import { pureSuperflyEngine } from "./flybrain";
 import { jevSuperflyHybridEngine } from "./hybrid";
 import { getOpeningBookMove } from "./opening-book";
+import { fenEngineCache } from "./lru-cache";
 
 export * from "./types";
 export { stockfishEngine, getStockfishPrediction } from "./stockfish";
@@ -33,6 +34,9 @@ export async function playEngineMove(
   id: EngineId,
   req: EngineMoveRequest,
 ): Promise<EngineMoveResponse> {
+  const cacheKey = id + ":" + req.fen;
+  const cached = fenEngineCache.get(cacheKey);
+  if (cached) return cached;
   // Hanya Stockfish yang menggunakan buku pembukaan terstruktur jika diperlukan;
   // Seluruh engine bio-AI (Jev, Fly, Jev-Fly) memainkan langkah pembukaan secara natural & acak,
   // membaca gerakan lawan secara adaptif tanpa terikat teori pembukaan kaku.
@@ -64,5 +68,7 @@ export async function playEngineMove(
   }
 
   const engine = getEngine(id);
-  return engine.play(req);
+  const response = await engine.play(req);
+  fenEngineCache.set(cacheKey, response);
+  return response;
 }

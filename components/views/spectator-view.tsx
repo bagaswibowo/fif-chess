@@ -596,11 +596,11 @@ export function SpectatorView({
           <div className="min-w-0">
             <h2 className="text-xs md:text-sm font-black text-white truncate flex items-center gap-1.5" style={{ margin: 0 }}>
               <span>AI vs Engine Catur</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/40">
+              <span className="text-xs font-bold px-1.5 py-0.2 rounded bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/40">
                 Live Arena
               </span>
             </h2>
-            <div className="text-[10px] text-[var(--muted-foreground)] truncate">
+            <div className="text-xs text-[var(--muted-foreground)] truncate">
               {status === "running" ? "Pertandingan Berlangsung..." : status === "finished" ? `Selesai (${moves.length} langkah)` : "Siap Dimulai"}
             </div>
           </div>
@@ -638,7 +638,7 @@ export function SpectatorView({
           {/* Depth Selector (Hanya muncul jika Stockfish terlibat dalam pertandingan) */}
           {(whiteEngine === "stockfish" || blackEngine === "stockfish") && (
             <div className="flex items-center gap-1 bg-[var(--background)] px-1.5 h-9 rounded-xl border border-[var(--border)]">
-              <span className="text-[10px] text-[var(--muted-foreground)] font-bold px-1 hidden sm:inline">SF Depth:</span>
+              <span className="text-xs text-[var(--muted-foreground)] font-bold px-1 hidden sm:inline">SF Depth:</span>
               {[6, 10, 14].map((d) => (
                 <button
                   key={d}
@@ -685,7 +685,7 @@ export function SpectatorView({
                 <option value="fly">Fruit Fly Brain (Hitam)</option>
                 <option value="jev-fly">Jev + Fly Brain (Hitam)</option>
               </select>
-              <span className="text-[11px] text-neutral-400 font-mono font-bold">
+              <span className="text-xs text-neutral-400 font-mono font-bold">
                 {whiteCp !== null ? (whiteCp < 0 ? `+${(-whiteCp/100).toFixed(1)}` : `-${(whiteCp/100).toFixed(1)}`) : "="}
               </span>
             </div>
@@ -744,7 +744,7 @@ export function SpectatorView({
                 <option value="fly">Fruit Fly Brain (Putih)</option>
                 <option value="jev-fly">Jev + Fly Brain (Putih)</option>
               </select>
-              <span className="text-[11px] text-emerald-400 font-mono font-bold">
+              <span className="text-xs text-emerald-400 font-mono font-bold">
                 {whiteCp !== null ? (whiteCp > 0 ? `+${(whiteCp/100).toFixed(1)}` : (whiteCp/100).toFixed(1)) : "="}
               </span>
             </div>
@@ -766,7 +766,7 @@ export function SpectatorView({
 
             <CardContent className="p-3 space-y-2 text-[12px] leading-relaxed overflow-y-auto flex-1 min-h-0 custom-scrollbar">
               {/* 4 Label Pertanda Visual di dalam card Komentator AI */}
-              <div className="grid grid-cols-4 gap-1 p-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[10px] font-bold">
+              <div className="grid grid-cols-4 gap-1 p-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-xs font-bold">
                 <div className="flex items-center justify-center gap-1 text-neutral-300">
                   <span className="w-2 h-2 rounded bg-yellow-500 border border-yellow-300 shrink-0" />
                   <span className="truncate">Langkah</span>
@@ -790,7 +790,7 @@ export function SpectatorView({
                   {/* Badge Taktis diletakkan di bawah judul di dalam card */}
                   {commentary.tacticalBadge && (
                     <div className="flex items-center gap-2 pt-0.5">
-                      <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-sm inline-block ${commentary.tacticalBadge.badgeColor}`}>
+                      <span className={`text-xs font-black px-2.5 py-0.5 rounded-full border shadow-sm inline-block ${commentary.tacticalBadge.badgeColor}`}>
                         {commentary.tacticalBadge.name}
                       </span>
                     </div>
@@ -818,7 +818,7 @@ export function SpectatorView({
 
                   {/* Prediction */}
                   <div className="p-2.5 rounded-xl border border-sky-500/40 text-[12px] shadow-inner" style={{ background: "rgba(14, 34, 48, 0.7)" }}>
-                    <div className="font-bold text-sky-400 text-[11px] flex items-center gap-1 mb-0.5">
+                    <div className="font-bold text-sky-400 text-xs flex items-center gap-1 mb-0.5">
                       <span>Prediksi Respons Lawan:</span>
                     </div>
                     <div className="text-sky-100 italic font-medium leading-relaxed">
@@ -829,10 +829,10 @@ export function SpectatorView({
                   {/* Strategi Khusus Bidak/Pion yang Melangkah */}
                   {commentary.strategicPlan && (
                     <div className="p-2.5 rounded-xl border border-emerald-500/40 text-[12px] shadow-inner" style={{ background: "rgba(6, 40, 28, 0.7)" }}>
-                      <div className="font-bold text-emerald-400 text-[11px] flex items-center justify-between mb-1">
+                      <div className="font-bold text-emerald-400 text-xs flex items-center justify-between mb-1">
                         <span>Strategi Bidak ({commentary.moveSan}):</span>
                         {commentary.pieceTrajectory && commentary.pieceTrajectory.length > 0 && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-semibold border border-emerald-500/30">
+                          <span className="text-xs px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-semibold border border-emerald-500/30">
                             {commentary.pieceTrajectory.length} langkah maju
                           </span>
                         )}
@@ -842,7 +842,7 @@ export function SpectatorView({
                       </div>
                       {commentary.pvText && (
                         <div className="font-mono text-[10.5px] p-2 rounded-lg bg-emerald-950/70 border border-emerald-500/25 text-emerald-200/90 leading-relaxed break-words">
-                          <span className="text-emerald-400 font-sans text-[10px] font-bold block mb-0.5">Kontekstual PV Global:</span>
+                          <span className="text-emerald-400 font-sans text-xs font-bold block mb-0.5">Kontekstual PV Global:</span>
                           {commentary.pvText}
                         </div>
                       )}
@@ -851,7 +851,7 @@ export function SpectatorView({
 
                   {/* Stockfish Prediction Verification Indicator */}
                   {predictionComparison && (
-                    <div className="p-2 rounded-xl border border-neutral-700/60 text-[11px] font-bold bg-neutral-900/60 text-neutral-200 flex items-center gap-1.5 shadow-sm">
+                    <div className="p-2 rounded-xl border border-neutral-700/60 text-xs font-bold bg-neutral-900/60 text-neutral-200 flex items-center gap-1.5 shadow-sm">
                       <span>{predictionComparison}</span>
                     </div>
                   )}
@@ -874,7 +874,7 @@ export function SpectatorView({
             bodyMaxHeightClass="max-h-[220px] md:max-h-[280px] lg:max-h-[340px]"
             headerExtra={
               outcome ? (
-                <Badge variant="outline" className="text-[10px] bg-amber-500/20 text-amber-300 border-amber-500/40">
+                <Badge variant="outline" className="text-xs bg-amber-500/20 text-amber-300 border-amber-500/40">
                   {outcome.label}
                 </Badge>
               ) : undefined
@@ -896,7 +896,7 @@ export function SpectatorView({
                 <IconTrophy3D size={16} />
                 <span>{outcome.label}</span>
               </div>
-              <div className="text-[11px] text-neutral-300">
+              <div className="text-xs text-neutral-300">
                 {outcome.winner === "white"
                   ? `${ENGINE_LABELS[whiteEngine]} (Putih) Menang Mutlak!`
                   : outcome.winner === "black"

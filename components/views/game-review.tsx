@@ -9,6 +9,7 @@
 // 5. Standardized Pill Tab Bar konsisten dengan UI FIF Chess.
 
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
 import { BoardControls } from "@/components/board-controls";
 import { NotationTable } from "@/components/notation-table";
 import { EvalBar } from "@/components/eval-bar";
@@ -465,7 +466,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   disabled={fenList.length <= 1}
                   title={isPlaying ? "Jeda pemutaran" : "Putar otomatis"}
                 >
-                  {isPlaying ? "Jeda" : "Putar"}
+                  <span className="flex items-center gap-1.5">{isPlaying ? <Pause size={14} className="shrink-0" /> : <Play size={14} className="shrink-0" />}<span>{isPlaying ? "Jeda" : "Putar"}</span></span>
                 </button>
 
                 <button
@@ -568,7 +569,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-center gap-3 flex-wrap w-full pt-1.5 text-[10px]">
+                <div className="flex items-center justify-center gap-3 flex-wrap w-full pt-1.5 text-xs">
                   <div className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
                     <span className="text-neutral-300">Langkah dimainkan</span>
@@ -604,13 +605,13 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
 
                   <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
                     <div className="p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
-                      <div className="text-[10px] text-neutral-400 uppercase font-medium">Langkah Dimainkan:</div>
+                      <div className="text-xs text-neutral-400 uppercase font-medium">Langkah Dimainkan:</div>
                       <div className="font-mono font-black text-base text-white pt-0.5">
                         {playedNow?.san ?? "—"}
                       </div>
                     </div>
                     <div className="p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/40">
-                      <div className="text-[10px] text-emerald-300 uppercase font-medium">Saran {ENGINE_LABELS[engine]}:</div>
+                      <div className="text-xs text-emerald-300 uppercase font-medium">Saran {ENGINE_LABELS[engine]}:</div>
                       <div className="font-mono font-black text-base text-emerald-400 pt-0.5">
                         {loadingEval ? "Menganalisis..." : (evalResult?.bestSan ?? "—")}
                       </div>
@@ -620,12 +621,12 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   {/* THREAT EXPLANATION */}
                   {activeThreats.length > 0 && (
                     <div className="p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 mt-2 stack-tight">
-                      <div className="text-[11px] font-bold text-red-300 flex items-center gap-1.5">
+                      <div className="text-xs font-bold text-red-300 flex items-center gap-1.5">
                         <IconAlert3D size={14} className="shrink-0" />
                         <span>Ancaman Lawan Terdeteksi:</span>
                       </div>
                       {activeThreats.map((t, idx) => (
-                        <p key={idx} className="text-[11px] text-neutral-200 m-0 leading-tight">
+                        <p key={idx} className="text-xs text-neutral-200 m-0 leading-tight">
                           • {t}
                         </p>
                       ))}
@@ -646,7 +647,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                     <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
                       Daftar Langkah Pertandingan
                     </span>
-                    <span className="text-[10px] font-mono text-neutral-400">
+                    <span className="text-xs font-mono text-neutral-400">
                       Klik nomor untuk lompat
                     </span>
                   </div>

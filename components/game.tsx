@@ -1,4 +1,5 @@
 "use client";
+import { Copy, Check, Download } from "lucide-react";
 import { DockModals, type DockModalType } from "@/components/dock-modals";
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
@@ -158,7 +159,12 @@ export function Game() {
   const [gameActive, setGameActive] = useState(false);
   const [selectedAiOpponent, setSelectedAiOpponent] = useState<"stockfish" | "jev-fly" | "jev" | "fly">("stockfish");
   const [rightTab, setRightTab] = useState<RightTab>("game-setup");
-  const [commentatorEnabled, setCommentatorEnabled] = useState(true);
+  const [boardOrientation, setBoardOrientation] = useState<Side>("white");
+
+
+  const flipBoardOrientation = useCallback(() => {
+    setBoardOrientation((s) => (s === "white" ? "black" : "white"));
+  }, []);
   const [lang, setLang] = useState<"id" | "en">("id");
   const [timeMode, setTimeMode] = useState<string>("unlimited");
 
@@ -184,7 +190,7 @@ export function Game() {
       if (e.key === "f" || e.key === "F") {
         setFullscreenClocks((v) => !v);
       } else if (e.key === "z" || e.key === "Z") {
-        setHumanSide((s) => (s === "white" ? "black" : "white"));
+        flipBoardOrientation();
       } else if (e.key === "Escape") {
         setFullscreenClocks(false);
       }
@@ -372,6 +378,7 @@ export function Game() {
       requestGen.current += 1;
       try { chess.load(START_FEN); } catch (_) {}
       setHumanSide(resolved);
+      setBoardOrientation(resolved);
       setFen(START_FEN);
       setGameStartFen(START_FEN);
       setMoves([]);
@@ -395,6 +402,7 @@ export function Game() {
   const resetGame = useCallback(() => {
     requestGen.current += 1;
     try { chess.load(START_FEN); } catch (_) {}
+    setBoardOrientation(humanSide);
     setFen(START_FEN);
     setGameStartFen(START_FEN);
     setMoves([]);
@@ -413,7 +421,7 @@ export function Game() {
   // Save last move by opponent as a dynamic puzzle
   const saveOpponentTrick = () => {
     if (moves.length === 0) return;
-    const lastM = moves[moves.length - 1];
+    const lastM = [...moves].reverse().find((m) => m.by !== "human") || moves[moves.length - 1];
     const newPuzzle = buildLivePuzzle(
       fen,
       lastM,
@@ -780,7 +788,7 @@ export function Game() {
               <div className="font-black tracking-wider text-sm lg:text-base uppercase leading-tight text-white flex items-center gap-1.5">
                 FIF <span className="text-[var(--primary)]">CHESS</span>
               </div>
-              <div className="text-[10px] text-neutral-400 font-semibold tracking-wide">ARENA CATUR TEL-U</div>
+              <div className="text-xs text-neutral-400 font-semibold tracking-wide">ARENA CATUR TEL-U</div>
             </div>
           </div>
 
@@ -794,7 +802,7 @@ export function Game() {
                   : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
-              <IconPlay3D size={22} />
+              <IconPlay3D size={26} />
               <span>{lang === "id" ? "Bermain" : "Play"}</span>
             </button>
 
@@ -808,7 +816,7 @@ export function Game() {
                   : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
-              <IconMedal3D size={22} />
+              <IconMedal3D size={26} />
               <span>{lang === "id" ? "Review Blunder" : "Game Review"}</span>
             </button>
 
@@ -820,7 +828,7 @@ export function Game() {
                   : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
-              <IconBot3D size={22} />
+              <IconBot3D size={26} />
               <span>{lang === "id" ? "AI Coach & Latih" : "AI Coach & Train"}</span>
             </button>
 
@@ -834,7 +842,7 @@ export function Game() {
                 }`}
                 aria-current={navTab === "admin"}
               >
-                <IconMedal3D size={22} />
+                <IconMedal3D size={26} />
                 <span>Admin</span>
               </button>
             )}
@@ -871,7 +879,7 @@ export function Game() {
                   : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
-              <IconCommunity3D size={22} />
+              <IconCommunity3D size={26} />
               <span>{lang === "id" ? "Komunitas FIF" : "FIF Community"}</span>
             </button>
           </nav>
@@ -900,7 +908,7 @@ export function Game() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-bold truncate text-white">{me.name}</div>
-              <div className="text-[11px] text-neutral-400 flex items-center gap-1.5 font-medium">
+              <div className="text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] inline-block"></span>
                 <span className="truncate">{currentUser ? `${currentUser.role} (${currentUser.elo})` : "Masuk untuk rating"}</span>
               </div>
@@ -916,7 +924,7 @@ export function Game() {
               className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
               <IconFriends3D size={18} />
-              <span className="text-[9px] font-bold text-neutral-400">Teman</span>
+              <span className="text-xs font-bold text-neutral-400">Teman</span>
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--primary)]"></span>
             </button>
 
@@ -927,7 +935,7 @@ export function Game() {
               className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
               <IconMessages3D size={18} />
-              <span className="text-[9px] font-bold text-neutral-400">Pesan</span>
+              <span className="text-xs font-bold text-neutral-400">Pesan</span>
             </button>
 
             <button
@@ -937,8 +945,8 @@ export function Game() {
               className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
               <IconBell3D size={18} />
-              <span className="text-[9px] font-bold text-neutral-400">Notif</span>
-              <span className="absolute top-1 right-1 px-1 py-0.2 rounded-full bg-red-600 text-[8px] font-black text-white">1</span>
+              <span className="text-xs font-bold text-neutral-400">Notif</span>
+              <span className="absolute top-1 right-1 px-1 py-0.2 rounded-full bg-red-600 text-xs font-black text-white">1</span>
             </button>
 
             <button
@@ -948,7 +956,7 @@ export function Game() {
               className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
               <IconSettings3D size={18} />
-              <span className="text-[9px] font-bold text-neutral-400">Atur</span>
+              <span className="text-xs font-bold text-neutral-400">Atur</span>
             </button>
           </div>
         </div>
@@ -957,29 +965,16 @@ export function Game() {
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col p-2 md:p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-3 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
         {!currentUser ? (
-          <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 min-h-[calc(100vh-4rem)] flex flex-col">
-            <div className="flex-1 overflow-y-auto">
-              <div className="w-full max-w-md mx-auto p-4 sm:p-6 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-2xl stack items-center text-center animate-in fade-in duration-200">
-                <div className="w-14 h-14 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center mb-2 shadow-inner">
-                  <IconKingWhite3D size={32} />
-                </div>
-                <h2 className="text-base sm:text-lg font-black text-white m-0">
-                  JEV Chess Telkom University
-                </h2>
-                <p className="text-xs text-[var(--muted-foreground)] mt-1 mb-4 leading-relaxed">
-                  Semua menu dan arena bermain terkunci. Silakan Masuk atau Daftarkan Akun Anda terlebih dahulu untuk membuka seluruh fitur.
-                </p>
-                <div className="w-full text-left">
-                  <AuthPanel
-                    user={currentUser}
-                    onClose={() => {}}
-                    onLogin={login}
-                    onRegister={register}
-                    onLogout={logout}
-                    inline={true}
-                  />
-                </div>
-              </div>
+          <div className="w-full max-w-lg mx-auto p-3 sm:p-6 min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center overflow-y-auto">
+            <div className="w-full max-w-md mx-auto">
+              <AuthPanel
+                user={currentUser}
+                onClose={() => {}}
+                onLogin={login}
+                onRegister={register}
+                onLogout={logout}
+                inline={true}
+              />
             </div>
           </div>
         ) : (<>
@@ -1047,11 +1042,11 @@ export function Game() {
                       <span>{playMode === "ai"
                         ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain (Hybrid)" : selectedAiOpponent === "fly" ? "Fruit Fly Brain (134k)" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15 NNUE")
                         : pvpOpponentName}</span>
-                      <span className="text-[11px] font-normal text-neutral-400">
+                      <span className="text-xs font-normal text-neutral-400">
                         ({playMode === "ai" ? "3550" : "PvP Online"})
                       </span>
                     </div>
-                    <div className="text-[10px] text-neutral-400 font-medium">
+                    <div className="text-xs text-neutral-400 font-medium">
                       {thinking
                         ? (lang === "id" ? "Sedang menghitung..." : "Thinking...")
                         : !humanToMove && gameActive && !effectiveOutcome.over
@@ -1074,12 +1069,16 @@ export function Game() {
 
               <BoardControls
                 variant="toolbar"
-                orientation={humanSide}
-                onFlipOrientation={() => setHumanSide((s) => (s === "white" ? "black" : "white"))}
+                orientation={boardOrientation}
+                onFlipOrientation={flipBoardOrientation}
                 isFullscreen={fullscreenClocks}
                 onToggleFullscreen={() => setFullscreenClocks((open) => !open)}
                 showShortcuts={true}
                 className="w-full shrink-0"
+                onSaveTrick={saveOpponentTrick}
+                trickSaved={opponentTacticSaved}
+                canSaveTrick={gameActive && moves.length > 0}
+                trickLabel={lang === "id" ? "Simpan Trik Lawan" : "Simpan Trik"}
               />
 
               {/* Board Row with Left Vertical Eval Bar (Chess.com Signature) */}
@@ -1104,7 +1103,7 @@ export function Game() {
                       options={{
                         id: "fif-chess-main",
                         position: fen,
-                        boardOrientation: humanSide,
+                        boardOrientation: boardOrientation,
                         allowDragging: humanToMove,
                         canDragPiece,
                         onPieceDrop,
@@ -1161,9 +1160,9 @@ export function Game() {
                   <div className="min-w-0">
                     <div className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5 truncate">
                       <span>{me.name}</span>
-                      {me.elo !== null && <span className="text-[11px] font-normal text-neutral-400">({me.elo})</span>}
+                      {me.elo !== null && <span className="text-xs font-normal text-neutral-400">({me.elo})</span>}
                     </div>
-                    <div className="text-[10px] text-neutral-400 flex items-center gap-1.5 font-medium">
+                    <div className="text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
                       <span className={`w-1.5 h-1.5 rounded-full inline-block ${
                         humanToMove && gameActive && !effectiveOutcome.over ? "bg-emerald-400 animate-pulse" : "bg-neutral-500"
                       }`} />
@@ -1183,21 +1182,6 @@ export function Game() {
                 </div>
               </div>
 
-              {/* Persistent: always visible above board, disabled when no opponent trick yet */}
-              <button
-                type="button"
-                onClick={saveOpponentTrick}
-                disabled={!lastMove || lastMove.by === "human" || !gameActive}
-                className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 shrink-0 ${
-                  opponentTacticSaved
-                    ? "bg-emerald-950/80 border-emerald-500 text-emerald-300"
-                    : !lastMove || lastMove.by === "human" || !gameActive
-                      ? "bg-[var(--card)] border-[var(--border)] text-neutral-600 cursor-not-allowed"
-                      : "bg-[var(--card)] border-[var(--border)] text-neutral-300 hover:text-white hover:border-[var(--primary)]"
-                }`}
-              >
-                <span>{opponentTacticSaved ? "Trik lawan disimpan" : "Simpan trik lawan"}</span>
-              </button>
               {fullscreenClocks && (
                 <ClockMovesFullscreen
                   fen={fen}
@@ -1281,67 +1265,16 @@ export function Game() {
                     </button>
                   </div>
                 </CardHeader>
-
-                {/* Persistent Komentator on/off: always available, never disappears with tabs */}
-                <div className="shrink-0 flex items-center justify-between gap-2 px-3 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
-                  <span className="flex items-center gap-2 text-[11px] font-bold text-neutral-300">
-                    <IconBot3D size={16} /> Komentator
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={commentatorEnabled}
-                    onClick={() => setCommentatorEnabled((e) => !e)}
-                    className={`inline-flex h-7 shrink-0 items-center gap-2 rounded-full border px-2 text-[10px] font-black transition-colors ${
-                      commentatorEnabled
-                        ? "border-[var(--primary)]/60 bg-[var(--primary)]/15 text-emerald-300"
-                        : "border-[var(--border)] bg-[var(--background)] text-neutral-500"
-                    }`}
-                  >
-                    <span className={`relative h-3.5 w-6 rounded-full transition-colors ${commentatorEnabled ? "bg-[var(--primary)]" : "bg-neutral-700"}`}>
-                      <span className={`absolute top-0.5 h-2.5 w-2.5 rounded-full bg-white shadow transition-transform ${commentatorEnabled ? "translate-x-3" : "translate-x-0.5"}`} />
-                    </span>
-                    <span>{commentatorEnabled ? "ON" : "OFF"}</span>
-                  </button>
-                </div>
-
-                <CardContent className="p-3.5 flex-1 min-h-0 overflow-y-auto space-y-3 custom-scrollbar">
+<CardContent className="p-3.5 flex-1 min-h-0 overflow-y-auto space-y-3 custom-scrollbar">
                   {/* TAB 1: GAME SETUP OR ACTIVE MATCH HUB */}
                   {rightTab === "game-setup" && (
                     <div className="space-y-4">
                       {/* WHEN MATCH IS ACTIVE: HIDE SETUP BUTTONS AND SHOW LIVE CLOCKS & IN-GAME CONTROLS */}
                       {gameActive && !effectiveOutcome.over ? (
                         <div className="space-y-3">
-                          {/* LIVE STOCKFISH COMMENTATOR CARD (Active in Normal Mode as well) */}
-                          {(() => {
-                            return (
-                              <div className="p-3 bg-[var(--surface)] rounded-xl border border-[var(--border)] shadow-sm space-y-2 animate-in fade-in">
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <IconBot3D size={18} />
-                                  <span className="truncate text-xs font-bold text-white">Komentator {AI_LABEL[selectedAiOpponent]}</span>
-                                </div>
-                                <div className="flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2">
-                                  <span className="text-xs font-bold leading-snug text-white">{commentatorEnabled ? matchCommentary.headline : "Komentator dinonaktifkan"}</span>
-                                  <span className="shrink-0 rounded bg-[var(--background)] px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-400">
-                                    {matchCommentary.evaluation}
-                                  </span>
-                                </div>
-                                {commentatorEnabled && (
-                                  <div className="space-y-1 text-[11px] leading-relaxed text-neutral-300">
-                                    <p className="m-0">{matchCommentary.detail}</p>
-                                    <p className="m-0 border-l-2 border-[var(--primary)] pl-2 text-emerald-200">{matchCommentary.focus}</p>
-                                  </div>
-                                )}
-                                {!commentatorEnabled && (
-                                  <p className="m-0 text-[11px] text-neutral-500">Aktifkan kembali untuk melihat penjelasan posisi dan rencana langkah berikutnya.</p>
-                                )}
-                              </div>
-                            );
-                          })()}
-
-                          <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex justify-between items-center">
+<div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex justify-between items-center">
                             <span>Jam Catur Pertandingan</span>
-                            <Badge className="bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/40 text-[10px]">
+                            <Badge className="bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/40 text-xs">
                               {timeMode === "unlimited" ? "Tanpa Batas" : timeMode}
                             </Badge>
                           </div>
@@ -1356,7 +1289,7 @@ export function Game() {
                                   ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15")
                                   : pvpOpponentName}
                               </span>
-                              {!humanToMove && <span className="text-[10px] text-[var(--primary)] font-black animate-pulse">Sedang Berpikir...</span>}
+                              {!humanToMove && <span className="text-xs text-[var(--primary)] font-black animate-pulse">Sedang Berpikir...</span>}
                             </div>
                             <div className="font-mono font-black text-2xl text-white">
                               {humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
@@ -1369,7 +1302,7 @@ export function Game() {
                           }`}>
                             <div>
                               <span className="text-xs font-bold text-neutral-300 block">Anda (Player)</span>
-                              {humanToMove && <span className="text-[10px] text-[var(--primary)] font-black animate-pulse">Giliran Anda Melangkah</span>}
+                              {humanToMove && <span className="text-xs text-[var(--primary)] font-black animate-pulse">Giliran Anda Melangkah</span>}
                             </div>
                             <div className="font-mono font-black text-2xl text-white">
                               {humanSide === "white" ? formattedWhiteTime : formattedBlackTime}
@@ -1420,7 +1353,7 @@ export function Game() {
                         /* SETUP — Chess.com Dark Interface */
                         <div className="space-y-2">
                           <div className="space-y-1">
-                            <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Pilih lawan</div>
+                            <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Pilih lawan</div>
                             <div className="flex w-full rounded-full border border-[var(--border)] bg-[var(--surface)] p-0.5" role="tablist" aria-label="Jenis lawan">
                               <button
                                 type="button"
@@ -1445,33 +1378,34 @@ export function Game() {
 
                           {/* Format Waktu (Time Control Pills) */}
                           <div className="space-y-1">
-                            <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider flex items-center justify-between">
+                            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center justify-between">
                               <span>Format Waktu</span>
-                              <span className="text-[11px] text-[var(--primary)] font-black font-mono">
+                              <span className="text-xs text-[var(--primary)] font-black font-mono">
                                 {timeMode === "unlimited" ? "Tanpa Batas" : `${timeMode}`}
                               </span>
                             </div>
                             <div className="grid grid-cols-3 gap-1">
-                                {[
-                                  { id: "unlimited", label: "Bebas", sub: "Tanpa Batas" },
-                                  { id: "10m", label: "10 mnt", sub: "Cepat" },
-                                  { id: "5m", label: "5 mnt", sub: "Kilat" },
-                                  { id: "3m", label: "3 mnt", sub: "Kilat" },
-                                  { id: "1m", label: "1 mnt", sub: "Peluru" },
-                                  { id: "30m", label: "30 mnt", sub: "Klasik" },
+                                {                                [
+                                  { id: "1m", label: "1 mnt", sub: "Peluru", icon: "/icons/chess/time-bullet.png" },
+                                  { id: "3m", label: "3 mnt", sub: "Kilat", icon: "/icons/chess/time-blitz.png" },
+                                  { id: "5m", label: "5 mnt", sub: "Kilat", icon: "/icons/chess/time-blitz.png" },
+                                  { id: "10m", label: "10 mnt", sub: "Cepat", icon: "/icons/chess/time-rapid.png" },
+                                  { id: "30m", label: "30 mnt", sub: "Klasik", icon: "/icons/chess/time-classic.png" },
+                                  { id: "unlimited", label: "Bebas", sub: "Tanpa Batas", icon: "/icons/chess/time-daily.png" },
                                 ].map((t) => (
                                 <button
                                   key={t.id}
                                   type="button"
                                   onClick={() => setTimeMode(t.id)}
-                                  className={`p-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                                  className={`p-1.5 rounded-lg border text-center flex flex-col items-center justify-center transition-all cursor-pointer ${
                                     timeMode === t.id
                                       ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white shadow-sm ring-1 ring-[var(--primary)]"
                                       : "bg-[var(--background)] border-[var(--border)] text-neutral-400 hover:border-neutral-500 hover:text-white"
                                   }`}
                                 >
+                                  <img src={t.icon} alt="" className="w-7 h-7 mb-1 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]" />
                                   <div className="text-xs font-black leading-tight text-white">{t.label}</div>
-                                  <div className="text-[9px] text-neutral-400 font-medium">{t.sub}</div>
+                                  <div className="text-xs text-neutral-400 font-medium">{t.sub}</div>
                                 </button>
                               ))}
                             </div>
@@ -1479,7 +1413,7 @@ export function Game() {
 
                           {/* Sisi Bidak (Chess.com 3-Card Visual Selector) */}
                           <div className="space-y-1">
-                            <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Pilih Sisi Bidak</div>
+                            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Pilih Sisi Bidak</div>
                             <div className="grid grid-cols-3 gap-1">
                               <button
                                 type="button"
@@ -1492,7 +1426,7 @@ export function Game() {
                               >
                                 <IconKingWhite3D size={22} />
                                 <span className="text-xs font-bold text-white">Putih</span>
-                                <span className="text-[8px] text-neutral-400 font-medium">Main Pertama</span>
+                                <span className="text-xs text-neutral-400 font-medium">Main Pertama</span>
                               </button>
                               <button
                                 type="button"
@@ -1505,7 +1439,7 @@ export function Game() {
                               >
                                 <IconDice3D size={22} />
                                 <span className="text-xs font-bold text-white">Acak</span>
-                                <span className="text-[8px] text-neutral-400 font-medium">Otomatis</span>
+                                <span className="text-xs text-neutral-400 font-medium">Otomatis</span>
                               </button>
                               <button
                                 type="button"
@@ -1518,14 +1452,14 @@ export function Game() {
                               >
                                 <IconKingBlack3D size={22} />
                                 <span className="text-xs font-bold text-white">Hitam</span>
-                                <span className="text-[8px] text-neutral-400 font-medium">Main Kedua</span>
+                                <span className="text-xs text-neutral-400 font-medium">Main Kedua</span>
                               </button>
                             </div>
                           </div>
 
                           {/* Pilihan Engine hanya untuk mode AI */}
                           {playMode === "ai" && <div className="space-y-1">
-                            <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Mode Lawan</div>
+                            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Mode Lawan</div>
                             <div className="grid grid-cols-2 gap-1">
                               {[
                                 { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine Elo 3550+" },
@@ -1544,7 +1478,7 @@ export function Game() {
                                   }`}
                                 >
                                   <span className="text-xs font-bold text-white leading-snug">{eng.label}</span>
-                                  <span className="text-[9px] text-neutral-400">{eng.sub}</span>
+                                  <span className="text-xs text-neutral-400">{eng.sub}</span>
                                 </button>
                               ))}
                             </div>
@@ -1564,7 +1498,7 @@ export function Game() {
                               {/* Tingkat Kesulitan AI (Hanya untuk Stockfish 15) */}
                               {selectedAiOpponent === "stockfish" && (
                                 <div className="space-y-1">
-                                  <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Kedalaman Stockfish</div>
+                                  <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Kedalaman Stockfish</div>
                                   <div className="grid grid-cols-3 gap-1.5">
                                     {[
                                       { depth: 3, label: "Mudah", elo: "~800" },
@@ -1582,7 +1516,7 @@ export function Game() {
                                         }`}
                                       >
                                         <div className="text-xs font-bold text-white">{lvl.label}</div>
-                                        <div className="text-[10px] text-neutral-400">{lvl.elo}</div>
+                                        <div className="text-xs text-neutral-400">{lvl.elo}</div>
                                       </button>
                                     ))}
                                   </div>
@@ -1592,7 +1526,7 @@ export function Game() {
                               {/* GIANT CHESS.COM GREEN CTA BUTTON */}
                               <button
                                 type="button"
-                                onClick={() => startGame(sideChoice === "random" ? "white" : sideChoice)}
+                                onClick={() => startGame(sideChoice === "random" ? (Math.random() < 0.5 ? "white" : "black") : sideChoice)}
                                 className="w-full h-14 rounded-2xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:translate-y-[2px] text-white font-black text-lg shadow-lg transition-all flex items-center justify-center gap-3 cursor-pointer"
                               >
                                 <IconPlay3D size={24} />
@@ -1628,18 +1562,18 @@ export function Game() {
                             <button
                               type="button"
                               onClick={copyGamePgn}
-                              className="px-2 py-0.5 rounded text-[11px] font-bold bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-[var(--border)] transition-colors cursor-pointer"
+                              className="px-2 py-0.5 rounded text-xs font-bold bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-[var(--border)] transition-colors cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
                               title="Salin PGN lengkap dengan metadata pertandingan"
                             >
-                              📋 {copiedPgn ? "Tersalin!" : "Salin PGN"}
+                              {copiedPgn ? (<><Check size={12} className="text-emerald-400" /><span className="text-emerald-400">Tersalin!</span></>) : (<><Copy size={12} /><span>Salin PGN</span></>)}
                             </button>
                             <button
                               type="button"
                               onClick={downloadGamePgn}
-                              className="px-2 py-0.5 rounded text-[11px] font-bold bg-[var(--primary)] hover:bg-[var(--primary-strong)] text-white transition-colors cursor-pointer"
+                              className="px-2 py-0.5 rounded text-xs font-bold bg-[var(--primary)] hover:bg-[var(--primary-strong)] text-white transition-colors cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
                               title="Unduh file .pgn"
                             >
-                              ⬇ Unduh .pgn
+                              <Download size={12} /><span>Unduh .pgn</span>
                             </button>
                           </div>
                         )}
@@ -1707,7 +1641,7 @@ export function Game() {
               <div className={`p-1 rounded-lg ${navTab === tab.id ? "bg-[var(--muted)] text-white" : ""}`}>
                 <tab.icon size={20} />
               </div>
-              <span className="text-[10px] leading-none">{lang === "id" ? tab.labelId : tab.labelEn}</span>
+              <span className="text-xs leading-none">{lang === "id" ? tab.labelId : tab.labelEn}</span>
             </button>
           ))}
         </div>

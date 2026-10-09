@@ -361,45 +361,62 @@ async function scanWithOmniRoute(imgPayload: string) {
 
 async function scanWithYolo11(image: string, prewarped?: boolean) {
   try {
-    const yoloRes = await fetch(`${YOLO11_URL}/scan-board`, {
+    const yoloRes = await fetch(`${YOLO11_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image, prewarped }),
+      body: JSON.stringify({ image, autoCrop: !prewarped, prewarped: !!prewarped }),
       signal: AbortSignal.timeout(15000),
     });
     if (yoloRes.ok) {
       const yData = await yoloRes.json();
-      const fenCandidate = yData.fen || yData.predicted_fen;
+      const fenCandidate =
+        yData.fen ||
+        yData.predicted_fen ||
+        (yData.board_fen ? `${yData.board_fen} w - - 0 1` : null) ||
+        (yData.board_fen_candidate ? `${yData.board_fen_candidate} w - - 0 1` : null);
       if (fenCandidate) {
         const repaired = sanitizeAndRepairFen(fenCandidate);
         if (repaired && isChessPlausible(repaired)) {
-          return { ok: true, fen: repaired, confidence: yData.confidence || 0.90, source: "yolo11-service" };
+          return { ok: true, fen: repaired, confidence: yData.confidence || yData.used_conf || 0.90, source: "yolo11-service" };
+        }
+        if (repaired) {
+          return { ok: true, fen: repaired, confidence: 0.70, source: "yolo11-repaired" };
         }
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error("YOLO11 scan exception:", err);
+  }
   return null;
 }
 
 async function scanWithChesscog(image: string, prewarped?: boolean) {
   try {
-    const cogRes = await fetch(`${CHESSCOG_URL}/scan-board`, {
+    const cogRes = await fetch(`${CHESSCOG_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image, prewarped }),
+      body: JSON.stringify({ image, prewarped: !!prewarped }),
       signal: AbortSignal.timeout(20000),
     });
     if (cogRes.ok) {
       const cData = await cogRes.json();
-      const fenCandidate = cData.fen || cData.predicted_fen;
+      const fenCandidate =
+        cData.fen ||
+        cData.predicted_fen ||
+        (cData.board_fen ? `${cData.board_fen} w - - 0 1` : null);
       if (fenCandidate) {
         const repaired = sanitizeAndRepairFen(fenCandidate);
         if (repaired && isChessPlausible(repaired)) {
           return { ok: true, fen: repaired, confidence: cData.confidence || 0.85, source: "chesscog-service" };
         }
+        if (repaired) {
+          return { ok: true, fen: repaired, confidence: 0.65, source: "chesscog-repaired" };
+        }
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error("Chesscog scan exception:", err);
+  }
   return null;
 }
 
@@ -423,22 +440,35 @@ export async function POST(req: NextRequest) {
     const imgPayload = image.startsWith("data:") ? image : `data:image/jpeg;base64,${image}`;
     const base64Data = imgPayload.replace(/^data:image\/\w+;base64,/, "");
 
+    // 1. Coba service lokal YOLO11 terlebih dahulu (instan di VPS)
+    const yoloRes = await scanWithYolo11(image, prewarped);
+    if (yoloRes) return NextResponse.json(yoloRes);
+
+    // 2. Coba service lokal Chesscog (instan di VPS)
+    const cogRes = await scanWithChesscog(image, prewarped);
+    if (cogRes) return NextResponse.json(cogRes);
+
+    // 3. Fallback ke Gemini Vision jika ada API key
     if (process.env.GEMINI_API_KEY) {
       const res = await scanWithGemini(base64Data);
       if (res) return NextResponse.json(res);
     }
 
-    const omniRes = await scanWithOmniRoute(imgPayload);
-    if (omniRes) return NextResponse.json(omniRes);
+    // 4. Fallback ke OmniRoute Vision bila ada key valid
+    if (process.env.OMNIROUTE_KEY && !process.env.OMNIROUTE_KEY.includes("...")) {
+      const omniRes = await scanWithOmniRoute(imgPayload);
+      if (omniRes) return NextResponse.json(omniRes);
+    }
 
-    const yoloRes = await scanWithYolo11(image, prewarped);
-    if (yoloRes) return NextResponse.json(yoloRes);
-
-    const cogRes = await scanWithChesscog(image, prewarped);
-    if (cogRes) return NextResponse.json(cogRes);
-
-    return NextResponse.json({ ok: false, error: "Gagal mendeteksi papan catur." }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Papan catur tidak terdeteksi otomatis pada gambar ini. Silakan gunakan fitur potong 4 sudut (crop perspektif), atau atur posisi bidak secara visual di Papan Referensi.",
+      },
+      { status: 422 }
+    );
   } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err.message || "Kesalahan server." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: err.message || "Kesalahan server saat memproses gambar." }, { status: 500 });
   }
 }

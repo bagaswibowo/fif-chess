@@ -1,5 +1,6 @@
 node_modules
-.next
+!.next/standalone
+!.next/static
 .git
 .gitignore
 .env

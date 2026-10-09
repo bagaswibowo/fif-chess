@@ -1,19 +1,50 @@
-import { useId } from "react";
-import React from "react";
+"use client";
 
-type IconProps = {
+import React, { useId, useState } from "react";
+
+export type IconProps = {
   className?: string;
   size?: number;
 };
 
-// 3D Emerald Play Button / Knight for "Bermain"
+// Helper for NeueDeutsche / Chess.com 3D asset with SVG fallback
+function NeueChessIcon({
+  src,
+  alt,
+  size,
+  className = "",
+  fallback,
+}: {
+  src: string;
+  alt: string;
+  size: number;
+  className?: string;
+  fallback: React.ReactNode;
+}) {
+  const [error, setError] = useState(false);
+  if (error) return <>{fallback}</>;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width={size}
+      height={size}
+      onError={() => setError(true)}
+      className={`inline-block object-contain shrink-0 select-none ${className}`}
+      style={{ width: `${size}px`, height: `${size}px` }}
+      loading="lazy"
+    />
+  );
+}
+
+// 1. Play Button / Board (NeueDeutsche board-2x2-green)
 export function IconPlay3D({ size = 24, className = "" }: IconProps) {
   const uid = useId().replace(/:/g, "_");
   const playGrad = `playGrad_${uid}`;
   const playShadow = `playShadow_${uid}`;
   const rimGrad = `rimGrad_${uid}`;
 
-  return (
+  const fallback = (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
         <radialGradient id={playGrad} cx="35%" cy="30%" r="70%">
@@ -33,235 +64,218 @@ export function IconPlay3D({ size = 24, className = "" }: IconProps) {
       <g filter={`url(#${playShadow})`}>
         <rect x="6" y="6" width="52" height="52" rx="16" fill={`url(#${rimGrad})`} />
         <rect x="8" y="8" width="48" height="48" rx="14" fill={`url(#${playGrad})`} stroke="#86efac" strokeWidth="1" />
-        <ellipse cx="24" cy="16" rx="14" ry="5" fill="#ffffff" opacity="0.35" transform="rotate(-15 24 16)" />
-        <polygon points="26,20 44,32 26,44" fill="#ffffff" filter="drop-shadow(0 2px 2px rgba(0,0,0,0.3))" />
+        <polygon points="26,20 44,32 26,44" fill="#ffffff" />
       </g>
     </svg>
   );
+
+  return <NeueChessIcon src="/icons/chess/board-2x2-green.png" alt="Bermain" size={size} className={className} fallback={fallback} />;
 }
 
-// 3D Glossy Chess Pawn
+// 2. Pawn / Pieces (NeueDeutsche board-pieces)
 export function IconPawn3D({ size = 28, className = "" }: IconProps) {
   const uid = useId().replace(/:/g, "_");
   const pawnHead = `pawnHead_${uid}`;
   const pawnBody = `pawnBody_${uid}`;
-  const pawnBase = `pawnBase_${uid}`;
-  const pawnShadow = `pawnShadow_${uid}`;
 
-  return (
+  const fallback = (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
       <defs>
         <radialGradient id={pawnHead} cx="35%" cy="30%" r="65%">
           <stop offset="0%" stopColor="#c8f582" />
           <stop offset="35%" stopColor="#81b64c" />
-          <stop offset="85%" stopColor="#45753c" />
           <stop offset="100%" stopColor="#2b4e24" />
         </radialGradient>
         <linearGradient id={pawnBody} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#98d659" />
-          <stop offset="50%" stopColor="#6ea83d" />
           <stop offset="100%" stopColor="#3b6631" />
         </linearGradient>
-        <linearGradient id={pawnBase} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#81b64c" />
-          <stop offset="60%" stopColor="#4e8330" />
-          <stop offset="100%" stopColor="#24401c" />
-        </linearGradient>
-        <filter id={pawnShadow} x="-10%" y="-10%" width="130%" height="130%">
-          <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.45" />
-        </filter>
       </defs>
-      <g filter={`url(#${pawnShadow})`}>
-        <ellipse cx="24" cy="41" rx="14" ry="4.5" fill={`url(#${pawnBase})`} />
-        <path d="M12 40 C12 37, 16 35, 24 35 C32 35, 36 37, 36 40 Z" fill={`url(#${pawnBody})`} />
-        <ellipse cx="24" cy="35" rx="9" ry="2.5" fill="#588f37" />
-        <path d="M18 35 C17 26, 19 22, 21 19 L27 19 C29 22, 31 26, 30 35 Z" fill={`url(#${pawnBody})`} />
-        <ellipse cx="24" cy="19" rx="6.5" ry="2" fill="#9de05d" />
-        <ellipse cx="24" cy="19.5" rx="6.5" ry="1.5" fill="#45753c" opacity="0.6" />
-        <circle cx="24" cy="12" r="8" fill={`url(#${pawnHead})`} />
-        <ellipse cx="21" cy="9.5" rx="3" ry="1.8" fill="#ffffff" opacity="0.65" transform="rotate(-20 21 9.5)" />
-      </g>
+      <circle cx="24" cy="14" r="8" fill={`url(#${pawnHead})`} />
+      <path d="M16 38 C16 28 20 22 24 22 C28 22 32 28 32 38 Z" fill={`url(#${pawnBody})`} />
     </svg>
   );
+
+  return <NeueChessIcon src="/icons/chess/board-pieces.png" alt="Bidak" size={size} className={className} fallback={fallback} />;
 }
 
-// 3D Puzzle Piece
+// 3. Puzzle / Quest (NeueDeutsche puzzle-rush)
 export function IconPuzzle3D({ size = 28, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const puzGrad = `puzGrad_${uid}`;
-  const puzShad = `puzShad_${uid}`;
-
-  return (
+  const fallback = (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
-      <defs>
-        <radialGradient id={puzGrad} cx="30%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#fca5a5" />
-          <stop offset="40%" stopColor="#f97316" />
-          <stop offset="90%" stopColor="#c2410c" />
-          <stop offset="100%" stopColor="#7c2d12" />
-        </radialGradient>
-        <filter id={puzShad} x="-10%" y="-10%" width="130%" height="130%">
-          <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.4" />
-        </filter>
-      </defs>
-      <g filter={`url(#${puzShad})`}>
-        <path
-          d="M12 16 H18 C18 13, 21 11, 24 11 C27 11, 30 13, 30 16 H36 V22 C39 22, 41 25, 41 28 C41 31, 39 34, 36 34 V40 H30 C30 37, 27 35, 24 35 C21 35, 18 37, 18 40 H12 V34 C9 34, 7 31, 7 28 C7 25, 9 22, 12 22 Z"
-          fill={`url(#${puzGrad})`}
-          stroke="#ea580c"
-          strokeWidth="1.2"
-        />
-        <ellipse cx="22" cy="18" rx="4" ry="2" fill="#ffffff" opacity="0.45" transform="rotate(-15 22 18)" />
-      </g>
+      <circle cx="24" cy="24" r="18" fill="#f97316" />
+      <path d="M18 24 L22 28 L30 18" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
+
+  return <NeueChessIcon src="/icons/chess/puzzle-rush.png" alt="Teka-teki" size={size} className={className} fallback={fallback} />;
 }
 
-// 3D Target Bullseye for Vision / Learning
-export function IconVision3D({ size = 28, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const visRing1 = `visRing1_${uid}`;
-  const visRing2 = `visRing2_${uid}`;
-  const visCenter = `visCenter_${uid}`;
-  const visShad = `visShad_${uid}`;
-
-  return (
+// 4. Target / Tactics Fork (NeueDeutsche tactics-fork)
+export function IconTarget3D({ size = 28, className = "" }: IconProps) {
+  const fallback = (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
-      <defs>
-        <linearGradient id={visRing1} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#60a5fa" />
-          <stop offset="100%" stopColor="#1d4ed8" />
-        </linearGradient>
-        <radialGradient id={visRing2} cx="35%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="#fed7aa" />
-          <stop offset="100%" stopColor="#ea580c" />
-        </radialGradient>
-        <radialGradient id={visCenter} cx="35%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="#fef08a" />
-          <stop offset="100%" stopColor="#eab308" />
-        </radialGradient>
-        <filter id={visShad} x="-15%" y="-15%" width="130%" height="130%">
-          <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.4" />
-        </filter>
-      </defs>
-      <g filter={`url(#${visShad})`}>
-        <circle cx="24" cy="24" r="18" fill={`url(#${visRing1})`} />
-        <circle cx="24" cy="24" r="13" fill="#ffffff" />
-        <circle cx="24" cy="24" r="9" fill={`url(#${visRing2})`} />
-        <circle cx="24" cy="24" r="4.5" fill={`url(#${visCenter})`} />
-        <ellipse cx="20" cy="16" rx="3.5" ry="1.5" fill="#ffffff" opacity="0.6" transform="rotate(-25 20 16)" />
-      </g>
+      <circle cx="24" cy="24" r="18" fill="#ef4444" />
+      <circle cx="24" cy="24" r="12" fill="#ffffff" />
+      <circle cx="24" cy="24" r="6" fill="#ef4444" />
     </svg>
   );
+
+  return <NeueChessIcon src="/icons/chess/tactics-fork.png" alt="Taktik" size={size} className={className} fallback={fallback} />;
 }
 
-// 3D Camera for Scan OTB
+export function IconVision3D(props: IconProps) {
+  return <IconTarget3D {...props} />;
+}
+
+// 5. Scan / Analysis (NeueDeutsche magnifier-analysis)
 export function IconScan3D({ size = 28, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const camBody = `camBody_${uid}`;
-  const camLens = `camLens_${uid}`;
-  const camShad = `camShad_${uid}`;
-
-  return (
+  const fallback = (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
-      <defs>
-        <linearGradient id={camBody} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#c084fc" />
-          <stop offset="50%" stopColor="#9333ea" />
-          <stop offset="100%" stopColor="#581c87" />
-        </linearGradient>
-        <radialGradient id={camLens} cx="35%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="#67e8f9" />
-          <stop offset="40%" stopColor="#06b6d4" />
-          <stop offset="90%" stopColor="#0e7490" />
-          <stop offset="100%" stopColor="#164e63" />
-        </radialGradient>
-        <filter id={camShad} x="-10%" y="-10%" width="130%" height="130%">
-          <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.4" />
-        </filter>
-      </defs>
-      <g filter={`url(#${camShad})`}>
-        <path d="M16 14 L20 10 H28 L32 14 H38 C40 14 41 15 41 17 V35 C41 37 40 38 38 38 H10 C8 38 7 37 7 35 V17 C7 15 8 14 10 14 Z" fill={`url(#${camBody})`} />
-        <circle cx="24" cy="26" r="9" fill="#1e1b4b" stroke="#a855f7" strokeWidth="1.5" />
-        <circle cx="24" cy="26" r="6.5" fill={`url(#${camLens})`} />
-        <ellipse cx="22" cy="23.5" rx="2" ry="1.2" fill="#ffffff" opacity="0.75" transform="rotate(-30 22 23.5)" />
-      </g>
+      <circle cx="22" cy="22" r="14" stroke="#a855f7" strokeWidth="4" fill="#1e1b4b" />
+      <path d="M32 32 L42 42" stroke="#a855f7" strokeWidth="5" strokeLinecap="round" />
     </svg>
   );
+
+  return <NeueChessIcon src="/icons/chess/magnifier-analysis.png" alt="Scan" size={size} className={className} fallback={fallback} />;
 }
 
-// 3D Community / Group of Users
+// 6. Community (NeueDeutsche communication-bubbles)
 export function IconCommunity3D({ size = 28, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const commGrad = `commGrad_${uid}`;
-  const commShad = `commShad_${uid}`;
-
-  return (
+  const fallback = (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
-      <defs>
-        <radialGradient id={commGrad} cx="35%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#6ee7b7" />
-          <stop offset="50%" stopColor="#10b981" />
-          <stop offset="100%" stopColor="#047857" />
-        </radialGradient>
-        <filter id={commShad} x="-10%" y="-10%" width="130%" height="130%">
-          <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.4" />
-        </filter>
-      </defs>
-      <g filter={`url(#${commShad})`}>
-        <circle cx="16" cy="18" r="5" fill="#047857" opacity="0.8" />
-        <path d="M9 33 C9 28, 12 26, 16 26 C20 26, 23 28, 23 33 Z" fill="#047857" opacity="0.8" />
-        <circle cx="32" cy="18" r="5" fill="#047857" opacity="0.8" />
-        <path d="M25 33 C25 28, 28 26, 32 26 C36 26, 39 28, 39 33 Z" fill="#047857" opacity="0.8" />
-        <circle cx="24" cy="16" r="6.5" fill={`url(#${commGrad})`} stroke="#a7f3d0" strokeWidth="1" />
-        <path d="M15 35 C15 29, 19 27, 24 27 C29 27, 33 29, 33 35 Z" fill={`url(#${commGrad})`} stroke="#a7f3d0" strokeWidth="1" />
-        <ellipse cx="22" cy="13.5" rx="2.5" ry="1.2" fill="#ffffff" opacity="0.65" transform="rotate(-20 22 13.5)" />
-      </g>
+      <circle cx="20" cy="22" r="12" fill="#10b981" />
+      <circle cx="32" cy="18" r="8" fill="#3b82f6" />
     </svg>
   );
+
+  return <NeueChessIcon src="/icons/chess/communication-bubbles.png" alt="Komunitas" size={size} className={className} fallback={fallback} />;
 }
 
-// 3D Friends (Two User Silhouettes with Green Gradient)
-export function IconFriends3D({ size = 22, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const fGrad = `fGrad_${uid}`;
+// 7. Bot (NeueDeutsche device-bot)
+export function IconBot3D({ size = 28, className = "" }: IconProps) {
+  const fallback = (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      <rect x="12" y="14" width="24" height="20" rx="6" fill="#475569" />
+      <rect x="16" y="20" width="16" height="6" rx="3" fill="#22c55e" />
+    </svg>
+  );
 
+  return <NeueChessIcon src="/icons/chess/device-bot.png" alt="AI Bot" size={size} className={className} fallback={fallback} />;
+}
+
+// 8. Medal / Trophy (NeueDeutsche cup-gold)
+export function IconMedal3D({ size = 24, className = "" }: IconProps) {
+  const fallback = (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className={className}>
+      <circle cx="32" cy="32" r="20" fill="#f59e0b" stroke="#d97706" strokeWidth="2" />
+    </svg>
+  );
+
+  return <NeueChessIcon src="/icons/chess/cup-gold.png" alt="Medal" size={size} className={className} fallback={fallback} />;
+}
+
+export function IconTrophy3D(props: IconProps) {
+  return <IconMedal3D {...props} />;
+}
+
+// 9. King White / Crown (NeueDeutsche crown-gold)
+export function IconKingWhite3D({ size = 28, className = "" }: IconProps) {
+  const fallback = (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M5 18L3 8L8 12L12 5L16 12L21 8L19 18H5Z" fill="#fbbf24" stroke="#d97706" strokeWidth="1.5" />
+    </svg>
+  );
+
+  return <NeueChessIcon src="/icons/chess/crown-gold.png" alt="Raja Putih" size={size} className={className} fallback={fallback} />;
+}
+
+// 10. Clock (NeueDeutsche time-rapid)
+export function IconClock3D({ size = 20, className = "" }: IconProps) {
+  const fallback = (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="12" cy="12" r="9" fill="#1e293b" stroke="#cbd5e1" strokeWidth="2" />
+      <path d="M12 7V12L15 15" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+
+  return <NeueChessIcon src="/icons/chess/time-rapid.png" alt="Waktu" size={size} className={className} fallback={fallback} />;
+}
+
+// 11. Globe (NeueDeutsche globe)
+export function IconGlobe3D({ size = 18, className = "" }: IconProps) {
+  const fallback = (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="12" cy="12" r="9" stroke="#38bdf8" strokeWidth="1.5" fill="#0f172a" />
+      <path d="M3.6 9H20.4M3.6 15H20.4" stroke="#38bdf8" strokeWidth="1.2" />
+    </svg>
+  );
+
+  return <NeueChessIcon src="/icons/chess/globe.png" alt="Globe" size={size} className={className} fallback={fallback} />;
+}
+
+// 12. Move Badges (NeueDeutsche Move Assessment Icons)
+export function IconMoveBrilliant({ size = 16, className = "" }: IconProps) {
+  return <img src="/icons/chess/move-brilliant.png" alt="Brilliant" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconMoveBest({ size = 16, className = "" }: IconProps) {
+  return <img src="/icons/chess/move-best.png" alt="Best Move" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconMoveExcellent({ size = 16, className = "" }: IconProps) {
+  return <img src="/icons/chess/move-excellent.png" alt="Excellent" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconMoveGood({ size = 16, className = "" }: IconProps) {
+  return <img src="/icons/chess/move-good.png" alt="Good" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconMoveBook({ size = 16, className = "" }: IconProps) {
+  return <img src="/icons/chess/move-book.png" alt="Book" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconMoveInaccuracy({ size = 16, className = "" }: IconProps) {
+  return <img src="/icons/chess/move-inaccuracy.png" alt="Inaccuracy" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconMoveMistake({ size = 16, className = "" }: IconProps) {
+  return <img src="/icons/chess/move-mistake.png" alt="Mistake" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconMoveBlunder({ size = 16, className = "" }: IconProps) {
+  return <img src="/icons/chess/move-blunder.png" alt="Blunder" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconMoveMissedWin({ size = 16, className = "" }: IconProps) {
+  return <img src="/icons/chess/move-missed-win.png" alt="Missed Win" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+
+// 13. Time Mode Icons (NeueDeutsche)
+export function IconTimeBullet({ size = 20, className = "" }: IconProps) {
+  return <img src="/icons/chess/time-bullet.png" alt="Bullet" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconTimeBlitz({ size = 20, className = "" }: IconProps) {
+  return <img src="/icons/chess/time-blitz.png" alt="Blitz" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconTimeRapid({ size = 20, className = "" }: IconProps) {
+  return <img src="/icons/chess/time-rapid.png" alt="Rapid" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconTimeClassic({ size = 20, className = "" }: IconProps) {
+  return <img src="/icons/chess/time-classic.png" alt="Classic" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+export function IconTimeDaily({ size = 20, className = "" }: IconProps) {
+  return <img src="/icons/chess/time-daily.png" alt="Daily" width={size} height={size} className={`inline-block object-contain ${className}`} />;
+}
+
+// Utility Icons
+export function IconFriends3D({ size = 22, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <defs>
-        <linearGradient id={fGrad} x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#86efac" />
-          <stop offset="0.6" stopColor="#81b64c" />
-          <stop offset="1" stopColor="#3f6212" />
-        </linearGradient>
-      </defs>
-      <circle cx="9" cy="7" r="4" fill={`url(#${fGrad})`} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))" />
-      <path d="M3 19C3 15.6863 5.68629 13 9 13C12.3137 13 15 15.6863 15 19V20H3V19Z" fill={`url(#${fGrad})`} />
+      <circle cx="9" cy="7" r="4" fill="#81b64c" />
+      <path d="M3 19C3 15.7 5.7 13 9 13C12.3 13 15 15.7 15 19V20H3V19Z" fill="#81b64c" />
       <circle cx="17" cy="9" r="3" fill="#a3e635" opacity="0.85" />
       <path d="M15 19C15.3 16.5 17.5 15 20 15C21.2 15 22.3 15.4 23 16V19H15Z" fill="#a3e635" opacity="0.85" />
     </svg>
   );
 }
 
-// 3D Messages (Chat Bubble with Gloss)
 export function IconMessages3D({ size = 22, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const mGrad = `mGrad_${uid}`;
-
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <defs>
-        <radialGradient id={mGrad} cx="30%" cy="25%" r="75%">
-          <stop offset="0%" stopColor="#93c5fd" />
-          <stop offset="50%" stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#1e3a8a" />
-        </radialGradient>
-      </defs>
-      <path
-        d="M20 11C20 15.4183 16.4183 19 12 19C10.5 19 9.1 18.6 7.9 17.8L3 19L4.4 14.5C3.5 13.5 3 12.3 3 11C3 6.58172 6.58172 3 12 3C16.4183 3 20 6.58172 20 11Z"
-        fill={`url(#${mGrad})`}
-        filter="drop-shadow(0 3px 4px rgba(0,0,0,0.4))"
-      />
+      <path d="M20 11C20 15.4 16.4 19 12 19C10.5 19 9.1 18.6 7.9 17.8L3 19L4.4 14.5C3.5 13.5 3 12.3 3 11C3 6.6 6.6 3 12 3C16.4 3 20 6.6 20 11Z" fill="#3b82f6" />
       <circle cx="8" cy="11" r="1.5" fill="#ffffff" />
       <circle cx="12" cy="11" r="1.5" fill="#ffffff" />
       <circle cx="16" cy="11" r="1.5" fill="#ffffff" />
@@ -269,54 +283,24 @@ export function IconMessages3D({ size = 22, className = "" }: IconProps) {
   );
 }
 
-// 3D Bell (Notification with Golden Bell)
 export function IconBell3D({ size = 22, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const bGrad = `bGrad_${uid}`;
-
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <defs>
-        <linearGradient id={bGrad} x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fef08a" />
-          <stop offset="0.5" stopColor="#eab308" />
-          <stop offset="1" stopColor="#854d0e" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M18 8C18 4.68629 15.3137 2 12 2C8.68629 2 6 4.68629 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z"
-        fill={`url(#${bGrad})`}
-        stroke="#ca8a04"
-        strokeWidth="1"
-        filter="drop-shadow(0 3px 4px rgba(0,0,0,0.4))"
-      />
+      <path d="M18 8C18 4.7 15.3 2 12 2C8.7 2 6 4.7 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" fill="#eab308" />
       <path d="M10.3 20C10.6 21.2 11.2 22 12 22C12.8 22 13.4 21.2 13.7 20H10.3Z" fill="#a16207" />
     </svg>
   );
 }
 
-// 3D Settings Gear
 export function IconSettings3D({ size = 22, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const gGrad = `gGrad_${uid}`;
-
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <defs>
-        <linearGradient id={gGrad} x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#e2e8f0" />
-          <stop offset="0.5" stopColor="#94a3b8" />
-          <stop offset="1" stopColor="#475569" />
-        </linearGradient>
-      </defs>
-      <circle cx="12" cy="12" r="8" fill={`url(#${gGrad})`} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))" />
+      <circle cx="12" cy="12" r="8" fill="#94a3b8" />
       <circle cx="12" cy="12" r="3.5" fill="#1e293b" />
-      <path d="M12 1V4M12 20V23M1 12H4M20 12H23M4.2 4.2L6.3 6.3M17.7 17.7L19.8 19.8M4.2 19.8L6.3 17.7M17.7 6.3L19.8 4.2" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   );
 }
 
-// 3D Search Glass
 export function IconSearch3D({ size = 18, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
@@ -326,530 +310,6 @@ export function IconSearch3D({ size = 18, className = "" }: IconProps) {
   );
 }
 
-// 3D Pin
-export function IconPin3D({ size = 18, className = "" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M16 4L20 8L15 13L16 19L11 14L6 19L5 18L10 13L5 8L9 4L16 4Z" fill="#f59e0b" stroke="#d97706" strokeWidth="1.2" />
-      <circle cx="16" cy="6" r="1.5" fill="#ffffff" />
-    </svg>
-  );
-}
-
-// 3D White King Piece
-export function IconKingWhite3D({ size = 28, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const kwGrad = `kwGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <defs>
-        <linearGradient id={kwGrad} x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#ffffff" />
-          <stop offset="0.6" stopColor="#fef3c7" />
-          <stop offset="1" stopColor="#f59e0b" />
-        </linearGradient>
-      </defs>
-      <path d="M12 2V5M10.5 3.5H13.5" stroke="#ca8a04" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M7 6L12 9L17 6L16 14H8L7 6Z" fill={`url(#${kwGrad})`} stroke="#b45309" strokeWidth="1" filter="drop-shadow(0 2px 3px rgba(0,0,0,0.3))" />
-      <rect x="6" y="15" width="12" height="4" rx="1.5" fill="#fef3c7" stroke="#b45309" strokeWidth="1" />
-    </svg>
-  );
-}
-
-// 3D Black King Piece
-export function IconKingBlack3D({ size = 28, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const kbGrad = `kbGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <defs>
-        <linearGradient id={kbGrad} x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#475569" />
-          <stop offset="0.6" stopColor="#1e293b" />
-          <stop offset="1" stopColor="#0f172a" />
-        </linearGradient>
-      </defs>
-      <path d="M12 2V5M10.5 3.5H13.5" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M7 6L12 9L17 6L16 14H8L7 6Z" fill={`url(#${kbGrad})`} stroke="#64748b" strokeWidth="1" filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))" />
-      <rect x="6" y="15" width="12" height="4" rx="1.5" fill="#1e293b" stroke="#64748b" strokeWidth="1" />
-    </svg>
-  );
-}
-
-// 3D Dice (Random side)
-export function IconDice3D({ size = 26, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const dGrad = `dGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <defs>
-        <linearGradient id={dGrad} x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#86efac" />
-          <stop offset="0.5" stopColor="#81b64c" />
-          <stop offset="1" stopColor="#365314" />
-        </linearGradient>
-      </defs>
-      <rect x="3" y="3" width="18" height="18" rx="4" fill={`url(#${dGrad})`} stroke="#86efac" strokeWidth="1" filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))" />
-      <circle cx="8" cy="8" r="1.5" fill="#ffffff" />
-      <circle cx="16" cy="8" r="1.5" fill="#ffffff" />
-      <circle cx="12" cy="12" r="1.5" fill="#ffffff" />
-      <circle cx="8" cy="16" r="1.5" fill="#ffffff" />
-      <circle cx="16" cy="16" r="1.5" fill="#ffffff" />
-    </svg>
-  );
-}
-
-// 3D Pencil / Create Topic
-export function IconPencil3D({ size = 20, className = "" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M18 2L22 6L7 21H3V17L18 2Z" fill="#81b64c" stroke="#4d7c0f" strokeWidth="1.5" />
-      <path d="M15 5L19 9" stroke="#ffffff" strokeWidth="1.2" />
-    </svg>
-  );
-}
-
-// 3D Bot / Stockfish Visor
-export function IconBot3D({ size = 28, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const botHead = `botHead_${uid}`;
-  const botVisor = `botVisor_${uid}`;
-  const botShad = `botShad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
-      <defs>
-        <linearGradient id={botHead} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#94a3b8" />
-          <stop offset="50%" stopColor="#475569" />
-          <stop offset="100%" stopColor="#1e293b" />
-        </linearGradient>
-        <linearGradient id={botVisor} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#22c55e" />
-          <stop offset="50%" stopColor="#4ade80" />
-          <stop offset="100%" stopColor="#22c55e" />
-        </linearGradient>
-        <filter id={botShad} x="-10%" y="-10%" width="130%" height="130%">
-          <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.4" />
-        </filter>
-      </defs>
-      <g filter={`url(#${botShad})`}>
-        <circle cx="24" cy="9" r="2.5" fill="#ef4444" />
-        <rect x="23" y="10" width="2" height="4" fill="#94a3b8" />
-        <rect x="11" y="14" width="26" height="22" rx="7" fill={`url(#${botHead})`} stroke="#64748b" strokeWidth="1.5" />
-        <rect x="15" y="20" width="18" height="7" rx="3.5" fill="#052e16" />
-        <rect x="16" y="21" width="16" height="5" rx="2.5" fill={`url(#${botVisor})`} />
-        <ellipse cx="18" cy="17" rx="3" ry="1.2" fill="#ffffff" opacity="0.5" />
-      </g>
-    </svg>
-  );
-}
-
-// 3D Fire / Streak
-export function IconFire3D({ size = 20, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const fireOuter = `fireOuter_${uid}`;
-  const fireInner = `fireInner_${uid}`;
-  const fireGlow = `fireGlow_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <radialGradient id={fireOuter} cx="40%" cy="40%" r="60%">
-          <stop stopColor="#fbbf24" />
-          <stop offset="0.5" stopColor="#f97316" />
-          <stop offset="1" stopColor="#dc2626" />
-        </radialGradient>
-        <radialGradient id={fireInner} cx="45%" cy="35%" r="50%">
-          <stop stopColor="#fef08a" />
-          <stop offset="0.7" stopColor="#fbbf24" />
-          <stop offset="1" stopColor="#ea580c" />
-        </radialGradient>
-        <filter id={fireGlow} x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse">
-          <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#ea580c" floodOpacity="0.5" />
-        </filter>
-      </defs>
-      <g filter={`url(#${fireGlow})`}>
-        <path d="M32 4C32 4 48 20 48 38C48 48 40.8 56 32 56C23.2 56 16 48 16 38C16 26 26 14 32 4Z" fill={`url(#${fireOuter})`} />
-        <path d="M32 20C32 20 40 30 40 40C40 45 36.4 49 32 49C27.6 49 24 45 24 40C24 33 29 26 32 20Z" fill={`url(#${fireInner})`} />
-      </g>
-    </svg>
-  );
-}
-
-// 3D Gold Star
-export function IconStar3D({ size = 20, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const starGrad = `starGrad_${uid}`;
-  const starShadow = `starShadow_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id={starGrad} x1="10" y1="10" x2="54" y2="54" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fef08a" />
-          <stop offset="0.4" stopColor="#fbbf24" />
-          <stop offset="1" stopColor="#d97706" />
-        </linearGradient>
-        <filter id={starShadow} x="4" y="4" width="56" height="56" filterUnits="userSpaceOnUse">
-          <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#b45309" floodOpacity="0.4" />
-        </filter>
-      </defs>
-      <g filter={`url(#${starShadow})`}>
-        <polygon points="32,6 40,24 60,25 44,38 50,56 32,45 14,56 20,38 4,25 24,24" fill={`url(#${starGrad})`} stroke="#f59e0b" strokeWidth="1" />
-      </g>
-    </svg>
-  );
-}
-
-// 3D Medal Badge
-export function IconMedal3D({ size = 24, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const medalDisc = `medalDisc_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id={medalDisc} x1="16" y1="24" x2="48" y2="56" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fde68a" />
-          <stop offset="0.5" stopColor="#f59e0b" />
-          <stop offset="1" stopColor="#b45309" />
-        </linearGradient>
-      </defs>
-      <polygon points="22,6 32,24 16,24" fill="#3b82f6" />
-      <polygon points="42,6 48,24 32,24" fill="#ef4444" />
-      <circle cx="32" cy="40" r="16" fill={`url(#${medalDisc})`} stroke="#d97706" strokeWidth="1.5" />
-      <circle cx="32" cy="40" r="11" fill="none" stroke="#fef3c7" strokeWidth="1.5" strokeDasharray="3 2" />
-    </svg>
-  );
-}
-
-// 3D Lock
-export function IconLock3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const shackleGrad = `shackleGrad_${uid}`;
-  const lockBody = `lockBody_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id={shackleGrad} x1="20" y1="12" x2="44" y2="32" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#94a3b8" />
-          <stop offset="1" stopColor="#475569" />
-        </linearGradient>
-        <linearGradient id={lockBody} x1="16" y1="28" x2="48" y2="58" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#f59e0b" />
-          <stop offset="1" stopColor="#b45309" />
-        </linearGradient>
-      </defs>
-      <path d="M22 30V20C22 14.5 26.5 10 32 10C37.5 10 42 14.5 42 20V30" stroke={`url(#${shackleGrad})`} strokeWidth="6" strokeLinecap="round" fill="none" />
-      <rect x="16" y="28" width="32" height="26" rx="6" fill={`url(#${lockBody})`} stroke="#92400e" strokeWidth="1.5" />
-      <circle cx="32" cy="40" r="3.5" fill="#78350f" />
-    </svg>
-  );
-}
-
-// 3D Lightning
-export function IconLightning3D({ size = 20, className = "" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// 3D Clock
-export function IconClock3D({ size = 20, className = "" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <circle cx="12" cy="12" r="9" fill="#1e293b" stroke="#cbd5e1" strokeWidth="2" />
-      <path d="M12 7V12L15 15" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// 3D Trophy
-export function IconTrophy3D({ size = 20, className = "" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M6 9V4H18V9C18 12.3 15.3 15 12 15C8.7 15 6 12.3 6 9Z" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5" />
-      <path d="M6 6H3V8C3 10.2 4.8 12 7 12" stroke="#eab308" strokeWidth="1.5" />
-      <path d="M18 6H21V8C21 10.2 19.2 12 17 12" stroke="#eab308" strokeWidth="1.5" />
-      <path d="M12 15V19M8 19H16" stroke="#ca8a04" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// 3D Swap
-export function IconSwap3D({ size = 18, className = "" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L21 16M17 20L13 16" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// 3D Globe
-export function IconGlobe3D({ size = 18, className = "" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <circle cx="12" cy="12" r="9" stroke="#38bdf8" strokeWidth="1.5" fill="#0f172a" />
-      <path d="M3.6 9H20.4M3.6 15H20.4M12 3C14.5 6 15.5 9 15.5 12C15.5 15 14.5 18 12 21C9.5 18 8.5 15 8.5 12C8.5 9 9.5 6 12 3Z" stroke="#38bdf8" strokeWidth="1.2" />
-    </svg>
-  );
-}
-
-// 3D Skull
-export function IconSkull3D({ size = 48, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const skullGrad = `skullGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <radialGradient id={skullGrad} cx="35%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#f1f5f9" />
-          <stop offset="60%" stopColor="#94a3b8" />
-          <stop offset="100%" stopColor="#475569" />
-        </radialGradient>
-      </defs>
-      <circle cx="32" cy="28" r="20" fill={`url(#${skullGrad})`} />
-      <path d="M22 38 H42 V50 H22 Z" fill={`url(#${skullGrad})`} />
-      <ellipse cx="24" cy="27" rx="5" ry="6" fill="#0f172a" />
-      <ellipse cx="40" cy="27" rx="5" ry="6" fill="#0f172a" />
-      <circle cx="24" cy="27" r="2" fill="#ef4444" />
-      <circle cx="40" cy="27" r="2" fill="#ef4444" />
-      <path d="M30 35 L32 31 L34 35 Z" fill="#0f172a" />
-      <rect x="25" y="44" width="2.5" height="6" rx="1" fill="#0f172a" />
-      <rect x="30.75" y="44" width="2.5" height="6" rx="1" fill="#0f172a" />
-      <rect x="36.5" y="44" width="2.5" height="6" rx="1" fill="#0f172a" />
-    </svg>
-  );
-}
-
-// 3D Balance Scale
-export function IconBalance3D({ size = 48, className = "" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <rect x="30" y="10" width="4" height="42" rx="2" fill="#94a3b8" />
-      <rect x="18" y="50" width="28" height="6" rx="3" fill="#64748b" />
-      <path d="M14 16 L50 16" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
-      <circle cx="32" cy="16" r="4" fill="#38bdf8" />
-      <path d="M14 16 L8 34 H20 Z" fill="#475569" stroke="#94a3b8" strokeWidth="1.5" />
-      <path d="M50 16 L44 34 H56 Z" fill="#475569" stroke="#94a3b8" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-// 3D White Flag (Surrender / Resign)
-export function IconFlag3D({ size = 48, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const flagCloth = `flagCloth_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id={flagCloth} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="50%" stopColor="#f8fafc" />
-          <stop offset="100%" stopColor="#cbd5e1" />
-        </linearGradient>
-      </defs>
-      <rect x="16" y="8" width="4" height="48" rx="2" fill="#94a3b8" />
-      <circle cx="18" cy="8" r="3" fill="#e2e8f0" />
-      <path
-        d="M20 12 C28 9, 36 15, 48 11 V33 C36 37, 28 31, 20 34 Z"
-        fill={`url(#${flagCloth})`}
-        stroke="#94a3b8"
-        strokeWidth="1.5"
-      />
-      <rect x="12" y="54" width="12" height="4" rx="2" fill="#64748b" />
-    </svg>
-  );
-}
-
-export function IconCoach3D({ size = 24, className = "" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <circle cx="32" cy="20" r="12" fill="#1c1a18" stroke="#81b64c" strokeWidth="2.5" />
-      <circle cx="32" cy="18" r="8" fill="#0a0c0a" />
-      <ellipse cx="27" cy="17" rx="2" ry="2.5" fill="#81b64c" />
-      <ellipse cx="37" cy="17" rx="2" ry="2.5" fill="#81b64c" />
-      <path d="M28 22 Q32 26 36 22" stroke="#81b64c" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-      <rect x="14" y="32" width="36" height="22" rx="6" fill="#1c1a18" stroke="#36322d" strokeWidth="2" />
-      <rect x="20" y="38" width="24" height="10" rx="3" fill="#0a0c0a" />
-      <circle cx="26" cy="43" r="3" fill="#81b64c" opacity="0.7" />
-      <circle cx="32" cy="43" r="3" fill="#38bdf8" opacity="0.6" />
-      <circle cx="38" cy="43" r="3" fill="#f97316" opacity="0.6" />
-      <path d="M32 32 L32 40" stroke="#36322d" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// 3D Quote Reply Icon
-export function IconQuote3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const quoteGrad = `quoteGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id={quoteGrad} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#93c5fd" />
-          <stop offset="50%" stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#1d4ed8" />
-        </linearGradient>
-      </defs>
-      <path d="M10 28 C10 20, 14 14, 22 10 L24 13 C18 16, 16 19, 16 23 H22 V36 H10 Z" fill={`url(#${quoteGrad})`} />
-      <path d="M26 28 C26 20, 30 14, 38 10 L40 13 C34 16, 32 19, 32 23 H38 V36 H26 Z" fill={`url(#${quoteGrad})`} />
-    </svg>
-  );
-}
-
-// 3D History / Import Game Icon
-export function IconHistory3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const histGrad = `histGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <radialGradient id={histGrad} cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#fde047" />
-          <stop offset="40%" stopColor="#eab308" />
-          <stop offset="100%" stopColor="#854d0e" />
-        </radialGradient>
-      </defs>
-      <circle cx="24" cy="24" r="18" stroke={`url(#${histGrad})`} strokeWidth="4" fill="none" />
-      <path d="M24 12 V24 L32 28" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-      <polygon points="12,18 6,24 12,30" fill={`url(#${histGrad})`} />
-    </svg>
-  );
-}
-
-// 3D Green Check Success Icon
-export function IconCheck3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const checkGrad = `checkGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <radialGradient id={checkGrad} cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#86efac" />
-          <stop offset="45%" stopColor="#22c55e" />
-          <stop offset="100%" stopColor="#15803d" />
-        </radialGradient>
-      </defs>
-      <circle cx="24" cy="24" r="20" fill={`url(#${checkGrad})`} />
-      <path d="M14 24 L21 31 L34 17" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// 3D Shield Icon
-export function IconShield3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const shieldGrad = `shieldGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id={shieldGrad} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#60a5fa" />
-          <stop offset="50%" stopColor="#2563eb" />
-          <stop offset="100%" stopColor="#1e3a8a" />
-        </linearGradient>
-      </defs>
-      <path d="M24 4 L8 10 V22 C8 32, 15 41, 24 44 C33 41, 40 32, 40 22 V10 Z" fill={`url(#${shieldGrad})`} stroke="#93c5fd" strokeWidth="1.5" />
-      <path d="M24 14 V34 M16 22 L24 14 L32 22" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// 3D Thumbs Up / Like Icon
-export function IconThumbsUp3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const thumbGrad = `thumbGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <radialGradient id={thumbGrad} cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#f472b6" />
-          <stop offset="50%" stopColor="#db2777" />
-          <stop offset="100%" stopColor="#9d174d" />
-        </radialGradient>
-      </defs>
-      <path d="M8 20 H14 V40 H8 Z M16 40 H34 C36 40, 38 38, 38 36 L40 26 C40.5 23.5, 38.5 21, 36 21 H27 L28.5 13 C29 10, 27 7, 24 8 L16 20 Z" fill={`url(#${thumbGrad})`} />
-    </svg>
-  );
-}
-
-// 3D AI Brain / Analysis Icon
-export function IconAiBrain3D({ size = 20, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const brainGrad = `brainGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <radialGradient id={brainGrad} cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#c084fc" />
-          <stop offset="50%" stopColor="#9333ea" />
-          <stop offset="100%" stopColor="#581c87" />
-        </radialGradient>
-      </defs>
-      <circle cx="24" cy="24" r="20" fill={`url(#${brainGrad})`} />
-      <circle cx="17" cy="19" r="4" fill="#ffffff" opacity="0.9" />
-      <circle cx="31" cy="19" r="4" fill="#ffffff" opacity="0.9" />
-      <circle cx="24" cy="31" r="4" fill="#ffffff" opacity="0.9" />
-      <path d="M17 19 L31 19 M17 19 L24 31 M31 19 L24 31" stroke="#ffffff" strokeWidth="2" />
-    </svg>
-  );
-}
-
-// 3D Rocket Icon
-export function IconRocket3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const rockGrad = `rockGrad_${uid}`;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <radialGradient id={rockGrad} cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#f87171" />
-          <stop offset="50%" stopColor="#ef4444" />
-          <stop offset="100%" stopColor="#991b1b" />
-        </radialGradient>
-      </defs>
-      <path d="M24 4 C32 10, 36 22, 34 32 L24 38 L14 32 C12 22, 16 10, 24 4 Z" fill={`url(#${rockGrad})`} />
-      <circle cx="24" cy="18" r="4" fill="#ffffff" />
-      <path d="M14 32 L6 36 L10 26 Z M34 32 L42 36 L38 26 Z" fill="#f59e0b" />
-      <polygon points="20,38 28,38 24,46" fill="#facc15" />
-    </svg>
-  );
-}
-
-// 3D Infinity Icon
-export function IconInfinity3D({ size = 18, className = "" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <path
-        d="M14 16 C8 16, 4 20, 4 24 C4 28, 8 32, 14 32 C20 32, 24 24, 24 24 C24 24, 28 32, 34 32 C40 32, 44 28, 44 24 C44 20, 40 16, 34 16 C28 16, 24 24, 24 24 C24 24, 20 16, 14 16 Z"
-        stroke="#81b64c"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-// 3D Close / Cross Icon
 export function IconClose3D({ size = 18, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
@@ -859,119 +319,205 @@ export function IconClose3D({ size = 18, className = "" }: IconProps) {
   );
 }
 
-// 3D Glowing Lightbulb Icon
-export function IconLightbulb3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const bulbGrad = `bulbGrad_${uid}`;
-  const bulbBase = `bulbBase_${uid}`;
-  const bulbGlow = `bulbGlow_${uid}`;
-
+export function IconCheck3D({ size = 18, className = "" }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <radialGradient id={bulbGrad} cx="35%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#fef08a" />
-          <stop offset="45%" stopColor="#eab308" />
-          <stop offset="100%" stopColor="#ca8a04" />
-        </radialGradient>
-        <linearGradient id={bulbBase} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#94a3b8" />
-          <stop offset="100%" stopColor="#475569" />
-        </linearGradient>
-        <radialGradient id={bulbGlow} cx="50%" cy="40%" r="50%">
-          <stop offset="0%" stopColor="#facc15" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#facc15" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <circle cx="16" cy="13" r="12" fill={`url(#${bulbGlow})`} />
-      <path
-        d="M16 4 C10.5 4 6 8.5 6 14 C6 17.5 8 20.5 11 22.2 V25 C11 25.6 11.4 26 12 26 H20 C20.6 26 21 25.6 21 25 V22.2 C24 20.5 26 17.5 26 14 C26 8.5 21.5 4 16 4 Z"
-        fill={`url(#${bulbGrad})`}
-        filter="drop-shadow(0 2px 3px rgba(0,0,0,0.3))"
-      />
-      <ellipse cx="13" cy="10" rx="3" ry="1.5" fill="#ffffff" opacity="0.65" transform="rotate(-30 13 10)" />
-      <rect x="12" y="26" width="8" height="2" rx="1" fill={`url(#${bulbBase})`} />
-      <rect x="13" y="28" width="6" height="2" rx="1" fill="#334155" />
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      <circle cx="24" cy="24" r="20" fill="#22c55e" />
+      <path d="M14 24 L21 31 L34 17" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// 3D Warning / Alert Icon
 export function IconAlert3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const alertGrad = `alertGrad_${uid}`;
-
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id={alertGrad} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#fde047" />
-          <stop offset="50%" stopColor="#f59e0b" />
-          <stop offset="100%" stopColor="#d97706" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M16 3 L2 27 C1.3 28.2 2.2 29.7 3.6 29.7 H28.4 C29.8 29.7 30.7 28.2 30 27 L16 3 Z"
-        fill={`url(#${alertGrad})`}
-        stroke="#b45309"
-        strokeWidth="1.2"
-        filter="drop-shadow(0 2px 4px rgba(0,0,0,0.35))"
-      />
-      <ellipse cx="14" cy="12" rx="2" ry="1" fill="#ffffff" opacity="0.5" transform="rotate(-30 14 12)" />
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
+      <path d="M16 3 L2 27 C1.3 28.2 2.2 29.7 3.6 29.7 H28.4 C29.8 29.7 30.7 28.2 30 27 L16 3 Z" fill="#f59e0b" />
       <rect x="14.5" y="12" width="3" height="8" rx="1.5" fill="#1c1917" />
       <circle cx="16" cy="24" r="1.8" fill="#1c1917" />
     </svg>
   );
 }
 
-// 3D Concentric Bullseye Target Icon
-export function IconTarget3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const tgtOuter = `tgtOuter_${uid}`;
-  const tgtMid = `tgtMid_${uid}`;
-  const tgtCenter = `tgtCenter_${uid}`;
-
+export function IconLightning3D({ size = 20, className = "" }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <radialGradient id={tgtOuter} cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#f87171" />
-          <stop offset="70%" stopColor="#ef4444" />
-          <stop offset="100%" stopColor="#991b1b" />
-        </radialGradient>
-        <radialGradient id={tgtMid} cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor="#e2e8f0" />
-        </radialGradient>
-        <radialGradient id={tgtCenter} cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#fca5a5" />
-          <stop offset="60%" stopColor="#dc2626" />
-          <stop offset="100%" stopColor="#7f1d1d" />
-        </radialGradient>
-      </defs>
-      <circle cx="16" cy="16" r="14" fill={`url(#${tgtOuter})`} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.3))" />
-      <circle cx="16" cy="16" r="10" fill={`url(#${tgtMid})`} />
-      <circle cx="16" cy="16" r="6" fill={`url(#${tgtCenter})`} />
-      <circle cx="16" cy="16" r="2.5" fill="#ffffff" opacity="0.85" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// 3D Red Cross Error Icon
-export function IconCrossRed3D({ size = 18, className = "" }: IconProps) {
-  const uid = useId().replace(/:/g, "_");
-  const crossGrad = `crossGrad_${uid}`;
-
+export function IconStar3D({ size = 20, className = "" }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <radialGradient id={crossGrad} cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#f87171" />
-          <stop offset="50%" stopColor="#ef4444" />
-          <stop offset="100%" stopColor="#991b1b" />
-        </radialGradient>
-      </defs>
-      <circle cx="16" cy="16" r="14" fill={`url(#${crossGrad})`} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.35))" />
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className={className}>
+      <polygon points="32,6 40,24 60,25 44,38 50,56 32,45 14,56 20,38 4,25 24,24" fill="#fbbf24" stroke="#d97706" strokeWidth="1" />
+    </svg>
+  );
+}
+
+export function IconFire3D({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className={className}>
+      <path d="M32 4C32 4 48 20 48 38C48 48 40.8 56 32 56C23.2 56 16 48 16 38C16 26 26 14 32 4Z" fill="#f97316" />
+      <path d="M32 20C32 20 40 30 40 40C40 45 36.4 49 32 49C27.6 49 24 45 24 40C24 33 29 26 32 20Z" fill="#fbbf24" />
+    </svg>
+  );
+}
+
+export function IconKingBlack3D({ size = 28, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M5 18L3 8L8 12L12 5L16 12L21 8L19 18H5Z" fill="#475569" stroke="#1e293b" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+export function IconDice3D({ size = 26, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="4" fill="#81b64c" />
+      <circle cx="8" cy="8" r="1.5" fill="#ffffff" />
+      <circle cx="16" cy="8" r="1.5" fill="#ffffff" />
+      <circle cx="12" cy="12" r="1.5" fill="#ffffff" />
+      <circle cx="8" cy="16" r="1.5" fill="#ffffff" />
+      <circle cx="16" cy="16" r="1.5" fill="#ffffff" />
+    </svg>
+  );
+}
+
+export function IconLightbulb3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
+      <circle cx="16" cy="13" r="10" fill="#facc15" />
+      <rect x="12" y="24" width="8" height="4" rx="1" fill="#64748b" />
+    </svg>
+  );
+}
+
+export function IconSwap3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L21 16M17 20L13 16" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconPencil3D({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M18 2L22 6L7 21H3V17L18 2Z" fill="#81b64c" stroke="#4d7c0f" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+export function IconPin3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M16 4L20 8L15 13L16 19L11 14L6 19L5 18L10 13L5 8L9 4L16 4Z" fill="#f59e0b" />
+    </svg>
+  );
+}
+
+export function IconLock3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className={className}>
+      <rect x="16" y="28" width="32" height="26" rx="6" fill="#f59e0b" />
+      <path d="M22 28V20C22 14.5 26.5 10 32 10C37.5 10 42 14.5 42 20V28" stroke="#94a3b8" strokeWidth="6" strokeLinecap="round" fill="none" />
+    </svg>
+  );
+}
+
+export function IconSkull3D({ size = 48, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className={className}>
+      <circle cx="32" cy="28" r="20" fill="#94a3b8" />
+      <rect x="25" y="44" width="14" height="8" rx="2" fill="#475569" />
+    </svg>
+  );
+}
+
+export function IconBalance3D({ size = 48, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className={className}>
+      <path d="M14 16 L50 16" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+      <circle cx="32" cy="16" r="4" fill="#38bdf8" />
+    </svg>
+  );
+}
+
+export function IconFlag3D({ size = 48, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className={className}>
+      <rect x="16" y="8" width="4" height="48" rx="2" fill="#94a3b8" />
+      <path d="M20 12 C28 9, 36 15, 48 11 V33 C36 37, 28 31, 20 34 Z" fill="#cbd5e1" />
+    </svg>
+  );
+}
+
+export function IconCoach3D({ size = 24, className = "" }: IconProps) {
+  return <IconBot3D size={size} className={className} />;
+}
+
+export function IconQuote3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      <circle cx="24" cy="24" r="18" fill="#3b82f6" />
+    </svg>
+  );
+}
+
+export function IconHistory3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      <circle cx="24" cy="24" r="18" stroke="#eab308" strokeWidth="4" fill="none" />
+      <path d="M24 12 V24 L32 28" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconShield3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      <path d="M24 4 L8 10 V22 C8 32, 15 41, 24 44 C33 41, 40 32, 40 22 V10 Z" fill="#2563eb" />
+    </svg>
+  );
+}
+
+export function IconThumbsUp3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      <circle cx="24" cy="24" r="18" fill="#ec4899" />
+    </svg>
+  );
+}
+
+export function IconAiBrain3D({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      <circle cx="24" cy="24" r="18" fill="#9333ea" />
+    </svg>
+  );
+}
+
+export function IconRocket3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      <circle cx="24" cy="24" r="18" fill="#ef4444" />
+    </svg>
+  );
+}
+
+export function IconInfinity3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      <path d="M14 16 C8 16, 4 20, 4 24 C4 28, 8 32, 14 32 C20 32, 24 24, 24 24 C24 24, 28 32, 34 32 C40 32, 44 28, 44 24 C44 20, 40 16, 34 16 C28 16, 24 24, 24 24 C24 24, 20 16, 14 16 Z" stroke="#81b64c" strokeWidth="5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconCrossRed3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
+      <circle cx="16" cy="16" r="14" fill="#ef4444" />
       <path d="M11 11 L21 21 M21 11 L11 21" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );

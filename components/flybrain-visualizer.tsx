@@ -77,18 +77,18 @@ export function FlyBrainVisualizer({ diagnostics, isThinking }: FlyBrainVisualiz
               <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
                 FlyBrain Connectome Lab
               </span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#312e2b] text-neutral-400 border border-[#443e37]">
+              <span className="px-1.5 py-0.5 rounded text-xs font-mono font-bold bg-[#312e2b] text-neutral-400 border border-[#443e37]">
                 134k Neurons
               </span>
             </div>
-            <p className="text-[11px] text-neutral-400">
+            <p className="text-xs text-neutral-400">
               {isThinking ? "Menjalankan forward pass konektom..." : moodConfig.label}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className={`px-2 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1.5 ${moodConfig.bg}`}>
+          <div className={`px-2 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1.5 ${moodConfig.bg}`}>
             <span className="relative flex h-2 w-2">
               {isThinking && (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
@@ -146,7 +146,7 @@ export function FlyBrainVisualizer({ diagnostics, isThinking }: FlyBrainVisualiz
           {/* TAB 1: REGIONAL BRAIN ACTIVITY */}
           {activeTab === "brain" && (
             <div className="space-y-3">
-              <div className="text-[11px] text-neutral-400 flex items-center justify-between">
+              <div className="text-xs text-neutral-400 flex items-center justify-between">
                 <span>Rambatan Sinyal Biologis (16 Timesteps)</span>
                 <span className="text-amber-400/90 font-mono">Drosophila FAFB v783</span>
               </div>
@@ -159,7 +159,7 @@ export function FlyBrainVisualizer({ diagnostics, isThinking }: FlyBrainVisualiz
                   { label: "Neuron Motorik (Langkah)", val: regional.motor, color: "from-emerald-500 to-teal-500" },
                 ].map((item, idx) => (
                   <div key={idx} className="space-y-1">
-                    <div className="flex justify-between text-[11px] text-neutral-300 font-mono">
+                    <div className="flex justify-between text-xs text-neutral-300 font-mono">
                       <span>{item.label}</span>
                       <span className="font-bold text-neutral-200">{(item.val * 100).toFixed(0)}%</span>
                     </div>
@@ -173,7 +173,7 @@ export function FlyBrainVisualizer({ diagnostics, isThinking }: FlyBrainVisualiz
                 ))}
               </div>
 
-              <div className="p-2.5 rounded-lg bg-[#141310] border border-[#2b2722] text-[11px] text-neutral-400 leading-relaxed flex items-start gap-2">
+              <div className="p-2.5 rounded-lg bg-[#141310] border border-[#2b2722] text-xs text-neutral-400 leading-relaxed flex items-start gap-2">
                 <IconLightbulb3D size={14} className="shrink-0 mt-0.5" />
                 <span>
                   <span className="text-neutral-300 font-semibold">Prinsip Biologis:</span> Sinyal papan catur diinjeksikan ke 2.048 neuron fotoreseptor, dihantarkan lewat 2,7 juta sinapsis dengan hukum Dale (ACh merangsang, GABA/Glutamat menghambat).
@@ -185,7 +185,7 @@ export function FlyBrainVisualizer({ diagnostics, isThinking }: FlyBrainVisualiz
           {/* TAB 2: COMPOUND EYE HEATMAP */}
           {activeTab === "eye" && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-[11px] text-neutral-400">
+              <div className="flex items-center justify-between text-xs text-neutral-400">
                 <span>Fotoreseptor Mata Majemuk (64 Petak)</span>
                 <span className="font-mono text-cyan-400">Ommatidia Grid</span>
               </div>
@@ -202,7 +202,7 @@ export function FlyBrainVisualizer({ diagnostics, isThinking }: FlyBrainVisualiz
                         backgroundColor: `rgba(245, 158, 11, ${Math.max(0.08, Math.min(0.9, intensity))})`,
                       }}
                     >
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/80 rounded-[3px] text-[8px] font-mono text-white transition-opacity">
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/80 rounded-[3px] text-xs font-mono text-white transition-opacity">
                         {(intensity * 100).toFixed(0)}
                       </div>
                     </div>
@@ -210,7 +210,7 @@ export function FlyBrainVisualizer({ diagnostics, isThinking }: FlyBrainVisualiz
                 })}
               </div>
 
-              <p className="text-[11px] text-neutral-400">
+              <p className="text-xs text-neutral-400">
                 Petak yang lebih terang menunjukkan area papan catur yang menerima eksitasi visual tertinggi dari retina lalat.
               </p>
             </div>
@@ -219,9 +219,9 @@ export function FlyBrainVisualizer({ diagnostics, isThinking }: FlyBrainVisualiz
           {/* TAB 3: CODEX NEURON LOOKUP */}
           {activeTab === "neurons" && (
             <div className="space-y-2.5">
-              <div className="text-[11px] text-neutral-400 flex items-center justify-between">
+              <div className="text-xs text-neutral-400 flex items-center justify-between">
                 <span>Neuron Paling Aktif Saat Ini</span>
-                <span className="text-amber-400 font-mono text-[10px]">codex.flywire.ai</span>
+                <span className="text-amber-400 font-mono text-xs">codex.flywire.ai</span>
               </div>
 
               <div className="space-y-1.5">
@@ -240,7 +240,7 @@ export function FlyBrainVisualizer({ diagnostics, isThinking }: FlyBrainVisualiz
                         <Sparkles className="w-3 h-3 text-amber-400" />
                         <span>Neuron #{n.id}</span>
                       </div>
-                      <p className="text-[10px] text-neutral-400">{n.region}</p>
+                      <p className="text-xs text-neutral-400">{n.region}</p>
                     </div>
 
                     <div className="flex items-center gap-3">

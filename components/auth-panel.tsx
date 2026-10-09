@@ -101,7 +101,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
             <div className="flex items-center gap-1.5">
               <h3 className="font-bold text-sm text-white truncate">{user.fullName}</h3>
               {user.isAdmin && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                <span className="px-1.5 py-0.5 rounded text-xs font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
                   Admin
                 </span>
               )}
@@ -115,17 +115,17 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-1.5 bg-[var(--background)] p-2.5 rounded-xl border border-[var(--border)] text-center">
           <div>
-            <span className="block text-[9px] uppercase font-bold text-neutral-400">Rating ELO</span>
+            <span className="block text-xs uppercase font-bold text-neutral-400">Rating ELO</span>
             <span className="font-mono font-black text-base text-[var(--primary)]">{user.elo}</span>
           </div>
           <div>
-            <span className="block text-[9px] uppercase font-bold text-neutral-400">Menang/Kalah</span>
+            <span className="block text-xs uppercase font-bold text-neutral-400">Menang/Kalah</span>
             <span className="font-mono font-bold text-xs text-neutral-200">
               {user.wins}W / {user.losses}L
             </span>
           </div>
           <div>
-            <span className="block text-[9px] uppercase font-bold text-neutral-400">Win Rate</span>
+            <span className="block text-xs uppercase font-bold text-neutral-400">Win Rate</span>
             <span className="font-mono font-bold text-xs text-emerald-400">{winRate}%</span>
           </div>
         </div>
@@ -201,7 +201,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
           <h2 className="text-base font-black text-white tracking-wide uppercase leading-tight">
             FIF <span className="text-[var(--primary)]">CHESS</span>
           </h2>
-          <p className="text-[11px] text-neutral-400">Platform Catur Civitas Telkom University</p>
+          <p className="text-xs text-neutral-400">Platform Catur Civitas Telkom University</p>
         </div>
       </div>
 
@@ -266,7 +266,7 @@ export function AuthPanel({ user, onLogin, onRegister, onLogout, onClose, defaul
         {/* Additional Register Fields - 2 column layout */}
         {mode === "register" && (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label
                   className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1"

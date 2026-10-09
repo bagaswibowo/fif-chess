@@ -1,11 +1,11 @@
 import rawQuestChapters from "@/resource/puzzles-quest.json";
 import rawPuzzles from "@/resource/puzzles-all.json";
 
-export type PuzzleCategory = "opening" | "defense" | "middlegame" | "endgame" | "jebakan" | "skakmat" | "opponent";
+export type PuzzleCategory = "opening" | "defense" | "middlegame" | "endgame" | "jebakan" | "skakmat" | "opponent" | "caruana";
 export type PuzzleDifficulty = "Mudah" | "Sedang" | "Sulit";
 export type PuzzleMotif = "mate" | "promotion" | "capture" | "capture-check" | "check" | "tactic" | "trap";
 export type PuzzleTrack = "quest" | "puzzle";
-export type PuzzleSource = "ct-art" | "bpcaturpedia" | "live";
+export type PuzzleSource = "ct-art" | "bpcaturpedia" | "live" | "caruana";
 
 export type Puzzle = {
   id: string;
@@ -28,6 +28,7 @@ export type Puzzle = {
 
 export const PUZZLE_CATEGORIES: { id: PuzzleCategory | "all"; label: string }[] = [
   { id: "all", label: "Semua Kategori" },
+  { id: "caruana", label: "Taktik Fabiano Caruana (100 Posisi)" },
   { id: "opening", label: "Pembukaan (Opening)" },
   { id: "defense", label: "Pertahanan (Defense)" },
   { id: "middlegame", label: "Babak Tengah (Middlegame)" },

@@ -9,6 +9,7 @@
 // 5. Standardized Pill Tab Bar konsisten dengan UI FIF Chess.
 
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Play, Pause } from "lucide-react";
 import { BoardControls } from "@/components/board-controls";
 import { NotationTable } from "@/components/notation-table";
 import { EvalBar } from "@/components/eval-bar";
@@ -252,15 +253,15 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
     if (moveIndex === 0 || !playedNow || !evalResult) return null;
     const delta = evalResult.deltaCp ?? 0;
     if (playedNow.san === evalResult.bestSan || delta <= 30) {
-      return { kind: "best", label: "Langkah Terbaik", badge: "Best Move", color: "text-emerald-400" };
+      return { kind: "best", label: "Langkah Terbaik", badge: "Best Move", color: "text-emerald-400", icon: "/icons/chess/move-best.png" };
     }
     if (delta <= 80) {
-      return { kind: "inaccuracy", label: "Kurang Akurat", badge: "Inaccuracy", color: "text-amber-300" };
+      return { kind: "inaccuracy", label: "Kurang Akurat", badge: "Inaccuracy", color: "text-amber-300", icon: "/icons/chess/move-inaccuracy.png" };
     }
     if (delta <= 200) {
-      return { kind: "mistake", label: "Kesalahan", badge: "Mistake", color: "text-orange-400" };
+      return { kind: "mistake", label: "Kesalahan", badge: "Mistake", color: "text-orange-400", icon: "/icons/chess/move-mistake.png" };
     }
-    return { kind: "blunder", label: "Blunder Fatal", badge: "Blunder", color: "text-red-400" };
+    return { kind: "blunder", label: "Blunder Fatal", badge: "Blunder", color: "text-red-400", icon: "/icons/chess/move-blunder.png" };
   }, [moveIndex, playedNow, evalResult]);
 
   // Deteksi ancaman di posisi saat ini
@@ -310,7 +311,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
       <div className="row-between flex-wrap gap-2 shrink-0">
         <h2 className="section-title m-0 text-lg md:text-xl">{lang === "id" ? "Riwayat & Review Blunder" : "History & Blunder Review"}</h2>
         <button className="ctl ctl-sm font-bold" onClick={onBackToPlay}>
-          {lang === "id" ? "← Kembali Bermain" : "← Back to Play"}
+          <ArrowLeft size={16} className="shrink-0" /><span>{lang === "id" ? "Kembali Bermain" : "Back to Play"}</span>
         </button>
       </div>
 
@@ -465,7 +466,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   disabled={fenList.length <= 1}
                   title={isPlaying ? "Jeda pemutaran" : "Putar otomatis"}
                 >
-                  {isPlaying ? "Jeda" : "Putar"}
+                  <span className="flex items-center gap-1.5">{isPlaying ? <Pause size={14} className="shrink-0" /> : <Play size={14} className="shrink-0" />}<span>{isPlaying ? "Jeda" : "Putar"}</span></span>
                 </button>
 
                 <button
@@ -474,7 +475,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   disabled={moveIndex === 0}
                   title="Langkah Sebelumnya (Mundur) [←]"
                 >
-                  ← Mundur
+                  <ChevronLeft size={16} className="shrink-0" /><span>Mundur</span>
                 </button>
 
                 <span className="font-mono text-xs font-bold text-neutral-200 px-3 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] shrink-0">
@@ -487,7 +488,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   disabled={moveIndex >= fenList.length - 1}
                   title="Langkah Berikutnya (Maju) [→]"
                 >
-                  Maju →
+                  <span>Maju</span><ChevronRight size={16} className="shrink-0" />
                 </button>
               </div>
 
@@ -523,7 +524,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 }
                 style={{ background: "var(--card)" }}
               >
-                <div className="flex gap-2.5 items-stretch justify-center w-full flex-1 min-h-0">
+                <div className="flex gap-2.5 items-center justify-center w-full flex-1 min-h-0">
                   <EvalBar
                     fen={currentFen}
                     scoreCp={evalResult?.scoreCp}
@@ -532,8 +533,8 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   <div
                     className={
                       fullscreenReview
-                        ? "aspect-square flex-1 max-h-[calc(100dvh-200px)] rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] flex items-center justify-center min-h-0"
-                        : "aspect-square flex-1 max-w-[min(78dvh,calc(100dvh-18rem),760px)] shrink-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]"
+                        ? "aspect-square self-center flex-1 max-h-[calc(100dvh-200px)] rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] flex items-center justify-center min-h-0"
+                        : "aspect-square self-center flex-1 max-w-[min(78dvh,calc(100dvh-18rem),760px)] shrink-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]"
                     }
                   >
                     <Chessboard
@@ -568,7 +569,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-center gap-3 flex-wrap w-full pt-1.5 text-[10px]">
+                <div className="flex items-center justify-center gap-3 flex-wrap w-full pt-1.5 text-xs">
                   <div className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
                     <span className="text-neutral-300">Langkah dimainkan</span>
@@ -596,21 +597,22 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                       Evaluasi Langkah #{Math.max(1, moveIndex)}
                     </div>
                     {moveClassification && (
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-black bg-[var(--surface)] border border-[var(--border)] ${moveClassification.color}`}>
-                        {moveClassification.badge}
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-black bg-[var(--surface)] border border-[var(--border)] flex items-center gap-1.5 ${moveClassification.color}`}>
+                        {moveClassification.icon && <img src={moveClassification.icon} alt="" className="w-4 h-4 object-contain" />}
+                        <span>{moveClassification.badge}</span>
                       </span>
                     )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
                     <div className="p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
-                      <div className="text-[10px] text-neutral-400 uppercase font-medium">Langkah Dimainkan:</div>
+                      <div className="text-xs text-neutral-400 uppercase font-medium">Langkah Dimainkan:</div>
                       <div className="font-mono font-black text-base text-white pt-0.5">
                         {playedNow?.san ?? "—"}
                       </div>
                     </div>
                     <div className="p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/40">
-                      <div className="text-[10px] text-emerald-300 uppercase font-medium">Saran {ENGINE_LABELS[engine]}:</div>
+                      <div className="text-xs text-emerald-300 uppercase font-medium">Saran {ENGINE_LABELS[engine]}:</div>
                       <div className="font-mono font-black text-base text-emerald-400 pt-0.5">
                         {loadingEval ? "Menganalisis..." : (evalResult?.bestSan ?? "—")}
                       </div>
@@ -620,12 +622,12 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   {/* THREAT EXPLANATION */}
                   {activeThreats.length > 0 && (
                     <div className="p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 mt-2 stack-tight">
-                      <div className="text-[11px] font-bold text-red-300 flex items-center gap-1.5">
+                      <div className="text-xs font-bold text-red-300 flex items-center gap-1.5">
                         <IconAlert3D size={14} className="shrink-0" />
                         <span>Ancaman Lawan Terdeteksi:</span>
                       </div>
                       {activeThreats.map((t, idx) => (
-                        <p key={idx} className="text-[11px] text-neutral-200 m-0 leading-tight">
+                        <p key={idx} className="text-xs text-neutral-200 m-0 leading-tight">
                           • {t}
                         </p>
                       ))}
@@ -646,7 +648,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                     <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
                       Daftar Langkah Pertandingan
                     </span>
-                    <span className="text-[10px] font-mono text-neutral-400">
+                    <span className="text-xs font-mono text-neutral-400">
                       Klik nomor untuk lompat
                     </span>
                   </div>

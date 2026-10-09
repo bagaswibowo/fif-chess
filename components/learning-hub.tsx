@@ -10,6 +10,7 @@
 // Bab 12 Taktik Skak Mat.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BoardControls } from "@/components/board-controls";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -237,7 +238,7 @@ export function LearningHub({ lang = "id" }: Props) {
             {lang === "id" ? "Trik & Quest Taktik" : "Tricks & Tactical Quests"}
           </h2>
           <p className="text-xs text-neutral-400 mt-0.5">
-            Konten diperkaya dari Buku Pintar Catur-Pedia (Fienso Suharsono) & CT-ART 4.0
+            Konten diperkaya dari Taktik Fabiano Caruana (Frank Erwich, New in Chess), Buku Pintar Catur-Pedia & CT-ART 4.0
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -273,13 +274,13 @@ export function LearningHub({ lang = "id" }: Props) {
           onClick={() => setPuzzleIndex((i) => Math.max(0, i - 1))}
           title="Sebelumnya"
         >
-          ← Prev
+          <ChevronLeft size={16} className="shrink-0" /><span>Prev</span>
         </button>
 
         <select
           value={currentIndex}
           onChange={(e) => setPuzzleIndex(Number(e.target.value))}
-          className="ctl ctl-sm text-xs font-bold truncate max-w-[210px] sm:max-w-[360px] py-1.5 px-2.5 cursor-pointer bg-[var(--surface)] text-white border border-[var(--border)] rounded-lg flex-1 min-w-0"
+          className="ctl ctl-sm text-xs font-bold truncate py-1.5 px-3 cursor-pointer bg-[var(--surface)] text-white border border-[var(--border)] rounded-lg flex-1 min-w-[180px]"
           aria-label="Pilih Teka-Teki"
         >
           {list.map((p, idx) => {
@@ -299,7 +300,7 @@ export function LearningHub({ lang = "id" }: Props) {
           onClick={() => setPuzzleIndex((i) => Math.min(list.length - 1, i + 1))}
           title="Berikutnya"
         >
-          Next →
+          <span>Next</span><ChevronRight size={16} className="shrink-0" />
         </button>
       </div>
 
@@ -366,14 +367,14 @@ export function LearningHub({ lang = "id" }: Props) {
           {/* Header Metadata */}
           <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider bg-[var(--surface)] text-neutral-300 border border-[var(--border)]">
+              <span className="px-2 py-0.5 rounded-md text-xs font-mono font-bold uppercase tracking-wider bg-[var(--surface)] text-neutral-300 border border-[var(--border)]">
                 #{currentIndex + 1} · {puzzle.category}
               </span>
-              <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${diffBadgeClass}`}>
+              <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${diffBadgeClass}`}>
                 {puzzle.difficulty}
               </span>
               {isBPCaturPedia && (
-                <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-950/60 text-amber-200 border border-amber-500/40">
+                <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-amber-950/60 text-amber-200 border border-amber-500/40">
                   📖 BPCaturPedia
                 </span>
               )}
@@ -441,7 +442,7 @@ export function LearningHub({ lang = "id" }: Props) {
               </div>
 
               <div className="pt-1 border-t border-emerald-800/60">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300 mb-1 flex items-center gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-300 mb-1 flex items-center gap-1.5">
                   <IconLightbulb3D size={14} />
                   <span>
                     {isBPCaturPedia
@@ -508,7 +509,7 @@ export function LearningHub({ lang = "id" }: Props) {
               onClick={() => setPuzzleIndex((i) => Math.min(list.length - 1, i + 1))}
               disabled={currentIndex >= list.length - 1}
             >
-              <span>Berikutnya →</span>
+              <span className="flex items-center gap-1.5"><span>Berikutnya</span><ChevronRight size={16} className="shrink-0" /></span>
             </button>
           </div>
         </div>

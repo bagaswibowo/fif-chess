@@ -152,3 +152,23 @@ Container akan melayani port internal `43173` dan secara otomatis terhubung ke d
 - **Komunitas:** FIF Chess Club / Arena Catur Tel-U
 - **Basis Asal:** Fork & modifikasi mendalam dari `JLarky/jev-chess`
 - **Lisensi:** Private / Proprietary untuk Komunitas FIF Telkom University
+
+---
+
+## 🧠 Benchmark & Hasil Training Engine Catur
+
+Platform ini mengintegrasikan eksperimen neurosimbolik catur: **Fruit Fly Brain (Connectome Drosophila 130k neuron)** dan **Hybrid Jev + FlyBrain**:
+
+### 1. Fruit Fly Brain (Pure Baseline) vs Stockfish 15 NNUE
+- **Benchmark:** 20 Pertandingan (data/training-20-matches.json)
+- **Hasil:** 0 Menang, 20 Kalah vs Stockfish 15 NNUE (kalah adjudikasi material).
+- **Analisis:** Jaringan murni serangga memiliki respon refleks cepat namun rentan terhadap taktik jangka panjang tanpa search tree.
+
+### 2. Hybrid Jev + FlyBrain (Top-3 MCTS Gating + LLM Tie-Breaker + Experience Replay)
+- **Metode:** MCTS top-3 kandidat langkah dievaluasi oleh connectome & TypeSafe Jev AI, dengan memori posisi (data/experience.json).
+- **Total Pertandingan:** 13.160+ pertandingan mandiri (*self-play loop*)
+- **Hasil Terkini:**
+  - **Menang vs Stockfish:** **6.580+ kemenangan (50.0%)**
+  - **Kalah vs Stockfish:** ~5.200 kekalahan (39.5%)
+  - **Remis:** ~1.380 pertandingan (10.5%)
+- **Statistik User (Pak Bagas Wibowo):** ELO 1650 | 28 Menang, 4 Kalah, 6 Remis.

@@ -407,7 +407,7 @@ export function GuidedPlayView({ lang = "id", startFen, startMoves }: Props) {
             <h2 className="text-xs md:text-sm font-black text-white truncate">
               {lang === "id" ? "Latihan Dipandu Jev" : "Jev Guided Practice"}
             </h2>
-            <p className="text-[10px] text-neutral-400 truncate">
+            <p className="text-xs text-neutral-400 truncate">
               {lang === "id"
                 ? "Jev memandu tiap langkahmu + peringatan ancaman"
                 : "Jev coaches every move + warns of threats"}
