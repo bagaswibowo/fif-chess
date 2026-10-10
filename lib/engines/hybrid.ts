@@ -24,6 +24,7 @@ import {
   normalizeFen,
 } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
+import { tacticalGatekeeper } from "./tactical-gatekeeper";
 import { evalSingleMove, playStockfishMove } from "../stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 import { fenEngineCache } from "./lru-cache";
@@ -180,187 +181,6 @@ function applyVncDescendingVeto(fen: string, hybridRaw: JevPlaySuccess): boolean
   return false;
 }
 
-function allowsUnsafeEnemyPromotion(fen: string, uci: string): boolean {
-  try {
-    const c = new Chess(fen);
-    const app = c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
-    if (!app) return true;
-
-    // Check if opponent can promote to Queen safely (i.e. not immediately recaptured)
-    const promoMoves = c.moves({ verbose: true }).filter((m: any) => m.san.includes("=Q") || m.promotion === "q");
-    for (const pm of promoMoves) {
-      const cPromo = new Chess(c.fen());
-      cPromo.move(pm);
-      const recapturesQ = cPromo.moves({ verbose: true }).some((rm: any) => rm.to === pm.to && rm.captured === "q");
-      if (!recapturesQ) return true;
-    }
-
-    // If our move gave check, check if enemy has an advanced passed pawn on 7th/2nd rank
-    // that we failed to control or attack
-    if (c.inCheck()) {
-      const currentSide = c.turn();
-      const myColor = currentSide === "w" ? "b" : "w";
-      const targetRank = currentSide === "w" ? "7" : "2";
-      const promoRank = currentSide === "w" ? "8" : "1";
-      for (let r = 0; r < 8; r++) {
-        for (let col = 0; col < 8; col++) {
-          const piece = c.board()[r][col];
-          if (piece && piece.color === currentSide && piece.type === "p") {
-            const sq = piece.square;
-            if (sq[1] === targetRank) {
-              const promoSq = (sq[0] + promoRank) as any;
-              if (!c.isAttacked(promoSq, myColor) && !c.isAttacked(sq, myColor)) {
-                return true;
-              }
-            }
-          }
-        }
-      }
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-async function ensureTacticalSafety(
-  fen: string,
-  candidateUci: string,
-  legalUcis: string[]
-): Promise<{ uci: string; vetoed: boolean; reason?: string }> {
-  if (legalUcis.length <= 1) return { uci: candidateUci, vetoed: false };
-
-  // 1. Cek langsung: apakah candidateUci membiarkan lawan skakmat ATAU promosi menjadi Menteri di giliran berikutnya?
-  try {
-    const testCh = new Chess(fen);
-    const testApp = testCh.move({
-      from: candidateUci.slice(0, 2),
-      to: candidateUci.slice(2, 4),
-      promotion: candidateUci[4],
-    });
-    if (testApp) {
-      const oppMoves = testCh.moves({ verbose: true });
-      const allowsMate = oppMoves.some((m: any) => m.san.includes("#"));
-      const allowsPromo = allowsUnsafeEnemyPromotion(fen, candidateUci);
-
-      if (allowsMate || allowsPromo) {
-        // Cari langkah alternatif yang bebas skakmat & bebas promosi lawan
-        const safeMoves = legalUcis.filter((u) => {
-          if (allowsMate) {
-            const c2 = new Chess(fen);
-            try {
-              if (!c2.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] })) return false;
-              if (c2.moves({ verbose: true }).some((om: any) => om.san.includes("#"))) return false;
-            } catch {
-              return false;
-            }
-          }
-          if (allowsPromo) {
-            if (allowsUnsafeEnemyPromotion(fen, u)) return false;
-          }
-          return true;
-        });
-        if (safeMoves.length > 0) {
-          const sfBest = await playStockfishMove(fen, 10);
-          const chosenSafe = sfBest?.uci && safeMoves.includes(sfBest.uci) ? sfBest.uci : safeMoves[0];
-          return {
-            uci: chosenSafe,
-            vetoed: true,
-            reason: allowsMate ? "checkmate_in_1_prevented" : "enemy_queen_promotion_prevented",
-          };
-        }
-      }
-    }
-  } catch (_) {}
-
-  // 2. Motif-level Tactical Gate: Cek Absolute Pin (seperti Qf7) & King Weakening (seperti f7-f6)
-  try {
-    const chBefore = new Chess(fen);
-    const pin = isMoveSteppingIntoAbsolutePin(chBefore, candidateUci);
-    const isWeak = isKingWeakeningMove(chBefore, candidateUci);
-    const isDangerousPin = pin.isPinned && (pin.piece === "q" || pin.piece === "r");
-
-    if (isDangerousPin || isWeak) {
-      const safeMoves = legalUcis.filter((u) => {
-        const p = isMoveSteppingIntoAbsolutePin(chBefore, u);
-        const w = isKingWeakeningMove(chBefore, u);
-        return (!p.isPinned || (p.piece !== "q" && p.piece !== "r")) && !w;
-      });
-
-      if (safeMoves.length > 0) {
-        const sfBest = await playStockfishMove(fen, 10);
-        const chosenSafe = sfBest?.uci && safeMoves.includes(sfBest.uci) ? sfBest.uci : safeMoves[0];
-        return {
-          uci: chosenSafe,
-          vetoed: true,
-          reason: isDangerousPin
-            ? `absolute_pin_vetoed (${pin.piece?.toUpperCase()} pinned to king)`
-            : "king_weakening_vetoed (f-pawn shield collapse)",
-        };
-      }
-    }
-  } catch (_) {}
-
-  // 3. Suicidal Piece Blunder Gate: Veto blunder mengorbankan Menteri/Benteng/Perwira demi pion kecil (seperti 37... Qxb4??)
-  try {
-    const chBefore = new Chess(fen);
-    const suicidal = isMoveSuicidalPieceLoss(chBefore, candidateUci);
-    if (suicidal.isSuicidal) {
-      const safeMoves = legalUcis.filter((u) => !isMoveSuicidalPieceLoss(chBefore, u).isSuicidal);
-      if (safeMoves.length > 0) {
-        const sfBest = await playStockfishMove(fen, 10);
-        const chosenSafe = sfBest?.uci && safeMoves.includes(sfBest.uci) ? sfBest.uci : safeMoves[0];
-        return {
-          uci: chosenSafe,
-          vetoed: true,
-          reason: `suicidal_piece_loss_vetoed (${suicidal.piece?.toUpperCase()} hung for -${suicidal.netLoss}cp)`,
-        };
-      }
-    }
-  } catch (_) {}
-
-  // 4. Hanging Piece Protection Gate: Veto membiarkan perwira kita dimakan gratis oleh lawan (seperti 32... Rb8?? membiarkan Ra5 dimakan b4xa5)
-  try {
-    const chBefore = new Chess(fen);
-    const hanging = doesMoveLeaveAttackedPieceHanging(chBefore, candidateUci);
-    if (hanging.leavesHanging) {
-      const safeMoves = legalUcis.filter((u) => !doesMoveLeaveAttackedPieceHanging(chBefore, u).leavesHanging);
-      if (safeMoves.length > 0) {
-        const sfBest = await playStockfishMove(fen, 10);
-        const chosenSafe = sfBest?.uci && safeMoves.includes(sfBest.uci) ? sfBest.uci : safeMoves[0];
-        return {
-          uci: chosenSafe,
-          vetoed: true,
-          reason: `hanging_piece_vetoed (${hanging.piece?.toUpperCase()} left to be captured for -${hanging.lostValue}cp)`,
-        };
-      }
-    }
-  } catch (_) {}
-
-  // 5. Evaluasi Taktis Stockfish (depth 8): Deteksi Blunder Berat / Kehilangan Pion & Perwira
-  try {
-    const score = await evalSingleMove(fen, candidateUci, 8);
-    if (score !== null && score <= -100) {
-      const sfBest = await playStockfishMove(fen, 10);
-      if (sfBest?.uci && sfBest.uci !== candidateUci) {
-        const chB = new Chess(fen);
-        const pin = isMoveSteppingIntoAbsolutePin(chB, sfBest.uci);
-        const isDangerousPin = pin.isPinned && (pin.piece === "q" || pin.piece === "r");
-        const allowsMate = doesAllowMate(fen, sfBest.uci);
-        const allowsPromo = allowsUnsafeEnemyPromotion(fen, sfBest.uci);
-        const isSuicide = isMoveSuicidalPieceLoss(chB, sfBest.uci).isSuicidal;
-        const isHang = doesMoveLeaveAttackedPieceHanging(chB, sfBest.uci).leavesHanging;
-
-        if (!isDangerousPin && !allowsMate && !allowsPromo && !isSuicide && !isHang) {
-          return { uci: sfBest.uci, vetoed: true, reason: `tactical_blunder_vetoed (eval was ${score}cp)` };
-        }
-      }
-    }
-  } catch (_) {}
-
-  return { uci: candidateUci, vetoed: false };
-}
-
 export class JevSuperflyHybridEngine implements IChessEngine {
   readonly id = "jev-fly" as const;
   readonly name = "Jev AI + Superfly Connectome Hybrid";
@@ -407,7 +227,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
       const isStartPos = normalizeFen(req.fen) === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
       if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) > 0 && (learned.score ?? 0) >= 0 && !isStartPos) {
         const legals = new Chess(req.fen).moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
-        const safeCheck = await ensureTacticalSafety(req.fen, learned.move, legals);
+        const safeCheck = await tacticalGatekeeper(req.fen, learned.move, { legalUcis: legals });
         const finalUci = safeCheck.vetoed ? safeCheck.uci : learned.move;
         const chL = new Chess(req.fen);
         const applied = applyUci(chL, finalUci);
@@ -483,7 +303,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
 
     // Grandmaster Anti-Blunder Tactical Gate (Proteksi Blunder Fatal, Kehilangan Perwira, & Skakmat)
     const chLegals = new Chess(req.fen).moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
-    const safeCheck = await ensureTacticalSafety(req.fen, hybridRaw.uci, chLegals);
+    const safeCheck = await tacticalGatekeeper(req.fen, hybridRaw.uci, { legalUcis: chLegals, probabilities: hybridRaw.probabilities });
     if (safeCheck.vetoed && safeCheck.uci !== hybridRaw.uci) {
       const oldBlunder = hybridRaw.uci;
       const chNew = new Chess(req.fen);

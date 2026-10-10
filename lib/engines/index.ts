@@ -14,6 +14,12 @@ export { pureJevEngine } from "./jev";
 export { pureSuperflyEngine } from "./flybrain";
 export { jevSuperflyHybridEngine } from "./hybrid";
 export { getOpeningBookMove } from "./opening-book";
+export {
+  tacticalGatekeeper,
+  allowsUnsafeEnemyPromotion,
+  type TacticalGateOptions,
+  type TacticalGateResult,
+} from "./tactical-gatekeeper";
 
 const engines: Record<EngineId, IChessEngine> = {
   stockfish: stockfishEngine,

@@ -10,6 +10,7 @@ import {
 import { playSuperflyMove, playFlyBrainMove, isPredationTrap } from "@/lib/flybrain/service";
 import { getLearnedMove, isBlunderMove, recordMatchExperience, reinforceMatchDopamine } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
+import { tacticalGatekeeper } from "./tactical-gatekeeper";
 import { evalSingleMove, playStockfishMove } from "../stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
@@ -47,43 +48,69 @@ export class PureJevEngine implements IChessEngine {
 
     // 1. Nature 2024 MBON Learned Recall: Ingat langkah terbaik jika sudah pernah dipelajari
     const learned = getLearnedMove(req.fen);
-    if (learned) {
+    if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) > 0 && (learned.score ?? 0) >= 0) {
+      const safeCheck = await tacticalGatekeeper(req.fen, learned.move);
+      const finalUci = safeCheck.vetoed ? safeCheck.uci : learned.move;
       const chL = new Chess(req.fen);
-      const appL = applyUci(chL, learned.move);
-      const nextFenL = chL.fen();
-      const prediction = await getStockfishPrediction(nextFenL);
-      return {
-        engine: this.id,
-        uci: learned.move,
-        san: appL.san,
-        fen: nextFenL,
-        probabilities: { [learned.move]: 0.99 },
-        confidence: 0.99,
-        droppedMoveCount: 0,
-        outcome: describeOutcome(chL),
-        scoreCp: learned.score,
-        prediction,
-        metadata: { source: "mbon-learned", model: "jev-latest" },
-      };
+      const appL = applyUci(chL, finalUci);
+      if (appL) {
+        const nextFenL = chL.fen();
+        const prediction = await getStockfishPrediction(nextFenL, finalUci);
+        return {
+          engine: this.id,
+          uci: finalUci,
+          san: appL.san,
+          fen: nextFenL,
+          probabilities: { [finalUci]: 0.99 },
+          confidence: 0.99,
+          droppedMoveCount: 0,
+          outcome: describeOutcome(chL),
+          scoreCp: learned.score,
+          prediction,
+          metadata: { source: safeCheck.vetoed ? "tactical-override" : "mbon-learned", model: "jev-latest" },
+        };
+      }
     }
 
     if (!key) {
       // Fallback: use Superfly connectome MCTS
       const fb = playSuperflyMove(req.fen, 40) || playFlyBrainMove(req.fen);
       if (fb) {
-        const prediction = await getStockfishPrediction(fb.fen);
+        const gate = await tacticalGatekeeper(req.fen, fb.uci, { probabilities: fb.probabilities });
+        let finalUci = fb.uci;
+        let finalSan = fb.san;
+        let finalFen = fb.fen;
+        let finalOutcome = fb.outcome;
+        if (gate.vetoed && gate.uci !== fb.uci) {
+          const chNew = new Chess(req.fen);
+          const appNew = applyUci(chNew, gate.uci);
+          if (appNew) {
+            finalUci = gate.uci;
+            finalSan = appNew.san;
+            finalFen = chNew.fen();
+            finalOutcome = describeOutcome(chNew);
+            recordMatchExperience(req.fen, gate.uci, 50, fb.uci);
+          }
+        }
+        const prediction = await getStockfishPrediction(finalFen, finalUci);
         return {
           engine: this.id,
-          uci: fb.uci,
-          san: fb.san,
-          fen: fb.fen,
-          probabilities: fb.probabilities,
-          confidence: fb.confidence,
+          uci: finalUci,
+          san: finalSan,
+          fen: finalFen,
+          probabilities: gate.vetoed ? { [finalUci]: 1.0 } : fb.probabilities,
+          confidence: gate.vetoed ? 0.95 : fb.confidence,
           droppedMoveCount: fb.droppedMoveCount,
-          outcome: fb.outcome,
+          outcome: finalOutcome,
           scoreCp: fb.scoreCp,
           prediction,
-          metadata: { fallback: "superfly_mcts", model: "jev-latest" },
+          metadata: {
+            fallback: "superfly_mcts",
+            tacticalGateVetoed: gate.vetoed,
+            gateReason: gate.reason,
+            quiescenceScore: gate.quiescenceScore,
+            model: "jev-latest",
+          },
         };
       }
       throw new JevRequestError("TYPESAFE_API_KEY not set", 503, false);
@@ -128,60 +155,20 @@ export class PureJevEngine implements IChessEngine {
       throw new JevRequestError(resolved.error, 422, true);
     }
 
-    // 2. Nature 2024 VNC Descending Premotor Veto (Murni biologis, tanpa intervensi Stockfish)
+    // 2. Tactical Gatekeeper & Quiescence Evaluation Blunder Check
     const chBefore = new Chess(req.fen);
     const legalUcis = chBefore.moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
 
-    const allowsMate = (uci: string): boolean => {
-      try {
-        const c = new Chess(req.fen);
-        if (!c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })) return true;
-        return c.moves({ verbose: true }).some((m: any) => m.san.includes("#"));
-      } catch {
-        return true;
-      }
-    };
-
     let chosenUci = resolved.uci;
-    const currentAllowsMate = allowsMate(chosenUci);
-    const currentIsTrap = isPredationTrap(req.fen, chosenUci);
-    const currentIsBlunder = isBlunderMove(req.fen, chosenUci);
+    const gateResult = await tacticalGatekeeper(req.fen, chosenUci, {
+      legalUcis,
+      probabilities: resolved.probabilities,
+    });
 
-    if (currentAllowsMate || currentIsTrap || currentIsBlunder) {
-      recordMatchExperience(req.fen, undefined, undefined, chosenUci);
-      const candidatesTier1: string[] = [];
-      const candidatesTier2: string[] = [];
-
-      for (const uci of legalUcis) {
-        if (!allowsMate(uci)) {
-          candidatesTier2.push(uci);
-          if (!isPredationTrap(req.fen, uci) && !isBlunderMove(req.fen, uci)) {
-            candidatesTier1.push(uci);
-          }
-        }
-      }
-
-      const probs = resolved.probabilities || {};
-      candidatesTier1.sort((a, b) => (probs[b] ?? 0) - (probs[a] ?? 0));
-      candidatesTier2.sort((a, b) => (probs[b] ?? 0) - (probs[a] ?? 0));
-
-      const safeCandidate = candidatesTier1[0] || candidatesTier2[0];
-      if (safeCandidate) {
-        chosenUci = safeCandidate;
-      }
+    if (gateResult.vetoed && gateResult.uci !== chosenUci) {
+      recordMatchExperience(req.fen, gateResult.uci, 50, chosenUci);
+      chosenUci = gateResult.uci;
     }
-
-    // Grandmaster Anti-Blunder Tactical Gate
-    try {
-      const score = await evalSingleMove(req.fen, chosenUci, 8);
-      if (score !== null && score <= -100) {
-        const sfBest = await playStockfishMove(req.fen, 10);
-        if (sfBest?.uci && sfBest.uci !== chosenUci) {
-          recordMatchExperience(req.fen, sfBest.uci, 50, chosenUci);
-          chosenUci = sfBest.uci;
-        }
-      }
-    } catch (_) {}
 
     const chess = new Chess(req.fen);
     const applied = applyUci(chess, chosenUci);
@@ -211,7 +198,9 @@ export class PureJevEngine implements IChessEngine {
       prediction,
       metadata: {
         rawChoice: resolved.uci,
-        vncVetoed: chosenUci !== resolved.uci,
+        vncVetoed: gateResult.vetoed,
+        gateReason: gateResult.reason,
+        quiescenceScore: gateResult.quiescenceScore,
         model: "jev-latest",
       },
     };

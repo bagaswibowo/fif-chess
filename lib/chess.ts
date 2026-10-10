@@ -853,3 +853,110 @@ export function calculateMaterialCp(fen: string): number {
 
   return white - black;
 }
+/**
+ * Evaluates material balance from the perspective of the side whose turn it is.
+ * Positive = side to move is ahead in material.
+ */
+export function evaluateMaterialBalance(chess: Chess): number {
+  let white = 0;
+  let black = 0;
+  const board = chess.board();
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (p) {
+        const val = PIECE_VALS_CP[p.type] ?? 0;
+        if (p.color === "w") white += val;
+        else black += val;
+      }
+    }
+  }
+  return chess.turn() === "w" ? white - black : black - white;
+}
+
+/**
+ * Negamax Quiescence Search helper to resolve tactical exchanges & prevent horizon effect.
+ * Searches captures, queen promotions, and forcing checks.
+ */
+export function quiescenceSearch(
+  chess: Chess,
+  alpha: number,
+  beta: number,
+  depth = 0,
+  maxDepth = 6,
+): number {
+  if (chess.isCheckmate()) return -30000 + depth;
+  if (chess.isDraw()) return 0;
+
+  const inCheck = chess.inCheck();
+  const standPat = evaluateMaterialBalance(chess);
+
+  if (!inCheck) {
+    if (depth >= maxDepth) return standPat;
+    if (standPat >= beta) return beta;
+    if (standPat > alpha) alpha = standPat;
+  }
+
+  const moves = chess.moves({ verbose: true });
+  let tacticalMoves = moves.filter((m: any) =>
+    inCheck ||
+    m.captured ||
+    m.promotion === "q" ||
+    m.san.includes("=Q") ||
+    m.san.includes("#")
+  );
+
+  tacticalMoves.sort((a: any, b: any) => {
+    if (a.san.includes("#")) return -10000;
+    if (b.san.includes("#")) return 10000;
+    const victimA = a.captured ? (PIECE_VALS_CP[a.captured] || 100) : 0;
+    const attackerA = PIECE_VALS_CP[a.piece || "p"] || 100;
+    const victimB = b.captured ? (PIECE_VALS_CP[b.captured] || 100) : 0;
+    const attackerB = PIECE_VALS_CP[b.piece || "p"] || 100;
+    return (victimB - attackerB) - (victimA - attackerA);
+  });
+
+  for (const m of tacticalMoves) {
+    chess.move(m);
+    const score = -quiescenceSearch(chess, -beta, -alpha, depth + 1, maxDepth);
+    chess.undo();
+
+    if (score >= beta) return beta;
+    if (score > alpha) alpha = score;
+  }
+
+  return alpha;
+}
+
+/**
+ * Returns the quiescent evaluation of a position in centipawns (from perspective of side to move).
+ */
+export function evaluatePositionQuiescence(pos: Chess | string, maxDepth = 6): number {
+  try {
+    const ch = typeof pos === "string" ? new Chess(pos) : pos;
+    return quiescenceSearch(ch, -35000, 35000, 0, maxDepth);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Evaluates candidate move with quiescence resolution.
+ * Returns score in centipawns from the perspective of the moving player.
+ */
+export function evaluateMoveQuiescence(fen: string, uci: string, maxDepth = 6): number {
+  try {
+    const c = new Chess(fen);
+    const m = c.move({
+      from: uci.slice(0, 2),
+      to: uci.slice(2, 4),
+      promotion: uci[4] || undefined,
+    });
+    if (!m) return -30000;
+    if (c.isCheckmate()) return 30000;
+    if (c.isDraw()) return 0;
+    return -quiescenceSearch(c, -35000, 35000, 0, maxDepth);
+  } catch {
+    return -30000;
+  }
+}

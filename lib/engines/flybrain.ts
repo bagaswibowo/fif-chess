@@ -5,6 +5,7 @@ import { recordMatchExperience, getLearnedMove, isBlunderMove } from "@/lib/expe
 import { getStockfishPrediction } from "./stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 import { fenEngineCache } from "./lru-cache";
+import { tacticalGatekeeper } from "./tactical-gatekeeper";
 import { mctsConcurrencyGate } from "./concurrency-gate";
 
 export class PureSuperflyEngine implements IChessEngine {
@@ -22,22 +23,24 @@ export class PureSuperflyEngine implements IChessEngine {
     // DB, tidak pernah membaca, sehingga belajar dari training tidak memengaruhinya.
     const learned = getLearnedMove(req.fen);
     if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) > 0 && (learned.score ?? 0) >= 0) {
+      const safeCheck = await tacticalGatekeeper(req.fen, learned.move);
+      const finalUci = safeCheck.vetoed ? safeCheck.uci : learned.move;
       const chL = new Chess(req.fen);
-      const appL = applyUci(chL, learned.move);
+      const appL = applyUci(chL, finalUci);
       if (appL) {
-        const prediction = await getStockfishPrediction(chL.fen());
+        const prediction = await getStockfishPrediction(chL.fen(), finalUci);
         return {
           engine: this.id,
-          uci: learned.move,
+          uci: finalUci,
           san: appL.san,
           fen: chL.fen(),
-          probabilities: { [learned.move]: 0.99 },
+          probabilities: { [finalUci]: 0.99 },
           confidence: 0.99,
           droppedMoveCount: 0,
           outcome: describeOutcome(chL),
           scoreCp: learned.score,
           prediction,
-          metadata: { source: "mbon-learned", model: "superfly-pure" },
+          metadata: { source: safeCheck.vetoed ? "tactical-override" : "mbon-learned", model: "superfly-pure" },
         };
       }
     }
@@ -50,26 +53,50 @@ export class PureSuperflyEngine implements IChessEngine {
       throw new Error("Superfly engine failed to evaluate position.");
     }
 
+    // Tactical gatekeeper & quiescence evaluation blunder check
+    const gateResult = await tacticalGatekeeper(req.fen, flyRes.uci, {
+      probabilities: flyRes.probabilities,
+    });
+    let finalUci = flyRes.uci;
+    let finalSan = flyRes.san;
+    let finalFen = flyRes.fen;
+    let finalOutcome = flyRes.outcome;
+
+    if (gateResult.vetoed && gateResult.uci !== flyRes.uci) {
+      const chNew = new Chess(req.fen);
+      const appNew = applyUci(chNew, gateResult.uci);
+      if (appNew) {
+        finalUci = gateResult.uci;
+        finalSan = appNew.san;
+        finalFen = chNew.fen();
+        finalOutcome = describeOutcome(chNew);
+        recordMatchExperience(req.fen, gateResult.uci, 50, flyRes.uci);
+      }
+    }
+
     // Online background learning from Stockfish: saves superior moves to experience.json
-    const prediction = await getStockfishPrediction(flyRes.fen, flyRes.uci);
+    const prediction = await getStockfishPrediction(finalFen, finalUci);
     if (prediction && prediction.uci) {
-      recordMatchExperience(flyRes.fen, prediction.uci, prediction.scoreCp ?? 0);
+      recordMatchExperience(finalFen, prediction.uci, prediction.scoreCp ?? 0);
     }
 
     const response: EngineMoveResponse = {
       engine: this.id,
-      uci: flyRes.uci,
-      san: flyRes.san,
-      fen: flyRes.fen,
-      probabilities: flyRes.probabilities,
-      confidence: flyRes.confidence,
+      uci: finalUci,
+      san: finalSan,
+      fen: finalFen,
+      probabilities: gateResult.vetoed ? { [finalUci]: 1.0 } : flyRes.probabilities,
+      confidence: gateResult.vetoed ? 0.95 : flyRes.confidence,
       droppedMoveCount: flyRes.droppedMoveCount,
-      outcome: flyRes.outcome,
+      outcome: finalOutcome,
       scoreCp: flyRes.scoreCp,
       prediction,
       metadata: {
         diagnostics: flyRes.diagnostics,
         simulations: sims,
+        tacticalGateVetoed: gateResult.vetoed,
+        tacticalGateReason: gateResult.reason,
+        quiescenceScore: gateResult.quiescenceScore,
       },
     };
     fenEngineCache.set(req.fen, response);
