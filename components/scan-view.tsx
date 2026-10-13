@@ -666,20 +666,6 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     }
   };
 
-  // Mode hapus bidak: klik bidak di papan referensi untuk menghapusnya.
-  const handleReferenceSquareClick = ({ square, piece }: { square: string; piece?: { pieceType?: string } | null }) => {
-    if (!isDeleteMode || !piece) return;
-    try {
-      const chess = new Chess(initialFen);
-      if (!chess.get(square as any)) return;
-      chess.remove(square as any);
-      const newFen = chess.fen();
-      if (newFen && newFen.split(" ")[0]) applyNewInitialFen(newFen);
-    } catch {
-      /* abaikan */
-    }
-  };
-
   // Solver Engine Step
   const stepEngineSolve = useCallback(async () => {
     if (isEngineCalculating || !liveFen) return;
@@ -1259,145 +1245,6 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               className="mt-2"
             />
 
-            {/* PALET BIDAK CADANGAN & TOMBOL EDIT TOGGLE */}
-            <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-[#1c1917] border border-[#3d3a34]">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditingBoard(v => !v);
-                    setSelectedSquareForAction(null);
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all shadow cursor-pointer ${
-                    isEditingBoard 
-                      ? "bg-amber-500 text-black border border-amber-400 ring-2 ring-amber-400/40 animate-pulse" 
-                      : "bg-[#292524] text-neutral-200 border border-[#44403c] hover:bg-[#3d3835]"
-                  }`}
-                >
-                  <span>{isEditingBoard ? "✏️ Selesai Edit Posisi" : "✏️ Mode Edit Papan"}</span>
-                </button>
-                {isEditingBoard && (
-                  <span className="text-[11px] font-bold text-amber-400 hidden sm:inline">
-                    Seret bidak bebas, klik bidak untuk hapus, atau pilih dari palet:
-                  </span>
-                )}
-              </div>
-
-              {isEditingBoard && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handleClearBoard}
-                    className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] font-bold border border-neutral-700 cursor-pointer"
-                    title="Kosongkan semua bidak kecuali raja"
-                  >
-                    🧹 Kosongkan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleResetBoard}
-                    className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] font-bold border border-neutral-700 cursor-pointer"
-                    title="Reset ke posisi standar awal catur"
-                  >
-                    ↩️ Posisi Awal
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* PALET PILIHAN BIDAK (MUNCUL SAAT EDIT MODE AKTIF) */}
-            {isEditingBoard && (
-              <div className="p-2.5 rounded-xl bg-[#141210] border border-amber-500/30 space-y-2">
-                {/* Baris Bidak Putih */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                  <span className="text-[10px] font-black text-neutral-400 uppercase w-12 shrink-0">Putih:</span>
-                  {[
-                    { id: "wK", label: "♔ Raja", icon: "♔" },
-                    { id: "wQ", label: "♕ Menteri", icon: "♕" },
-                    { id: "wR", label: "♖ Benteng", icon: "♖" },
-                    { id: "wB", label: "♗ Gajah", icon: "♗" },
-                    { id: "wN", label: "♘ Kuda", icon: "♘" },
-                    { id: "wP", label: "♙ Pion", icon: "♙" },
-                  ].map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setSelectedPalettePiece(selectedPalettePiece === p.id ? null : p.id)}
-                      className={`px-2 py-1 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                        selectedPalettePiece === p.id
-                          ? "bg-amber-400 text-black border-amber-300 ring-2 ring-amber-300 shadow"
-                          : "bg-[#221f1d] text-white border-[#3d3835] hover:bg-[#2c2825]"
-                      }`}
-                      title={`Klik lalu klik petak papan untuk pasang ${p.label}`}
-                    >
-                      <span className="text-base leading-none">{p.icon}</span>
-                      <span className="text-[11px] font-mono">{p.id.slice(1)}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Baris Bidak Hitam & Tombol Hapus */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pt-0.5">
-                  <span className="text-[10px] font-black text-neutral-400 uppercase w-12 shrink-0">Hitam:</span>
-                  {[
-                    { id: "bK", label: "♚ Raja", icon: "♚" },
-                    { id: "bQ", label: "♛ Menteri", icon: "♛" },
-                    { id: "bR", label: "♜ Benteng", icon: "♜" },
-                    { id: "bB", label: "♝ Gajah", icon: "♝" },
-                    { id: "bN", label: "♞ Kuda", icon: "♞" },
-                    { id: "bP", label: "♟ Pion", icon: "♟" },
-                  ].map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setSelectedPalettePiece(selectedPalettePiece === p.id ? null : p.id)}
-                      className={`px-2 py-1 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                        selectedPalettePiece === p.id
-                          ? "bg-amber-400 text-black border-amber-300 ring-2 ring-amber-300 shadow"
-                          : "bg-[#221f1d] text-neutral-300 border-[#3d3835] hover:bg-[#2c2825]"
-                      }`}
-                      title={`Klik lalu klik petak papan untuk pasang ${p.label}`}
-                    >
-                      <span className="text-base leading-none">{p.icon}</span>
-                      <span className="text-[11px] font-mono">{p.id.slice(1)}</span>
-                    </button>
-                  ))}
-
-                  {/* Tombol Hapus Bidak Mode */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedPalettePiece(selectedPalettePiece === "delete" ? null : "delete");
-                      setIsDeleteMode(v => !v);
-                    }}
-                    className={`ml-auto px-2.5 py-1 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                      selectedPalettePiece === "delete" || isDeleteMode
-                        ? "bg-red-600 text-white border-red-400 ring-2 ring-red-400"
-                        : "bg-red-950/40 text-red-300 border-red-800/60 hover:bg-red-900/40"
-                    }`}
-                  >
-                    <span>🗑️</span>
-                    <span>{isDeleteMode ? "Hapus: AKTIF" : "Mode Hapus"}</span>
-                  </button>
-                </div>
-
-                {/* Notifikasi Floating jika petak diklik untuk hapus */}
-                {selectedSquareForAction && (
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-red-950/60 border border-red-500/50 text-xs text-red-200">
-                    <span>Petak terpilih: <strong>{selectedSquareForAction}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() => handleEditSquareClick(selectedSquareForAction)}
-                      className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>🗑️ Hapus Bidak Ini</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-
             <div className="flex justify-center w-full">
               <div className="flex gap-2.5 items-stretch w-full max-w-[min(100%,calc(100dvh-230px))]">
                 <EvalBar fen={liveFen} scoreCp={currentScoreCp} orientation={scanBoardOrientation} />
@@ -1574,6 +1421,147 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               className="mt-2"
             />
 
+{/* PALET BIDAK CADANGAN & TOMBOL EDIT TOGGLE */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-[#1c1917] border border-[#3d3a34]">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingBoard(v => !v);
+                    setSelectedSquareForAction(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all shadow cursor-pointer ${
+                    isEditingBoard 
+                      ? "bg-amber-500 text-black border border-amber-400 ring-2 ring-amber-400/40 animate-pulse" 
+                      : "bg-[#292524] text-neutral-200 border border-[#44403c] hover:bg-[#3d3835]"
+                  }`}
+                >
+                  <span>{isEditingBoard ? "✏️ Selesai Edit Posisi" : "✏️ Mode Edit Papan"}</span>
+                </button>
+                {isEditingBoard && (
+                  <span className="text-[11px] font-bold text-amber-400 hidden sm:inline">
+                    Seret bidak bebas, klik bidak untuk hapus, atau pilih dari palet:
+                  </span>
+                )}
+              </div>
+
+              {isEditingBoard && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleClearBoard}
+                    className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] font-bold border border-neutral-700 cursor-pointer"
+                    title="Kosongkan semua bidak kecuali raja"
+                  >
+                    🧹 Kosongkan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetBoard}
+                    className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] font-bold border border-neutral-700 cursor-pointer"
+                    title="Reset ke posisi standar awal catur"
+                  >
+                    ↩️ Posisi Awal
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* PALET PILIHAN BIDAK (MUNCUL SAAT EDIT MODE AKTIF) */}
+            {isEditingBoard && (
+              <div className="p-2.5 rounded-xl bg-[#141210] border border-amber-500/30 space-y-2">
+                {/* Baris Bidak Putih */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                  <span className="text-[10px] font-black text-neutral-400 uppercase w-12 shrink-0">Putih:</span>
+                  {[
+                    { id: "wK", label: "♔ Raja", icon: "♔" },
+                    { id: "wQ", label: "♕ Menteri", icon: "♕" },
+                    { id: "wR", label: "♖ Benteng", icon: "♖" },
+                    { id: "wB", label: "♗ Gajah", icon: "♗" },
+                    { id: "wN", label: "♘ Kuda", icon: "♘" },
+                    { id: "wP", label: "♙ Pion", icon: "♙" },
+                  ].map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedPalettePiece(selectedPalettePiece === p.id ? null : p.id)}
+                      className={`px-2 py-1 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                        selectedPalettePiece === p.id
+                          ? "bg-amber-400 text-black border-amber-300 ring-2 ring-amber-300 shadow"
+                          : "bg-[#221f1d] text-white border-[#3d3835] hover:bg-[#2c2825]"
+                      }`}
+                      title={`Klik lalu klik petak papan untuk pasang ${p.label}`}
+                    >
+                      <span className="text-base leading-none">{p.icon}</span>
+                      <span className="text-[11px] font-mono">{p.id.slice(1)}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Baris Bidak Hitam & Tombol Hapus */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pt-0.5">
+                  <span className="text-[10px] font-black text-neutral-400 uppercase w-12 shrink-0">Hitam:</span>
+                  {[
+                    { id: "bK", label: "♚ Raja", icon: "♚" },
+                    { id: "bQ", label: "♛ Menteri", icon: "♛" },
+                    { id: "bR", label: "♜ Benteng", icon: "♜" },
+                    { id: "bB", label: "♝ Gajah", icon: "♝" },
+                    { id: "bN", label: "♞ Kuda", icon: "♞" },
+                    { id: "bP", label: "♟ Pion", icon: "♟" },
+                  ].map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedPalettePiece(selectedPalettePiece === p.id ? null : p.id)}
+                      className={`px-2 py-1 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                        selectedPalettePiece === p.id
+                          ? "bg-amber-400 text-black border-amber-300 ring-2 ring-amber-300 shadow"
+                          : "bg-[#221f1d] text-neutral-300 border-[#3d3835] hover:bg-[#2c2825]"
+                      }`}
+                      title={`Klik lalu klik petak papan untuk pasang ${p.label}`}
+                    >
+                      <span className="text-base leading-none">{p.icon}</span>
+                      <span className="text-[11px] font-mono">{p.id.slice(1)}</span>
+                    </button>
+                  ))}
+
+                  {/* Tombol Hapus Bidak Mode */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPalettePiece(selectedPalettePiece === "delete" ? null : "delete");
+                      setIsDeleteMode(v => !v);
+                    }}
+                    className={`ml-auto px-2.5 py-1 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                      selectedPalettePiece === "delete" || isDeleteMode
+                        ? "bg-red-600 text-white border-red-400 ring-2 ring-red-400"
+                        : "bg-red-950/40 text-red-300 border-red-800/60 hover:bg-red-900/40"
+                    }`}
+                  >
+                    <span>🗑️</span>
+                    <span>{isDeleteMode ? "Hapus: AKTIF" : "Mode Hapus"}</span>
+                  </button>
+                </div>
+
+                {/* Notifikasi Floating jika petak diklik untuk hapus */}
+                {selectedSquareForAction && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-red-950/60 border border-red-500/50 text-xs text-red-200">
+                    <span>Petak terpilih: <strong>{selectedSquareForAction}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => handleEditSquareClick(selectedSquareForAction)}
+                      className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>🗑️ Hapus Bidak Ini</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+
+            
+
             <div className="w-full mx-auto aspect-square max-w-[min(100%,calc(100dvh-230px))] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
               <Chessboard
                 options={{
@@ -1582,7 +1570,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                   boardOrientation: scanBoardOrientation,
                   allowDragging: true,
                   onPieceDrop: handleBoard1Drop,
-                  onSquareClick: handleReferenceSquareClick,
+                  onSquareClick: handleEditSquareClick,
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
                 }}
@@ -1595,18 +1583,6 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             <p className="prose-note m-0 text-xs">
               Geser bidak untuk membetulkan penempatan, seret bidak <strong>keluar papan</strong> untuk menghapus, atau aktifkan Mode Hapus lalu klik bidak yang salah deteksi.
             </p>
-
-            {/* Mode Hapus Bidak */}
-            <button
-              onClick={() => setIsDeleteMode((v) => !v)}
-              className={`ctl ctl-sm w-full font-bold justify-center flex items-center gap-1.5 ${
-                isDeleteMode ? "ctl-danger" : "ctl-quiet"
-              }`}
-              title="Aktifkan lalu klik bidak di papan untuk menghapusnya"
-            >
-              <IconClose3D size={14} />
-              <span>{isDeleteMode ? "Mode Hapus: AKTIF — klik bidak untuk hapus" : "Mode Hapus Bidak"}</span>
-            </button>
 
             <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] stack-tight font-mono text-xs break-all select-all text-emerald-300">
               {initialFen}

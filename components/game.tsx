@@ -1,5 +1,5 @@
 "use client";
-import { Copy, Check, Download } from "lucide-react";
+import { Copy, Check, Download, Share2 } from "lucide-react";
 import { DockModals, type DockModalType } from "@/components/dock-modals";
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
@@ -254,12 +254,17 @@ export function Game() {
     const p = new URLSearchParams(window.location.search).get("spectate");
     if (p) {
       setSpectateMatchId(p);
-      fetch(`/api/broadcast?id=${p}`)
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.ok && d.match) setSpectateMatchData(d.match);
-        })
-        .catch(() => {});
+      const poll = () => {
+        fetch(`/api/broadcast?id=${p}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.ok && d.match) setSpectateMatchData(d.match);
+          })
+          .catch(() => {});
+      };
+      poll();
+      const iv = setInterval(poll, 2500);
+      return () => clearInterval(iv);
     }
   }, []);
 
@@ -723,6 +728,15 @@ export function Game() {
         : "0.0";
 
   const [copiedPgn, setCopiedPgn] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
+
+  const copyShareLink = useCallback(() => {
+    if (!broadcastId) return;
+    const url = `${window.location.origin}/?spectate=${broadcastId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedShare(true);
+    setTimeout(() => setCopiedShare(false), 2000);
+  }, [broadcastId]);
 
   const getFullPgn = useCallback(() => {
     const whitePlayerName = humanSide === "white"
@@ -800,6 +814,56 @@ export function Game() {
     a.click();
     URL.revokeObjectURL(url);
   }, [getFullPgn]);
+
+  // SPECTATOR: render fullscreen broadcast/replay ketika dibuka via ?spectate=<id>
+  if (spectateMatchId && spectateMatchData) {
+    const m = spectateMatchData;
+    return (
+      <div className="h-screen w-screen bg-[var(--background)] text-white flex flex-col items-center justify-center p-4 gap-3 select-none">
+        <div className="flex items-center gap-2 text-sm font-black tracking-widest uppercase">
+          <IconPlay3D size={20} />
+          <span>FIF <span className="text-[var(--primary)]">· Siaran Langsung</span></span>
+        </div>
+        <div className="flex items-center gap-6 text-xs font-bold text-neutral-300">
+          <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-white border border-neutral-500" /> {m.whiteName || "Putih"}</span>
+          <span className="text-neutral-500">vs</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-neutral-900 border border-neutral-500" /> {m.blackName || "Hitam"}</span>
+        </div>
+        <div className="w-full max-w-[min(100%,calc(100dvh-190px))] aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-xl">
+          <Chessboard
+            options={{
+              id: "board-spectate",
+              position: m.fen || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              boardOrientation: "white",
+              allowDragging: false,
+              darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+              lightSquareStyle: { backgroundColor: "var(--board-light)" },
+            }}
+          />
+        </div>
+        <div className="text-sm font-black">
+          {m.over ? (
+            <span className="text-amber-400">⏹ Pertandingan Selesai — {m.outcomeLabel || "selesai"}</span>
+          ) : (
+            <span className="flex items-center gap-2 text-emerald-400"><span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Langsung</span>
+          )}
+        </div>
+        {Array.isArray(m.moves) && m.moves.length > 0 && (
+          <div className="max-w-xl text-center font-mono text-[11px] text-neutral-400 break-words leading-relaxed">
+            {m.moves.join(" ")}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (spectateMatchId && !spectateMatchData) {
+    return (
+      <div className="h-screen w-screen bg-[var(--background)] text-white flex items-center justify-center">
+        <span className="text-sm font-bold text-neutral-400 animate-pulse">Memuat siaran…</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row h-screen max-h-screen overflow-hidden bg-[var(--background)] text-white select-none">
@@ -1627,6 +1691,17 @@ export function Game() {
                                     />
                                   </button>
                                 </div>
+
+                                {broadcastId && (
+                                  <button
+                                    type="button"
+                                    onClick={copyShareLink}
+                                    className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-xs font-bold text-neutral-200 cursor-pointer transition-colors"
+                                    title="Salin tautan agar orang lain bisa menonton siaran / replay ini"
+                                  >
+                                    {copiedShare ? (<><Check size={12} className="text-emerald-400" /><span className="text-emerald-400">Tautan Tersalin!</span></>) : (<><Share2 size={12} /><span>Salin Tautan Siaran</span></>)}
+                                  </button>
+                                )}
                               </div>
 
                               {/* GIANT CHESS.COM GREEN CTA BUTTON */}
