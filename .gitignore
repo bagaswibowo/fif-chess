@@ -56,4 +56,5 @@ models/
 chesscog-service/
 yolo11-service/
 models/
-resource/
+resource/*.pdf
+debug/
