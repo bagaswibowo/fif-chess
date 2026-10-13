@@ -552,7 +552,7 @@ export function CoachModeView({ lang = "id" }: Props) {
                         <Undo2 size={14} className="shrink-0" /><span>{lang === "id" ? "Batalkan" : "Undo"}</span>
                       </Button>
                       <Button onClick={() => void tryMove(hint.uci.slice(0, 2), hint.uci.slice(2, 4))} size="sm"
-                        className="flex-1 min-w-0 px-2 h-8 bg-[#81b64c] text-xs font-bold text-[#1f291e] hover:bg-[#81b64c]/90"
+                        className="flex-1 min-w-0 px-2 h-8 bg-[var(--primary)] text-xs font-bold text-white hover:bg-[var(--primary-hover)]"
                         disabled={thinkingRef.current}>
                         <IconCheck3D size={16} />
                         {lang === "id" ? `Mainkan` : `Play`}

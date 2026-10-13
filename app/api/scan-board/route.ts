@@ -369,6 +369,14 @@ async function scanWithYolo11(image: string, prewarped?: boolean) {
     });
     if (yoloRes.ok) {
       const yData = await yoloRes.json();
+      // Hormati penolakan model: jika yolo11 bilang ok:false (posisi tidak masuk akal),
+      // jangan naikkan jadi success — teruskan sebagai kandidat untuk review manual.
+      if (yData.ok === false) {
+        const cand = yData.board_fen_candidate
+          ? `${yData.board_fen_candidate} w - - 0 1`
+          : null;
+        return { ok: false, error: yData.error || "Posisi tidak terbaca dengan pasti.", suggestedFen: cand };
+      }
       const fenCandidate =
         yData.fen ||
         yData.predicted_fen ||
@@ -380,7 +388,7 @@ async function scanWithYolo11(image: string, prewarped?: boolean) {
           return { ok: true, fen: repaired, confidence: yData.confidence || yData.used_conf || 0.90, source: "yolo11-service" };
         }
         if (repaired) {
-          return { ok: true, fen: repaired, confidence: 0.70, source: "yolo11-repaired" };
+          return { ok: false, error: "Hasil deteksi belum pasti. Perbaiki manual di papan referensi.", suggestedFen: repaired };
         }
       }
     }
@@ -460,15 +468,20 @@ export async function POST(req: NextRequest) {
       if (omniRes) return NextResponse.json(omniRes);
     }
 
-    // Jika model lokal tidak merespons, buka posisi langsung ke Mode Edit Papan
+    // Jika semua provider gagal, JANGAN pura-pura sukses dengan posisi awal.
+    // Kembalikan kegagalan jujur + kandidat FEN (bila ada) untuk review manual.
     return NextResponse.json({
-      ok: true,
-      fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      ok: false,
+      fen: null,
       needEdit: true,
-      source: "edit-mode-fallback",
-      message: "Papan siap diatur. Silakan gunakan Mode Edit Papan untuk menyesuaikan posisi bidak."
-    });
+      source: "no-provider",
+      error:
+        "Papan tidak terbaca otomatis. Silakan gunakan preset cepat, tempel FEN, atau muat posisi lalu atur bidaknya di Mode Edit Papan.",
+    }, { status: 200 });
   } catch (err: any) {
+    if (err?.name === "TypeError" || (err && String(err?.message || "").includes("JSON"))) {
+      return NextResponse.json({ ok: false, error: "Format permintaan tidak valid." }, { status: 400 });
+    }
     return NextResponse.json({ ok: false, error: err.message || "Kesalahan server saat memproses gambar." }, { status: 500 });
   }
 }

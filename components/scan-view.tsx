@@ -37,10 +37,10 @@ type EngineType = "stockfish" | "jev-fly" | "jev" | "fly";
 type ViewTab = "solver" | "reference" | "compare";
 
 const PRESET_POSITIONS = [
-  { name: "Foto Papan Fisik (Elephant Gambit)", fen: "rnbqkbnr/ppp2ppp/8/3pp3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3" },
-  { name: "Foto Papan Catur Kayu (Midgame)", fen: "r1bqkbnr/pppp1ppp/8/4p3/3nP3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 4" },
-  { name: "Foto Endgame Rd7", fen: "7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1" },
-  { name: "Sicilian Najdorf (Standar)", fen: "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6" },
+  { name: "Foto Papan Fisik (Elephant Gambit)", short: "Elephant Gambit", fen: "rnbqkbnr/ppp2ppp/8/3pp3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3" },
+  { name: "Foto Papan Catur Kayu (Midgame)", short: "Midgame", fen: "r1bqkbnr/pppp1ppp/8/4p3/3nP3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 4" },
+  { name: "Foto Endgame Rd7", short: "Endgame Rd7", fen: "7k/3r1q2/1P3pp1/2R4p/8/5QPP/5PK1/8 w - - 0 1" },
+  { name: "Sicilian Najdorf (Standar)", short: "Najdorf", fen: "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6" },
 ];
 
 function sanitizeAndRepairFen(rawFen: string): string | null {
@@ -323,10 +323,11 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           if (data.needEdit) {
             setIsEditingBoard(true);
             applyNewInitialFen(data.fen, "Posisi berhasil terdeteksi! Mode Edit aktif untuk menyempurnakan bidak.");
+            setActiveTab("reference");
           } else {
             applyNewInitialFen(data.fen, "Foto berhasil dipindai! Periksa & betulkan bidak bila perlu, lalu lanjut ke Solver.");
+            setActiveTab("solver");
           }
-          setActiveTab("solver");
           setScanProgress(null);
           setIsProcessingImage(false);
         }, 400);
@@ -567,10 +568,19 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     let lastFen: string | null = null;
     let stableCount = 0;
+    let failCount = 0;
 
     while (!liveAbortRef.current) {
       const video = liveVideoRef.current;
       if (!video || video.readyState < 2 || !liveStreamRef.current) break;
+
+      if (failCount >= 6) {
+        setLiveDetectStatus("error");
+        setLiveDetectError(
+          "Papan tidak terbaca dari kamera. Pastikan kamera menghadap papan dengan pencahayaan cukup dan seluruh 64 petak terlihat, lalu coba lagi."
+        );
+        break;
+      }
 
       let base64: string;
       try {
@@ -605,18 +615,22 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             stableCount = 1;
             lastFen = fenBoard;
           }
+          failCount = 0;
           setLiveDetectFen(data.fen as string);
           if (stableCount >= 2) {
             setLiveDetectStatus("success");
-            applyNewInitialFen(data.fen as string, "Live detection berhasil — posisi stabil terbaca!");
+            applyNewInitialFen(data.fen as string, "Live detection berhasil, posisi stabil terbaca!");
             setTimeout(() => stopLiveDetection(), 900);
             break;
           }
         } else {
+          // Server jujur bilang tidak terbaca (ok:false) -> hitung sebagai gagal.
+          failCount += 1;
           setLiveDetectFen(null);
         }
       } catch {
         // Jaringan/server gagal sekali: tunggu lalu coba lagi.
+        failCount += 1;
       }
 
       await sleep(1500);
@@ -815,7 +829,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           </div>
           <div className="row-between items-center pt-1">
             <span className="text-xs text-[var(--muted-foreground)]">
-              *Hasil scan dapat keliru — selalu periksa & perbaiki bidak di tab Papan Referensi sebelum dianalisis
+              *Hasil scan dapat keliru, selalu periksa dan perbaiki bidak di tab Referensi sebelum dianalisis
             </span>
             <button
               type="button"
@@ -853,7 +867,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             Import Posisi Papan Catur
           </h2>
           <p className="text-xs text-[var(--muted-foreground)] max-w-md mt-1 mb-6 leading-relaxed">
-            Pindai posisi dari kamera, unggah foto papan, atau gunakan Live Detection — kamera membaca papan fisik secara kontinu sampai posisi terbaca stabil.
+            Pindai posisi dari kamera, unggah foto papan, atau gunakan Live Detection. Kamera membaca papan fisik secara kontinu sampai posisi terbaca stabil.
           </p>
 
           {/* ACTION CARDS — 3 tombol besar dengan kontras terbaca */}
@@ -903,7 +917,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <div className="row-between pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  Live Detection — Arahkan Kamera ke Papan
+                  Live Detection: Arahkan Kamera ke Papan
                 </span>
                 <button className="ctl ctl-xs ctl-quiet" onClick={stopLiveDetection}>
                   <IconClose3D size={14} />
@@ -1020,8 +1034,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         />
       )}
       {/* TOP CONTROL BAR */}
-      <div className="panel px-3.5 py-2.5 row-between flex-wrap gap-2.5" style={{ background: "var(--card)" }}>
-        <div className="row items-center gap-2">
+      <div className="panel px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2.5" style={{ background: "var(--card)" }}>
+        <div className="flex items-center gap-2 shrink-0">
           <IconScan3D size={22} />
           <h2 className="text-xs md:text-sm font-black text-white m-0">
             Import Posisi &amp; AI Solver Arena
@@ -1029,7 +1043,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         </div>
 
         {/* Action Controls */}
-        <div className="row items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={handleResetToBlank}
             className="ctl ctl-xs ctl-quiet flex items-center gap-1.5 font-bold"
@@ -1040,7 +1054,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           </button>
           <button
             onClick={() => void startWebcam("environment")}
-            className="ctl ctl-xs flex items-center gap-1.5 font-bold"
+            className="ctl ctl-xs ctl-quiet flex items-center gap-1.5 font-bold"
             disabled={isProcessingImage}
           >
             <IconScan3D size={14} />
@@ -1048,7 +1062,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="ctl ctl-xs flex items-center gap-1.5 font-bold"
+            className="ctl ctl-xs ctl-quiet flex items-center gap-1.5 font-bold"
             disabled={isProcessingImage}
           >
             <IconVision3D size={14} />
@@ -1159,64 +1173,71 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       )}
 
       {/* FEN INPUT & PRESETS BAR */}
-      <div className="panel p-2.5 row items-center gap-2 text-xs flex-wrap" style={{ background: "var(--surface)" }}>
-        <span className="text-xs font-bold text-[var(--muted-foreground)] shrink-0">FEN:</span>
-        <input
-          type="text"
-          value={fenInput}
-          onChange={(e) => setFenInput(e.target.value)}
-          placeholder="Notasi FEN..."
-          className="flex-1 min-w-[240px] p-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs text-white font-mono focus:outline-none focus:border-[var(--primary)]"
-        />
-        <button onClick={() => applyNewInitialFen(fenInput, "Notasi FEN diterapkan!")} className="ctl ctl-xs ctl-primary font-bold shrink-0">
-          <IconCheck3D size={12} />
-          <span>Terapkan</span>
-        </button>
+      <div className="panel p-2.5 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:flex-wrap" style={{ background: "var(--surface)" }}>
+        <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:min-w-[240px]">
+          <label className="text-xs font-bold text-[var(--muted-foreground)] shrink-0" htmlFor="fen-input">FEN:</label>
+          <input
+            id="fen-input"
+            type="text"
+            value={fenInput}
+            onChange={(e) => setFenInput(e.target.value)}
+            placeholder="Notasi FEN..."
+            className="flex-1 min-w-0 p-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs text-white font-mono focus:outline-none focus:border-[var(--primary)]"
+          />
+          <button onClick={() => applyNewInitialFen(fenInput, "Notasi FEN diterapkan!")} className="ctl ctl-xs ctl-primary font-bold shrink-0">
+            <IconCheck3D size={12} />
+            <span>Terapkan</span>
+          </button>
+        </div>
 
         {/* Quick Presets */}
-        <div className="row items-center gap-1 shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1 shrink-0 overflow-x-auto">
           {PRESET_POSITIONS.map((p) => (
             <button
               key={p.name}
               onClick={() => applyNewInitialFen(p.fen, `Posisi ${p.name} dimuat!`)}
-              className={`ctl ctl-xs transition-all ${
-                initialFen === p.fen ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"
+              title={p.name}
+              className={`ctl ctl-xs whitespace-nowrap transition-all ${
+                initialFen === p.fen ? "ctl-active font-bold" : "ctl-quiet"
               }`}
             >
-              {p.name}
+              {p.short}
             </button>
           ))}
         </div>
       </div>
 
       {/* VIEWPORT MODE TABS */}
-      <div className="row items-center gap-1.5 border-b border-[var(--border)] pb-1.5">
+      <div className="flex items-center gap-1.5 overflow-x-auto border-b border-[var(--border)] pb-1.5">
         <button
           onClick={() => setActiveTab("solver")}
-          className={`ctl ctl-xs font-bold transition-all flex items-center gap-1.5 ${
-            activeTab === "solver" ? "ctl-active ring-1 ring-[var(--primary)]" : "ctl-quiet"
+          aria-pressed={activeTab === "solver"}
+          className={`ctl ctl-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
+            activeTab === "solver" ? "ctl-active" : "ctl-quiet"
           }`}
         >
           <IconBot3D size={14} />
-          <span>Papan AI Solver &amp; Taktik (Penuh)</span>
+          <span>AI Solver</span>
         </button>
         <button
           onClick={() => setActiveTab("reference")}
-          className={`ctl ctl-xs font-bold transition-all flex items-center gap-1.5 ${
-            activeTab === "reference" ? "ctl-active ring-1 ring-[var(--primary)]" : "ctl-quiet"
+          aria-pressed={activeTab === "reference"}
+          className={`ctl ctl-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
+            activeTab === "reference" ? "ctl-active" : "ctl-quiet"
           }`}
         >
           <IconVision3D size={14} />
-          <span>Papan Referensi &amp; Edit Posisi</span>
+          <span>Referensi</span>
         </button>
         <button
           onClick={() => setActiveTab("compare")}
-          className={`ctl ctl-xs font-bold transition-all flex items-center gap-1.5 ${
-            activeTab === "compare" ? "ctl-active ring-1 ring-[var(--primary)]" : "ctl-quiet"
+          aria-pressed={activeTab === "compare"}
+          className={`ctl ctl-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
+            activeTab === "compare" ? "ctl-active" : "ctl-quiet"
           }`}
         >
           <IconSwap3D size={14} />
-          <span>Bandingkan Keduanya (Side-by-Side)</span>
+          <span>Bandingkan</span>
         </button>
       </div>
 
@@ -1407,72 +1428,79 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           <div className="lg:col-span-7 panel p-3 stack-tight" style={{ background: "var(--card)" }}>
             <div className="row-between pb-1.5" style={{ borderBottom: "1px solid var(--border)" }}>
               <span className="font-bold text-xs md:text-sm text-white flex items-center gap-2">
-                <IconVision3D size={18} /> Papan 1: Referensi Asli (Edit Bidak)
+                <IconVision3D size={18} /> Referensi &amp; Edit Posisi
               </span>
               <CapturedPiecesBar fen={initialFen} side="white" />
             </div>
 
-            {/* Kontrol papan DI ATAS (konsisten dengan tab Solver & AI Coach) */}
-            <BoardControls
-              variant="toolbar"
-              orientation={scanBoardOrientation}
-              onFlipOrientation={() => setScanBoardOrientation((o) => (o === "white" ? "black" : "white"))}
-              showShortcuts={true}
-              className="mt-2"
-            />
-
-{/* PALET BIDAK CADANGAN & TOMBOL EDIT TOGGLE */}
-            <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-[#1c1917] border border-[#3d3a34]">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditingBoard(v => !v);
-                    setSelectedSquareForAction(null);
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all shadow cursor-pointer ${
-                    isEditingBoard 
-                      ? "bg-amber-500 text-black border border-amber-400 ring-2 ring-amber-400/40 animate-pulse" 
-                      : "bg-[#292524] text-neutral-200 border border-[#44403c] hover:bg-[#3d3835]"
-                  }`}
-                >
-                  <span>{isEditingBoard ? "✏️ Selesai Edit Posisi" : "✏️ Mode Edit Papan"}</span>
-                </button>
-                {isEditingBoard && (
-                  <span className="text-[11px] font-bold text-amber-400 hidden sm:inline">
-                    Seret bidak bebas, klik bidak untuk hapus, atau pilih dari palet:
-                  </span>
-                )}
-              </div>
+            {/* KONTROL EDIT: toggle Mode Edit, Mode Hapus, aksi cepat, dan hint tunggal */}
+            <div className="flex flex-wrap items-center gap-2 pt-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditingBoard(v => !v);
+                  setSelectedSquareForAction(null);
+                }}
+                aria-pressed={isEditingBoard}
+                className={`ctl ctl-xs font-bold ${isEditingBoard ? "ctl-active" : "ctl-quiet"}`}
+              >
+                <span>{isEditingBoard ? "Selesai Edit Posisi" : "Mode Edit Papan"}</span>
+              </button>
 
               {isEditingBoard && (
-                <div className="flex items-center gap-1.5">
+                <>
                   <button
                     type="button"
-                    onClick={handleClearBoard}
-                    className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] font-bold border border-neutral-700 cursor-pointer"
-                    title="Kosongkan semua bidak kecuali raja"
+                    onClick={() => {
+                      setSelectedPalettePiece(selectedPalettePiece === "delete" ? null : "delete");
+                      setIsDeleteMode(v => !v);
+                    }}
+                    aria-pressed={isDeleteMode}
+                    className="ctl ctl-xs ctl-danger font-bold"
                   >
-                    🧹 Kosongkan
+                    <span>{isDeleteMode ? "Hapus: AKTIF" : "Mode Hapus"}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleResetBoard}
-                    className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] font-bold border border-neutral-700 cursor-pointer"
-                    title="Reset ke posisi standar awal catur"
-                  >
-                    ↩️ Posisi Awal
-                  </button>
-                </div>
+
+                  <span className="text-[11px] text-[var(--muted-foreground)] leading-snug">
+                    Seret bidak bebas, klik bidak untuk hapus, atau pilih dari palet.
+                  </span>
+
+                  <span className="ml-auto flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleClearBoard}
+                      className="ctl ctl-xs ctl-quiet font-bold"
+                      title="Kosongkan semua bidak kecuali raja"
+                    >
+                      Kosongkan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetBoard}
+                      className="ctl ctl-xs ctl-quiet font-bold"
+                      title="Reset ke posisi standar awal catur"
+                    >
+                      Posisi Awal
+                    </button>
+                  </span>
+                </>
               )}
             </div>
 
-            {/* PALET PILIHAN BIDAK (MUNCUL SAAT EDIT MODE AKTIF) */}
+            {/* Kontrol papan (compact: ikon + label di desktop) */}
+            <BoardControls
+              variant="compact"
+              orientation={scanBoardOrientation}
+              onFlipOrientation={() => setScanBoardOrientation((o) => (o === "white" ? "black" : "white"))}
+              showShortcuts={true}
+              className="pt-1"
+            />
+
+            {/* PALET PILIHAN BIDAK (baris putih & hitam sejajar) */}
             {isEditingBoard && (
-              <div className="p-2.5 rounded-xl bg-[#141210] border border-amber-500/30 space-y-2">
-                {/* Baris Bidak Putih */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                  <span className="text-[10px] font-black text-neutral-400 uppercase w-12 shrink-0">Putih:</span>
+              <div className="p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-1.5">
+                <div className="flex items-center gap-1.5 overflow-x-auto">
+                  <span className="text-[10px] font-black text-[var(--muted-foreground)] uppercase w-12 shrink-0">Putih</span>
                   {[
                     { id: "wK", label: "♔ Raja", icon: "♔" },
                     { id: "wQ", label: "♕ Menteri", icon: "♕" },
@@ -1485,11 +1513,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                       key={p.id}
                       type="button"
                       onClick={() => setSelectedPalettePiece(selectedPalettePiece === p.id ? null : p.id)}
-                      className={`px-2 py-1 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                        selectedPalettePiece === p.id
-                          ? "bg-amber-400 text-black border-amber-300 ring-2 ring-amber-300 shadow"
-                          : "bg-[#221f1d] text-white border-[#3d3835] hover:bg-[#2c2825]"
-                      }`}
+                      aria-pressed={selectedPalettePiece === p.id}
+                      className={`ctl ctl-xs ${selectedPalettePiece === p.id ? "ctl-active" : "ctl-quiet"}`}
                       title={`Klik lalu klik petak papan untuk pasang ${p.label}`}
                     >
                       <span className="text-base leading-none">{p.icon}</span>
@@ -1498,9 +1523,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                   ))}
                 </div>
 
-                {/* Baris Bidak Hitam & Tombol Hapus */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pt-0.5">
-                  <span className="text-[10px] font-black text-neutral-400 uppercase w-12 shrink-0">Hitam:</span>
+                <div className="flex items-center gap-1.5 overflow-x-auto">
+                  <span className="text-[10px] font-black text-[var(--muted-foreground)] uppercase w-12 shrink-0">Hitam</span>
                   {[
                     { id: "bK", label: "♚ Raja", icon: "♚" },
                     { id: "bQ", label: "♛ Menteri", icon: "♛" },
@@ -1513,54 +1537,31 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                       key={p.id}
                       type="button"
                       onClick={() => setSelectedPalettePiece(selectedPalettePiece === p.id ? null : p.id)}
-                      className={`px-2 py-1 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                        selectedPalettePiece === p.id
-                          ? "bg-amber-400 text-black border-amber-300 ring-2 ring-amber-300 shadow"
-                          : "bg-[#221f1d] text-neutral-300 border-[#3d3835] hover:bg-[#2c2825]"
-                      }`}
+                      aria-pressed={selectedPalettePiece === p.id}
+                      className={`ctl ctl-xs ${selectedPalettePiece === p.id ? "ctl-active" : "ctl-quiet"}`}
                       title={`Klik lalu klik petak papan untuk pasang ${p.label}`}
                     >
                       <span className="text-base leading-none">{p.icon}</span>
                       <span className="text-[11px] font-mono">{p.id.slice(1)}</span>
                     </button>
                   ))}
-
-                  {/* Tombol Hapus Bidak Mode */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedPalettePiece(selectedPalettePiece === "delete" ? null : "delete");
-                      setIsDeleteMode(v => !v);
-                    }}
-                    className={`ml-auto px-2.5 py-1 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition-all ${
-                      selectedPalettePiece === "delete" || isDeleteMode
-                        ? "bg-red-600 text-white border-red-400 ring-2 ring-red-400"
-                        : "bg-red-950/40 text-red-300 border-red-800/60 hover:bg-red-900/40"
-                    }`}
-                  >
-                    <span>🗑️</span>
-                    <span>{isDeleteMode ? "Hapus: AKTIF" : "Mode Hapus"}</span>
-                  </button>
                 </div>
 
-                {/* Notifikasi Floating jika petak diklik untuk hapus */}
+                {/* Notifikasi saat petak dipilih untuk dihapus */}
                 {selectedSquareForAction && (
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-red-950/60 border border-red-500/50 text-xs text-red-200">
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-red-950/60 border border-red-500/50 text-xs text-red-200">
                     <span>Petak terpilih: <strong>{selectedSquareForAction}</strong></span>
                     <button
                       type="button"
                       onClick={() => handleEditSquareClick(selectedSquareForAction)}
-                      className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                      className="ctl ctl-xs ctl-danger font-bold"
                     >
-                      <span>🗑️ Hapus Bidak Ini</span>
+                      Hapus Bidak Ini
                     </button>
                   </div>
                 )}
               </div>
             )}
-
-
-            
 
             <div className="w-full mx-auto aspect-square max-w-[min(100%,calc(100dvh-230px))] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
               <Chessboard
@@ -1578,33 +1579,33 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             </div>
           </div>
 
-          <div className="lg:col-span-5 panel p-3.5 stack text-xs" style={{ background: "var(--card)" }}>
-            <span className="font-bold text-sm text-white">Detail Posisi Ter-Import</span>
-            <p className="prose-note m-0 text-xs">
-              Geser bidak untuk membetulkan penempatan, seret bidak <strong>keluar papan</strong> untuk menghapus, atau aktifkan Mode Hapus lalu klik bidak yang salah deteksi.
-            </p>
+          <div className="lg:col-span-5 stack-tight">
+            <div className="panel p-3 stack text-xs" style={{ background: "var(--card)" }}>
+              <span className="font-bold text-sm text-white">Detail Posisi Ter-Import</span>
 
-            <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] stack-tight font-mono text-xs break-all select-all text-emerald-300">
-              {initialFen}
-            </div>
-
-            <button
-              onClick={() => setActiveTab("solver")}
-              className="ctl ctl-sm ctl-primary font-bold justify-center mt-2 flex items-center gap-1.5"
-            >
-              <IconBot3D size={14} />
-              <span>Gunakan di Simulator (Dual-Engine Solver)</span>
-            </button>
-
-            {pendingCropImage && (
               <button
-                onClick={() => setIsCropModalOpen(true)}
-                className="ctl ctl-sm ctl-quiet font-bold justify-center flex items-center gap-1.5"
+                onClick={() => setActiveTab("solver")}
+                className="ctl ctl-sm ctl-primary font-bold justify-center w-full flex items-center gap-1.5"
               >
-                <IconScan3D size={14} />
-                <span>Sesuaikan Sudut Papan Manual (bila hasil meleset)</span>
+                <IconBot3D size={14} />
+                <span>Gunakan di Simulator</span>
               </button>
-            )}
+
+              {pendingCropImage && (
+                <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] stack-tight">
+                  <button
+                    onClick={() => setIsCropModalOpen(true)}
+                    className="ctl ctl-sm ctl-quiet font-bold justify-center w-full flex items-center gap-1.5"
+                  >
+                    <IconScan3D size={14} />
+                    <span>Sesuaikan Sudut Papan</span>
+                  </button>
+                  <p className="prose-note m-0 text-xs">
+                    Gunakan bila hasil scan meleset. Posisi tetap tersimpan.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
