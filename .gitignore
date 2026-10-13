@@ -53,8 +53,5 @@ models/
 *.log
 *.pt
 *.pdf
-chesscog-service/
-yolo11-service/
-models/
 resource/*.pdf
 debug/

@@ -1,0 +1,678 @@
+{
+ "format": "flyb",
+ "version": 1,
+ "byte_order": "little",
+ "quant": "f16",
+ "steps": 16,
+ "activation": "satrelu",
+ "gelu_approximate": "tanh",
+ "activation_sat": 10.0,
+ "neuron_order": "rcm",
+ "value_head": "mlp",
+ "value_activation": "satrelu",
+ "value_hidden": 256,
+ "dale": true,
+ "n": 134209,
+ "nnz": 2663502,
+ "nnz_mod": 37011,
+ "nnz_total": 2700513,
+ "total_synapses": 34153566,
+ "n_in": 2048,
+ "n_out": 1415,
+ "num_moves": 4168,
+ "input_dim": 1280,
+ "num_planes": 20,
+ "vision": true,
+ "sensory_input": true,
+ "readout_steps": [
+  8,
+  16
+ ],
+ "neuromod": true,
+ "central_dim": 128,
+ "n_ret": 5543,
+ "n_central": 32292,
+ "retina_type_legend": [
+  "R1-6",
+  "R7",
+  "R8"
+ ],
+ "retina": {
+  "enabled": true,
+  "n_ret": 5543,
+  "options": {
+   "types": [
+    "R1-6",
+    "R7",
+    "R8"
+   ],
+   "eyes": "both",
+   "field": "split",
+   "effective_field": "split",
+   "binning": "weighted",
+   "partner_types": [
+    "L1",
+    "L2",
+    "L3"
+   ],
+   "max": null
+  },
+  "columns_per_eye": {
+   "left": 785,
+   "right": 796
+  },
+  "columns_per_square": {
+   "left": {
+    "min": 9,
+    "median": 17.0,
+    "max": 80,
+    "empty_squares": 0,
+    "total": 785
+   },
+   "right": {
+    "min": 14,
+    "median": 23.0,
+    "max": 53,
+    "empty_squares": 0,
+    "total": 796
+   }
+  },
+  "photoreceptors_per_square_per_eye": {
+   "left": {
+    "min": 67,
+    "median": 70.0,
+    "max": 77,
+    "empty_squares": 0,
+    "total": 2259
+   },
+   "right": {
+    "min": 97,
+    "median": 103.0,
+    "max": 107,
+    "empty_squares": 0,
+    "total": 3284
+   }
+  },
+  "photoreceptors_per_square": {
+   "min": 67,
+   "median": 87.0,
+   "max": 107,
+   "empty_squares": 0,
+   "total": 5543
+  },
+  "per_type": {
+   "R1-6": {
+    "connectome": 8456,
+    "direct": 0,
+    "via_partner": 4141,
+    "unplaced": 4315,
+    "inactive": 0
+   },
+   "R7": {
+    "connectome": 1338,
+    "direct": 1253,
+    "via_partner": 0,
+    "unplaced": 85,
+    "inactive": 599
+   },
+   "R8": {
+    "connectome": 1357,
+    "direct": 1276,
+    "via_partner": 0,
+    "unplaced": 81,
+    "inactive": 528
+   }
+  },
+  "side_mismatch": 0,
+  "placed": 6670,
+  "candidates": 5543,
+  "types": {
+   "R1-6": 4141,
+   "R7": 654,
+   "R8": 748
+  },
+  "eyes": {
+   "left": 2259,
+   "right": 3284
+  },
+  "coordinates": "u: file a -> h (left eye u<0.5 lateral->frontal, right eye u>0.5 frontal->lateral); v: rank 1 -> 8 (ventral -> dorsal); X=(q-p)*sqrt(3)/2, Y=(p+q)/2 from hex (p,q)",
+  "square": "rank*8+file in the mover's perspective (planes index), see docs/RETINA.md",
+  "source": {
+   "path": "/home/carlo/Scrivania/fly-chess/data/connectome/column_assignment.csv.gz",
+   "size": 462838,
+   "mtime": 1789308896.169525
+  },
+  "hops_to_output": {
+   "min": 2,
+   "median": 4.0,
+   "max": 6,
+   "unreachable": 40,
+   "n": 5543
+  },
+  "connect": {
+   "enabled": true,
+   "note": "no pruning (max_neurons=None): every path of the filtered connectome is kept"
+  }
+ },
+ "run_name": "fly3",
+ "train_steps": 264000,
+ "exported_at": "2026-09-14T13:20:37+00:00",
+ "elo_estimates": {
+  "random": 636.4258428105995,
+  "material": 240.823996531185,
+  "previous-best": 61.433567223132
+ },
+ "super_class_legend": [
+  "unknown",
+  "optic",
+  "central",
+  "sensory",
+  "visual_projection",
+  "ascending",
+  "descending",
+  "sensory_ascending",
+  "visual_centrifugal",
+  "motor",
+  "endocrine"
+ ],
+ "graph_meta": {
+  "cfg": {
+   "region": "full",
+   "max_neurons": null,
+   "min_syn": 5,
+   "input_super_classes": [
+    "sensory",
+    "ascending",
+    "sensory_ascending"
+   ],
+   "max_inputs": 2048,
+   "output_super_classes": [
+    "descending",
+    "motor"
+   ],
+   "max_outputs": 2048,
+   "name": "full",
+   "retina": true,
+   "retina_types": [
+    "R1-6",
+    "R7",
+    "R8"
+   ],
+   "retina_eyes": "both",
+   "retina_field": "split",
+   "retina_binning": "weighted",
+   "retina_partner_types": [
+    "L1",
+    "L2",
+    "L3"
+   ],
+   "retina_max": null,
+   "retina_connect": true
+  },
+  "n": 134209,
+  "nnz": 2700513,
+  "n_in": 2048,
+  "n_out": 1415,
+  "n_ret": 5543,
+  "retina": {
+   "enabled": true,
+   "n_ret": 5543,
+   "options": {
+    "types": [
+     "R1-6",
+     "R7",
+     "R8"
+    ],
+    "eyes": "both",
+    "field": "split",
+    "effective_field": "split",
+    "binning": "weighted",
+    "partner_types": [
+     "L1",
+     "L2",
+     "L3"
+    ],
+    "max": null
+   },
+   "columns_per_eye": {
+    "left": 785,
+    "right": 796
+   },
+   "columns_per_square": {
+    "left": {
+     "min": 9,
+     "median": 17.0,
+     "max": 80,
+     "empty_squares": 0,
+     "total": 785
+    },
+    "right": {
+     "min": 14,
+     "median": 23.0,
+     "max": 53,
+     "empty_squares": 0,
+     "total": 796
+    }
+   },
+   "photoreceptors_per_square_per_eye": {
+    "left": {
+     "min": 67,
+     "median": 70.0,
+     "max": 77,
+     "empty_squares": 0,
+     "total": 2259
+    },
+    "right": {
+     "min": 97,
+     "median": 103.0,
+     "max": 107,
+     "empty_squares": 0,
+     "total": 3284
+    }
+   },
+   "photoreceptors_per_square": {
+    "min": 67,
+    "median": 87.0,
+    "max": 107,
+    "empty_squares": 0,
+    "total": 5543
+   },
+   "per_type": {
+    "R1-6": {
+     "connectome": 8456,
+     "direct": 0,
+     "via_partner": 4141,
+     "unplaced": 4315,
+     "inactive": 0
+    },
+    "R7": {
+     "connectome": 1338,
+     "direct": 1253,
+     "via_partner": 0,
+     "unplaced": 85,
+     "inactive": 599
+    },
+    "R8": {
+     "connectome": 1357,
+     "direct": 1276,
+     "via_partner": 0,
+     "unplaced": 81,
+     "inactive": 528
+    }
+   },
+   "side_mismatch": 0,
+   "placed": 6670,
+   "candidates": 5543,
+   "types": {
+    "R1-6": 4141,
+    "R7": 654,
+    "R8": 748
+   },
+   "eyes": {
+    "left": 2259,
+    "right": 3284
+   },
+   "coordinates": "u: file a -> h (left eye u<0.5 lateral->frontal, right eye u>0.5 frontal->lateral); v: rank 1 -> 8 (ventral -> dorsal); X=(q-p)*sqrt(3)/2, Y=(p+q)/2 from hex (p,q)",
+   "square": "rank*8+file in the mover's perspective (planes index), see docs/RETINA.md",
+   "source": {
+    "path": "/home/carlo/Scrivania/fly-chess/data/connectome/column_assignment.csv.gz",
+    "size": 462838,
+    "mtime": 1789308896.169525
+   },
+   "hops_to_output": {
+    "min": 2,
+    "median": 4.0,
+    "max": 6,
+    "unreachable": 40,
+    "n": 5543
+   },
+   "connect": {
+    "enabled": true,
+    "note": "no pruning (max_neurons=None): every path of the filtered connectome is kept"
+   }
+  },
+  "super_class_counts": {
+   "ascending": 1629,
+   "central": 32292,
+   "descending": 1305,
+   "endocrine": 69,
+   "motor": 110,
+   "optic": 77576,
+   "sensory": 12674,
+   "sensory_ascending": 360,
+   "visual_centrifugal": 517,
+   "visual_projection": 7677
+  },
+  "sign_counts": {
+   "excitatory": 1643026,
+   "inhibitory": 1057487
+  },
+  "nt_fallback": {
+   "rule": "unannotated neuron -> syn_count-weighted majority of its edge nt predictions (one sign per neuron)",
+   "unannotated_neurons": 14612,
+   "resolved_by_majority": 9754
+  },
+  "total_syn_count": 34153566.0,
+  "connectome": {
+   "neurons": 139255,
+   "edges": 2700513
+  },
+  "sources": {
+   "connections.csv.gz": {
+    "size": 50289304,
+    "mtime": 1789223160.2547703
+   },
+   "neurons.csv.gz": {
+    "size": 1679884,
+    "mtime": 1789223158.1387253
+   },
+   "classification.csv.gz": {
+    "size": 934402,
+    "mtime": 1789223158.8827412
+   },
+   "consolidated_cell_types.csv.gz": {
+    "size": 901707,
+    "mtime": 1789223158.787739
+   },
+   "coordinates.csv.gz": {
+    "size": 5314546,
+    "mtime": 1789223158.2027266
+   }
+  },
+  "build_time_s": 0.604,
+  "built_at": "2026-09-13T17:09:57+0200"
+ },
+ "total_bytes": 59983600,
+ "blob_sha256": "672729a353ffba09424d8a65e73bc888f48eb6497194c6b6d1a6ed28515fec2d",
+ "gzip_bytes": 49663711,
+ "arrays": [
+  {
+   "name": "csr_indptr",
+   "dtype": "i32",
+   "shape": [
+    134210
+   ],
+   "offset": 0,
+   "length_bytes": 536840
+  },
+  {
+   "name": "csr_indices",
+   "dtype": "i32",
+   "shape": [
+    2663502
+   ],
+   "offset": 536840,
+   "length_bytes": 10654008
+  },
+  {
+   "name": "w",
+   "dtype": "f16",
+   "shape": [
+    2663502
+   ],
+   "offset": 11190848,
+   "length_bytes": 5327004
+  },
+  {
+   "name": "bias",
+   "dtype": "f32",
+   "shape": [
+    134209
+   ],
+   "offset": 16517856,
+   "length_bytes": 536836
+  },
+  {
+   "name": "alpha",
+   "dtype": "f32",
+   "shape": [
+    134209
+   ],
+   "offset": 17054696,
+   "length_bytes": 536836
+  },
+  {
+   "name": "input_idx",
+   "dtype": "i32",
+   "shape": [
+    2048
+   ],
+   "offset": 17591536,
+   "length_bytes": 8192
+  },
+  {
+   "name": "output_idx",
+   "dtype": "i32",
+   "shape": [
+    1415
+   ],
+   "offset": 17599728,
+   "length_bytes": 5660
+  },
+  {
+   "name": "w_in",
+   "dtype": "f16",
+   "shape": [
+    2048,
+    1280
+   ],
+   "offset": 17605392,
+   "length_bytes": 5242880
+  },
+  {
+   "name": "b_in",
+   "dtype": "f32",
+   "shape": [
+    2048
+   ],
+   "offset": 22848272,
+   "length_bytes": 8192
+  },
+  {
+   "name": "policy_w",
+   "dtype": "f16",
+   "shape": [
+    4168,
+    2958
+   ],
+   "offset": 22856464,
+   "length_bytes": 24657888
+  },
+  {
+   "name": "policy_b",
+   "dtype": "f32",
+   "shape": [
+    4168
+   ],
+   "offset": 47514352,
+   "length_bytes": 16672
+  },
+  {
+   "name": "value_w",
+   "dtype": "f16",
+   "shape": [
+    256,
+    2958
+   ],
+   "offset": 47531024,
+   "length_bytes": 1514496
+  },
+  {
+   "name": "value_b",
+   "dtype": "f32",
+   "shape": [
+    256
+   ],
+   "offset": 49045520,
+   "length_bytes": 1024
+  },
+  {
+   "name": "value_w2",
+   "dtype": "f16",
+   "shape": [
+    1,
+    256
+   ],
+   "offset": 49046544,
+   "length_bytes": 512
+  },
+  {
+   "name": "value_b2",
+   "dtype": "f32",
+   "shape": [
+    1
+   ],
+   "offset": 49047056,
+   "length_bytes": 4
+  },
+  {
+   "name": "positions",
+   "dtype": "f16",
+   "shape": [
+    134209,
+    3
+   ],
+   "offset": 49047064,
+   "length_bytes": 805254
+  },
+  {
+   "name": "super_class",
+   "dtype": "u8",
+   "shape": [
+    134209
+   ],
+   "offset": 49852320,
+   "length_bytes": 134209
+  },
+  {
+   "name": "node_perm",
+   "dtype": "i32",
+   "shape": [
+    134209
+   ],
+   "offset": 49986536,
+   "length_bytes": 536836
+  },
+  {
+   "name": "retina_idx",
+   "dtype": "i32",
+   "shape": [
+    5543
+   ],
+   "offset": 50523376,
+   "length_bytes": 22172
+  },
+  {
+   "name": "retina_square",
+   "dtype": "u8",
+   "shape": [
+    5543
+   ],
+   "offset": 50545552,
+   "length_bytes": 5543
+  },
+  {
+   "name": "retina_uv",
+   "dtype": "f16",
+   "shape": [
+    5543,
+    2
+   ],
+   "offset": 50551096,
+   "length_bytes": 22172
+  },
+  {
+   "name": "retina_eye",
+   "dtype": "u8",
+   "shape": [
+    5543
+   ],
+   "offset": 50573272,
+   "length_bytes": 5543
+  },
+  {
+   "name": "w_ret",
+   "dtype": "f16",
+   "shape": [
+    5543,
+    20
+   ],
+   "offset": 50578816,
+   "length_bytes": 221720
+  },
+  {
+   "name": "b_ret",
+   "dtype": "f32",
+   "shape": [
+    5543
+   ],
+   "offset": 50800536,
+   "length_bytes": 22172
+  },
+  {
+   "name": "mod_indptr",
+   "dtype": "i32",
+   "shape": [
+    134210
+   ],
+   "offset": 50822712,
+   "length_bytes": 536840
+  },
+  {
+   "name": "mod_indices",
+   "dtype": "i32",
+   "shape": [
+    37011
+   ],
+   "offset": 51359552,
+   "length_bytes": 148044
+  },
+  {
+   "name": "w_mod",
+   "dtype": "f16",
+   "shape": [
+    37011
+   ],
+   "offset": 51507600,
+   "length_bytes": 74022
+  },
+  {
+   "name": "central_idx",
+   "dtype": "i32",
+   "shape": [
+    32292
+   ],
+   "offset": 51581624,
+   "length_bytes": 129168
+  },
+  {
+   "name": "central_w",
+   "dtype": "f16",
+   "shape": [
+    128,
+    32292
+   ],
+   "offset": 51710792,
+   "length_bytes": 8266752
+  },
+  {
+   "name": "central_b",
+   "dtype": "f32",
+   "shape": [
+    128
+   ],
+   "offset": 59977544,
+   "length_bytes": 512
+  },
+  {
+   "name": "retina_type",
+   "dtype": "u8",
+   "shape": [
+    5543
+   ],
+   "offset": 59978056,
+   "length_bytes": 5543
+  }
+ ],
+ "stage": "selfplay"
+}

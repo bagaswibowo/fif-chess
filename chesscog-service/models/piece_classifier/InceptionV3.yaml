@@ -1,0 +1,50 @@
+DATASET:
+  BATCH_SIZE: 16
+  CLASSES:
+    - black_bishop
+    - black_king
+    - black_knight
+    - black_pawn
+    - black_queen
+    - black_rook
+    - white_bishop
+    - white_king
+    - white_knight
+    - white_pawn
+    - white_queen
+    - white_rook
+  PATH: data://pieces
+  TRANSFORMS:
+    CENTER_CROP: null
+    RANDOM_HORIZONTAL_FLIP: null
+    RESIZE:
+      - 299
+      - 299
+    COLOR_JITTER:
+      BRIGHTNESS: 0.
+      CONTRAST: 0.
+      SATURATION: 0.
+      HUE: 0.
+    SHEAR: null
+    SCALE:
+      VERTICAL: null
+      HORIZONTAL: null
+    TRANSLATE:
+      VERTICAL: null
+      HORIZONTAL: null
+  WORKERS: 2
+TRAINING:
+  MODEL:
+    NAME: InceptionV3
+    REGISTRY: PIECE_CLASSIFIER
+  PHASES:
+    - EPOCHS: 2
+      OPTIMIZER:
+        LEARNING_RATE: 0.001
+        NAME: Adam
+      PARAMS: head
+    - EPOCHS: 4
+      OPTIMIZER:
+        LEARNING_RATE: 0.0001
+        NAME: Adam
+      PARAMS: all
