@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --port 43173 --hostname 127.0.0.1",
     "build": "next build",
-    "start": "next start --port 43173 --hostname 127.0.0.1",
+    "start": "next start -p 43173 -H 0.0.0.0",
     "lint": "eslint",
     "test": "npx tsx scripts/check-core.ts",
     "test:watch": "npm test"

@@ -460,14 +460,14 @@ export async function POST(req: NextRequest) {
       if (omniRes) return NextResponse.json(omniRes);
     }
 
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Papan catur tidak terdeteksi otomatis pada gambar ini. Silakan gunakan fitur potong 4 sudut (crop perspektif), atau atur posisi bidak secara visual di Papan Referensi.",
-      },
-      { status: 422 }
-    );
+    // Jika model lokal tidak merespons, buka posisi langsung ke Mode Edit Papan
+    return NextResponse.json({
+      ok: true,
+      fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      needEdit: true,
+      source: "edit-mode-fallback",
+      message: "Papan siap diatur. Silakan gunakan Mode Edit Papan untuk menyesuaikan posisi bidak."
+    });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err.message || "Kesalahan server saat memproses gambar." }, { status: 500 });
   }

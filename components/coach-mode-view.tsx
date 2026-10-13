@@ -559,7 +559,7 @@ export function CoachModeView({ lang = "id" }: Props) {
                       </Button>
                       <Button onClick={() => setShowHintArrow(v => !v)} variant="outline" size="sm"
                         className={`flex-1 min-w-0 px-2 h-8 text-xs font-bold border-[#81b64c]/40 flex gap-1.5 items-center justify-center ${
-                          showHintArrow ? "bg-[#38bdf8] text-[#1f291e] border-[#38bdf8] hover:bg-[#38bdf8]/90" : "bg-transparent text-[#81b64c] hover:bg-[#81b64c]/20"
+                          showHintArrow ? "bg-sky-500 text-white font-extrabold border-sky-400 hover:bg-sky-600 shadow-sm" : "bg-transparent text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/20"
                         }`}>
                         {showHintArrow ? <IconClose3D size={13} /> : <IconTarget3D size={13} />}
                         <span className="truncate">{showHintArrow ? (lang === "id" ? "Sembunyi" : "Hide") : (lang === "id" ? "Tunjukkan" : "Show")}</span>

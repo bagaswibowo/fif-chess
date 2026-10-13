@@ -241,6 +241,60 @@ export function Game() {
   const chess = useMemo(() => new Chess(fen), [fen]);
   const outcome = describeOutcome(chess);
   const effectiveOutcome = customOutcome ?? outcome;
+
+  // Siaran Langsung & Rekaman Pertandingan
+  const [isPublicBroadcast, setIsPublicBroadcast] = useState(true);
+  const [saveMatchReplay, setSaveMatchReplay] = useState(true);
+  const [broadcastId, setBroadcastId] = useState<string>("");
+  const [spectateMatchId, setSpectateMatchId] = useState<string | null>(null);
+  const [spectateMatchData, setSpectateMatchData] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URLSearchParams(window.location.search).get("spectate");
+    if (p) {
+      setSpectateMatchId(p);
+      fetch(`/api/broadcast?id=${p}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.ok && d.match) setSpectateMatchData(d.match);
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const syncBroadcast = useCallback(
+    (nextFen: string, uci?: string, san?: string, comm?: any, isOver?: boolean, outcomeLabel?: string) => {
+      if (!broadcastId) return;
+      const whiteName = humanSide === "white" ? me.name : AI_LABEL[selectedAiOpponent] || "Engine";
+      const blackName = humanSide === "black" ? me.name : AI_LABEL[selectedAiOpponent] || "Engine";
+      void fetch("/api/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: broadcastId,
+          whiteName,
+          blackName,
+          fen: nextFen,
+          moves: chess.history(),
+          lastUci: uci,
+          commentary: comm,
+          over: isOver !== undefined ? isOver : effectiveOutcome.over,
+          outcomeLabel: outcomeLabel || effectiveOutcome.label,
+          isPublic: isPublicBroadcast,
+          saveReplay: saveMatchReplay,
+        }),
+      }).catch(() => {});
+    },
+    [broadcastId, humanSide, me.name, selectedAiOpponent, chess, effectiveOutcome, isPublicBroadcast, saveMatchReplay],
+  );
+
+  // Otomatis akhiri siaran & kelola rekaman publik saat game selesai
+  useEffect(() => {
+    if (effectiveOutcome.over && broadcastId) {
+      syncBroadcast(fen, undefined, undefined, undefined, true, effectiveOutcome.label);
+    }
+  }, [effectiveOutcome.over, effectiveOutcome.label, broadcastId, fen, syncBroadcast]);
   const turn = sideToMove(chess);
   const humanToMove = !effectiveOutcome.over && turn === humanSide && !thinking;
 
@@ -372,6 +426,8 @@ export function Game() {
 
   const startGame = useCallback(
     (side: Side) => {
+      const newBId = "LIVE-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      setBroadcastId(newBId);
       // "Acak" diundi di sini, sekali, lalu meng jadi nilai tetap.
       const resolved: Side = sideChoice === "random" ? (Math.random() < 0.5 ? "white" : "black") : side;
       setSideResolved(resolved);
@@ -560,6 +616,9 @@ export function Game() {
         });
         return true;
       }
+
+      // Sync move to live broadcast
+      syncBroadcast(nextFen, legal.uci, applied.san);
 
       // AI Mode
       const nextOutcome = describeOutcome(chess);
@@ -1522,6 +1581,53 @@ export function Game() {
                                   </div>
                                 </div>
                               )}
+
+                              {/* TOGGLES SIARAN LANGSUNG & REKAMAN PERTANDINGAN */}
+                              <div className="space-y-2 py-2 border-t border-[var(--border)]">
+                                <div className="flex items-center justify-between py-1">
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-bold text-white">Siarkan ke Publik</div>
+                                    <div className="text-[10px] text-neutral-400">Izinkan orang lain menonton siaran langsung</div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={isPublicBroadcast}
+                                    onClick={() => setIsPublicBroadcast(!isPublicBroadcast)}
+                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                      isPublicBroadcast ? "bg-emerald-500" : "bg-neutral-700"
+                                    }`}
+                                  >
+                                    <span
+                                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                                        isPublicBroadcast ? "translate-x-4" : "translate-x-0"
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center justify-between py-1 border-t border-neutral-800">
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-bold text-white">Simpan Rekaman Pertandingan</div>
+                                    <div className="text-[10px] text-neutral-400">Bisa ditonton ulang via tautan share publik saat permainan selesai</div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={saveMatchReplay}
+                                    onClick={() => setSaveMatchReplay(!saveMatchReplay)}
+                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                      saveMatchReplay ? "bg-emerald-500" : "bg-neutral-700"
+                                    }`}
+                                  >
+                                    <span
+                                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                                        saveMatchReplay ? "translate-x-4" : "translate-x-0"
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
+                              </div>
 
                               {/* GIANT CHESS.COM GREEN CTA BUTTON */}
                               <button
