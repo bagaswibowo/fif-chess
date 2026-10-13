@@ -1,0 +1,59 @@
+services:
+  chesscog:
+    build:
+      context: ./chesscog-service
+      dockerfile: Dockerfile
+    image: jev-chesscog:latest
+    container_name: jev-chesscog
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  yolo11:
+    build:
+      context: ./yolo11-service
+      dockerfile: Dockerfile
+    image: jev-yolo11:latest
+    container_name: jev-yolo11
+    restart: unless-stopped
+    # Model bidak catur pretrained diunduh OTOMATIS oleh entrypoint saat
+    # container start (yolo11n fine-tune, 12 kelas). Tidak perlu setup manual.
+    environment:
+      - YOLO_MODEL_PATH=/app/models/best.pt
+      - YOLO_MODEL_URL=${YOLO_MODEL_URL:-https://huggingface.co/dopaul/chess-piece-detector-merged-v2/resolve/main/best.pt}
+      - YOLO_CONF_THRESHOLD=${YOLO_CONF_THRESHOLD:-0.25}
+    volumes:
+      - ./models/yolo11:/app/models
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jev-chess:latest
+    container_name: jev-chess
+    restart: unless-stopped
+    ports:
+      - "43173:43173"
+    environment:
+      - TYPESAFE_API_KEY=${TYPESAFE_API_KEY}
+      - SITE_HMAC_KEY=${SITE_HMAC_KEY:-}
+      - SITE_PASSWORD_HMAC=${SITE_PASSWORD_HMAC:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?ADMIN_PASSWORD wajib diset di .env}
+      - NODE_ENV=production
+      - JEV_DATA_DIR=/app/data
+      - CHESSCOG_URL=http://chesscog:8000
+      - YOLO11_URL=http://yolo11:8100
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+
+  cftunnel-jev-chess:
+    image: cloudflare/cloudflared:latest
+    container_name: cftunnel-jev-chess
+    restart: unless-stopped
+    network_mode: host
+    profiles:
+      - cloudflare
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate --protocol http2 run

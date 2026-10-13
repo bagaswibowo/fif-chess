@@ -1,0 +1,80 @@
+import { Chess } from "chess.js";
+import { applyUci, describeOutcome } from "../chess";
+import type { EngineId, IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
+import { stockfishEngine, getStockfishPrediction } from "./stockfish";
+import { pureJevEngine } from "./jev";
+import { pureSuperflyEngine } from "./flybrain";
+import { jevSuperflyHybridEngine } from "./hybrid";
+import { getOpeningBookMove } from "./opening-book";
+import { fenEngineCache } from "./lru-cache";
+
+export * from "./types";
+export { stockfishEngine, getStockfishPrediction } from "./stockfish";
+export { pureJevEngine } from "./jev";
+export { pureSuperflyEngine } from "./flybrain";
+export { jevSuperflyHybridEngine } from "./hybrid";
+export { getOpeningBookMove } from "./opening-book";
+export {
+  tacticalGatekeeper,
+  allowsUnsafeEnemyPromotion,
+  type TacticalGateOptions,
+  type TacticalGateResult,
+} from "./tactical-gatekeeper";
+
+const engines: Record<EngineId, IChessEngine> = {
+  stockfish: stockfishEngine,
+  jev: pureJevEngine,
+  fly: pureSuperflyEngine,
+  "jev-fly": jevSuperflyHybridEngine,
+};
+
+export function getEngine(id: EngineId): IChessEngine {
+  const engine = engines[id];
+  if (!engine) {
+    throw new Error(`Engine "${id}" not found. Available: ${Object.keys(engines).join(", ")}`);
+  }
+  return engine;
+}
+
+export async function playEngineMove(
+  id: EngineId,
+  req: EngineMoveRequest,
+): Promise<EngineMoveResponse> {
+  const cacheKey = id + ":" + req.fen;
+  const cached = fenEngineCache.get(cacheKey);
+  if (cached) return cached;
+  // Hanya Stockfish yang menggunakan buku pembukaan terstruktur jika diperlukan;
+  // Seluruh engine bio-AI (Jev, Fly, Jev-Fly) memainkan langkah pembukaan secara natural & acak,
+  // membaca gerakan lawan secara adaptif tanpa terikat teori pembukaan kaku.
+  if (id === "stockfish") {
+    const bookMove = getOpeningBookMove(req.fen, req.seed ?? 0);
+    if (bookMove) {
+      try {
+        const ch = new Chess(req.fen);
+        const app = applyUci(ch, bookMove);
+        if (app) {
+          const prediction = await getStockfishPrediction(ch.fen(), bookMove);
+          return {
+            engine: id,
+            uci: bookMove,
+            san: app.san,
+            fen: ch.fen(),
+            probabilities: { [bookMove]: 1.0 },
+            confidence: 1.0,
+            droppedMoveCount: 0,
+            outcome: describeOutcome(ch),
+            prediction,
+            metadata: {
+              source: "master_opening_book",
+            },
+          };
+        }
+      } catch {}
+    }
+  }
+
+  const engine = getEngine(id);
+  const response = await engine.play(req);
+  fenEngineCache.set(cacheKey, response);
+  return response;
+}

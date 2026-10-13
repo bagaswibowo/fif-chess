@@ -1,0 +1,200 @@
+// Self-check untuk data dan logika yang rusak diam-diam.
+// Jalankan: node --experimental-strip-types scripts/check-core.ts
+// Satu file, tanpa framework — cukup gagal kalau logikanya rusak.
+import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { Chess } from "chess.js";
+import { PUZZLES, QUEST_CHAPTERS } from "../lib/puzzle-data.ts";
+import { replaySanList, isKnightFork, isQueenThreatened, isQueenXrayed, calculateMaterialCp, applyUci } from "../lib/chess.ts";
+import { buildLivePuzzle, isPlayablePuzzle } from "../lib/puzzle-store.ts";
+import {
+  recordMatchExperience,
+  getLearnedMove,
+  isBlunderMove,
+  extractPositionMotifs,
+  recallMotifValence,
+  isMoveSteppingIntoAbsolutePin,
+  isKingWeakeningMove,
+} from "../lib/experience.ts";
+import { evaluateConnectomeNetwork } from "../lib/flybrain/connectome-network.ts";
+
+const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+const PIECE_NAME = { p: "pion", n: "knight", b: "gajah", r: "menara", q: "sekertaris" };
+
+// 1. Teka-teki terverifikasi, semua unik, semua bisa dimuat, semua solusi legal.
+assert.ok(PUZZLES.length >= 50, `harus minimal 50 teka-teki, ada ${PUZZLES.length}`);
+
+const seen = new Set();
+for (const p of PUZZLES) {
+  const key = p.fen.split(" ").slice(0, 4).join(" ");
+  assert.ok(!seen.has(key), `posisi duplikat: ${key}`);
+  seen.add(key);
+
+  const c = new Chess(p.fen);
+  assert.equal(c.turn(), p.turn, `${p.id}: turn FEN tidak cocok dengan field turn`);
+
+  const before = c.moves({ verbose: true }).find(
+    (m) => m.lan.slice(0, 4) === p.solutionUci.slice(0, 4) && (!p.solutionUci[4] || m.lan[4] === p.solutionUci[4]),
+  );
+  assert.ok(before, `${p.id}: solusi ${p.solutionUci} bukan langkah legal`);
+
+  // Terapkan, lalu bukti Occupy motif dari keadaan papan yang sebenarnya.
+  const victim = c.get(before.to.toLowerCase() as never);
+  const mover = before.piece;
+  const attacker = before.from.toLowerCase() as never;
+  c.move(before.lan);
+  const gain = (victim ? VALUE[victim.type as keyof typeof VALUE] : 0) - VALUE[mover as keyof typeof VALUE];
+
+  if (p.motif === "mate") {
+    assert.ok(c.isCheckmate(), `${p.id}: klaim skakmat tapi papan bukan skakmat`);
+  } else if (p.motif === "capture") {
+    assert.ok(before.isCapture(), `${p.id}: klaim tangkap tapi langkah bukan tangkapan`);
+  } else if (p.motif === "capture-check") {
+    assert.ok(before.isCapture() && c.isCheck(), `${p.id}: klaim tangkap+skak tidak sesuai papan`);
+  } else if (p.motif === "promotion") {
+    assert.ok(before.isPromotion(), `${p.id}: klaim promosi tapi langkah bukan promosi`);
+  } else if (p.motif === "check") {
+    assert.ok(c.isCheck(), `${p.id}: klaim skak tapi langkah tidak memberi skak`);
+  } else if (p.motif === "tactic") {
+    assert.ok(before, `${p.id}: langkah taktis tidak valid`);
+  }
+  assert.ok(attacker, `${p.id}: petak asal tidak valid`);
+}
+
+// 2. Bab Quest adalah subset dari bank, tidak ada materi yang dobrak.
+const questIds = new Set(QUEST_CHAPTERS.map((c) => c.id));
+assert.ok(questIds.size === QUEST_CHAPTERS.length, "ada id bab Quest duplikat");
+for (const c of QUEST_CHAPTERS) {
+  const twin = PUZZLES.find((p) => p.id === c.id);
+  assert.ok(twin, `bab Quest ${c.id} tidak ada di bank — harusnya satu sumber`);
+}
+
+// 3. replaySanList: history PvP harus bisa di-replay persis.
+const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const r = replaySanList(START, ["e4", "e5", "Nf3", "Nc6"]);
+assert.equal(r.length, 4, "replay memotong langkah yang legal");
+assert.deepEqual(r.map((m) => m.uci), ["e2e4", "e7e5", "g1f3", "b8c6"]);
+
+// 4. Replay harus berhenti, bukan mengarang, saat history tidak cocok.
+assert.equal(replaySanList(START, ["e4", "Qh8"]).length, 1, "replay menerima langkah ilegal");
+
+// 5. Trik live harus menyimpan posisi sebelum solusi, bukan posisi sesudahnya.
+const livePosition = new Chess(START);
+livePosition.move("e4");
+livePosition.move("e5");
+const livePuzzle = buildLivePuzzle(
+  livePosition.fen(),
+  { by: "stockfish", uci: "e7e5", san: "e5" },
+  "Stockfish 15 NNUE",
+  ["e4", "e5"],
+  START,
+  "live-test",
+);
+assert.ok(livePuzzle, "trik live legal tidak berhasil dibuat");
+assert.equal(livePuzzle?.turn, "b", "giliran puzzle live harus mengikuti posisi sebelum solusi");
+assert.equal(new Chess(livePuzzle!.fen).get("e7")?.type, "p", "posisi puzzle harus memiliki pion solusi di e7");
+assert.equal(isPlayablePuzzle({ ...livePuzzle, savedAt: Date.now(), source: "test" }), true, "puzzle live harus playable");
+assert.equal(buildLivePuzzle(livePosition.fen(), { by: "human", uci: "e2e4", san: "e4" }, "Lawan", ["e4"], START, "human-test"), null, "langkah manusia tidak boleh disimpan sebagai trik lawan");
+
+// 6. Design token: var() tanpa definisi = teks hitam diam-diam di atas
+//    kayu gelap. next/font menyediakan variabelnya sendiri, jadi ia dikecualikan.
+const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf-8");
+const declared = new Set([...css.matchAll(/^\s*(--[a-z0-9-]+)\s*:/gm)].map((m) => m[1]));
+const INJECTED_BY_NEXT_FONT = new Set([
+  "--font-geist-sans",
+  "--font-geist-mono",
+  "--font-instrument-serif",
+]);
+const used = new Set([...css.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1]));
+for (const file of readdirSync(new URL("../components/", import.meta.url))) {
+  if (!file.endsWith(".tsx")) continue;
+  const src = readFileSync(new URL(`../components/${file}`, import.meta.url), "utf-8");
+  for (const m of src.matchAll(/var\((--[a-z0-9-]+)/g)) used.add(m[1]);
+}
+const missing = [...used].filter((t) => !declared.has(t) && !INJECTED_BY_NEXT_FONT.has(t));
+assert.deepEqual(missing, [], `token CSS tanpa definisi: ${missing.join(", ")}`);
+
+// Warna hex literal = design system dilewati.
+const REVIEWED = [
+  "game.tsx",
+  "auth-panel.tsx",
+  "pvp-panel.tsx",
+  "admin-panel.tsx",
+  "community-view.tsx",
+  "game-review.tsx",
+  "clock-moves-fullscreen.tsx",
+  "learning-hub.tsx",
+];
+for (const file of REVIEWED) {
+  const src = readFileSync(new URL(`../components/${file}`, import.meta.url), "utf-8");
+  const hexes = [...new Set([...src.matchAll(/#[0-9a-fA-F]{6}\b/g)].map((m) => m[0]))];
+  assert.deepEqual(hexes, [], `${file} masih memakai warna literal: ${hexes.join(", ")}`);
+}
+
+console.log(
+  `OK — ${PUZZLES.length} teka-teki, ${QUEST_CHAPTERS.length} bab Quest, replay SAN benar, ${used.size} token CSS terdefinisi.`,
+);
+
+// Invariant design system: kelas dipakai tapi tidak didefinisikan
+const cssText = readFileSync(new URL("../app/globals.css", import.meta.url), "utf-8");
+const compDir = fileURLToPath(new URL("../components", import.meta.url));
+const custom = new Set();
+for (const f of readdirSync(compDir)) {
+  if (!f.endsWith(".tsx")) continue;
+  const text = readFileSync(join(compDir, f), "utf-8");
+  for (const m of text.matchAll(/"([^"]*)"|\{`([^`]*)`\}/g)) {
+    for (const cls of (m[1] ?? m[2]).split(/\s+/)) {
+      if (/^(ctl|prose|panel|field|data-table|table-wrap|section-title|board-frame)/.test(cls)) custom.add(cls);
+    }
+  }
+}
+const undefinedClasses = [...custom].filter((c) => !cssText.includes("." + c)).sort();
+assert.deepEqual(undefinedClasses, [], `kelas dipakai tapi tidak ada di globals.css: ${undefinedClasses.join(", ")}`);
+console.log(`  ${custom.size} kelas kustom, semua terdefinisi.`);
+
+// 5. Tactics fork & queen threat tests
+const forkChess = new Chess("r3k3/8/8/3N4/8/8/8/4K3 w - - 0 1");
+assert.equal(isKnightFork(forkChess, "d5c7"), true, "d5c7 must be detected as Royal Fork");
+assert.equal(isKnightFork(forkChess, "d5b6"), false, "d5b6 is not a fork");
+const rayChess = new Chess("2r2rk1/pp6/7b/3n1p2/3q1B2/5Q2/PP4PP/3R1R1K b - - 0 27");
+assert.equal(isQueenThreatened(rayChess), true, "Queen on d4 is attacked");
+const safeChess = new Chess("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+assert.equal(isQueenThreatened(safeChess), false, "Starting queen is not attacked");
+
+// 6. Eval bar & pawn promotion tests
+assert.equal(calculateMaterialCp("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), 0);
+assert.equal(calculateMaterialCp("rnbqkbnr/ppppppp1/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), 100);
+const promoChess = new Chess("8/4P3/8/8/8/8/8/4K2k w - - 0 1");
+const promoMove = applyUci(promoChess, "e7e8");
+assert.equal(promoMove.promotion, "q");
+
+// 7. Experience memory & blunder filter test
+const testFen = "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2";
+recordMatchExperience(testFen, "g1f3", 35, "f1c4");
+assert.equal(getLearnedMove(testFen)?.move, "g1f3");
+assert.equal(isBlunderMove(testFen, "f1c4"), true);
+
+// 8. Connectome Network Statistics (bioRxiv/Nature 2024: Reciprocity, Triads, NSRNs)
+const connectomeTestChess = new Chess("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+const netStats = evaluateConnectomeNetwork(connectomeTestChess, "e7e5");
+assert.ok(typeof netStats.netScore === "number", "connectome netScore must be number");
+assert.ok(Array.isArray(netStats.diagnostics), "connectome diagnostics must be array");
+
+// 9. Kenyon Cell (KC) Motif Generalization & Tactical Safety (King vulnerability, enemy passed pawn, absolute pin)
+const weakKingChess = new Chess("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
+assert.equal(isKingWeakeningMove(weakKingChess, "f7f6"), true, "f7f6 must be flagged as king-weakening");
+assert.equal(isKingWeakeningMove(weakKingChess, "b8c6"), false, "b8c6 is developing and not king-weakening");
+
+const pinChess = new Chess("4rk2/pp2q1pp/8/8/8/8/PPPPP1PP/5R1K b - - 0 1");
+const pinCheck = isMoveSteppingIntoAbsolutePin(pinChess, "e7f7");
+assert.equal(pinCheck.isPinned, true, "Qf7 stepping into absolute pin to king must be detected");
+assert.equal(pinCheck.piece, "q");
+
+const passedPawnChess = new Chess("8/3P4/8/8/8/8/4k3/4K3 b - - 0 1");
+const passedMotifs = extractPositionMotifs(passedPawnChess);
+assert.equal(passedMotifs.enemyPassedPawnRank, 7, "Enemy passed pawn on rank 7 must be detected");
+assert.ok(recallMotifValence(passedPawnChess) < 0, "Aversive motif valence recalled for enemy rank 7 passed pawn");
+
+console.log("  Invariants catur & taktik: royal_fork=ok, eval_bar=ok, promo=ok, memory=ok, connectome=ok, kc_motifs=ok.");

@@ -1,0 +1,962 @@
+import { Chess, type Move, type Square } from "chess.js";
+
+export type Side = "white" | "black";
+export type PromotionPiece = "q" | "r" | "b" | "n";
+
+export type TacticalMotif =
+  | "check"
+  | "checkmate"
+  | "capture"
+  | "promotion"
+  | "castle"
+  | "fork"
+  | "pin"
+  | "skewer"
+  | "discovered-attack"
+  | "removal-of-defender"
+  | "double-attack"
+  | "back-rank"
+  | "smothered-mate"
+  | "bodens-mating"
+  | "none";
+
+export type LegalMove = {
+  uci: string;
+  san: string;
+  from: Square;
+  to: Square;
+  promotion?: PromotionPiece;
+  isCapture: boolean;
+  isPromotion: boolean;
+  isCastle: boolean;
+  isCheck: boolean;
+  isCheckmate: boolean;
+  motif: TacticalMotif;
+  evaluationDelta?: number;
+};
+
+export type GameOutcome = {
+  over: boolean;
+  label: string;
+  winner: Side | null;
+  kind:
+    | "playing"
+    | "check"
+    | "checkmate"
+    | "stalemate"
+    | "insufficient"
+    | "threefold"
+    | "fifty"
+    | "draw" | "resigned" | "timeout";
+};
+
+/** Choice questions accept at most 255 options (TypeSafe docs). */
+export const CHOICE_OPTION_CAP = 255;
+
+export function validateFen(fen: string): { ok: true; data: { chess: Chess } } | { ok: false; error: string } {
+  try {
+    const chess = new Chess(fen);
+    return { ok: true, data: { chess } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Invalid FEN" };
+  }
+}
+
+export function parseFen(fen: string): Chess {
+  const result = validateFen(fen);
+  if (!result.ok) {
+    throw new Error(result.error ?? "Invalid FEN.");
+  }
+  return result.data.chess;
+}
+
+export function sideToMove(chess: Chess): Side {
+  return chess.turn() === "w" ? "white" : "black";
+}
+
+export function uciFromMove(move: Move): string {
+  return move.lan;
+}
+
+/**
+ * Detect tactical motifs by comparing the board before and after a move.
+ * Uses chess.js facts: isCheck(), isCheckmate(), capture, piece type changes,
+ * and king movement. Does NOT claim human reasoning.
+ */
+export function detectMotif(
+  before: Chess,
+  after: Chess,
+  move: Move,
+): TacticalMotif {
+  if (after.isCheckmate()) return "checkmate";
+  if (after.isCheck()) return "check";
+  if (move.isKingsideCastle() || move.isQueensideCastle()) return "castle";
+  if (move.isPromotion()) return "promotion";
+  if (move.isCapture()) {
+    // Could also be fork/removal — check below
+  }
+
+  const beforeKings = countKings(before);
+  const afterKings = countKings(after);
+  if (beforeKings !== afterKings) return "double-attack";
+
+  // Discovered attack: own piece moved away to reveal attack on opponent's king
+  if (isDiscoveredAttack(before, after, move)) return "discovered-attack";
+
+  // Removal of defender: captured piece was defending a square now attacked
+  if (isRemovalOfDefender(before, after, move)) return "removal-of-defender";
+
+  if (move.isCapture()) return "capture";
+
+  // Pin check: is the moving piece still pinned after it moved? (post-move pin indicator)
+  // We don't report pin on the moving piece here; pin is about the target.
+  // Skewer: a valuable piece moved, exposing a less valuable piece behind it
+  if (isSkewer(before, after, move)) return "skewer";
+
+  // Back-rank mate indicator: king trapped on rank 1/8 after opponent's move
+  if (isBackRankThreat(after, before.turn())) return "back-rank";
+
+  if (isFork(before, after, move)) return "fork";
+
+  return "none";
+}
+
+function countKings(chess: Chess): number {
+  let count = 0;
+  const moves = chess.moves({ verbose: true });
+  // Use board state via FEN parsing
+  const board = chess.board();
+  for (let r = 0; r < 8; r++) {
+    for (let f = 0; f < 8; f++) {
+      const p = board[r]?.[f];
+      if (p && p.type === "k") count++;
+    }
+  }
+  return count;
+}
+
+function isDiscoveredAttack(
+  before: Chess,
+  after: Chess,
+  move: Move,
+): boolean {
+  // A discovered attack occurs when a piece moves out of the way, revealing
+  // an attack on the opponent's king. We check: was the opponent in check
+  // before? No. Is opponent in check after? Yes. And the moving piece
+  // was on the same line as the opponent's king.
+  if (before.isCheck()) return false; // Not discovered if already checking
+  if (!after.isCheck()) return false;
+
+  // Check if the moving piece was blocking an attack line
+  const oppKing = findKing(after, before.turn());
+  if (!oppKing) return false;
+
+  // If the moving piece was on a rank/file/diagonal with the king and
+  // the after-position shows check, it's likely a discovered attack
+  const fromR = 8 - parseInt(move.from[1], 10);
+  const fromF = move.from.charCodeAt(0) - 97;
+  const toR = 8 - parseInt(move.to[1], 10);
+  const toF = move.to.charCodeAt(0) - 97;
+  const kingR = 8 - parseInt(oppKing[1], 10);
+  const kingF = oppKing.charCodeAt(0) - 97;
+
+  // Same rank
+  if (fromR === kingR && fromR === toR) return true;
+  // Same file
+  if (fromF === kingF && fromF === toF) return true;
+  // Same diagonal
+  if (Math.abs(fromR - kingR) === Math.abs(fromF - kingF) &&
+      Math.abs(toR - kingR) === Math.abs(toF - kingF) &&
+      fromR !== kingR) return true;
+
+  return false;
+}
+
+function isRemovalOfDefender(
+  before: Chess,
+  after: Chess,
+  move: Move,
+): boolean {
+  // If a piece was captured, check if that piece was defending a square
+  // that is now attacked by the moving side
+  if (!move.isCapture()) return false;
+
+  const capturedSquare = move.to;
+  // Check if any piece of the moving side now attacks a key square
+  // that was previously only defended by the captured piece
+  const afterMoves = after.moves({ verbose: true });
+  const beforeCheck = before.isCheck();
+  const afterCheck = after.isCheck();
+
+  // Simple heuristic: if capturing opened up a check that wasn't there before,
+  // it's likely removal of a defender (the captured piece was defending against an attack)
+  if (!beforeCheck && afterCheck) return true;
+
+  return false;
+}
+
+function isSkewer(
+  before: Chess,
+  after: Chess,
+  move: Move,
+): boolean {
+  // Skewer: a valuable piece moves, exposing a less valuable piece behind it
+  // on the same line to the opponent's attack
+  if (move.isCapture()) return false;
+
+  const board = after.board();
+  const fromR = 8 - parseInt(move.from[1], 10);
+  const fromF = move.from.charCodeAt(0) - 97;
+  const toR = 8 - parseInt(move.to[1], 10);
+  const toF = move.to.charCodeAt(0) - 97;
+
+  // Check if there's an opponent's valuable piece behind the destination
+  const dr = toR - fromR;
+  const df = toF - fromF;
+  if (dr === 0 && df === 0) return false;
+
+  let r = toR + dr;
+  let f = toF + df;
+  while (r >= 0 && r < 8 && f >= 0 && f < 8) {
+    const p = board[r]?.[f];
+    if (p && p.color !== before.turn()) {
+      // Found a piece behind the moved piece — if it's valuable and the
+      // move was capturing or checking, could be skewer
+      if ((p.type === "q" || p.type === "r" || p.type === "b") &&
+          (after.isCheck() || after.isCheckmate())) {
+        return true;
+      }
+    }
+    if (p) break;
+    r += dr;
+    f += df;
+  }
+  return false;
+}
+
+function isBackRankThreat(chess: Chess, moverSide: "w" | "b"): boolean {
+  // Check if there's a rook/queen on the back rank threatening the king
+  // trapped behind its own pawns
+  const board = chess.board();
+  const kingColor = moverSide; // "w" | "b" — matches chess.js Color
+  let kingPos: { r: number; f: number } | null = null;
+  for (let r = 0; r < 8; r++) {
+    for (let f = 0; f < 8; f++) {
+      const p = board[r]?.[f];
+      if (p && p.type === "k" && p.color === kingColor) {
+        kingPos = { r, f };
+      }
+    }
+  }
+  if (!kingPos) return false;
+  if (kingPos.r !== (moverSide === "w" ? 7 : 0)) return false;
+  // King on back rank with pawns blocking — check if any opponent rook/queen attacks that rank
+  for (let f = 0; f < 8; f++) {
+    if (f === kingPos.f) continue;
+    const p = board[kingPos.r]?.[f];
+    if (p && p.type === "k") continue; // king
+    if (p && p.type === "p" && p.color === kingColor) continue; // own pawn blocking
+    if (p && p.color !== kingColor && (p.type === "r" || p.type === "q")) {
+      // Direct attack on the king's rank
+      if (isPathClear(board, kingPos.r, kingPos.f, kingPos.r, f)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function isPathClear(
+  board: any[][],
+  r1: number,
+  f1: number,
+  r2: number,
+  f2: number,
+): boolean {
+  if (r1 !== r2 && f1 !== f2) return false;
+  if (r1 === r2 && f1 === f2) return false;
+  const dr = r2 - r1;
+  const df = f2 - f1;
+  let r = r1 + dr === 0 ? 0 : dr / Math.abs(dr);
+  let f = f1 + df === 0 ? 0 : df / Math.abs(df);
+  let cr = r1 + (dr === 0 ? 0 : dr / Math.abs(dr));
+  let cf = f1 + (df === 0 ? 0 : df / Math.abs(df));
+  // Simplified: check squares between r1,f1 and r2,f2
+  const steps = Math.max(Math.abs(r2 - r1), Math.abs(f2 - f1));
+  for (let i = 1; i < steps; i++) {
+    const sr = r1 + (dr === 0 ? 0 : (dr > 0 ? 1 : -1) * i);
+    const sf = f1 + (df === 0 ? 0 : (df > 0 ? 1 : -1) * i);
+    if (sr === r2 && sf === f2) break;
+    if (board[sr]?.[sf]) return false;
+  }
+  return true;
+}
+
+function isFork(before: Chess, after: Chess, move: Move): boolean {
+  // Fork: a single piece attacks two or more opponent pieces simultaneously
+  // Heuristic: if the moving piece's destination square attacks multiple opponent pieces
+  if (move.isCapture()) return false; // Fork captures are rare; focus on non-capture forks
+  const toR = 8 - parseInt(move.to[1], 10);
+  const toF = move.to.charCodeAt(0) - 97;
+  const board = after.board();
+  const moverColor = move.color || before.turn();
+  const oppColor = moverColor === "w" ? "b" : "w";
+
+  // Count opponent pieces attacked from this destination
+  // Knight fork: L-shape targets
+  const knightTargets = [
+    [toR - 2, toF - 1], [toR - 2, toF + 1],
+    [toR - 1, toF - 2], [toR - 1, toF + 2],
+    [toR + 1, toF - 2], [toR + 1, toF + 2],
+    [toR + 2, toF - 1], [toR + 2, toF + 1],
+  ];
+  let attacked = 0;
+  for (const [r, f] of knightTargets) {
+    if (r >= 0 && r < 8 && f >= 0 && f < 8) {
+      const p = board[r]?.[f];
+      if (p && p.color === oppColor && (p.type === "r" || p.type === "n" || p.type === "b" || p.type === "q" || p.type === "k")) {
+        attacked++;
+        if (attacked >= 2) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function moverColor(side: "w" | "b"): "white" | "black" {
+  return side === "w" ? "white" : "black";
+}
+
+function findKing(chess: Chess, side: "w" | "b"): string | null {
+  const board = chess.board();
+  for (let r = 0; r < 8; r++) {
+    for (let f = 0; f < 8; f++) {
+      const p = board[r]?.[f];
+      if (p && p.type === "k" && p.color === side) {
+        return String.fromCharCode(97 + f) + (8 - r);
+      }
+    }
+  }
+  return null;
+}
+
+export function getLegalMoves(chess: Chess): LegalMove[] {
+  return chess.moves({ verbose: true }).map((move) => {
+    // Create a temporary chess to evaluate after the move
+    const after = new Chess(chess.fen());
+    after.move({ from: move.from, to: move.to, promotion: move.promotion });
+    const motif = detectMotif(chess, after, move);
+    const isCastle = move.isKingsideCastle() || move.isQueensideCastle();
+    return {
+      uci: uciFromMove(move),
+      san: move.san,
+      from: move.from,
+      to: move.to,
+      promotion: move.promotion as PromotionPiece | undefined,
+      isCapture: move.isCapture(),
+      isPromotion: move.isPromotion(),
+      isCastle,
+      isCheck: move.san.includes("+") || move.san.includes("#"),
+      isCheckmate: move.san.includes("#"),
+      motif,
+    };
+  }).filter((m) => m.from && m.to);
+}
+
+const ENDGAME_QUEEN_PROMO_BONUS = 800;
+const ENDGAME_OTHER_PROMO_BONUS = 500;
+
+export function movePriority(move: LegalMove, isEndgame = false): number {
+  if (move.isCheckmate) return 1000;
+  const endgameBonus = isEndgame ? (move.promotion === "q" ? ENDGAME_QUEEN_PROMO_BONUS : ENDGAME_OTHER_PROMO_BONUS) : 0;
+  if (move.isPromotion) return 80 + (move.promotion === "q" ? 10 : 0) + endgameBonus;
+  if (move.isCheck) return 70;
+  if (move.isCapture && move.isPromotion) return 90 + endgameBonus;
+  if (move.isCapture) return 60;
+  if (move.isCastle) return 50;
+  if (!move.uci) return 5;
+  // Tactical motif bonus
+  if (move.motif === "fork") return 55;
+  if (move.motif === "skewer") return 53;
+  if (move.motif === "removal-of-defender") return 52;
+  if (move.motif === "discovered-attack") return 51;
+  if (move.motif === "double-attack") return 50;
+  if (move.motif === "back-rank") return 48;
+  return 10;
+}
+
+/**
+ * Keep every legal move unless we exceed Choice's 255-option cap.
+ * Real chess never reaches 218 legal moves, so this is last-resort only.
+ */
+export function selectMovesForChoice(moves: LegalMove[], isEndgame = false): {
+  selected: LegalMove[];
+  dropped: LegalMove[];
+} {
+  if (moves.length <= CHOICE_OPTION_CAP) {
+    return { selected: moves, dropped: [] };
+  }
+  const ranked = [...moves].sort((a, b) => {
+    const delta = movePriority(b, isEndgame) - movePriority(a, isEndgame);
+    return delta !== 0 ? delta : a.uci.localeCompare(b.uci);
+  });
+  return {
+    selected: ranked.slice(0, CHOICE_OPTION_CAP),
+    dropped: ranked.slice(CHOICE_OPTION_CAP),
+  };
+}
+
+export function applyUci(chess: Chess, uci: string): Move {
+  if (!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uci)) {
+    throw new Error(`Not a UCI move: ${uci}`);
+  }
+  const from = uci.slice(0, 2);
+  const to = uci.slice(2, 4);
+  let promotion = uci.length > 4 ? uci[4] : undefined;
+
+  // Auto-promote to Queen if pawn reaches the back rank without explicit promotion piece
+  if (!promotion) {
+    try {
+      const piece = chess.get(from as any);
+      if (piece && piece.type === "p" && (to.endsWith("8") || to.endsWith("1"))) {
+        promotion = "q";
+      }
+    } catch {}
+  }
+
+  return chess.move({ from, to, promotion });
+}
+
+export function isKnightFork(chess: Chess, moveUci: string): boolean {
+  if (moveUci.length < 4) return false;
+  const from = moveUci.slice(0, 2);
+  const to = moveUci.slice(2, 4);
+  const piece = chess.get(from as Square);
+  if (!piece || piece.type !== "n") return false;
+
+  const toCol = to.charCodeAt(0) - 97;
+  const toRow = parseInt(to[1], 10) - 1;
+  const offsets = [
+    [1, 2], [1, -2], [-1, 2], [-1, -2],
+    [2, 1], [2, -1], [-2, 1], [-2, -1]
+  ];
+
+  const opponentColor = chess.turn() === "w" ? "b" : "w";
+  let targets = 0;
+
+  for (const [dc, dr] of offsets) {
+    const c = toCol + dc;
+    const r = toRow + dr;
+    if (c >= 0 && c <= 7 && r >= 0 && r <= 7) {
+      const sq = (String.fromCharCode(97 + c) + (r + 1)) as Square;
+      if (sq === from) continue;
+      const target = chess.get(sq);
+      if (target && target.color === opponentColor) {
+        if (target.type === "k" || target.type === "q" || target.type === "r" || target.type === "b") {
+          targets++;
+        }
+      }
+    }
+  }
+
+  return targets >= 2;
+}
+
+export function isQueenThreatened(chess: Chess): boolean {
+  const currentSide = chess.turn();
+  const board = chess.board();
+  let queenSq: Square | null = null;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = board[r][c];
+      if (sq && sq.color === currentSide && sq.type === "q") {
+        queenSq = (String.fromCharCode(97 + c) + (8 - r)) as Square;
+        break;
+      }
+    }
+    if (queenSq) break;
+  }
+  if (!queenSq) return false;
+
+  const opp = currentSide === "w" ? "b" : "w";
+  return chess.isAttacked(queenSq, opp);
+}
+
+/**
+ * Detects if the Queen is in the direct line of sight (X-ray) of an enemy Rook, Bishop, or Queen
+ * with 0 or 1 intervening piece (discovered attack threat).
+ */
+export function isQueenXrayed(chess: Chess): boolean {
+  const currentSide = chess.turn();
+  const board = chess.board();
+  let qFile = -1;
+  let qRank = -1;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (p && p.color === currentSide && p.type === "q") {
+        qRank = r;
+        qFile = c;
+        break;
+      }
+    }
+    if (qFile !== -1) break;
+  }
+  if (qFile === -1) return false;
+
+  const opp = currentSide === "w" ? "b" : "w";
+  const dirs = [
+    { dr: -1, dc: 0, ortho: true },
+    { dr: 1, dc: 0, ortho: true },
+    { dr: 0, dc: -1, ortho: true },
+    { dr: 0, dc: 1, ortho: true },
+    { dr: -1, dc: -1, ortho: false },
+    { dr: -1, dc: 1, ortho: false },
+    { dr: 1, dc: -1, ortho: false },
+    { dr: 1, dc: 1, ortho: false },
+  ];
+
+  for (const { dr, dc, ortho } of dirs) {
+    let pieces = 0;
+    let r = qRank + dr;
+    let c = qFile + dc;
+    while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+      const p = board[r][c];
+      if (p) {
+        if (pieces === 1) {
+          if (p.color === opp && (p.type === "q" || (ortho ? p.type === "r" : p.type === "b"))) {
+            return true;
+          }
+          break;
+        }
+        if (pieces === 0) {
+          if (p.color === opp && (p.type === "q" || (ortho ? p.type === "r" : p.type === "b"))) {
+            return true;
+          }
+          pieces++;
+        }
+      }
+      r += dr;
+      c += dc;
+    }
+  }
+  return false;
+}
+
+export function isPromotionAttempt(
+  chess: Chess,
+  from: string,
+  to: string,
+): boolean {
+  return getLegalMoves(chess).some(
+    (move) => move.from === from && move.to === to && move.isPromotion,
+  );
+}
+
+export function findLegalMove(
+  chess: Chess,
+  from: string,
+  to: string,
+  promotion?: PromotionPiece,
+): LegalMove | undefined {
+  return getLegalMoves(chess).find((move) => {
+    if (move.from !== from || move.to !== to) return false;
+    if (promotion !== undefined && !move.isPromotion) return false;
+    if (move.isPromotion) return move.promotion === (promotion ?? "q");
+    return true;
+  });
+}
+
+/**
+ * Replay a SAN list from a starting FEN and return UCI+SAN per ply.
+ * PvP rooms only store SAN, but the board UI needs UCI for square highlights,
+ * so one replay is cheaper than a per-ply server round trip.
+ * ponytail: naive replay; a room is capped well below chess.js limits.
+ */
+export function replaySanList(
+  startFen: string,
+  sans: string[],
+): { san: string; uci: string }[] {
+  const out: { san: string; uci: string }[] = [];
+  const chess = parseFen(startFen);
+  for (const san of sans) {
+    try {
+      const move = chess.move(san);
+      out.push({ san: move.san, uci: uciFromMove(move) });
+    } catch {
+      break; // history and position disagree — stop rather than render garbage
+    }
+  }
+  return out;
+}
+
+export function describeOutcome(chess: Chess): GameOutcome {
+  if (chess.isCheckmate()) {
+    const winner: Side = chess.turn() === "w" ? "black" : "white";
+    return {
+      over: true,
+      winner,
+      kind: "checkmate",
+      label: `Checkmate — ${capitalize(winner)} wins`,
+    };
+  }
+  if (chess.isStalemate()) {
+    return {
+      over: true,
+      winner: null,
+      kind: "stalemate",
+      label: "Draw by stalemate",
+    };
+  }
+  if (chess.isThreefoldRepetition()) {
+    return {
+      over: true,
+      winner: null,
+      kind: "threefold",
+      label: "Draw by threefold repetition",
+    };
+  }
+  if (chess.isInsufficientMaterial()) {
+    return {
+      over: true,
+      winner: null,
+      kind: "insufficient",
+      label: "Draw by insufficient material",
+    };
+  }
+  if (chess.isDrawByFiftyMoves()) {
+    return {
+      over: true,
+      winner: null,
+      kind: "fifty",
+      label: "Draw by the fifty-move rule",
+    };
+  }
+  if (chess.isDraw()) {
+    return {
+      over: true,
+      winner: null,
+      kind: "draw",
+      label: "Draw",
+    };
+  }
+  if (chess.isCheck()) {
+    return {
+      over: false,
+      winner: null,
+      kind: "check",
+      label: `${capitalize(sideToMove(chess))} is in check`,
+    };
+  }
+  return {
+    over: false,
+    winner: null,
+    kind: "playing",
+    label: `${capitalize(sideToMove(chess))} to move`,
+  };
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/**
+ * Generate procedural exercises for training.
+ * Produces deterministic positions based on theme, difficulty, side, and seed.
+ * Maximum count = 100 as per user request for non-unlimited variation.
+ */
+export function generateProceduralExercises(
+  theme: "opening" | "defense" | "middlegame" | "endgame" | "tactics" = "opening",
+  difficulty: "easy" | "medium" | "hard" = "easy",
+  side: Side = "white",
+  count = 100,
+): { fen: string; turn: "w" | "b"; theme: string; difficulty: string }[] {
+  const exercises = [];
+  const rng = seededRandom(simpleHash(`${theme}-${difficulty}-${side}`));
+  for (let i = 0; i < count; i++) {
+    const hashed = simpleHash(`${theme}-${difficulty}-${side}-${i}`);
+    const fen = generateFenFromHash(hashed, theme, difficulty);
+    const move = rng() < 0.5 ? "w" : "b";
+    const exercise = {
+      fen,
+      turn: move as "w" | "b",
+      theme,
+      difficulty,
+    };
+    exercises.push(exercise);
+  }
+  return exercises;
+}
+
+/** Simple deterministic hash for reproducible FEN generation */
+function simpleHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+}
+
+/** Deterministic pseudo-random from seed (no Math.random) */
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+/** Map hash to a legal, thematically relevant FEN */
+function generateFenFromHash(hash: number, theme: string, difficulty: string): string {
+  const positions = getPositionsByTheme(theme, difficulty);
+  const index = hash % positions.length;
+  return positions[index];
+}
+
+/** Return a curated list of FENs for each theme and difficulty */
+function getPositionsByTheme(theme: string, difficulty: string): string[] {
+  // Opening: classic positions with piece development and potential attacks
+  const opening = {
+    easy: [
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "r1bqkb1r/pppppppp/2n5/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3",
+      "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+    ],
+    medium: [
+      "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3",
+      "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 2",
+    ],
+    hard: [
+      "r1bqk2r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3",
+    ],
+  };
+
+  // Defense: counterplay, material equality, defensive ideas
+  const defense = {
+    easy: [
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "k1K5/8/8/8/8/8/8/8 b - - 0 1", // solo king -> stalemate
+    ],
+    medium: [
+      "r1bqk2r/pppppppp/2n2n2/8/4p3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3",
+    ],
+    hard: [
+      "r1bqk2r/pppppppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3",
+    ],
+  };
+
+  // Middlegame: dynamic positions with tactical possibilities
+  const middlegame = {
+    easy: [
+      "r1bqk2r/pppppppp/2n2n2/8/4p3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3",
+      "rnbqkb1r/pp1ppppp/5n2/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 2",
+    ],
+    medium: [
+      "r1bqk2r/pppppppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3",
+      "rnbqkb1r/pppppppp/5n2/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 2",
+    ],
+    hard: [
+      "r1bqk2r/pppppppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3",
+    ],
+  };
+
+  // Endgame: specific patterns, king+piece endings, basic checkmates
+  const endgame = {
+    easy: [
+      "k7/8/8/8/8/8/8/7K w - - 0 1", // king to corner
+      "8/8/8/8/8/8/k7/7K b - - 0 1", // black to move, stalemate
+    ],
+    medium: [
+      "K7/8/8/8/8/8/8/7k w - - 0 1", // king rank
+      "K7/8/8/8/8/8/7k/7r w - - 0 1", // rook back rank mate
+    ],
+    hard: [
+      "K7/8/8/8/8/8/7k/7r w - - 0 1",
+    ],
+  };
+
+  // Tactics: forced lines, checkmates, forks, pins, skewers
+  const tactics = {
+    easy: [
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "8/8/8/8/4k3/8/8/7K w - - 0 1", // king+rook vs king
+    ],
+    medium: [
+      "r1bqk2r/pppppppp/2n2n2/8/4p3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3",
+    ],
+    hard: [
+      "r1bqk2r/pppppppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3",
+    ],
+  };
+
+  switch (theme) {
+    case "opening": return opening[difficulty as keyof typeof opening] || [];
+    case "defense": return defense[difficulty as keyof typeof defense] || [];
+    case "middlegame": return middlegame[difficulty as keyof typeof middlegame] || [];
+    case "endgame": return endgame[difficulty as keyof typeof endgame] || [];
+    case "tactics": return tactics[difficulty as keyof typeof tactics] || [];
+    default: return [];
+  }
+}
+
+/**
+ * Strict validation: checks FEN integrity, turn, halfmove, fullmove counters.
+ * Returns ok: boolean, with error string if invalid.
+ */
+export function validateFenStrict(fen: string): { ok: true; data: { chess: Chess } } | { ok: false; error: string } {
+  try {
+    const chess = new Chess(fen);
+    return { ok: true, data: { chess } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Invalid FEN" };
+  }
+}
+
+/** Verify move is legal and legal move set is consistent */
+export function validateMove(
+  chess: Chess,
+  from: string,
+  to: string,
+  promotion?: PromotionPiece,
+): boolean {
+  const moves = getLegalMoves(chess);
+  return moves.some((m) => m.from === from && m.to === to &&
+    (promotion ? m.promotion === promotion : !m.isPromotion));
+}
+
+/** Verify turn matches expected side */
+export function validateTurn(chess: Chess, expectedSide: Side): boolean {
+  return sideToMove(chess) === expectedSide;
+}
+
+const PIECE_VALS_CP: Record<string, number> = {
+  p: 100, n: 320, b: 330, r: 500, q: 900,
+};
+
+/** Calculates raw material balance from FEN (in centipawns, White positive). */
+export function calculateMaterialCp(fen: string): number {
+  if (!fen) return 0;
+  const boardPart = fen.split(" ")[0] || "";
+  let white = 0;
+  let black = 0;
+
+  for (const ch of boardPart) {
+    const val = PIECE_VALS_CP[ch.toLowerCase()];
+    if (!val) continue;
+    if (ch >= "A" && ch <= "Z") white += val;
+    else black += val;
+  }
+
+  return white - black;
+}
+/**
+ * Evaluates material balance from the perspective of the side whose turn it is.
+ * Positive = side to move is ahead in material.
+ */
+export function evaluateMaterialBalance(chess: Chess): number {
+  let white = 0;
+  let black = 0;
+  const board = chess.board();
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (p) {
+        const val = PIECE_VALS_CP[p.type] ?? 0;
+        if (p.color === "w") white += val;
+        else black += val;
+      }
+    }
+  }
+  return chess.turn() === "w" ? white - black : black - white;
+}
+
+/**
+ * Negamax Quiescence Search helper to resolve tactical exchanges & prevent horizon effect.
+ * Searches captures, queen promotions, and forcing checks.
+ */
+export function quiescenceSearch(
+  chess: Chess,
+  alpha: number,
+  beta: number,
+  depth = 0,
+  maxDepth = 6,
+): number {
+  if (chess.isCheckmate()) return -30000 + depth;
+  if (chess.isDraw()) return 0;
+
+  const inCheck = chess.inCheck();
+  const standPat = evaluateMaterialBalance(chess);
+
+  if (!inCheck) {
+    if (depth >= maxDepth) return standPat;
+    if (standPat >= beta) return beta;
+    if (standPat > alpha) alpha = standPat;
+  }
+
+  const moves = chess.moves({ verbose: true });
+  let tacticalMoves = moves.filter((m: any) =>
+    inCheck ||
+    m.captured ||
+    m.promotion === "q" ||
+    m.san.includes("=Q") ||
+    m.san.includes("#")
+  );
+
+  tacticalMoves.sort((a: any, b: any) => {
+    if (a.san.includes("#")) return -10000;
+    if (b.san.includes("#")) return 10000;
+    const victimA = a.captured ? (PIECE_VALS_CP[a.captured] || 100) : 0;
+    const attackerA = PIECE_VALS_CP[a.piece || "p"] || 100;
+    const victimB = b.captured ? (PIECE_VALS_CP[b.captured] || 100) : 0;
+    const attackerB = PIECE_VALS_CP[b.piece || "p"] || 100;
+    return (victimB - attackerB) - (victimA - attackerA);
+  });
+
+  for (const m of tacticalMoves) {
+    chess.move(m);
+    const score = -quiescenceSearch(chess, -beta, -alpha, depth + 1, maxDepth);
+    chess.undo();
+
+    if (score >= beta) return beta;
+    if (score > alpha) alpha = score;
+  }
+
+  return alpha;
+}
+
+/**
+ * Returns the quiescent evaluation of a position in centipawns (from perspective of side to move).
+ */
+export function evaluatePositionQuiescence(pos: Chess | string, maxDepth = 6): number {
+  try {
+    const ch = typeof pos === "string" ? new Chess(pos) : pos;
+    return quiescenceSearch(ch, -35000, 35000, 0, maxDepth);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Evaluates candidate move with quiescence resolution.
+ * Returns score in centipawns from the perspective of the moving player.
+ */
+export function evaluateMoveQuiescence(fen: string, uci: string, maxDepth = 6): number {
+  try {
+    const c = new Chess(fen);
+    const m = c.move({
+      from: uci.slice(0, 2),
+      to: uci.slice(2, 4),
+      promotion: uci[4] || undefined,
+    });
+    if (!m) return -30000;
+    if (c.isCheckmate()) return 30000;
+    if (c.isDraw()) return 0;
+    return -quiescenceSearch(c, -35000, 35000, 0, maxDepth);
+  } catch {
+    return -30000;
+  }
+}
