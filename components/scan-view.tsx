@@ -1311,7 +1311,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                     onChange={(e) => setWhiteEngine(e.target.value as EngineType)}
                     className="w-full bg-[var(--surface)] text-xs font-bold text-white border border-[var(--border)] rounded-lg p-1.5 focus:outline-none"
                   >
-                    <option value="stockfish">Stockfish 15 NNUE</option>
+                    <option value="stockfish">Stockfish 19 NNUE</option>
                     <option value="jev-fly">Jev + Fly Brain</option>
                     <option value="jev">Jev One</option>
                     <option value="fly">Fruit Fly Brain</option>
@@ -1326,7 +1326,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                     className="w-full bg-[var(--surface)] text-xs font-bold text-white border border-[var(--border)] rounded-lg p-1.5 focus:outline-none"
                   >
                     <option value="jev-fly">Jev + Fly Brain</option>
-                    <option value="stockfish">Stockfish 15 NNUE</option>
+                    <option value="stockfish">Stockfish 19 NNUE</option>
                     <option value="jev">Jev One</option>
                     <option value="fly">Fruit Fly Brain</option>
                   </select>

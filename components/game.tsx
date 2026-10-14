@@ -64,7 +64,7 @@ import type { JevAnalysis, JevError, PlayedMove } from "@/lib/types";
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 const AI_LABEL: Record<string, string> = {
-  stockfish: "Stockfish 15 NNUE",
+  stockfish: "Stockfish 19 NNUE",
   "jev-fly": "Jev + Fly Brain",
   jev: "Jev System One",
   fly: "Fruit Fly Brain",
@@ -748,7 +748,7 @@ export function Game() {
             ? "Fruit Fly Brain"
             : selectedAiOpponent === "jev"
               ? "Jev"
-              : "Stockfish 15 NNUE"
+              : "Stockfish 19 NNUE"
         : pvpOpponentName;
 
     const blackPlayerName = humanSide === "black"
@@ -760,7 +760,7 @@ export function Game() {
             ? "Fruit Fly Brain"
             : selectedAiOpponent === "jev"
               ? "Jev"
-              : "Stockfish 15 NNUE"
+              : "Stockfish 19 NNUE"
         : pvpOpponentName;
 
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, ".");
@@ -1163,7 +1163,7 @@ export function Game() {
                   <div className="min-w-0">
                     <div className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5 truncate">
                       <span>{playMode === "ai"
-                        ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain (Hybrid)" : selectedAiOpponent === "fly" ? "Fruit Fly Brain (134k)" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15 NNUE")
+                        ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain (Hybrid)" : selectedAiOpponent === "fly" ? "Fruit Fly Brain (134k)" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 19 NNUE")
                         : pvpOpponentName}</span>
                       <span className="text-xs font-normal text-neutral-400">
                         ({playMode === "ai" ? "3550" : "PvP Online"})
@@ -1409,7 +1409,7 @@ export function Game() {
                             <div>
                               <span className="text-xs font-bold text-neutral-300 block">
                                 {playMode === "ai"
-                                  ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 15")
+                                  ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 19")
                                   : pvpOpponentName}
                               </span>
                               {!humanToMove && <span className="text-xs text-[var(--primary)] font-black animate-pulse">Sedang Berpikir...</span>}
@@ -1585,7 +1585,7 @@ export function Game() {
                             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Mode Lawan</div>
                             <div className="grid grid-cols-2 gap-1">
                               {[
-                                { id: "stockfish", label: "Stockfish 15 NNUE", sub: "Engine Elo 3550+" },
+                                { id: "stockfish", label: "Stockfish 19 NNUE", sub: "Engine Elo 3550+" },
                                 { id: "jev-fly", label: "Jev + Fly Brain", sub: "Hybrid Connectome" },
                                 { id: "jev", label: "Jev System One", sub: "Semantik Posisi" },
                                 { id: "fly", label: "Fruit Fly Brain", sub: "134k Neuron Biologis" },
@@ -1618,7 +1618,7 @@ export function Game() {
                             />
                           ) : (
                             <>
-                              {/* Tingkat Kesulitan AI (Hanya untuk Stockfish 15) */}
+                              {/* Tingkat Kesulitan AI (Hanya untuk Stockfish 19) */}
                               {selectedAiOpponent === "stockfish" && (
                                 <div className="space-y-1">
                                   <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Kedalaman Stockfish</div>
@@ -1802,8 +1802,8 @@ export function Game() {
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 min-h-16 bg-[var(--card)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md border-t border-[var(--border)] shadow-2xl overflow-x-auto">
-        <div className="flex justify-around items-center py-2 px-1 gap-1 min-w-full min-h-16">
+      <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 min-h-14 bg-[var(--card)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md border-t border-[var(--border)] shadow-2xl">
+        <div className="flex justify-around items-center py-1.5 px-0.5 gap-0.5 min-w-full">
           {[
             { id: "play", icon: IconPlay3D, labelId: "Bermain", labelEn: "Play" },
             { id: "coach", icon: IconCoach3D, labelId: "Latih", labelEn: "Train" },
@@ -1815,14 +1815,14 @@ export function Game() {
             <button
               key={tab.id}
               onClick={() => handleNavClick(tab.id as NavTab)}
-              className={`flex flex-col items-center gap-1 px-2 py-1 rounded-lg transition-all min-w-[56px] ${
+              className={`flex flex-col items-center gap-0.5 px-1 py-1 rounded-lg transition-all min-w-0 flex-1 ${
                 navTab === tab.id ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
               }`}
             >
               <div className={`p-1 rounded-lg ${navTab === tab.id ? "bg-[var(--muted)] text-white" : ""}`}>
                 <tab.icon size={20} />
               </div>
-              <span className="text-xs leading-none">{lang === "id" ? tab.labelId : tab.labelEn}</span>
+              <span className="text-[10px] leading-none">{lang === "id" ? tab.labelId : tab.labelEn}</span>
             </button>
           ))}
         </div>

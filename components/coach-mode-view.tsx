@@ -88,7 +88,7 @@ export function CoachModeView({ lang = "id" }: Props) {
 
   const isPlayerTurn = chess.turn() === (playerSide === "white" ? "w" : "b");
 
-  const engineBest = async (currentFen: string, engine: "stockfish" | "jev" = "stockfish", depth = 12) => {
+  const engineBest = async (currentFen: string, engine: "stockfish" | "jev" | "fly" | "jev-fly" = "stockfish", depth = 12) => {
     try {
       const r = await fetch("/api/engine-move", {
         method: "POST",
@@ -188,7 +188,7 @@ export function CoachModeView({ lang = "id" }: Props) {
     } else {
       setThinking(true);
       thinkingRef.current = true;
-      const botMove = await engineBest(c.fen(), "stockfish", 12);
+      const botMove = await engineBest(c.fen(), "jev-fly", 12);
       if (botMove) {
         const move = findLegalMove(c, botMove.uci.slice(0, 2) as Square, botMove.uci.slice(2, 4) as Square);
         if (move && c.move(move)) {
@@ -276,7 +276,7 @@ export function CoachModeView({ lang = "id" }: Props) {
       cpLoss,
     });
 
-    const botData = await engineBest(c.fen(), "stockfish", 12);
+    const botData = await engineBest(c.fen(), "jev-fly", 12);
     if (botData) {
       const oppMove = findLegalMove(c, botData.uci.slice(0, 2) as Square, botData.uci.slice(2, 4) as Square,
         botData.uci.length > 4 ? (botData.uci[4] as "q") : undefined);
@@ -405,7 +405,7 @@ export function CoachModeView({ lang = "id" }: Props) {
               {lang === "id" ? "AI Coach — Mode Latih" : "AI Coach — Training"}
             </h2>
             <div className="text-xs md:text-xs text-neutral-400 truncate">
-              Lawan: Stockfish 15 NNUE
+              Lawan: Jev + Fly Brain (Hybrid) · Dilatih Stockfish 19
             </div>
           </div>
         </div>
@@ -457,7 +457,7 @@ export function CoachModeView({ lang = "id" }: Props) {
           <div className="w-full flex items-center justify-between px-3 py-1 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-neutral-800 border-neutral-600" : "bg-white border-neutral-300"}`} />
-              <span className="text-xs md:text-sm font-bold text-white truncate">Stockfish 15</span>
+              <span className="text-xs md:text-sm font-bold text-white truncate">Jev + Fly Brain</span>
               <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/40 shrink-0">
                 {evalCp !== null ? (evalCp > 0 ? `+${(evalCp / 100).toFixed(1)}` : (evalCp / 100).toFixed(1)) : "="}
               </span>
@@ -526,7 +526,7 @@ export function CoachModeView({ lang = "id" }: Props) {
               <div className="flex items-center gap-2">
                 <IconLightning3D size={20} />
                 <span className="text-xs font-black uppercase tracking-wider text-[#81b64c]">
-                  {lang === "id" ? "Rekomendasi Coach JeV+Flybrain" : "Coach JeV+Flybrain Recommendation"}
+                  {lang === "id" ? "Rekomendasi Coach (Stockfish 19)" : "Coach Recommendation (Stockfish 19)"}
                 </span>
               </div>
 
@@ -650,8 +650,8 @@ export function CoachModeView({ lang = "id" }: Props) {
           {history.length > 0 && (
             <NotationTable
               title={lang === "id" ? "Riwayat Langkah" : "Move History"}
-              whiteLabel={playerSide === "white" ? (lang === "id" ? "Anda (Player)" : "You (Player)") : "Stockfish 15"}
-              blackLabel={playerSide === "black" ? (lang === "id" ? "Anda (Player)" : "You (Player)") : "Stockfish 15"}
+              whiteLabel={playerSide === "white" ? (lang === "id" ? "Anda (Player)" : "You (Player)") : "Jev + Fly Brain"}
+              blackLabel={playerSide === "black" ? (lang === "id" ? "Anda (Player)" : "You (Player)") : "Jev + Fly Brain"}
               plyCount={history.length}
               rows={Array.from({ length: Math.ceil(history.length / 2) }).map((_, i) => ({
                 no: i + 1,

@@ -8,7 +8,7 @@ export default async function Home({
   const params = await searchParams;
   return (
     <main className="flex-1">
-      <Game initialSpectateId={params?.spectate || null} />
+      <Game />
     </main>
   );
 }
