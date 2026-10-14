@@ -1338,6 +1338,20 @@ def predict(req: ScanRequest):
             if pts is not None:
                 warped = four_point_transform(img, pts, size=800)
                 cal_warp = calibrate_grid(warped)
+                # Validasi segmen warp: harus nyaris persegi dan menutup >=55%
+                # gambar. Kalau quad meleset (potongan parsial), warp dicurigai
+                # walaupun skornya tinggi — grid checkerboard bisa nangkep
+                # tekstur palsu di luar papan.
+                if cal_warp is not None:
+                    hh, ww = warped.shape[:2]
+                    seg_w = abs(pts[1][0] - pts[0][0])
+                    seg_h = abs(pts[3][1] - pts[0][1])
+                    ratio_ok = 0.5 < (seg_w / max(seg_h, 1e-6)) < 2.0
+                    coverage = min(seg_w * seg_h / (img.shape[0] * img.shape[1]), 1.5)
+                    if not (ratio_ok and coverage >= 0.55):
+                        logger.warning("Segmen warp dicurigai (ratio %.2f, coverage %.2f) — diabaikan.",
+                                       seg_w / max(seg_h, 1e-6), coverage)
+                        cal_warp = None
                 if cal_warp is not None and (cal_raw is None or cal_warp[3] > cal_raw[3]):
                     calib, work_img = cal_warp, warped
                     logger.info("Memakai kalibrasi WARP (skor %.2f > %.2f)",
@@ -1365,6 +1379,14 @@ def predict(req: ScanRequest):
         for conf_try in (CONF_THRESHOLD, 0.15, 0.08):
             dets = [d for d in all_dets if len(d) > 4 and d[4] >= conf_try]
             cand = grid_fen(dets, calib, img=work_img)
+            # Kalibrasi kadang "kunci" ke grid palsu (pojok gambar, skor tinggi
+            # dari tekstur) sehingga semua bidak jatuh di luar grid → FEN kosong.
+            # Bandingkan dengan grid full-image dan pakai yang lebih banyak bidak.
+            # ponytail: dua kandidat grid saja; kalibrasi yang lebih pintar kalau ini masih sering meleset.
+            full_grid = (0.0, 0.0, work_img.shape[1] / 8.0)
+            cand_full = grid_fen(dets, full_grid, img=work_img)
+            if piece_count(cand_full) > piece_count(cand) * 2 and piece_count(cand_full) >= 4:
+                cand = cand_full
             # Simpan kandidat TERBANYAK bidak, bukan hanya yang pertama — ini yang
             # dipakai sebagai "perlu review" kalau tak ada yang plausibel.
             if first_candidate is None or piece_count(cand) > piece_count(first_candidate):
