@@ -43,7 +43,7 @@ export function BoardControls({
   if (variant === "dock") {
     return (
       <div className={`w-full space-y-2 ${className}`}>
-        <div className={`grid ${hasTrickButton ? "grid-cols-3" : "grid-cols-2"} gap-2 w-full`}>
+        <div className={`flex flex-wrap ${hasTrickButton ? "" : "sm:grid sm:grid-cols-2"} gap-2 w-full [&>*]:flex-1 [&>*]:min-w-[calc(50%-0.25rem)]`}>
           <button
             type="button"
             onClick={onFlipOrientation}
@@ -161,7 +161,7 @@ export function BoardControls({
   // variant === "toolbar" (Sleek horizontal toolbar outside the board)
   return (
     <div className={`flex items-center gap-2 px-2.5 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0 ${className}`}>
-      <div className={`flex-1 grid ${hasTrickButton ? "grid-cols-3" : "grid-cols-2"} gap-2`}>
+      <div className={`flex-1 flex flex-wrap ${hasTrickButton ? "" : "sm:grid sm:grid-cols-2"} gap-2 [&>*]:flex-1 [&>*]:min-w-[calc(50%-0.25rem)]`}>
         <button
           type="button"
           onClick={onFlipOrientation}

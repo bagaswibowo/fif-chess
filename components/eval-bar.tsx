@@ -73,7 +73,7 @@ export function EvalBar({
       </div>
 
       {/* Dual-Color Vertical Bar (Black & White) */}
-      <div className="w-3.5 md:w-4 flex-1 h-full min-h-[220px] bg-neutral-900 rounded-full overflow-hidden border border-neutral-700 flex flex-col justify-between shadow-inner relative">
+      <div className="w-3.5 md:w-4 flex-1 h-full lg:min-h-[220px] bg-neutral-900 rounded-full overflow-hidden border border-neutral-700 flex flex-col justify-between shadow-inner relative self-stretch">
         {/* Top Segment */}
         <div
           className={`w-full transition-all duration-300 ease-out ${topColor}`}
