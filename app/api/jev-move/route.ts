@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // Stockfish 15 NNUE (Invincible mode, Elo 3500+)
+  // Stockfish 19 NNUE (Invincible mode, Elo 3500+)
   try {
     const result = await playStockfishMove(fen, depth);
     return NextResponse.json({

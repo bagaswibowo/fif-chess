@@ -25,7 +25,6 @@ import {
 } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import { tacticalGatekeeper } from "./tactical-gatekeeper";
-import { evalSingleMove, playStockfishMove } from "../stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 import { fenEngineCache } from "./lru-cache";
 import { mctsConcurrencyGate } from "./concurrency-gate";
@@ -186,7 +185,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
   readonly name = "Jev AI + Superfly Connectome Hybrid";
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
-    const cached = fenEngineCache.get(req.fen);
+    const cached = fenEngineCache.get(this.id + ":" + req.fen);
     if (cached) {
       return cached;
     }
@@ -245,7 +244,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
           prediction,
           metadata: { source: safeCheck.vetoed ? "tactical-override" : "mbon-learned", model: "jev-fly-hybrid" },
         };
-        fenEngineCache.set(req.fen, mbonResp);
+        fenEngineCache.set(this.id + ":" + req.fen, mbonResp);
         return mbonResp;
       }
 
@@ -278,11 +277,10 @@ export class JevSuperflyHybridEngine implements IChessEngine {
     if (!hybridRaw) {
       const flyFallback = playSuperflyMove(req.fen, sims) || playFlyBrainMove(req.fen);
       if (!flyFallback) {
-        const sfEmergency = await playStockfishMove(req.fen, 10);
         const chEm = new Chess(req.fen);
         const fallbackMoves = chEm.moves({ verbose: true });
         const defaultUci = fallbackMoves[0] ? fallbackMoves[0].from + fallbackMoves[0].to + (fallbackMoves[0].promotion || "") : "";
-        const chosenUci = sfEmergency?.uci || defaultUci;
+        const chosenUci = defaultUci;
         const appEm = applyUci(chEm, chosenUci);
         hybridRaw = {
           uci: chosenUci,
@@ -345,7 +343,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         connectomeNetwork: evaluateConnectomeNetwork(new Chess(req.fen), hybridRaw.uci),
       },
     };
-    fenEngineCache.set(req.fen, finalResp);
+    fenEngineCache.set(this.id + ":" + req.fen, finalResp);
     return finalResp;
   }
 }

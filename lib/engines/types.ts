@@ -9,6 +9,7 @@ export interface EngineMoveRequest {
   seed?: number;
   apiKey?: string;
   simulations?: number;
+  skillLevel?: number;
 }
 
 export interface StrategicStep {
@@ -44,6 +45,8 @@ export interface EnginePrediction {
     to: string;
     intention: string;
   } | null;
+  strategicGoal?: string;
+  chain3Moves?: string;
   futureLine?: StrategicStep[];
   pieceTrajectory?: StrategicStep[];
   pvMoves?: string[];

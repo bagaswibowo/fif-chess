@@ -43,9 +43,8 @@ export async function playEngineMove(
   const cacheKey = id + ":" + req.fen;
   const cached = fenEngineCache.get(cacheKey);
   if (cached) return cached;
-  // Hanya Stockfish yang menggunakan buku pembukaan terstruktur jika diperlukan;
-  // Seluruh engine bio-AI (Jev, Fly, Jev-Fly) memainkan langkah pembukaan secara natural & acak,
-  // membaca gerakan lawan secara adaptif tanpa terikat teori pembukaan kaku.
+  // Hanya Stockfish yang memakai buku pembukaan terstruktur (teori GM).
+  // Engine bio-AI (Jev / Fly / Jev-Fly) membuka secara natural & adaptif TANPA intervensi Stockfish.
   if (id === "stockfish") {
     const bookMove = getOpeningBookMove(req.fen, req.seed ?? 0);
     if (bookMove) {

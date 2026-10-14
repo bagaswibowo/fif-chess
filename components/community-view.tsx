@@ -125,7 +125,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
       lastActivity: "15 mnt lalu",
       isPinned: true,
       attachedGameSummary: {
-        opponent: "Stockfish 15 NNUE",
+        opponent: "Stockfish 19 NNUE",
         outcome: "win",
         movesCount: 38,
         playedAs: "white",
@@ -145,7 +145,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
           attachedGame: {
             id: "game-demo-1",
             playedAt: Date.now(),
-            opponent: "Stockfish 15 NNUE",
+            opponent: "Stockfish 19 NNUE",
             humanSide: "white",
             outcomeKind: "win",
             winner: "white",

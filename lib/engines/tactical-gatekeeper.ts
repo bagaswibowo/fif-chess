@@ -1,5 +1,5 @@
 import { Chess } from "chess.js";
-import { applyUci, evaluateMoveQuiescence } from "@/lib/chess";
+import { applyUci, evaluateMoveQuiescence, staticExchangeEvaluation } from "@/lib/chess";
 import {
   isMoveSteppingIntoAbsolutePin,
   isKingWeakeningMove,
@@ -115,6 +115,11 @@ export async function tacticalGatekeeper(
     allows1PlyMate = true;
   }
 
+  const fromSq = candidateUci.slice(0, 2);
+  const toSq = candidateUci.slice(2, 4);
+  const isCapture = Boolean(ch.get(toSq as any));
+  const failsSEE = isCapture && !staticExchangeEvaluation(ch, fromSq, toSq, 0);
+
   const isPredation = isPredationTrap(fen, candidateUci);
   const isBlunderRec = isBlunderMove(fen, candidateUci);
 
@@ -126,6 +131,7 @@ export async function tacticalGatekeeper(
     candWeak ||
     isPredation ||
     isBlunderRec ||
+    failsSEE ||
     candQScore <= -180;
 
   if (!isBlunder) {
@@ -154,14 +160,18 @@ export async function tacticalGatekeeper(
     const pin = isMoveSteppingIntoAbsolutePin(ch, u);
     const isPin = pin.isPinned && (pin.piece === "q" || pin.piece === "r");
     const weak = isKingWeakeningMove(ch, u);
+    const uFrom = u.slice(0, 2);
+    const uTo = u.slice(2, 4);
+    const uCap = Boolean(ch.get(uTo as any));
+    const badSEE = uCap && !staticExchangeEvaluation(ch, uFrom, uTo, 0);
     const prob = probs[u] ?? 0;
     const valence = calculateBiologicalValence(new Chess(fen), u);
-    return { uci: u, qScore, promo, isPin, weak, allowsMate, prob, valence };
+    return { uci: u, qScore, promo, isPin, weak, allowsMate, prob, valence, badSEE };
   });
 
   // TIER 1: Completely sound
   let safeCandidates = scored.filter(
-    (s) => !s.allowsMate && !s.promo && !s.isPin && !s.weak && s.qScore > -20000,
+    (s) => !s.allowsMate && !s.promo && !s.isPin && !s.weak && !s.badSEE && s.qScore > -20000,
   );
 
   // TIER 2: Avoid forced mate & queen promo
@@ -196,7 +206,7 @@ export async function tacticalGatekeeper(
   let selectedUci = safeCandidates[0].uci;
   let selectedQScore = safeCandidates[0].qScore;
 
-  if (options?.useStockfish !== false) {
+  if (options?.useStockfish === true) {
     try {
       const sfBest = await playStockfishMove(fen, 10);
       if (sfBest?.uci && safeCandidates.some((c) => c.uci === sfBest.uci)) {
@@ -213,6 +223,8 @@ export async function tacticalGatekeeper(
     ? "forced_checkmate_prevented"
     : candPromo
     ? "enemy_queen_promotion_prevented"
+    : failsSEE
+    ? "suicidal_exchange_vetoed (Stockfish 19 SEE negative)"
     : candDangerousPin
     ? `absolute_pin_vetoed (${candPin.piece?.toUpperCase()} pinned to king)`
     : candWeak

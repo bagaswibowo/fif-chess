@@ -102,7 +102,7 @@ type Props = {
 
 type Engine = "stockfish" | "jev" | "fly" | "jev-fly";
 const ENGINE_LABELS: Record<Engine, string> = {
-  stockfish: "Stockfish 15 NNUE",
+  stockfish: "Stockfish 19 NNUE",
   jev: "Jev AI Connectome",
   fly: "Fruit Fly Brain",
   "jev-fly": "Jev + Fly Brain",
@@ -447,7 +447,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                     onChange={(e) => setEngine(e.target.value as Engine)}
                     aria-label="Engine review"
                   >
-                    <option value="stockfish">Stockfish 15 NNUE</option>
+                    <option value="stockfish">Stockfish 19 NNUE</option>
                     <option value="jev">Jev AI Connectome</option>
                     <option value="fly">Fruit Fly Brain</option>
                     <option value="jev-fly">Jev + Fly Brain</option>

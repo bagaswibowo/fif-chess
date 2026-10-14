@@ -11,7 +11,6 @@ import { playSuperflyMove, playFlyBrainMove, isPredationTrap } from "@/lib/flybr
 import { getLearnedMove, isBlunderMove, recordMatchExperience, reinforceMatchDopamine } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
 import { tacticalGatekeeper } from "./tactical-gatekeeper";
-import { evalSingleMove, playStockfishMove } from "../stockfish";
 import type { IChessEngine, EngineMoveRequest, EngineMoveResponse } from "./types";
 
 export class PureJevEngine implements IChessEngine {

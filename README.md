@@ -1,7 +1,7 @@
 # ♟️ FIF Chess Arena
 
 > **Platform Web Catur Modern Komunitas FIF Telkom University**  
-> Ditenagai oleh **Stockfish 15 NNUE (Invincible Engine, Elo 3550+)**, **TypeSafe Jev API**, antarmuka bertema **Chess.com**, ikon **3D Vector Shaders murni**, serta optimasi penuh untuk layar *mobile/smartphone*.
+> Ditenagai oleh **Stockfish 19 NNUE (Invincible Engine, Elo 3550+)**, **TypeSafe Jev API**, antarmuka bertema **Chess.com**, ikon **3D Vector Shaders murni**, serta optimasi penuh untuk layar *mobile/smartphone*.
 
 ---
 
@@ -10,7 +10,7 @@
 FIF Chess Arena dirancang khusus untuk memenuhi standar platform catur modern yang tangguh, efisien, dan bebas ketergantungan berlebihan pada AI probabilistik biasa:
 
 1. **Engine Catur Tak Terkalahkan (Invincible AI):**
-   - Menggunakan binary asli **Stockfish 15 NNUE** yang dikompilasi secara lokal dalam container Debian Linux (`/usr/games/stockfish`).
+   - Menggunakan binary asli **Stockfish 19 NNUE** yang dikompilasi secara lokal dalam container Debian Linux (`/usr/games/stockfish`).
    - Berjalan pada kedalaman evaluasi (*depth*) 14–16 dengan Elo ~3550+, menghasilkan langkah taktis mutlak tanpa blunder dalam waktu <200ms.
    - Opsi `MultiPV 3` memberikan 3 kandidat variasi langkah teratas beserta persentase probabilitasnya ke antarmuka.
    - Fallback otomatis ke **TypeSafe Jev Choice API** jika engine lokal tidak tersedia.
@@ -45,7 +45,7 @@ FIF Chess Arena dirancang khusus untuk memenuhi standar platform catur modern ya
 - **Framework:** Next.js 16 (App Router, Turbopack, React 19)
 - **Styling:** Tailwind CSS v4, Radix UI Primitives, Lucide Icons
 - **Chess Logic & Board:** `chess.js` v1.0.0-beta.6, `react-chessboard`
-- **Engine:** Stockfish 15 NNUE (UCI protocol over IPC stdin/stdout pipe)
+- **Engine:** Stockfish 19 NNUE (UCI protocol over IPC stdin/stdout pipe)
 - **Containerization:** Docker Multi-stage (Node 20 Alpine Builder + Node 20 Slim Runner with Stockfish)
 - **Reverse Proxy / Tunnel:** Cloudflare Tunnel (`cloudflared --protocol http2`)
 - **Security:** HMAC SHA-256 Gate Authentication + In-memory bounded sliding window rate limiter
@@ -159,16 +159,16 @@ Container akan melayani port internal `43173` dan secara otomatis terhubung ke d
 
 Platform ini mengintegrasikan eksperimen neurosimbolik catur: **Fruit Fly Brain (Connectome Drosophila 130k neuron)** dan **Hybrid Jev + FlyBrain**:
 
-### 1. Fruit Fly Brain (Pure Baseline) vs Stockfish 15 NNUE
+### 1. Fruit Fly Brain (Pure Baseline) vs Stockfish 19 NNUE
 - **Benchmark:** 20 Pertandingan (data/training-20-matches.json)
-- **Hasil:** 0 Menang, 20 Kalah vs Stockfish 15 NNUE (kalah adjudikasi material).
+- **Hasil:** 0 Menang, 20 Kalah vs Stockfish 19 NNUE (kalah adjudikasi material).
 - **Analisis:** Jaringan murni serangga memiliki respon refleks cepat namun rentan terhadap taktik jangka panjang tanpa search tree.
 
-### 2. Autonomous Training Loop: FlyBrain vs Stockfish 15 NNUE (`scripts/train-until-win.ts`)
-- **Tujuan:** Melatih connectome FlyBrain secara otonom (*while !wonCheckmate*) hingga mampu menumbangkan Stockfish 15 NNUE (depth 14).
+### 2. Autonomous Training Loop: FlyBrain vs Stockfish 19 NNUE (`scripts/train-until-win.ts`)
+- **Tujuan:** Melatih connectome FlyBrain secara otonom (*while !wonCheckmate*) hingga mampu menumbangkan Stockfish 19 NNUE (depth 14).
 - **Total Pertandingan Terkini:** 13.260+ pertandingan
 - **Hasil Rekap:**
-  - **Stockfish 15 NNUE:** **11.895 Kemenangan** (skakmat mutlak)
+  - **Stockfish 19 NNUE:** **11.895 Kemenangan** (skakmat mutlak)
   - **FlyBrain / Jev:** **0 Kemenangan** (belum pernah mengalahkan Stockfish)
   - **Remis (Draw/Stalemate):** **1.365 Pertandingan** (FlyBrain MCTS sukses menahan imbang hingga 116 plies)
 - **Pertandingan User (Human vs Bot):**

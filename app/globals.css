@@ -423,3 +423,16 @@ select.field { padding-right: 2rem; }
 /* Amankan area notch iPhone (header) & home bar (nav bawah) */
 .mobile-safe-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
 .mobile-safe-bottom { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+
+/* Pastikan notasi koordinat angka (1-8) dan huruf (a-h) selalu tebal, kontras tinggi, dan tidak terpotong */
+[data-square] > span,
+[data-boardid] span,
+[id$="-board"] span {
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+  line-height: 1 !important;
+  text-shadow: none !important;
+}

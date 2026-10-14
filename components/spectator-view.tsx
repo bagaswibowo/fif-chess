@@ -47,6 +47,8 @@ type Commentary = {
   target: string;
   prediction: string;
   strategicPlan?: string;
+  strategicGoal?: string;
+  chain3Moves?: string;
   tacticalBadge?: TacticalConcept | null;
   tektokkan?: TektokkanPrediction | null;
   futureLine?: any[];
@@ -57,7 +59,7 @@ type Commentary = {
 const MOVE_DELAY_MS = 850;
 
 const ENGINE_LABELS: Record<EngineType, string> = {
-  stockfish: "Stockfish 15 NNUE",
+  stockfish: "Stockfish 19 NNUE",
   jev: "Jev AI Connectome",
   fly: "Fruit Fly Brain",
   "jev-fly": "Jev + Fly Brain",
@@ -128,9 +130,11 @@ function getAttackedSquares(chess: Chess, sq: string): string[] {
 export function SpectatorView({
   lang = "id",
   onTryPosition,
+  broadcastId,
 }: {
   lang?: "id" | "en";
   onTryPosition?: (fen: string, moves: string[]) => void;
+  broadcastId?: string;
 }) {
   const [whiteEngine, setWhiteEngine] = useState<EngineType>("stockfish");
   const [blackEngine, setBlackEngine] = useState<EngineType>("jev-fly");
@@ -154,6 +158,47 @@ export function SpectatorView({
 
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
   const [fullscreenSpectator, setFullscreenSpectator] = useState(false);
+  const [broadcastData, setBroadcastData] = useState<any>(null);
+
+  useEffect(() => {
+    const activeBroadcastId = broadcastId || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("spectate") : null);
+    if (!activeBroadcastId) return;
+
+    let timer: NodeJS.Timeout;
+    const fetchLive = async () => {
+      try {
+        const res = await fetch("/api/broadcast?id=" + activeBroadcastId);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.match) {
+            setBroadcastData(data.match);
+            setCurrentFen(data.match.fen);
+            if (data.match.moves) {
+              setMoves(data.match.moves.map((san: string, idx: number) => ({
+                san,
+                uci: san,
+                by: idx % 2 === 0 ? "white" : "black",
+                fen: data.match.fen,
+                scoreCp: data.match.scoreCp ?? null,
+              })));
+            }
+            if (data.match.commentary) {
+              setCommentary(data.match.commentary);
+            }
+            if (data.match.lastUci) {
+              setLastMoveUci(data.match.lastUci);
+            }
+            // scoreCp auto-derived from moves
+          }
+        }
+      } catch (_) {}
+      timer = setTimeout(fetchLive, 1500);
+    };
+
+    fetchLive();
+    return () => clearTimeout(timer);
+  }, [broadcastId]);
+
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -360,7 +405,7 @@ export function SpectatorView({
           to: data.prediction.to,
           san: data.prediction.san,
         };
-        predDesc = data.prediction.summary || data.prediction.description || `Stockfish 15 NNUE memprediksi balasan terbaik: ${data.prediction.san}`;
+        predDesc = data.prediction.summary || data.prediction.description || `Stockfish 19 NNUE memprediksi balasan terbaik: ${data.prediction.san}`;
       } else if (tektokkan.hasExchange && tektokkan.defenderFrom && tektokkan.targetSq) {
         chosenPred = { from: tektokkan.defenderFrom, to: tektokkan.targetSq, san: `x${tektokkan.targetSq}` };
         predDesc = tektokkan.explanation || "";
@@ -380,15 +425,18 @@ export function SpectatorView({
       const pieceTrajectory = (data.prediction as any)?.pieceTrajectory || [];
       const pvText = (data.prediction as any)?.pvText || "";
 
-      if (pieceTrajectory.length > 0) {
-        stratMoveObj = { from: pieceTrajectory[0].from, to: pieceTrajectory[0].to };
-        stratPlanText = `${pieceTrajectory[0].san}: ${pieceTrajectory[0].intention || "Manuver lanjutan bidak ini."}`;
-      } else if (data.prediction?.strategicMove) {
+      const strategicGoal = (data.prediction as any)?.strategicGoal || "";
+      const chain3Moves = (data.prediction as any)?.chain3Moves || "";
+
+      if (data.prediction?.strategicMove?.intention) {
         stratMoveObj = {
           from: data.prediction.strategicMove.from,
           to: data.prediction.strategicMove.to,
         };
-        stratPlanText = `${data.prediction.strategicMove.san}: ${data.prediction.strategicMove.intention}`;
+        stratPlanText = data.prediction.strategicMove.intention;
+      } else if (pieceTrajectory.length > 0) {
+        stratMoveObj = { from: pieceTrajectory[0].from, to: pieceTrajectory[0].to };
+        stratPlanText = `${pieceTrajectory[0].san}: ${pieceTrajectory[0].intention || "Manuver lanjutan perwira ini."}`;
       } else if (futureLine.length > 1) {
         stratMoveObj = { from: futureLine[1].from, to: futureLine[1].to };
         stratPlanText = `${futureLine[1].san}: ${futureLine[1].intention || "Melanjutkan rantai manuver taktis posisi."}`;
@@ -456,6 +504,8 @@ export function SpectatorView({
         target: targetText,
         prediction: predDesc || "Menunggu respon lawan.",
         strategicPlan: stratPlanText,
+        strategicGoal,
+        chain3Moves,
         tacticalBadge: activeConcept,
         tektokkan,
         futureLine,
@@ -675,16 +725,25 @@ export function SpectatorView({
           <div className="panel px-3 py-1.5 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm shrink-0" style={{ background: "var(--card)" }}>
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-3.5 h-3.5 rounded-full bg-neutral-900 border-2 border-neutral-600 shrink-0" />
-              <select
-                value={blackEngine}
-                onChange={(e) => { setBlackEngine(e.target.value as any); if (status !== "idle") resetMatch(); }}
-                className="bg-[var(--surface)] text-[12px] font-bold text-white border border-[var(--border)] rounded-lg px-2 py-1 focus:outline-none focus:border-[var(--primary)] cursor-pointer"
-              >
-                <option value="jev">Jev AI Connectome (Hitam)</option>
-                <option value="stockfish">Stockfish 15 NNUE (Hitam)</option>
-                <option value="fly">Fruit Fly Brain (Hitam)</option>
-                <option value="jev-fly">Jev + Fly Brain (Hitam)</option>
-              </select>
+              {broadcastData ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black text-white px-2 py-1 rounded bg-neutral-800 border border-neutral-700">
+                    {broadcastData.blackName} (Hitam)
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold animate-pulse">● LIVE</span>
+                </div>
+              ) : (
+                <select
+                  value={blackEngine}
+                  onChange={(e) => { setBlackEngine(e.target.value as any); if (status !== "idle") resetMatch(); }}
+                  className="bg-[var(--surface)] text-[12px] font-bold text-white border border-[var(--border)] rounded-lg px-2 py-1 focus:outline-none focus:border-[var(--primary)] cursor-pointer"
+                >
+                  <option value="jev">Jev AI Connectome (Hitam)</option>
+                  <option value="stockfish">Stockfish 19 NNUE (Hitam)</option>
+                  <option value="fly">Fruit Fly Brain (Hitam)</option>
+                  <option value="jev-fly">Jev + Fly Brain (Hitam)</option>
+                </select>
+              )}
               <span className="text-xs text-neutral-400 font-mono font-bold">
                 {whiteCp !== null ? (whiteCp < 0 ? `+${(-whiteCp/100).toFixed(1)}` : `-${(whiteCp/100).toFixed(1)}`) : "="}
               </span>
@@ -734,16 +793,25 @@ export function SpectatorView({
           <div className="panel px-3 py-2 rounded-xl border border-[var(--border)] flex items-center justify-between gap-2 shadow-sm" style={{ background: "var(--card)" }}>
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-neutral-300 shrink-0" />
-              <select
-                value={whiteEngine}
-                onChange={(e) => { setWhiteEngine(e.target.value as any); if (status !== "idle") resetMatch(); }}
-                className="bg-[var(--surface)] text-[12px] font-bold text-white border border-[var(--border)] rounded-lg px-2 py-1 focus:outline-none focus:border-[var(--primary)] cursor-pointer"
-              >
-                <option value="stockfish">Stockfish 15 NNUE (Putih)</option>
-                <option value="jev">Jev AI Connectome (Putih)</option>
-                <option value="fly">Fruit Fly Brain (Putih)</option>
-                <option value="jev-fly">Jev + Fly Brain (Putih)</option>
-              </select>
+              {broadcastData ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black text-white px-2 py-1 rounded bg-neutral-800 border border-neutral-700">
+                    {broadcastData.whiteName} (Putih)
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold animate-pulse">● LIVE</span>
+                </div>
+              ) : (
+                <select
+                  value={whiteEngine}
+                  onChange={(e) => { setWhiteEngine(e.target.value as any); if (status !== "idle") resetMatch(); }}
+                  className="bg-[var(--surface)] text-[12px] font-bold text-white border border-[var(--border)] rounded-lg px-2 py-1 focus:outline-none focus:border-[var(--primary)] cursor-pointer"
+                >
+                  <option value="stockfish">Stockfish 19 NNUE (Putih)</option>
+                  <option value="jev">Jev AI Connectome (Putih)</option>
+                  <option value="fly">Fruit Fly Brain (Putih)</option>
+                  <option value="jev-fly">Jev + Fly Brain (Putih)</option>
+                </select>
+              )}
               <span className="text-xs text-emerald-400 font-mono font-bold">
                 {whiteCp !== null ? (whiteCp > 0 ? `+${(whiteCp/100).toFixed(1)}` : (whiteCp/100).toFixed(1)) : "="}
               </span>
@@ -816,31 +884,38 @@ export function SpectatorView({
                     <span className="text-neutral-200 font-medium leading-snug">{commentary.target}</span>
                   </div>
 
-                  {/* Prediction */}
+                  {/* Prediksi Respons Lawan (Sebelum Lawan Melangkah) */}
                   <div className="p-2.5 rounded-xl border border-sky-500/40 text-[12px] shadow-inner" style={{ background: "rgba(14, 34, 48, 0.7)" }}>
-                    <div className="font-bold text-sky-400 text-xs flex items-center gap-1 mb-0.5">
+                    <div className="font-bold text-sky-400 text-xs flex items-center justify-between mb-0.5">
                       <span>Prediksi Respons Lawan:</span>
+                      <span className="text-[10px] text-sky-300/80 font-mono">Sebelum Lawan Melangkah</span>
                     </div>
                     <div className="text-sky-100 italic font-medium leading-relaxed">
                       {commentary.prediction}
                     </div>
                   </div>
 
-                  {/* Strategi Khusus Bidak/Pion yang Melangkah */}
+                  {/* Strategi Bidak (Tujuan Langkah yang Baru Dilakukan) */}
                   {commentary.strategicPlan && (
                     <div className="p-2.5 rounded-xl border border-emerald-500/40 text-[12px] shadow-inner" style={{ background: "rgba(6, 40, 28, 0.7)" }}>
                       <div className="font-bold text-emerald-400 text-xs flex items-center justify-between mb-1">
-                        <span>Strategi Bidak ({commentary.moveSan}):</span>
-                        {commentary.pieceTrajectory && commentary.pieceTrajectory.length > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-semibold border border-emerald-500/30">
-                            {commentary.pieceTrajectory.length} langkah maju
+                        <span>Tujuan Strategi ({commentary.moveSan}):</span>
+                        {commentary.strategicGoal && (
+                          <span className="text-xs px-2 py-0.5 bg-emerald-500/25 text-emerald-300 rounded font-semibold border border-emerald-500/40">
+                            {commentary.strategicGoal}
                           </span>
                         )}
                       </div>
                       <div className="text-emerald-100 font-medium leading-relaxed mb-1.5">
                         {commentary.strategicPlan}
                       </div>
-                      {commentary.pvText && (
+                      {commentary.chain3Moves && (
+                        <div className="font-mono text-[10.5px] p-2 rounded-lg bg-emerald-950/80 border border-emerald-500/30 text-emerald-200 leading-relaxed">
+                          <span className="text-emerald-400 font-sans text-xs font-bold block mb-0.5">Proyeksi Rantai Langkah (s/d 3 Langkah):</span>
+                          {commentary.chain3Moves}
+                        </div>
+                      )}
+                      {!commentary.chain3Moves && commentary.pvText && (
                         <div className="font-mono text-[10.5px] p-2 rounded-lg bg-emerald-950/70 border border-emerald-500/25 text-emerald-200/90 leading-relaxed break-words">
                           <span className="text-emerald-400 font-sans text-xs font-bold block mb-0.5">Kontekstual PV Global:</span>
                           {commentary.pvText}

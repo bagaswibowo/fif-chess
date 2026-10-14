@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   }
 
   const engine = parseEngine(bodyObj);
-  const seed = typeof bodyObj.seed === 'number' ? bodyObj.seed : 0;
+  const seed = typeof bodyObj.seed === 'number' ? bodyObj.seed : Math.floor(Math.random() * 1000000);
   const history = Array.isArray(bodyObj.history) ? (bodyObj.history as string[]) : [];
 
   try {

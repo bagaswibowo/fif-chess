@@ -13,7 +13,7 @@ export class PureSuperflyEngine implements IChessEngine {
   readonly name = "Superfly Connectome (PUCT MCTS)";
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
-    const cached = fenEngineCache.get(req.fen);
+    const cached = fenEngineCache.get(this.id + ":" + req.fen);
     if (cached) return cached;
     const baseSims = Math.max(10, req.simulations ?? 15);
     const sims = mctsConcurrencyGate.getAdaptiveSimulations(baseSims);
@@ -99,7 +99,7 @@ export class PureSuperflyEngine implements IChessEngine {
         quiescenceScore: gateResult.quiescenceScore,
       },
     };
-    fenEngineCache.set(req.fen, response);
+    fenEngineCache.set(this.id + ":" + req.fen, response);
     return response;
   }
 }
