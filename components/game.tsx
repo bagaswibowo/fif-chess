@@ -247,6 +247,25 @@ export function Game() {
   const [saveMatchReplay, setSaveMatchReplay] = useState(true);
   const [broadcastId, setBroadcastId] = useState<string>("");
   const [spectateMatchId, setSpectateMatchId] = useState<string | null>(null);
+
+  // Daftar siaran publik aktif untuk ikon Notif (live matches + komentator status)
+  const [liveMatchesForDock, setLiveMatchesForDock] = useState<any[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      void fetch("/api/broadcast", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!alive || !d) return;
+          const list = Array.isArray(d) ? d : d.matches || [];
+          setLiveMatchesForDock(list.filter((m: any) => m.isPublic && !m.over));
+        })
+        .catch(() => {});
+    };
+    load();
+    const t = setInterval(load, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
   const [spectateMatchData, setSpectateMatchData] = useState<any>(null);
 
   useEffect(() => {
@@ -1843,6 +1862,8 @@ export function Game() {
         activeModal={activeDockModal}
         onClose={() => setActiveDockModal(null)}
         user={currentUser}
+        liveMatches={liveMatchesForDock}
+        onWatchLiveMatch={(id) => setSpectateMatchId(id)}
         onChallengePlayer={(uname) => {
           setPlayMode("pvp");
           setNavTab("play");

@@ -6,6 +6,7 @@ interface BroadcastMatch {
   blackName: string;
   fen: string;
   moves: string[];
+  plyCount?: number;
   lastUci?: string;
   commentary?: any;
   over?: boolean;
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
       blackName: body.blackName || "Hitam",
       fen: body.fen || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
       moves: Array.isArray(body.moves) ? body.moves : [],
+      plyCount: Array.isArray(body.moves) ? body.moves.length : 0,
       lastUci: body.lastUci,
       commentary: body.commentary,
       over: isOver,
