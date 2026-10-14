@@ -1173,8 +1173,8 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       )}
 
       {/* FEN INPUT & PRESETS BAR */}
-      <div className="panel p-2.5 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:flex-wrap" style={{ background: "var(--surface)" }}>
-        <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:min-w-[240px]">
+      <div className="panel p-2.5 flex flex-col gap-2 text-xs" style={{ background: "var(--surface)" }}>
+        <div className="flex items-center gap-2 w-full">
           <label className="text-xs font-bold text-[var(--muted-foreground)] shrink-0" htmlFor="fen-input">FEN:</label>
           <input
             id="fen-input"
@@ -1191,7 +1191,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         </div>
 
         {/* Quick Presets */}
-        <div className="flex items-center gap-1 shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1 w-full overflow-x-auto custom-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {PRESET_POSITIONS.map((p) => (
             <button
               key={p.name}
@@ -1208,7 +1208,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       </div>
 
       {/* VIEWPORT MODE TABS */}
-      <div className="flex items-center gap-1.5 overflow-x-auto border-b border-[var(--border)] pb-1.5">
+      <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar border-b border-[var(--border)] pb-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           onClick={() => setActiveTab("solver")}
           aria-pressed={activeTab === "solver"}

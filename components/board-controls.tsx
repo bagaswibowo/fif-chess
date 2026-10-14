@@ -117,7 +117,7 @@ export function BoardControls({
           aria-label={`Putar orientasi papan (${currentSideLabel})`}
         >
           <IconSwap3D size={14} />
-          <span className="hidden sm:inline">Putar Papan</span>
+          <span>Putar Papan</span>
           {showShortcuts && <kbd className="hidden lg:inline text-xs text-neutral-400 font-mono">Z</kbd>}
         </button>
         {onToggleFullscreen && (
