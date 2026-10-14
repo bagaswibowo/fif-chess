@@ -1433,20 +1433,22 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               <CapturedPiecesBar fen={initialFen} side="white" />
             </div>
 
-            {/* KONTROL EDIT: toggle Mode Edit, Mode Hapus, aksi cepat, dan hint tunggal */}
+            {/* KONTROL EDIT: Mode Edit toggle kini di samping Putar Papan (extra BoardControls).
+                Baris ini hanya muncul saat edit aktif: Selesai, Mode Hapus, aksi cepat, hint. */}
             <div className="flex flex-wrap items-center gap-2 pt-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditingBoard(v => !v);
-                  setSelectedSquareForAction(null);
-                }}
-                aria-pressed={isEditingBoard}
-                className={`ctl ctl-xs font-bold ${isEditingBoard ? "ctl-active" : "ctl-quiet"}`}
-              >
-                <span>{isEditingBoard ? "Selesai Edit Posisi" : "Mode Edit Papan"}</span>
-              </button>
-
+              {isEditingBoard && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingBoard(false);
+                    setSelectedSquareForAction(null);
+                  }}
+                  aria-pressed={isEditingBoard}
+                  className="ctl ctl-xs ctl-active font-bold"
+                >
+                  <span>Selesai Edit Posisi</span>
+                </button>
+              )}
               {isEditingBoard && (
                 <>
                   <button
@@ -1494,6 +1496,20 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               onFlipOrientation={() => setScanBoardOrientation((o) => (o === "white" ? "black" : "white"))}
               showShortcuts={true}
               className="pt-1"
+              extra={
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingBoard(v => !v);
+                    setSelectedSquareForAction(null);
+                  }}
+                  aria-pressed={isEditingBoard}
+                  className={`ctl ctl-sm font-bold ${isEditingBoard ? "ctl-active" : "ctl-quiet"}`}
+                  title="Nyalakan/matikan Mode Edit untuk atur bidak manual"
+                >
+                  {isEditingBoard ? "Selesai Edit" : "Mode Edit"}
+                </button>
+              }
             />
 
             {/* PALET PILIHAN BIDAK (baris putih & hitam sejajar) */}
@@ -1598,7 +1614,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                     className="ctl ctl-sm ctl-quiet font-bold justify-center w-full flex items-center gap-1.5"
                   >
                     <IconScan3D size={14} />
-                    <span>Sesuaikan Sudut Papan</span>
+                    <span>Scan Ulang (Sesuaikan Sudut)</span>
                   </button>
                   <p className="prose-note m-0 text-xs">
                     Gunakan bila hasil scan meleset. Posisi tetap tersimpan.
