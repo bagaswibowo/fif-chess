@@ -1151,9 +1151,11 @@ export function Game() {
         {navTab === "admin" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><AdminPanel user={currentUser} /></div>}
 
         {navTab === "play" && (
-          <div className="h-full max-h-full min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-2 md:gap-3 items-center justify-center w-full">
+          <div className="lg:h-full lg:max-h-full lg:min-h-0 lg:grid lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] lg:gap-2 md:lg:gap-3 lg:items-center lg:justify-center w-full lg:items-stretch">
             {/* CENTER CHESSBOARD ARENA */}
-            <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[min(100%,calc(100dvh-260px))] mx-auto space-y-1 md:space-y-1.5">
+            {/* Mobile: board sized by viewport WIDTH, sidebar flows below & scrolls with the page.
+                Desktop (lg+): original h-full grid layout. */}
+            <div className="lg:flex lg:flex-col lg:justify-center lg:items-center lg:h-full lg:max-h-full lg:min-h-0 flex flex-col justify-start items-center w-full lg:max-w-[min(100%,calc(100dvh-260px))] max-w-full mx-auto space-y-1 md:space-y-1.5">
               {/* Opponent Card (Top) with 3D Bot Icon / Player Icon */}
               <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -1358,8 +1360,9 @@ export function Game() {
             </div>
 
             {/* RIGHT SIDEBAR (Control Panel - 100% Chess.com) */}
-            <div className="h-full max-h-full min-h-0 flex flex-col">
-              <Card className="bg-[var(--card)] border border-[var(--border)] shadow-xl rounded-2xl overflow-hidden h-full max-h-full flex flex-col min-h-0">
+            {/* Mobile: natural height below the board (scrolls with page); desktop: h-full panel */}
+            <div className="lg:h-full lg:max-h-full lg:min-h-0 lg:flex lg:flex-col flex flex-col">
+              <Card className="bg-[var(--card)] border border-[var(--border)] shadow-xl rounded-2xl overflow-hidden lg:h-full lg:max-h-full flex flex-col lg:min-h-0">
                 <CardHeader className="p-2 border-b border-[var(--border)] bg-[var(--muted)] shrink-0">
                   <div className="flex w-full bg-[var(--surface)] p-1 rounded-full border border-[var(--border)] gap-1">
                     <button
