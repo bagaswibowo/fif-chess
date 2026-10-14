@@ -35,6 +35,35 @@ export function FormattedPostContent({ text }: { text: string }) {
           );
         }
 
+        // Markdown table: | a | b | baris + |---|---| separator
+        if (trimmed.startsWith("|") && trimmed.includes("\n") ) {
+          const rows = trimmed.split("\n").filter((l) => l.trim().startsWith("|"));
+          const isSep = (l: string) => /^\s*\|?[\s:-]*-{2,}[\s:|-]*\|?\s*$/.test(l) && l.includes("-");
+          const parse = (l: string) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+          const header = rows.length > 1 && isSep(rows[1]) ? parse(rows[0]) : null;
+          const bodyRows = (header ? rows.slice(2) : rows).filter((l) => !isSep(l));
+          if (header || bodyRows.length > 0) {
+            return (
+              <div key={pIdx} className="table-wrap my-1 rounded-xl border border-[var(--border)]">
+                <table className="data-table">
+                  {header && (
+                    <thead>
+                      <tr>{header.map((h, i) => <th key={i}>{h}</th>)}</tr>
+                    </thead>
+                  )}
+                  <tbody>
+                    {bodyRows.map((r, i) => (
+                      <tr key={i}>
+                        {parse(r).map((c, j) => <td key={j} className={/^[-+]?[\d.,]+%?$/.test(c) ? "num" : ""}>{c}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          }
+        }
+
         if (trimmed.startsWith("## ")) {
           return (
             <h4 key={pIdx} className="font-bold text-sm text-[var(--primary)] mt-1 mb-0.5">
