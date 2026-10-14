@@ -244,6 +244,8 @@ export function Game() {
 
   // Siaran Langsung & Rekaman Pertandingan
   const [isPublicBroadcast, setIsPublicBroadcast] = useState(true);
+  // Toggle komentator taktik AI untuk penonton siaran (default: ON)
+  const [broadcastCommentary, setBroadcastCommentary] = useState(true);
   const [saveMatchReplay, setSaveMatchReplay] = useState(true);
   const [broadcastId, setBroadcastId] = useState<string>("");
   const [spectateMatchId, setSpectateMatchId] = useState<string | null>(null);
@@ -302,7 +304,7 @@ export function Game() {
           fen: nextFen,
           moves: chess.history(),
           lastUci: uci,
-          commentary: comm,
+          commentary: broadcastCommentary ? comm : null,
           over: isOver !== undefined ? isOver : effectiveOutcome.over,
           outcomeLabel: outcomeLabel || effectiveOutcome.label,
           isPublic: isPublicBroadcast,
@@ -310,7 +312,7 @@ export function Game() {
         }),
       }).catch(() => {});
     },
-    [broadcastId, humanSide, me.name, selectedAiOpponent, chess, effectiveOutcome, isPublicBroadcast, saveMatchReplay],
+    [broadcastId, humanSide, me.name, selectedAiOpponent, chess, effectiveOutcome, isPublicBroadcast, saveMatchReplay, broadcastCommentary],
   );
 
   // Otomatis akhiri siaran & kelola rekaman publik saat game selesai
@@ -1679,14 +1681,7 @@ export function Game() {
                                     type="button"
                                     role="switch"
                                     aria-checked={isPublicBroadcast}
-                                    onClick={() => {
-                                      const next = !isPublicBroadcast;
-                                      setIsPublicBroadcast(next);
-                                      // Siapkan broadcast sejak toggle ON — link bisa dibagi sebelum langkah pertama
-                                      if (next && !broadcastId) {
-                                        setBroadcastId("LIVE-" + Math.random().toString(36).substring(2, 8).toUpperCase());
-                                      }
-                                    }}
+                                    onClick={() => setIsPublicBroadcast(!isPublicBroadcast)}
                                     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                                       isPublicBroadcast ? "bg-emerald-500" : "bg-neutral-700"
                                     }`}
@@ -1694,6 +1689,28 @@ export function Game() {
                                     <span
                                       className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                                         isPublicBroadcast ? "translate-x-4" : "translate-x-0"
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center justify-between py-1 border-t border-neutral-800">
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-bold text-white">Komentator Taktik AI</div>
+                                    <div className="text-[10px] text-neutral-400">Penonton siaran melihat analisis taktik per langkah</div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={broadcastCommentary}
+                                    onClick={() => setBroadcastCommentary(!broadcastCommentary)}
+                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                      broadcastCommentary ? "bg-emerald-500" : "bg-neutral-700"
+                                    }`}
+                                  >
+                                    <span
+                                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                                        broadcastCommentary ? "translate-x-4" : "translate-x-0"
                                       }`}
                                     />
                                   </button>
@@ -1721,7 +1738,7 @@ export function Game() {
                                   </button>
                                 </div>
 
-                                {broadcastId && (
+                                {broadcastId && gameActive && (
                                   <button
                                     type="button"
                                     onClick={copyShareLink}
