@@ -584,6 +584,12 @@ export function Game() {
     resetGame();
   }, [pvpRoomCode, pvpToken, resetGame]);
 
+  const lastMove = moves[moves.length - 1];
+  const matchCommentary = useMemo(
+    () => buildMatchCommentary(chess, lastMove, typeof analysis?.scoreCp === "number" ? analysis.scoreCp : null, humanSide),
+    [analysis?.scoreCp, chess, humanSide, lastMove],
+  );
+
   const tryHumanMove = useCallback(
     (from: string, to: string, promotion?: PromotionPiece): boolean => {
       if (!humanToMove) return false;
@@ -604,6 +610,9 @@ export function Game() {
         },
       ]);
 
+      // Sync move to live broadcast (AI & PvP — komentator publik ikut tampil)
+      syncBroadcast(nextFen, legal.uci, applied.san, matchCommentary as any);
+
       // If in PvP mode, push move to server
       if (playMode === "pvp" && pvpRoomCode) {
         void fetch("/api/pvp", {
@@ -622,9 +631,6 @@ export function Game() {
         return true;
       }
 
-      // Sync move to live broadcast
-      syncBroadcast(nextFen, legal.uci, applied.san);
-
       // AI Mode
       const nextOutcome = describeOutcome(chess);
       if (!nextOutcome.over) {
@@ -632,7 +638,7 @@ export function Game() {
       }
       return true;
     },
-    [askEngine, chess, humanToMove, playMode, pvpRoomCode, humanSide, pvpToken],
+    [askEngine, chess, humanToMove, playMode, pvpRoomCode, humanSide, pvpToken, matchCommentary],
   );
 
   const onPieceDrop = ({ sourceSquare, targetSquare }: PieceDropHandlerArgs): boolean => {
@@ -662,12 +668,6 @@ export function Game() {
     }
     return set;
   }, [chess, selectedSquare]);
-
-  const lastMove = moves[moves.length - 1];
-  const matchCommentary = useMemo(
-    () => buildMatchCommentary(chess, lastMove, typeof analysis?.scoreCp === "number" ? analysis.scoreCp : null, humanSide),
-    [analysis?.scoreCp, chess, humanSide, lastMove],
-  );
 
   const squareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
@@ -1660,7 +1660,14 @@ export function Game() {
                                     type="button"
                                     role="switch"
                                     aria-checked={isPublicBroadcast}
-                                    onClick={() => setIsPublicBroadcast(!isPublicBroadcast)}
+                                    onClick={() => {
+                                      const next = !isPublicBroadcast;
+                                      setIsPublicBroadcast(next);
+                                      // Siapkan broadcast sejak toggle ON — link bisa dibagi sebelum langkah pertama
+                                      if (next && !broadcastId) {
+                                        setBroadcastId("LIVE-" + Math.random().toString(36).substring(2, 8).toUpperCase());
+                                      }
+                                    }}
                                     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                                       isPublicBroadcast ? "bg-emerald-500" : "bg-neutral-700"
                                     }`}
