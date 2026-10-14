@@ -1495,6 +1495,17 @@ export function Game() {
                             <IconSwap3D size={15} />
                             <span>Reset Permainan</span>
                           </button>
+                        
+                          {broadcastId && (
+                            <button
+                              type="button"
+                              onClick={copyShareLink}
+                              className="w-full py-2.5 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-neutral-200 flex items-center justify-center gap-2 transition-all"
+                              title="Salin tautan agar orang lain bisa menonton siaran ini"
+                            >
+                              {copiedShare ? (<><Check size={15} className="text-emerald-400" /><span className="text-emerald-400">Tautan Tersalin!</span></>) : (<><Share2 size={15} /><span>Salin Tautan Siaran</span></>)}
+                            </button>
+                          )}
                         </div>
                       ) : (
                         /* SETUP — Chess.com Dark Interface */
@@ -1738,16 +1749,6 @@ export function Game() {
                                   </button>
                                 </div>
 
-                                {broadcastId && gameActive && (
-                                  <button
-                                    type="button"
-                                    onClick={copyShareLink}
-                                    className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-xs font-bold text-neutral-200 cursor-pointer transition-colors"
-                                    title="Salin tautan agar orang lain bisa menonton siaran / replay ini"
-                                  >
-                                    {copiedShare ? (<><Check size={12} className="text-emerald-400" /><span className="text-emerald-400">Tautan Tersalin!</span></>) : (<><Share2 size={12} /><span>Salin Tautan Siaran</span></>)}
-                                  </button>
-                                )}
                               </div>
 
                               {/* GIANT CHESS.COM GREEN CTA BUTTON */}
