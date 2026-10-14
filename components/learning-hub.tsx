@@ -104,6 +104,9 @@ export function LearningHub({ lang = "id" }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [status, setStatus] = useState<"unsolved" | "correct" | "wrong">("unsolved");
   const [hint, setHint] = useState(0);
+  // Lanjutan trik: setelah langkah benar, tampilkan ancaman/hasil lanjutan
+  const [continuation, setContinuation] = useState<{ san: string; from: string; to: string; note: string }[]>([]);
+  const [showContinuation, setShowContinuation] = useState(false);
   const [playAsBlack, setPlayAsBlack] = useState(false);
 
   // Satu daftar: puzzle bawaan + trik lawan yang disimpan pemain (tanpa duplikat)
@@ -166,6 +169,7 @@ export function LearningHub({ lang = "id" }: Props) {
       setStatus("correct");
       setSelected(null);
       complete(puzzle.id, puzzle.xp);
+      computeContinuation(c.fen(), puzzle.turn === "w" ? "b" : "w");
     } else {
       setStatus("wrong");
       setSelected(null);
@@ -189,11 +193,40 @@ export function LearningHub({ lang = "id" }: Props) {
       setStatus("correct");
       setSelected(null);
       complete(puzzle.id, puzzle.xp);
+      computeContinuation(c.fen(), puzzle.turn === "w" ? "b" : "w");
       return true;
     } else {
       setStatus("wrong");
       setSelected(null);
       return false;
+    }
+  };
+
+  // Lanjutan trik: setelah solusi benar, hitung balasan lawan & ancaman lanjutan (client-side, chess.js)
+  // ponytail: heuristik tangkapan/skak; engine depth kalau mau lebih dalam nanti.
+  const computeContinuation = (fenAfter: string, replyTurn: "w" | "b") => {
+    try {
+      const c = new Chess(fenAfter);
+      const opp = replyTurn;
+      const moves = c.moves({ verbose: true });
+      // Prioritas balasan lawan: tangkapan > skak > lainnya (maks 3)
+      const replies = moves
+        .filter((mv) => mv.captured || mv.san.includes("+"))
+        .sort((a, b) => (b.captured ? 1 : 0) - (a.captured ? 1 : 0))
+        .slice(0, 3);
+      const conts = replies.map((mv) => ({
+        san: mv.san,
+        from: mv.from,
+        to: mv.to,
+        note: mv.captured
+          ? `Lawan balas ${mv.san} — mengambil bidak di ${mv.to.toUpperCase()}`
+          : `Lawan balas ${mv.san} — memberi skak, siapkan pertahanan`
+      }));
+      // Ancaman kita berikutnya (giliran kita lagi): tangkapan tersedia
+      setContinuation(conts);
+      setShowContinuation(false);
+    } catch {
+      setContinuation([]);
     }
   };
 
@@ -208,6 +241,16 @@ export function LearningHub({ lang = "id" }: Props) {
   if (status === "correct") {
     squareStyles[from] = { backgroundColor: "color-mix(in srgb, var(--primary) 35%, transparent)" };
     squareStyles[to] = { backgroundColor: "color-mix(in srgb, var(--primary) 55%, transparent)" };
+  }
+  // Panah hijau: petak asal bidak solusi + target (apa yang diancam/dimakan)
+  const arrows: { startSquare: string; endSquare: string; color: string }[] = [];
+  if (status === "unsolved" && hint >= 3) {
+    arrows.push({ startSquare: from, endSquare: to, color: "#22c55e" });
+  }
+  if (showContinuation) {
+    for (const cont of continuation) {
+      arrows.push({ startSquare: cont.from, endSquare: cont.to, color: "#22c55e" });
+    }
   }
 
   const doneCount = list.filter((c) => progress.completed.includes(c.id)).length;
@@ -345,6 +388,7 @@ export function LearningHub({ lang = "id" }: Props) {
                 canDragPiece: ({ piece }) => (puzzle.turn === "w" ? piece.pieceType.startsWith("w") : piece.pieceType.startsWith("b")),
                 onPieceDrop: handlePieceDrop,
                 squareStyles,
+                arrows,
                 onSquareClick,
                 boardStyle: {
                   backgroundColor: "var(--board-dark)",
@@ -454,6 +498,40 @@ export function LearningHub({ lang = "id" }: Props) {
                   <HighlightedChessText text={puzzle.trickExplanation} />
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* LANJUTAN TRIK: setelah benar, tampilkan apa lanjutannya & ancaman lawan */}
+          {status === "correct" && continuation.length > 0 && (
+            <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/50">
+              <button
+                type="button"
+                onClick={() => setShowContinuation((v) => !v)}
+                className="flex items-center justify-between w-full text-left"
+                aria-expanded={showContinuation}
+              >
+                <span className="text-sm font-bold text-emerald-200 flex items-center gap-1.5">
+                  <IconTarget3D size={15} />
+                  <span>Lanjutan Trik ({continuation.length} balasan lawan)</span>
+                </span>
+                <span className="text-emerald-300 text-xs font-bold">{showContinuation ? "Tutup" : "Lihat"}</span>
+              </button>
+              {showContinuation && (
+                <ul className="mt-2 space-y-1.5">
+                  {continuation.map((cont, i) => (
+                    <li key={i} className="text-xs text-emerald-100 flex items-start gap-2">
+                      <span className="font-mono font-black text-emerald-300 shrink-0">{cont.san}</span>
+                      <span className="text-emerald-200/80">{cont.note}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-[11px] text-emerald-300/70 mt-1.5">Panah hijau di papan menunjukkan arah balasan lawan.</p>
+            </div>
+          )}
+          {status === "correct" && continuation.length === 0 && (
+            <div className="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-200">
+              Solusi tepat! Tidak ada tangkapan/skak balasan langsung dari lawan — posisi kamu unggul.
             </div>
           )}
 
