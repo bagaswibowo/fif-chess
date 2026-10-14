@@ -838,10 +838,45 @@ export function Game() {
   }, [getFullPgn]);
 
   // SPECTATOR: render fullscreen broadcast/replay ketika dibuka via ?spectate=<id>
+  const spectateArrows = useMemo(() => {
+    const list: { startSquare: string; endSquare: string; color: string }[] = [];
+    const m = spectateMatchData;
+    if (!m) return list;
+    // Kuning: langkah terakhir
+    if (m.lastUci && m.lastUci.length >= 4) {
+      list.push({ startSquare: m.lastUci.slice(0, 2), endSquare: m.lastUci.slice(2, 4), color: "#eab308" });
+    }
+    const comm = m.commentary;
+    if (!comm) return list;
+    // Merah: ancaman
+    if (comm.threat?.from && comm.threat?.to) {
+      list.push({ startSquare: comm.threat.from, endSquare: comm.threat.to, color: "#ef4444" });
+    }
+    // Biru: prediksi respons lawan
+    if (comm.predFrom && comm.predTo) {
+      list.push({ startSquare: comm.predFrom, endSquare: comm.predTo, color: "#38bdf8" });
+    } else if (comm.tektokkan?.hasExchange && comm.tektokkan.defenderFrom && comm.tektokkan.targetSq) {
+      list.push({ startSquare: comm.tektokkan.defenderFrom, endSquare: comm.tektokkan.targetSq, color: "#38bdf8" });
+    }
+    // Hijau: strategi / trajektori bidak
+    const traj = Array.isArray(comm.pieceTrajectory) && comm.pieceTrajectory.length > 0
+      ? comm.pieceTrajectory
+      : (Array.isArray(comm.futureLine) ? comm.futureLine : []);
+    traj.forEach((step: any, idx: number) => {
+      if (step?.from && step?.to && step.from !== step.to) {
+        list.push({ startSquare: step.from, endSquare: step.to, color: idx === 0 ? "#10b981" : "#059669cc" });
+      }
+    });
+    if (traj.length === 0 && comm.stratFrom && comm.stratTo) {
+      list.push({ startSquare: comm.stratFrom, endSquare: comm.stratTo, color: "#10b981" });
+    }
+    return list;
+  }, [spectateMatchData]);
+
   if (spectateMatchId && spectateMatchData) {
     const m = spectateMatchData;
     return (
-      <div className="h-screen w-screen bg-[var(--background)] text-white flex flex-col items-center justify-center p-4 gap-3 select-none">
+      <div className="min-h-screen w-screen bg-[var(--background)] text-white flex flex-col items-center justify-start pt-4 pb-8 p-4 gap-3 select-none overflow-y-auto">
         <div className="flex items-center gap-2 text-sm font-black tracking-widest uppercase">
           <IconPlay3D size={20} />
           <span>FIF <span className="text-[var(--primary)]">· Siaran Langsung</span></span>
@@ -858,6 +893,7 @@ export function Game() {
               position: m.fen || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
               boardOrientation: "white",
               allowDragging: false,
+              arrows: spectateArrows,
               darkSquareStyle: { backgroundColor: "var(--board-dark)" },
               lightSquareStyle: { backgroundColor: "var(--board-light)" },
             }}
