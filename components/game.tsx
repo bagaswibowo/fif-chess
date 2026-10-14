@@ -26,6 +26,7 @@ import { AuthPanel } from "@/components/auth-panel";
 import { AdminPanel } from "@/components/admin-panel";
 import { PvpPanel, type PvpRoom } from "@/components/pvp-panel";
 import { ClockMovesFullscreen } from "@/components/clock-moves-fullscreen";
+import { TacticalCommentaryCard } from "@/components/tactical-commentary-card";
 import { useSession } from "@/lib/use-session";
 import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import { CoachModeView } from "@/components/coach-mode-view";
@@ -869,9 +870,23 @@ export function Game() {
             <span className="flex items-center gap-2 text-emerald-400"><span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Langsung</span>
           )}
         </div>
+        {m.commentary && (
+          <div className="w-full max-w-xl">
+            <TacticalCommentaryCard
+              commentary={m.commentary}
+              badgeTitle="Komentator & Taktik AI"
+              badgeSubtitle="Siaran Publik"
+              isLive={!m.over}
+            />
+          </div>
+        )}
         {Array.isArray(m.moves) && m.moves.length > 0 && (
-          <div className="max-w-xl text-center font-mono text-[11px] text-neutral-400 break-words leading-relaxed">
-            {m.moves.join(" ")}
+          <div className="w-full max-w-xl max-h-[30dvh] overflow-y-auto custom-scrollbar">
+            <MoveList
+              moves={m.moves.map((san: string, i: number) => ({ san, uci: "", by: i % 2 === 0 ? "white" : "black", ply: i + 1 }))}
+              whiteName={m.whiteName || "Putih"}
+              blackName={m.blackName || "Hitam"}
+            />
           </div>
         )}
       </div>
