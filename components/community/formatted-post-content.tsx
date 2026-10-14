@@ -36,8 +36,14 @@ export function FormattedPostContent({ text }: { text: string }) {
         }
 
         // Markdown table: | a | b | baris + |---|---| separator
-        if (trimmed.startsWith("|") && trimmed.includes("\n") ) {
-          const rows = trimmed.split("\n").filter((l) => l.trim().startsWith("|"));
+if (trimmed.includes("|") && trimmed.includes("\n")) {
+  const lines = trimmed.split("\n");
+  let tableLines: string[] = [];
+  for (const line of lines) {
+    if (line.trim().startsWith("|")) tableLines.push(line);
+    else if (tableLines.length > 0) break;
+  }
+  const rows = tableLines.length >= 2 ? tableLines : lines.filter((l) => l.trim().startsWith("|"));
           const isSep = (l: string) => /^\s*\|?[\s:-]*-{2,}[\s:|-]*\|?\s*$/.test(l) && l.includes("-");
           const parse = (l: string) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
           const header = rows.length > 1 && isSep(rows[1]) ? parse(rows[0]) : null;
