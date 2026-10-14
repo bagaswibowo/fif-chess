@@ -1348,9 +1348,13 @@ def predict(req: ScanRequest):
                     seg_h = abs(pts[3][1] - pts[0][1])
                     ratio_ok = 0.5 < (seg_w / max(seg_h, 1e-6)) < 2.0
                     coverage = min(seg_w * seg_h / (img.shape[0] * img.shape[1]), 1.5)
-                    if not (ratio_ok and coverage >= 0.55):
-                        logger.warning("Segmen warp dicurigai (ratio %.2f, coverage %.2f) — diabaikan.",
-                                       seg_w / max(seg_h, 1e-6), coverage)
+                    # Threshold coverage adaptif: papan kecil dalam frame (screenshot
+                    # live-stream) legal, asal skor checkerboard rawannya lemah —
+                    # kalau mentah sudah bagus, warp kecil lebih sering quad palsu.
+                    min_cov = 0.3 if (cal_raw is None or cal_raw[3] < 0.7) else 0.55
+                    if not (ratio_ok and coverage >= min_cov):
+                        logger.warning("Segmen warp dicurigai (ratio %.2f, coverage %.2f < %.2f) — diabaikan.",
+                                       seg_w / max(seg_h, 1e-6), coverage, min_cov)
                         cal_warp = None
                 if cal_warp is not None and (cal_raw is None or cal_warp[3] > cal_raw[3]):
                     calib, work_img = cal_warp, warped
