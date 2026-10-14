@@ -58,6 +58,18 @@ function isChessPlausible(fen: string): boolean {
     const blackRooks = blackPieces.filter((p) => p && p.type === "r").length;
     if (whiteRooks > 4 || blackRooks > 4) return false;
 
+    // Strict cap: menteri & gajah (scan sering false-positive bishop/queen).
+    // 2 menteri & 2 gajah asli + maksimum hasil promosi = 3 masih masuk akal.
+    const whiteQueens = whitePieces.filter((p) => p && p.type === "q").length;
+    const blackQueens = blackPieces.filter((p) => p && p.type === "q").length;
+    if (whiteQueens > 3 || blackQueens > 3) return false;
+    const whiteBishops = whitePieces.filter((p) => p && p.type === "b").length;
+    const blackBishops = blackPieces.filter((p) => p && p.type === "b").length;
+    if (whiteBishops > 3 || blackBishops > 3) return false;
+
+    // Minimal total bidak: papan nyaris kosong = hasil scan sampah
+    if (board.length < 3) return false;
+
     return true;
   } catch {
     return false;

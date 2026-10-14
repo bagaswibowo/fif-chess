@@ -346,6 +346,41 @@ def _checker_score(bright: np.ndarray) -> float:
     return abs(_checker_signed(bright))
 
 
+def _refine_grid(img_gray, x0, y0, sq, iters=2):
+    """Iterative grid refine ala AI_Chess/Elucidation: geser tiap garis grid ke
+    puncak gradien Sobel terdekat (±20% petak), lalu refit origin & spacing. 2 iterasi."""
+    g = cv2.blur(img_gray, (5, 5)).astype(np.float32)
+    gx = cv2.Sobel(g, cv2.CV_32F, 1, 0)
+    gy = cv2.Sobel(g, cv2.CV_32F, 0, 1)
+    gx_mag = np.abs(gx).sum(axis=0)
+    gy_mag = np.abs(gy).sum(axis=1)
+    H, W = g.shape
+    for _ in range(iters):
+        xs = []
+        for i in range(9):
+            ideal = x0 + i * sq
+            lo = max(0, int(ideal - sq * 0.2)); hi = min(W - 1, int(ideal + sq * 0.2) + 1)
+            if hi <= lo:
+                xs.append(ideal); continue
+            xs.append(lo + int(np.argmax(gx_mag[lo:hi])))
+        ys = []
+        for i in range(9):
+            ideal = y0 + i * sq
+            lo = max(0, int(ideal - sq * 0.2)); hi = min(H - 1, int(ideal + sq * 0.2) + 1)
+            if hi <= lo:
+                ys.append(ideal); continue
+            ys.append(lo + int(np.argmax(gy_mag[lo:hi])))
+        xs_a = np.array(xs[1:-1], dtype=np.float64)
+        ys_a = np.array(ys[1:-1], dtype=np.float64)
+        if len(xs_a) >= 3 and len(ys_a) >= 3:
+            sq_x = np.polyfit(range(len(xs_a)), xs_a, 1)[0]
+            sq_y = np.polyfit(range(len(ys_a)), ys_a, 1)[0]
+            sq = max((sq_x + sq_y) / 2.0, 8.0)
+            x0 = float(np.median(xs_a)) - sq
+            y0 = float(np.median(ys_a)) - sq
+    return (x0, y0, sq)
+
+
 def orient_from_detections(detections, grid) -> str | None:
     """Sisi pandang dari warna bidak di baris paling bawah papan.
 
@@ -1374,6 +1409,17 @@ def predict(req: ScanRequest):
             logger.warning("Kalibrasi grid gagal — fallback grid penuh, orientasi dari bidak.")
 
         h, w = work_img.shape[:2]
+
+        # 2b. Iterative grid refine: snap garis grid ke gradien terkuat (AI_Chess style)
+        try:
+            g_gray = cv2.cvtColor(work_img, cv2.COLOR_RGB2GRAY)
+            rx0, ry0, rsq = _refine_grid(g_gray, calib[0], calib[1], calib[2])
+            if rsq > 8 and abs(rsq - calib[2]) / max(calib[2], 1) < 0.25:
+                logger.info("Grid refine: (%.1f, %.1f, sq=%.1f) -> (%.1f, %.1f, sq=%.1f)",
+                            calib[0], calib[1], calib[2], rx0, ry0, rsq)
+                calib = (rx0, ry0, rsq, calib[3])
+        except Exception as e:
+            logger.warning("Grid refine gagal (abaikan): %s", e)
 
         # 3. Threshold adaptif satu-pass (cepat di CPU): prediksi 1x pada conf=0.08 lalu filter di RAM.
         result = None
