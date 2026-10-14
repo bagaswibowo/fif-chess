@@ -1414,10 +1414,14 @@ def predict(req: ScanRequest):
         try:
             g_gray = cv2.cvtColor(work_img, cv2.COLOR_RGB2GRAY)
             rx0, ry0, rsq = _refine_grid(g_gray, calib[0], calib[1], calib[2])
-            if rsq > 8 and abs(rsq - calib[2]) / max(calib[2], 1) < 0.25:
+            # Sanity: papan hasil refine harus benar-benar muat dalam gambar
+            fits = rx0 > -rsq * 0.3 and ry0 > -rsq * 0.3                 and rx0 + 8 * rsq <= g_gray.shape[1] + rsq * 0.3                 and ry0 + 8 * rsq <= g_gray.shape[0] + rsq * 0.3
+            if fits and rsq > 8 and abs(rsq - calib[2]) / max(calib[2], 1) < 0.25:
                 logger.info("Grid refine: (%.1f, %.1f, sq=%.1f) -> (%.1f, %.1f, sq=%.1f)",
                             calib[0], calib[1], calib[2], rx0, ry0, rsq)
                 calib = (rx0, ry0, rsq, calib[3])
+            elif not fits:
+                logger.info("Grid refine ditolak (keluar gambar): (%.1f, %.1f, sq=%.1f)", rx0, ry0, rsq)
         except Exception as e:
             logger.warning("Grid refine gagal (abaikan): %s", e)
 
