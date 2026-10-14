@@ -1153,7 +1153,7 @@ export function Game() {
         {navTab === "play" && (
           <div className="h-full max-h-full min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-2 md:gap-3 items-center justify-center w-full">
             {/* CENTER CHESSBOARD ARENA */}
-            <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[min(100%,calc(100dvh-200px))] mx-auto space-y-1 md:space-y-1.5">
+            <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[min(100%,calc(100dvh-260px))] mx-auto space-y-1 md:space-y-1.5">
               {/* Opponent Card (Top) with 3D Bot Icon / Player Icon */}
               <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -1221,7 +1221,7 @@ export function Game() {
                   />
 
                   {/* Chessboard Container: strict aspect-square bound by both height & width */}
-                  <div className="relative aspect-square h-[min(92vw,52dvh)] max-h-[52dvh] md:h-[min(62vw,70dvh,640px)] md:max-h-[70dvh] mx-auto shrink-0 overflow-hidden rounded-xl border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl md:rounded-2xl">
+                  <div className="relative mx-auto shrink-0 overflow-hidden rounded-xl border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl md:rounded-2xl" style={{ width: "min(100%, calc(100dvh - 320px))", aspectRatio: "1 / 1" }}>
                     <Chessboard
                       options={{
                         id: "fif-chess-main",
