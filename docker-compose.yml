@@ -8,6 +8,8 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+    volumes:
+      - ./chesscog-service/server.py:/app/server.py:ro
 
   yolo11:
     build:
@@ -24,6 +26,7 @@ services:
       - YOLO_CONF_THRESHOLD=${YOLO_CONF_THRESHOLD:-0.25}
     volumes:
       - ./models/yolo11:/app/models
+      - ./yolo11-service/server.py:/app/server.py:ro
 
   app:
     build:
@@ -46,6 +49,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./models:/app/models
+      - /home/sxz/Stockfish/src/stockfish:/usr/games/stockfish:ro
 
   cftunnel-jev-chess:
     image: cloudflare/cloudflared:latest

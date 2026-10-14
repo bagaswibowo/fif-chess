@@ -1,4 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { existsSync } from "node:fs";
+const SF_BIN = process.env.STOCKFISH_PATH || (existsSync("/home/sxz/Stockfish/src/stockfish") ? "/home/sxz/Stockfish/src/stockfish" : "/usr/games/stockfish");
 import { Chess } from "chess.js";
 import { applyUci, describeOutcome, isKnightFork, isQueenThreatened, isQueenXrayed, type GameOutcome } from "@/lib/chess";
 import { getLearnedMove, isBlunderMove, recordMatchExperience } from "./experience";
@@ -28,7 +30,7 @@ function getStockfishEval(fen: string, depth = 12, multipv = 5): Promise<Stockfi
   return new Promise((resolve) => {
     let p: ChildProcessWithoutNullStreams;
     try {
-      p = spawn("/usr/games/stockfish") as ChildProcessWithoutNullStreams;
+      p = spawn(SF_BIN) as ChildProcessWithoutNullStreams;
     } catch {
       return resolve(null);
     }
@@ -140,7 +142,7 @@ export function evalSingleMove(fen: string, move: string, depth = 8): Promise<nu
 
     let p: ChildProcessWithoutNullStreams;
     try {
-      p = spawn("/usr/games/stockfish") as ChildProcessWithoutNullStreams;
+      p = spawn(SF_BIN) as ChildProcessWithoutNullStreams;
     } catch {
       return resolve(null);
     }
@@ -494,7 +496,7 @@ export async function guardJevFlyMove(
   return evaluateGuardedMove(fen, hybridResult, Math.max(14, depth), maxDiff);
 }
 
-export async function playStockfishMove(fen: string, depth = 14, playedUci?: string): Promise<StockfishResult> {
+export async function playStockfishMove(fen: string, depth = 14, playedUci?: string, skillLevel?: number): Promise<StockfishResult> {
   // Strict FEN validation to prevent UCI command injection.
   if (!/^[0-9a-zA-Z\/\s\-_]+$/.test(fen)) {
     throw new Error("Invalid FEN string format");
@@ -506,7 +508,7 @@ export async function playStockfishMove(fen: string, depth = 14, playedUci?: str
   }
 
   return new Promise((resolve, reject) => {
-    const p = spawn("/usr/games/stockfish");
+    const p = spawn(SF_BIN);
     let out = "";
     const topMoves = new Map<number, string>();
     const topScores = new Map<number, number>();
@@ -648,6 +650,8 @@ export async function playStockfishMove(fen: string, depth = 14, playedUci?: str
       reject(new Error(err.toString()));
     });
 
+    const skill = typeof skillLevel === "number" ? Math.max(0, Math.min(20, skillLevel)) : Number(process.env.STOCKFISH_SKILL_LEVEL ?? 20);
+    p.stdin.write(`setoption name Skill Level value ${skill}\n`);
     p.stdin.write("setoption name MultiPV value 5\n");
     p.stdin.write(`position fen ${fen}\n`);
     p.stdin.write(`go depth ${depth} movetime 1200\n`);

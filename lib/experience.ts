@@ -508,7 +508,10 @@ export function normalizeFen(fen: string): string {
   return parts.slice(0, 4).join(" ");
 }
 
+const START_FEN_NORMALIZED = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
+
 export function getLearnedMove(fen: string): { move: string; score: number; dopamine: number } | null {
+  if (normalizeFen(fen) === START_FEN_NORMALIZED) return null;
   const db = loadDb();
   const entry = db[normalizeFen(fen)];
   if (entry?.bestMove && (entry.dopamine ?? 0) >= 0) {
@@ -516,8 +519,6 @@ export function getLearnedMove(fen: string): { move: string; score: number; dopa
   }
   return null;
 }
-
-const START_FEN_NORMALIZED = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
 
 export function isBlunderMove(fen: string, move: string): boolean {
   // Posisi awal catur tidak pernah memiliki blunder pada langkah ke-1

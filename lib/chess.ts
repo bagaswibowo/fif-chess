@@ -875,8 +875,65 @@ export function evaluateMaterialBalance(chess: Chess): number {
 }
 
 /**
- * Negamax Quiescence Search helper to resolve tactical exchanges & prevent horizon effect.
- * Searches captures, queen promotions, and forcing checks.
+ * Static Exchange Evaluation (SEE):
+ * Mengadopsi prinsip Stockfish 19 Position::see_ge.
+ * Menghitung nilai bersih pertukaran pada petak target tanpa variasi penuh.
+ * Mengeliminasi blunder perwira berharga tinggi yang memukul petak berpenjaga.
+ */
+export function staticExchangeEvaluation(
+  chess: Chess,
+  from: string,
+  to: string,
+  threshold = 0,
+): boolean {
+  try {
+    const mover = chess.get(from as any);
+    if (!mover) return false;
+    const target = chess.get(to as any);
+    const targetVal = target ? (PIECE_VALS_CP[target.type] ?? 0) : 0;
+    const moverVal = PIECE_VALS_CP[mover.type] ?? 0;
+
+    let swap = targetVal - threshold;
+    if (swap < 0) return false;
+
+    swap = moverVal - swap;
+    if (swap <= 0) return true; // Pemukul bernilai <= korban (pertukaran untung/seimbang)
+
+    const clone = new Chess(chess.fen());
+    const firstMove = clone.move({ from: from as any, to: to as any });
+    if (!firstMove) return false;
+
+    const gain: number[] = [targetVal];
+    let currentVal = moverVal;
+
+    while (true) {
+      const legals = clone.moves({ verbose: true }).filter((m: any) => m.to === to);
+      if (legals.length === 0) break;
+
+      legals.sort((a: any, b: any) => (PIECE_VALS_CP[a.piece] ?? 100) - (PIECE_VALS_CP[b.piece] ?? 100));
+      const nextMove = legals[0];
+      gain.push(currentVal);
+      currentVal = PIECE_VALS_CP[nextMove.piece] ?? 100;
+      clone.move(nextMove);
+    }
+
+    let d = gain.length - 1;
+    while (d > 0) {
+      gain[d - 1] = Math.max(-gain[d], 0);
+      d--;
+    }
+
+    return (targetVal - gain[0]) >= threshold;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Stockfish 19-Inspired Quiescence Search:
+ * 1. Stand-Pat Pruning (evaluasi statis melebihi beta).
+ * 2. Delta Pruning (memangkas cabang jika makan Menteri pun tak mencapai alpha).
+ * 3. SEE Filtering (hanya telusuri pemukulan yang bernilai non-negatif).
  */
 export function quiescenceSearch(
   chess: Chess,
@@ -894,16 +951,21 @@ export function quiescenceSearch(
   if (!inCheck) {
     if (depth >= maxDepth) return standPat;
     if (standPat >= beta) return beta;
+    // Delta Pruning: batas maksimal kenaikan perwira (Queen = 900cp)
+    const BIGGEST_DELTA = 900;
+    if (standPat + BIGGEST_DELTA < alpha) {
+      return alpha;
+    }
     if (standPat > alpha) alpha = standPat;
   }
 
   const moves = chess.moves({ verbose: true });
   let tacticalMoves = moves.filter((m: any) =>
     inCheck ||
-    m.captured ||
     m.promotion === "q" ||
     m.san.includes("=Q") ||
-    m.san.includes("#")
+    m.san.includes("#") ||
+    (m.captured && staticExchangeEvaluation(chess, m.from, m.to, 0))
   );
 
   tacticalMoves.sort((a: any, b: any) => {

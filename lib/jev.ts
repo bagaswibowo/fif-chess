@@ -7,6 +7,7 @@ import {
   selectMovesForChoice,
   sideToMove,
   type GameOutcome,
+  staticExchangeEvaluation,
 } from "@/lib/chess";
 import { evaluateWithFlyBrain, type FlyMoveScore } from "@/lib/flybrain/service";
 import { getLearnedMove, isBlunderMove } from "@/lib/experience";
@@ -436,6 +437,11 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
       desc += `[DEVELOPMENT] Deploys ${pName} forward to ${move.to}`;
     } else {
       desc += `[POSITIONAL] Moves ${pName} to ${move.to}`;
+    }
+
+    // Stockfish 19 Static Exchange Evaluation (SEE) Guard:
+    if (move.isCapture && !staticExchangeEvaluation(chess, move.from, move.to, 0)) {
+      desc += " [SUICIDAL EXCHANGE - FAILS SEE] Tactical exchange calculation proves this capture drops net material! DO NOT SELECT!";
     }
 
     // In-Context Cognitive Plasticity: Pembelajaran dari kesalahan dan kemenangan masa lalu

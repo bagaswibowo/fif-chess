@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { SessionUser } from "@/lib/use-session";
+import { BOARD_THEMES, PIECE_THEMES, applyGlobalChessTheme, type BoardThemeId, type PieceThemeId } from "@/lib/chess-themes";
 import {
   IconFriends3D,
   IconMessages3D,
@@ -21,6 +22,8 @@ type Props = {
   user: SessionUser | null;
   onChallengePlayer?: (username: string) => void;
   onLogout?: () => void;
+  liveMatches?: any[];
+  onWatchLiveMatch?: (id: string) => void;
 };
 
 export type PlayerItem = {
@@ -54,13 +57,36 @@ export function DockModals({
   user,
   onChallengePlayer,
   onLogout,
+  liveMatches = [],
+  onWatchLiveMatch,
 }: Props) {
   const [players, setPlayers] = useState<PlayerItem[]>([]);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [chatText, setChatText] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [boardTheme, setBoardTheme] = useState("walnut");
+  const [boardTheme, setBoardTheme] = useState<BoardThemeId>("wood");
+  const [pieceTheme, setPieceTheme] = useState<PieceThemeId>("standard");
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!activeModal) return;
+    try {
+      const b = (localStorage.getItem("jev_board_theme") as BoardThemeId) || "wood";
+      const p = (localStorage.getItem("jev_piece_theme") as PieceThemeId) || "standard";
+      if (BOARD_THEMES.some((t) => t.id === b)) setBoardTheme(b);
+      if (PIECE_THEMES.some((item) => item.id === p)) setPieceTheme(p);
+    } catch {}
+  }, [activeModal]);
+
+  const handleSaveSettings = () => {
+    applyGlobalChessTheme(boardTheme, pieceTheme);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const activeBoardThemeObj = BOARD_THEMES.find((t) => t.id === boardTheme) || BOARD_THEMES[0];
+  const activePieceThemeObj = PIECE_THEMES.find((p) => p.id === pieceTheme) || PIECE_THEMES[0];
 
   useEffect(() => {
     if (!activeModal) return;
@@ -261,7 +287,56 @@ export function DockModals({
 
           {/* TAB: PEMBERITAHUAN */}
           {activeModal === "notifications" && (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
+              {/* NOTIFIKASI PERTANDINGAN LIVE AKTIF */}
+              {liveMatches.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-bold uppercase tracking-wider text-red-400 flex items-center gap-1.5 px-1">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    <span>Pertandingan Langsung Aktif ({liveMatches.length})</span>
+                  </div>
+                  {liveMatches.map((m: any) => (
+                    <div
+                      key={m.id}
+                      className="p-3.5 rounded-xl bg-gradient-to-r from-red-950/40 via-[#262421] to-[#262421] border border-red-500/40 flex items-center justify-between gap-3 shadow-md hover:border-red-400/60 transition-all"
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-red-500/20 border border-red-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-bold text-white truncate flex items-center gap-1.5">
+                            <span>{m.whiteName}</span>
+                            <span className="text-neutral-400 text-xs font-normal">vs</span>
+                            <span>{m.blackName}</span>
+                          </div>
+                          <div className="text-xs text-neutral-300 mt-0.5">
+                            {m.plyCount} langkah • {m.hasCommentary ? "Komentator & Taktik AI Aktif" : "Siaran Langsung"}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onWatchLiveMatch) {
+                            onWatchLiveMatch(m.id);
+                            onClose();
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow cursor-pointer shrink-0 flex items-center gap-1.5"
+                      >
+                        <IconLightning3D size={14} />
+                        <span>Tonton</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* NOTIFIKASI SISTEM LAINNYA */}
+              <div className="text-xs font-bold uppercase tracking-wider text-neutral-400 px-1 pt-1">
+                Pemberitahuan Sistem
+              </div>
               {notifications.map((n) => (
                 <div
                   key={n.id}
@@ -299,20 +374,128 @@ export function DockModals({
                     className="w-5 h-5 accent-[#81b64c] rounded cursor-pointer"
                   />
                 </div>
-                <div className="flex items-center justify-between pt-2 border-t border-[#312e2b]">
-                  <div>
-                    <div className="text-sm font-bold text-white">Tema Warna Papan</div>
-                    <div className="text-xs text-neutral-400">Kayu Turnamen Walnut & Maple</div>
+                {/* PREVIEW LIVE MINI PAPAN & BIDAK */}
+                <div className="p-3 rounded-xl bg-[#1a1714] border border-[#3d3a34] flex items-center gap-3.5">
+                  <div className="w-20 h-20 rounded-lg overflow-hidden border border-black/60 shadow-md grid grid-cols-2 grid-rows-2 shrink-0">
+                    <div style={{ backgroundColor: activeBoardThemeObj.light }} className="flex items-center justify-center p-1">
+                      {pieceTheme === "standard" ? (
+                        <span className="text-xl">♔</span>
+                      ) : (
+                        <img src={`/pieces/${pieceTheme}/wK.png`} alt="wK" className="w-full h-full object-contain filter drop-shadow" />
+                      )}
+                    </div>
+                    <div style={{ backgroundColor: activeBoardThemeObj.dark }} className="flex items-center justify-center p-1">
+                      {pieceTheme === "standard" ? (
+                        <span className="text-xl">♞</span>
+                      ) : (
+                        <img src={`/pieces/${pieceTheme}/bN.png`} alt="bN" className="w-full h-full object-contain filter drop-shadow" />
+                      )}
+                    </div>
+                    <div style={{ backgroundColor: activeBoardThemeObj.dark }} className="flex items-center justify-center p-1">
+                      {pieceTheme === "standard" ? (
+                        <span className="text-xl">♟</span>
+                      ) : (
+                        <img src={`/pieces/${pieceTheme}/bP.png`} alt="bP" className="w-full h-full object-contain filter drop-shadow" />
+                      )}
+                    </div>
+                    <div style={{ backgroundColor: activeBoardThemeObj.light }} className="flex items-center justify-center p-1">
+                      {pieceTheme === "standard" ? (
+                        <span className="text-xl">♙</span>
+                      ) : (
+                        <img src={`/pieces/${pieceTheme}/wP.png`} alt="wP" className="w-full h-full object-contain filter drop-shadow" />
+                      )}
+                    </div>
                   </div>
-                  <select
-                    value={boardTheme}
-                    onChange={(e) => setBoardTheme(e.target.value)}
-                    className="px-3 py-1.5 rounded-lg bg-[#1a1714] border border-[#3d3a34] text-xs text-white"
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-bold text-neutral-400">Preview Papan & Bidak:</div>
+                    <div className="text-sm font-black text-amber-400 truncate">{activeBoardThemeObj.name}</div>
+                    <div className="text-xs text-neutral-300 truncate">Bidak: {activePieceThemeObj.name}</div>
+                  </div>
+                </div>
+
+                {/* PILIHAN WARNA PAPAN (SWATCH LANGSUNG) */}
+                <div className="space-y-1.5 pt-2 border-t border-[#312e2b]">
+                  <div className="text-xs font-bold text-neutral-300">Pilih Warna Papan Catur:</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {BOARD_THEMES.map((t) => {
+                      const isActive = boardTheme === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setBoardTheme(t.id)}
+                          className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
+                            isActive
+                              ? "border-amber-400 bg-amber-950/40 ring-1 ring-amber-400/60 shadow"
+                              : "border-[#312e2b] bg-[#1a1714] hover:border-neutral-500"
+                          }`}
+                        >
+                          <div className="w-5 h-5 rounded overflow-hidden grid grid-cols-2 grid-rows-2 shrink-0 border border-black/40">
+                            <div style={{ backgroundColor: t.light }} />
+                            <div style={{ backgroundColor: t.dark }} />
+                            <div style={{ backgroundColor: t.dark }} />
+                            <div style={{ backgroundColor: t.light }} />
+                          </div>
+                          <span className="text-[11px] font-bold text-white truncate min-w-0 flex-1">{t.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* PILIHAN MODEL BIDAK (KARTU VISUAL LANGSUNG) */}
+                <div className="space-y-1.5 pt-2 border-t border-[#312e2b]">
+                  <div className="text-xs font-bold text-neutral-300">Pilih Model & Gaya Bidak (2D & 3D):</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PIECE_THEMES.map((p) => {
+                      const isActive = pieceTheme === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setPieceTheme(p.id)}
+                          className={`p-2 rounded-xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                            isActive
+                              ? "border-amber-400 bg-amber-950/40 ring-1 ring-amber-400/60 shadow"
+                              : "border-[#312e2b] bg-[#1a1714] hover:border-neutral-500"
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-700 flex items-center justify-center shrink-0 p-0.5">
+                            {p.id === "standard" ? (
+                              <span className="text-lg">♟️</span>
+                            ) : (
+                              <img
+                                src={`/pieces/${p.id}/wK.png`}
+                                alt={p.name}
+                                className="w-full h-full object-contain filter drop-shadow"
+                              />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-white truncate">{p.name}</div>
+                            <div className="text-[10px] text-neutral-400 truncate">{p.desc}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* TOMBOL SIMPAN PENGATURAN */}
+                <div className="pt-3 border-t border-[#312e2b] space-y-2">
+                  {saveSuccess && (
+                    <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500 text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 animate-in fade-in">
+                      <span>✓</span>
+                      <span>Pengaturan berhasil disimpan & diterapkan ke semua papan catur!</span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleSaveSettings}
+                    className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
                   >
-                    <option value="walnut">Kayu Klasik (Walnut)</option>
-                    <option value="emerald">Hijau Turnamen (Emerald)</option>
-                    <option value="dark">Dark Charcoal</option>
-                  </select>
+                    <span>💾 Simpan Pengaturan</span>
+                  </button>
                 </div>
               </div>
 

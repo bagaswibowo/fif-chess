@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from "react";
 
 export type BoardThemeId =
@@ -76,8 +77,7 @@ export function getNotationStyles(theme: BoardTheme) {
       userSelect: "none" as const,
       lineHeight: "1",
       fontFamily: "ui-monospace, monospace",
-      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))",
-    },
+          },
     alphaNotationStyle: {
       fontSize: "13px",
       fontWeight: "800",
@@ -86,8 +86,7 @@ export function getNotationStyles(theme: BoardTheme) {
       userSelect: "none" as const,
       lineHeight: "1",
       fontFamily: "ui-monospace, monospace",
-      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))",
-    },
+          },
     darkSquareNotationStyle: {
       color: theme.light,
       fontWeight: "800",

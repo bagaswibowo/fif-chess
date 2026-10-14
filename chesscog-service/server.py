@@ -3,7 +3,8 @@ import base64
 import logging
 import numpy as np
 import cv2
-from PIL import Image
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 import chess
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel

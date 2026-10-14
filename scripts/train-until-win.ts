@@ -40,6 +40,8 @@ async function runTrainingUntilWin() {
 
   let matchIndex = 0;
   let wonCheckmate = false;
+  let currentSkillLevel = Number(process.env.INITIAL_SKILL_LEVEL ?? 3); // Curriculum Tier start: Level 3
+  let bioWinsAtTier = 0;
 
   const ROTATION = ["jev", "fly", "jev-fly"] as const;
   const OPPONENT = "stockfish" as const; // Stockfish is the benchmark, never trained
@@ -48,11 +50,11 @@ async function runTrainingUntilWin() {
     matchIndex++;
     const chess = new Chess();
     const myColor: "white" | "black" = matchIndex % 2 === 1 ? "white" : "black";
-    // Fokus latihan: Pure FlyBrain MCTS (terbukti mampu menahan remis 116 plies)
-    const whiteEngine = myColor === "white" ? "fly" : OPPONENT;
-    const blackEngine = myColor === "black" ? "fly" : OPPONENT;
+    const currentBio = ROTATION[(matchIndex - 1) % ROTATION.length];
+    const whiteEngine = myColor === "white" ? currentBio : OPPONENT;
+    const blackEngine = myColor === "black" ? currentBio : OPPONENT;
 
-    console.log(`[Match #${matchIndex}] Jev+FlyBrain (${myColor.toUpperCase()}) vs Stockfish (${myColor === "white" ? "BLACK" : "WHITE"})`);
+    console.log(`[Match #${matchIndex} | SF Skill Lv.${currentSkillLevel}] ${currentBio.toUpperCase()} (${myColor.toUpperCase()}) vs Stockfish (${myColor === "white" ? "BLACK" : "WHITE"})`);
 
     const history: string[] = [];
 
@@ -63,23 +65,16 @@ async function runTrainingUntilWin() {
       const fenBefore = chess.fen();
 
       try {
-        // PARAM PERSIS LIVE (components/game.tsx -> /api/engine-move):
-        // seed:0 + history slice(-10) + depth:14. seed & history masuk prompt Jev
-        // (buildJevRequest), jadi harus sama agar hasil training == live.
         const res = await playEngineMove(currentEngine as any, {
           fen: fenBefore,
           depth: 14,
-          simulations: 15,
-          seed: 0,
+          simulations: 25,
+          skillLevel: currentSkillLevel,
+          seed: Math.floor(Math.random() * 1000000),
           history: history.slice(-10),
         });
 
         if (!res?.uci) break;
-
-        // Otomatis serap langkah Stockfish ke memori experience agar Jev+FlyBrain semakin pintar
-        if (currentEngine === "stockfish") {
-          recordMatchExperience(fenBefore, res.uci, 120);
-        }
 
         const applied = chess.move(res.san);
         if (!applied) break;
@@ -103,16 +98,25 @@ async function runTrainingUntilWin() {
 
     console.log(`  -> Match #${matchIndex} Result: Winner = ${winner.toUpperCase()} (${isCheckmate ? "CHECKMATE" : "DRAW"}), Plies: ${history.length}, DB Size: ${getDbSize()}`);
 
-    // Update Dopamine & Aversive Learning langsung ke experience.json
+    // Update Dopamine hanya jika bio engine menang (atau hukum blunder jika kalah)
     if (winner !== "draw") {
       reinforceMatchDopamine(history, winner);
     }
 
-    // Evaluasi Syarat Berhenti: Jev + FlyBrain menang telak dengan checkmate!
-    if (winner === myColor && isCheckmate) {
+    if (winner === myColor) {
+      bioWinsAtTier++;
+      if (bioWinsAtTier >= 2 && currentSkillLevel < 20) {
+        currentSkillLevel++;
+        bioWinsAtTier = 0;
+        console.log(`\n>>> [CURRICULUM LEVEL UP] Bio-Engine reached Tier Skill Level ${currentSkillLevel}! <<\n`);
+      }
+    }
+
+    // Evaluasi Syarat Berhenti: Bio-engine menang telak dengan checkmate!
+    if (winner === myColor && isCheckmate && currentSkillLevel >= 10) {
       wonCheckmate = true;
       console.log("\n=============================================================");
-      console.log(`  VICTORY ACHIEVED! JEV + FLYBRAIN CHECKMATED STOCKFISH!`);
+      console.log(`  VICTORY ACHIEVED! ${currentBio.toUpperCase()} CHECKMATED STOCKFISH!`);
       console.log(`  Total Matches Played: ${matchIndex}`);
       console.log(`  Final Experience Database: ${getDbSize()} positions`);
       console.log(`  Winning Game Moves (${history.length} plies): ${history.join(" ")}`);

@@ -29,7 +29,8 @@ import numpy as np
 import chess
 import cv2
 from fastapi import FastAPI, HTTPException
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 from pydantic import BaseModel
 
 logger = logging.getLogger("yolo11-chess")
@@ -48,6 +49,8 @@ CLASS_TO_FEN = {
 }
 
 _model = None
+_seg_model = None
+_pieces_model = None
 
 
 def load_model():
@@ -65,6 +68,38 @@ def load_model():
     except Exception as e:
         logger.error("Gagal memuat model YOLO: %s", e)
         return None
+
+
+def load_seg_model():
+    global _seg_model
+    if _seg_model is not None:
+        return _seg_model
+    seg_path = "/app/models/board_seg.pt"
+    if os.path.exists(seg_path):
+        try:
+            from ultralytics import YOLO
+            _seg_model = YOLO(seg_path)
+            logger.info("Board segmentation model loaded dari %s", seg_path)
+            return _seg_model
+        except Exception as e:
+            logger.warning("Gagal load board segmentation model: %s", e)
+    return None
+
+
+def load_pieces_model():
+    global _pieces_model
+    if _pieces_model is not None:
+        return _pieces_model
+    p_path = "/app/models/pieces_yolo.pt"
+    if os.path.exists(p_path):
+        try:
+            from ultralytics import YOLO
+            _pieces_model = YOLO(p_path)
+            logger.info("Real-world pieces model loaded dari %s", p_path)
+            return _pieces_model
+        except Exception as e:
+            logger.warning("Gagal load pieces model: %s", e)
+    return None
 
 
 app = FastAPI(title="YOLOv11 Chess Piece Detection API")
@@ -116,6 +151,31 @@ def four_point_transform(image: np.ndarray, pts, size: int = 800) -> np.ndarray:
 
 
 def detect_board_corners(image: np.ndarray):
+    h, w = image.shape[:2]
+
+    # ── Strategi 0: Neural Board Segmentation (YOLO Segment) ──
+    try:
+        seg = load_seg_model()
+        if seg is not None:
+            res_b = seg.predict(image, conf=0.15, verbose=False)
+            if len(res_b) > 0 and res_b[0].masks is not None:
+                poly = res_b[0].masks.xy[0]
+                if len(poly) >= 4:
+                    hull = cv2.convexHull(poly.astype(np.float32))
+                    peri = cv2.arcLength(hull, True)
+                    approx = cv2.approxPolyDP(hull, 0.04 * peri, True).reshape(-1, 2)
+                    if len(approx) == 4 and cv2.isContourConvex(approx.astype(np.int32)):
+                        s = approx.sum(axis=1)
+                        diff = np.diff(approx, axis=1)
+                        tl = approx[np.argmin(s)]
+                        br = approx[np.argmax(s)]
+                        tr = approx[np.argmin(diff)]
+                        bl = approx[np.argmax(diff)]
+                        pts = np.array([tl, tr, br, bl], dtype=np.float32)
+                        logger.info("Auto-crop: sukses menemukan 4 sudut via neural board segmentation: %s", pts.tolist())
+                        return pts
+    except Exception as e:
+        logger.warning("Neural board seg exception: %s", e)
     """
     Deteksi 4 sudut papan. Dua strategi berurutan:
     1. Segmentasi warna petak gelap (hijau/coklat vinyl) via HSV + morphology
@@ -194,7 +254,42 @@ def detect_board_corners(image: np.ndarray):
                 if area > best_area and side > min(h, w) * 0.4:
                     best, best_area = pts, area
                 break
-    return best
+    if best is not None:
+        return best
+
+    # ── Strategi 3 (fallback pintar): Bounding-Box Bidak YOLO11 ──
+    try:
+        model = load_model()
+        if model is not None:
+            res_list = model.predict(image, conf=0.10, imgsz=800, verbose=False)
+            boxes = []
+            for r in res_list:
+                for b in r.boxes:
+                    boxes.append(b.xyxy[0].cpu().numpy())
+            if len(boxes) >= 4:
+                arr = np.array(boxes)
+                x1, y1 = float(arr[:, 0].min()), float(arr[:, 1].min())
+                x2, y2 = float(arr[:, 2].max()), float(arr[:, 3].max())
+                bw, bh = x2 - x1, y2 - y1
+                # Papan catur melebar sedikit dari bidak terluar (~10%)
+                mx, my = bw * 0.10, bh * 0.10
+                bx1, by1 = max(0.0, x1 - mx), max(0.0, y1 - my)
+                bx2, by2 = min(float(w), x2 + mx), min(float(h), y2 + my)
+                cx, cy = (bx1 + bx2) / 2.0, (by1 + by2) / 2.0
+                side = max(bx2 - bx1, by2 - by1)
+                hs = side / 2.0
+                pts = np.array([
+                    [max(0.0, cx - hs), max(0.0, cy - hs)],
+                    [min(float(w), cx + hs), max(0.0, cy - hs)],
+                    [min(float(w), cx + hs), min(float(h), cy + hs)],
+                    [max(0.0, cx - hs), min(float(h), cy + hs)],
+                ], dtype=np.float32)
+                logger.info("Deteksi sudut via kluster bidak YOLO11 sukses (%d bidak).", len(boxes))
+                return pts
+    except Exception as e:
+        logger.warning("Deteksi sudut via kluster bidak gagal: %s", e)
+
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -356,7 +451,42 @@ def calibrate_grid(img: np.ndarray):
     return (X0, Y0, SQ, best_score)
 
 
+PIECES_CLASS_MAP = {
+    "white_pawn": "P", "white_knight": "N", "white_bishop": "B",
+    "white_rook": "R", "white_queen": "Q", "white_king": "K",
+    "black_pawn": "p", "black_knight": "n", "black_bishop": "b",
+    "black_rook": "r", "black_queen": "q", "black_king": "k",
+    "white-pawn": "P", "white-knight": "N", "white-bishop": "B",
+    "white-rook": "R", "white-queen": "Q", "white-king": "K",
+    "black-pawn": "p", "black-knight": "n", "black-bishop": "b",
+    "black-rook": "r", "black-queen": "q", "black-king": "k"
+}
+
 def detect_pieces(img_np: np.ndarray, conf_override: float | None = None):
+    p_model = load_pieces_model() or load_model()
+    if p_model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Model YOLO belum tersedia.",
+        )
+    results = p_model.predict(img_np, conf=conf_override or CONF_THRESHOLD, imgsz=800, verbose=False)
+    detections = []
+    for r in results:
+        names = r.names
+        for box in r.boxes:
+            c_name = names[int(box.cls[0])]
+            fen_char = PIECES_CLASS_MAP.get(c_name) or CLASS_TO_FEN.get(c_name)
+            if fen_char is None:
+                continue
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
+            cx = (x1 + x2) / 2.0
+            h = y2 - y1
+            # Anchor di 85% tinggi kotak: dasar kontak bidak ke petak
+            cy = y1 + h * 0.85
+            detections.append((fen_char, cx, cy, h, float(box.conf[0])))
+    return detections
+
+def _old_detect_pieces(img_np: np.ndarray, conf_override: float | None = None):
     """Jalankan YOLOv11, kembalikan daftar (kelas_fen, cx, cy_anchor, tinggi, conf).
 
     cy_anchor BUKAN tengah kotak. Untuk bidak tinggi (raja, ratu, gajah, kuda)
@@ -373,7 +503,7 @@ def detect_pieces(img_np: np.ndarray, conf_override: float | None = None):
         )
     # imgsz 1024 (bukan default 640): bidak kecil di foto jauh/HP jauh lebih
     # terbaca — recall naik signifikan dengan biaya inferensi ~2x (masih <1 dtk).
-    results = model.predict(img_np, conf=conf_override or CONF_THRESHOLD, imgsz=1024, verbose=False)
+    results = model.predict(img_np, conf=conf_override or CONF_THRESHOLD, imgsz=800, verbose=False)
     detections = []
     for r in results:
         names = r.names
@@ -1227,12 +1357,13 @@ def predict(req: ScanRequest):
 
         h, w = work_img.shape[:2]
 
-        # 3. Threshold adaptif dua tahap.
+        # 3. Threshold adaptif satu-pass (cepat di CPU): prediksi 1x pada conf=0.08 lalu filter di RAM.
         result = None
         used_conf = CONF_THRESHOLD
         first_candidate = None
+        all_dets = detect_pieces(work_img, conf_override=0.08)
         for conf_try in (CONF_THRESHOLD, 0.15, 0.08):
-            dets = detect_pieces(work_img, conf_override=conf_try)
+            dets = [d for d in all_dets if len(d) > 4 and d[4] >= conf_try]
             cand = grid_fen(dets, calib, img=work_img)
             # Simpan kandidat TERBANYAK bidak, bukan hanya yang pertama — ini yang
             # dipakai sebagai "perlu review" kalau tak ada yang plausibel.
@@ -1257,11 +1388,8 @@ def predict(req: ScanRequest):
             if result:
                 break
 
-        # Fallback papan DIGITAL (screenshot): glif 2D tidak dikenali YOLO.
-        # Baca dengan beberapa varian grid (kmeans mentah & refined checker);
-        # pilih yang plausibel. Jika keduanya plausibel, ambil yang pertama
-        # (urutan di _digital_candidates).
-        if result is None:
+        # Fallback digital hanya jika bukan foto kamera dan belum ada kandidat YOLO
+        if result is None and not req.autoCrop and not first_candidate:
             try:
                 dig_variants = _digital_candidates(img)
                 for cand_dig in dig_variants:
@@ -1271,9 +1399,6 @@ def predict(req: ScanRequest):
                             break
                     if result:
                         break
-                if result is None and dig_variants:
-                    rot_dig = rotate180_board(dig_variants[0])
-                    first_candidate = dig_variants[0] if piece_count(dig_variants[0]) >= piece_count(rot_dig) else rot_dig
             except Exception as e:
                 logger.warning("Pembaca papan digital gagal: %s", e)
 
@@ -1292,14 +1417,24 @@ def predict(req: ScanRequest):
                 "used_conf": used_conf,
             }
 
-        # Tidak plausibel — kirim kandidat terbaik untuk ditinjau user.
+        # Kirim kandidat terbaik langsung ke mode edit papan
         cand = first_candidate or ""
         alt = rotate180_board(cand) if cand else ""
         best_cand = cand if piece_count(cand) >= piece_count(alt) else alt
+        if best_cand:
+            return {
+                "ok": True,
+                "fen": best_cand + " w - - 0 1",
+                "board_fen": best_cand,
+                "detections": piece_count(best_cand),
+                "engine": "yolo11-candidate",
+                "orientation": "normal",
+                "used_conf": used_conf,
+                "needEdit": True,
+            }
         return {
             "ok": False,
-            "error": "Deteksi menghasilkan posisi yang tidak masuk akal (raja hilang/ganda, pion ilegal, atau bidak berlebih). Perbaiki manual di papan referensi.",
-            "board_fen_candidate": best_cand,
+            "error": "Papan catur tidak terdeteksi pada gambar. Silakan gunakan foto yang lebih jelas atau atur di Mode Edit Papan.",
             "used_conf": used_conf,
         }
     except HTTPException:

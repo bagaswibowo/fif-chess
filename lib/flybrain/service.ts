@@ -3,7 +3,7 @@ const MIDGAME_PROMO_BOOST = 0.65;
 const ENDGAME_PAWN_ADVANCE_FACTOR = 0.40;
 const MIDGAME_PAWN_ADVANCE_FACTOR = 0.25;
 
-import { describeOutcome } from "../chess.ts";
+import { describeOutcome, staticExchangeEvaluation } from "../chess.ts";
 import fs from "node:fs";
 import path from "node:path";
 import { Chess } from "chess.js";
@@ -643,8 +643,12 @@ export function playSuperflyMove(fen: string, sims = 15, mctsOpts: Record<string
       const valence = calculateBiologicalValence(chEval, v.uci);
       const isBlunder = isBlunderMove(fen, v.uci);
       const penalty = isBlunder ? -1000 : 0;
+      const fromSq = v.uci.slice(0, 2);
+      const toSq = v.uci.slice(2, 4);
+      const isCap = Boolean(chEval.get(toSq as any));
+      const seePenalty = isCap && !staticExchangeEvaluation(chEval, fromSq, toSq, 0) ? -2000 : 0;
       const dopamineBonus = (learnedPos && learnedPos.move === v.uci) ? (learnedPos.dopamine ?? 0) / 20 : 0;
-      const bioScore = v.n + (valence / 40) + dopamineBonus + penalty;
+      const bioScore = v.n + (valence / 40) + dopamineBonus + penalty + seePenalty;
       return { ...v, valence, bioScore, dopamineBonus };
     });
     scoredVisits.sort((a: any, b: any) => b.bioScore - a.bioScore);

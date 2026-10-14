@@ -1,4 +1,7 @@
 "use client";
+import { useChessTheme } from "@/lib/chess-themes";
+import { TacticalCommentaryCard, type TacticalCommentaryData } from "@/components/tactical-commentary-card";
+import { Share2, Check } from "lucide-react";
 
 // Fullscreen Focus Arena (v4.0)
 // Fitur Lengkap & Anti-Bug:
@@ -37,9 +40,14 @@ type Props = {
     reason: string;
     tactic?: string;
   } | null;
+  tacticalCommentary?: TacticalCommentaryData | null;
+  isSpectator?: boolean;
+  isGuestSpectator?: boolean;
+  onAuthRequest?: () => void;
 };
 
 export function ClockMovesFullscreen({
+
   onClose,
   whiteName,
   blackName,
@@ -55,7 +63,14 @@ export function ClockMovesFullscreen({
   canDragPiece,
   scoreCp = 0,
   coachCommentary,
+  tacticalCommentary,
+  isSpectator = false,
+  isGuestSpectator = false,
+  onAuthRequest,
 }: Props) {
+  const { customPieces, notationStyles } = useChessTheme();
+  const isSpectating = Boolean(isSpectator || isGuestSpectator);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [currentOrientation, setCurrentOrientation] = useState<"white" | "black">(boardOrientation);
   const [showCommentary, setShowCommentary] = useState(true);
 
@@ -97,6 +112,49 @@ export function ClockMovesFullscreen({
   const lastMove = moves.length > 0 ? moves[moves.length - 1] : null;
   const isHumanTurn = activeSide === currentOrientation;
 
+  // Spectator Tactical Arrows (Anti-cheat: only visible to spectators, never for active players)
+  const spectatorArrows = useMemo(() => {
+    if (!isSpectating || !showCommentary || !tacticalCommentary) return [];
+    const list: { startSquare: string; endSquare: string; color: string }[] = [];
+    if (tacticalCommentary.lastUci && tacticalCommentary.lastUci.length >= 4) {
+      list.push({
+        startSquare: tacticalCommentary.lastUci.slice(0, 2),
+        endSquare: tacticalCommentary.lastUci.slice(2, 4),
+        color: "#eab308",
+      });
+    }
+    if (tacticalCommentary.threatFrom && tacticalCommentary.threatTo && tacticalCommentary.threatFrom !== tacticalCommentary.threatTo) {
+      list.push({
+        startSquare: tacticalCommentary.threatFrom,
+        endSquare: tacticalCommentary.threatTo,
+        color: "#ef4444",
+      });
+    }
+    if (tacticalCommentary.predFrom && tacticalCommentary.predTo && tacticalCommentary.predFrom !== tacticalCommentary.predTo) {
+      list.push({
+        startSquare: tacticalCommentary.predFrom,
+        endSquare: tacticalCommentary.predTo,
+        color: "#38bdf8",
+      });
+    }
+    if (tacticalCommentary.stratFrom && tacticalCommentary.stratTo && tacticalCommentary.stratFrom !== tacticalCommentary.stratTo) {
+      list.push({
+        startSquare: tacticalCommentary.stratFrom,
+        endSquare: tacticalCommentary.stratTo,
+        color: "#10b981",
+      });
+    }
+    return list;
+  }, [isSpectating, showCommentary, tacticalCommentary]);
+
+  const handleCopyShare = () => {
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
+
   return (
     <div
       role="dialog"
@@ -107,16 +165,35 @@ export function ClockMovesFullscreen({
       {/* HEADER NAVIGASI ATAS */}
       <header className="px-3 sm:px-6 py-2 bg-[var(--card)]/95 backdrop-blur border-b border-[var(--border)] flex items-center justify-between shrink-0 z-20 h-11">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isSpectating ? "bg-red-500 animate-pulse" : "bg-emerald-400 animate-pulse"}`} />
           <h2 className="text-xs sm:text-sm font-black text-white m-0 tracking-wide uppercase truncate">
-            Arena Fokus Catur (1 Layar)
+            {isSpectating ? "Arena Fokus Catur — Siaran Langsung" : "Arena Fokus Catur (1 Layar)"}
           </h2>
-          <div className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--surface)] border border-[var(--border)] text-[var(--primary)]">
-            {activeSide ? `● Giliran ${activeSide === "white" ? "Putih" : "Hitam"}` : "Selesai"}
+          <div className={`hidden sm:inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
+            isSpectating
+              ? "bg-red-500/20 text-red-300 border border-red-500/40"
+              : "bg-[var(--surface)] border border-[var(--border)] text-[var(--primary)]"
+          }`}>
+            {isSpectating
+              ? (activeSide ? `● Giliran ${activeSide === "white" ? "Putih" : "Hitam"}` : "Pertandingan Selesai")
+              : (activeSide ? `● Giliran ${activeSide === "white" ? "Putih" : "Hitam"}` : "Selesai")}
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Tombol Bagikan untuk Penonton */}
+          {isSpectating && (
+            <button
+              type="button"
+              onClick={handleCopyShare}
+              className="px-2.5 py-1 text-xs font-bold rounded-lg bg-sky-600 hover:bg-sky-500 text-white flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              title="Salin Tautan Siaran Langsung"
+            >
+              {copiedLink ? <Check size={14} className="text-emerald-300" /> : <Share2 size={14} />}
+              <span className="hidden sm:inline">{copiedLink ? "Link Tersalin!" : "Bagikan"}</span>
+            </button>
+          )}
+
           {/* Toggle Komentator */}
           <button
             type="button"
@@ -144,15 +221,15 @@ export function ClockMovesFullscreen({
             <span className="hidden md:inline">Putar</span>
           </button>
 
-          {/* Tombol Tutup */}
+          {/* Tombol Tutup / Kembali */}
           <button
             type="button"
             onClick={onClose}
-            className="px-2.5 py-1 text-xs font-bold rounded-lg bg-red-950/80 border border-red-500/50 text-red-200 hover:bg-red-900 flex items-center gap-1.5 transition-all shadow-sm"
-            title="Tutup Layar Penuh (Escape)"
+            className="px-2.5 py-1 text-xs font-bold rounded-lg bg-red-950/80 border border-red-500/50 text-red-200 hover:bg-red-900 flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+            title={isSpectating ? "Buka Web Catur Lengkap" : "Tutup Layar Penuh (Escape)"}
           >
             <IconClose3D size={14} />
-            <span>Tutup</span>
+            <span>{isSpectating ? "Menu Catur" : "Tutup"}</span>
           </button>
         </div>
       </header>
@@ -211,14 +288,15 @@ export function ClockMovesFullscreen({
             <div className="flex-1 aspect-square h-full rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] min-h-0">
               <Chessboard
                 options={{
-                  id: "fullscreen-focus-board",
+                  id: isSpectating ? "spectator-focus-board" : "fullscreen-focus-board",
                   position: fen,
                   boardOrientation: currentOrientation,
-                  allowDragging: isHumanTurn,
-                  canDragPiece: canDragPiece,
+                  allowDragging: isSpectating ? false : isHumanTurn,
+                  canDragPiece: isSpectating ? () => false : canDragPiece,
                   onPieceDrop: onPieceDrop ?? (() => false),
                   onSquareClick: onSquareClick,
                   squareStyles: squareStyles,
+                  arrows: isSpectating ? spectatorArrows : [],
                   boardStyle: {
                     backgroundColor: "var(--board-dark)",
                     gridTemplateRows: "repeat(8, 1fr)",
@@ -228,8 +306,9 @@ export function ClockMovesFullscreen({
                   },
                   darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                   lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                  pieces: customPieces,
                   animationDurationInMs: 200,
-                  showNotation: true,
+                  ...notationStyles,
                 }}
               />
             </div>
@@ -241,10 +320,12 @@ export function ClockMovesFullscreen({
               <span className={`w-3 h-3 rounded-full border shrink-0 ${currentOrientation === "white" ? "bg-white border-neutral-300" : "bg-neutral-900 border-neutral-600"}`} />
               <div className="min-w-0 flex items-center gap-1.5">
                 <span className="text-xs font-bold text-white block truncate max-w-[130px] sm:max-w-[200px]">
-                  {currentOrientation === "white" ? whiteName : blackName} (Anda)
+                  {currentOrientation === "white" ? whiteName : blackName} {isSpectating ? "" : "(Anda)"}
                 </span>
                 <span className="text-xs text-neutral-400 hidden sm:inline">
-                  {isHumanTurn ? "● Giliran Anda" : "Menunggu lawan"}
+                  {isSpectating
+                    ? (activeSide === (currentOrientation === "white" ? "white" : "black") ? "● Melangkah..." : "Menunggu")
+                    : (isHumanTurn ? "● Giliran Anda" : "Menunggu lawan")}
                 </span>
               </div>
             </div>
@@ -265,49 +346,15 @@ export function ClockMovesFullscreen({
         {/* KOLOM KANAN: KOMENTAR TAKTIS & SCORESHEET NOTASI */}
         <div className="flex-1 flex flex-col gap-2 w-full max-w-md lg:h-full lg:max-h-[min(88vh,calc(100dvh-150px))] overflow-hidden min-h-0">
           
-          {/* LIVE STOCKFISH & AI COACH COMMENTATOR CARD */}
-          {showCommentary && (
-            <div className="p-3 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0 animate-in fade-in space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <IconBot3D size={18} />
-                  <span className="text-xs font-bold text-white">
-                    {coachCommentary ? "Analisis AI Coach" : "Analisis Komentator Stockfish"}
-                  </span>
-                </div>
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] text-emerald-400 font-bold">
-                  Eval: {evalValue > 0 ? "+" + evalValue.toFixed(2) : evalValue.toFixed(2)}
-                </span>
-              </div>
-
-              <div className="text-xs leading-relaxed text-neutral-200">
-                {coachCommentary ? (
-                  <div className="space-y-1">
-                    <div className="font-bold text-emerald-400">{coachCommentary.headline}</div>
-                    <div className="text-neutral-300">{coachCommentary.reason}</div>
-                    {coachCommentary.tactic && (
-                      <div className="text-xs text-amber-300 italic flex items-center gap-1.5">
-                        <IconLightbulb3D size={13} className="shrink-0" />
-                        <span>{coachCommentary.tactic}</span>
-                      </div>
-                    )}
-                  </div>
-                ) : lastMove ? (
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-white">Langkah {lastMove.san}:</span>
-                    {Math.abs(evalValue) < 0.8 ? (
-                      <span className="text-emerald-400 font-bold">● Posisi seimbang &amp; terkontrol</span>
-                    ) : (evalValue > 1.5 && currentOrientation === "white") || (evalValue < -1.5 && currentOrientation === "black") ? (
-                      <span className="text-blue-400 font-bold">● Posisi Anda sangat unggul!</span>
-                    ) : (
-                      <span className="text-amber-400 font-bold">● Lawan menekan, pertahankan petak sentral</span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-neutral-400">Pertandingan baru dimulai. Tekan atau seret bidak untuk melangkah.</span>
-                )}
-              </div>
-            </div>
+          {/* LIVE KOMENTATOR & TAKTIK AI (Hanya untuk Penonton, Disembunyikan dari Pemain) */}
+          {showCommentary && isSpectating && (
+            <TacticalCommentaryCard
+              commentary={tacticalCommentary}
+              scoreCp={scoreCp}
+              badgeTitle="Komentator & Taktik AI"
+              badgeSubtitle="Siaran Publik"
+              isLive={true}
+            />
           )}
 
           {/* SCORESHEET NOTASI LANGKAH */}

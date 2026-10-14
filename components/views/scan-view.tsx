@@ -250,7 +250,19 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       clearTimeout(p2);
       clearTimeout(timer);
 
-      const data = await res.json().catch(() => ({ ok: false, error: "Respons server tidak valid." }));
+      let data: any;
+      try {
+        const text = await res.text();
+        data = JSON.parse(text);
+      } catch {
+        if (res.status === 413) {
+          data = { ok: false, error: "Ukuran foto terlalu besar. Silakan gunakan foto beresolusi lebih rendah atau crop area papan catur." };
+        } else if (res.status === 504 || res.status === 502) {
+          data = { ok: false, error: "Waktu pemrosesan AI habis / server sedang sibuk. Silakan coba lagi atau gunakan preset posisi / FEN." };
+        } else {
+          data = { ok: false, error: `Gagal memproses gambar (status ${res.status || "jaringan"}). Silakan coba lagi atau periksa sudut foto.` };
+        }
+      }
       if (data.ok && data.fen) {
         setScanProgress({ percent: 100, stage: "Selesai! Memuat posisi ke papan..." });
         setTimeout(() => {
@@ -262,14 +274,15 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           setIsProcessingImage(false);
         }, 400);
       } else {
-        // Gagal jujur dari server (mis. tidak ada engine vision yang aktif).
-        // Tampilkan pesan server + arahkan ke editing manual di papan referensi.
         setError(
           data.error ||
             (lang === "id"
-              ? "Posisi tidak terbaca. Coba foto yang lebih terang & tegak lurus, atau tempel FEN manual / muat posisi lalu edit bidaknya di tab Papan Referensi."
-              : "Position unreadable. Try a brighter, straight-on photo, paste FEN manually, or edit pieces on the reference board.")
+              ? "Posisi tidak terbaca otomatis. Silakan sesuaikan 4 pin sudut papan catur di bawah."
+              : "Position unreadable. Adjust the 4 board corners below.")
         );
+        if (pendingCropImage && !prewarped) {
+          setIsCropModalOpen(true);
+        }
         setScanProgress(null);
         setIsProcessingImage(false);
       }
