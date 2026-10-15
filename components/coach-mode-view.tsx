@@ -24,8 +24,29 @@ import {
   IconClose3D,
 } from "@/components/icons3d";
 import { describeOutcome, findLegalMove, getLegalMoves, type GameOutcome } from "@/lib/chess";
+// Import type-only dari modul daun: barrel "@/lib/engines" menarik node:child_process
+// (spawn Stockfish) dan akan menggagalkan build client component.
+import type { EngineId } from "@/lib/engines/types";
 
 type Props = { lang?: "id" | "en" };
+
+// Engine sparring yang boleh dipilih pemain. Pelatihnya tetap Stockfish 19 —
+// ini hanya lawan tandingnya.
+const SPARRING_ENGINES: { id: EngineId; label: string }[] = [
+  { id: "jev-fly", label: "Jev + Fly Brain" },
+  { id: "jev", label: "Jev System One" },
+  { id: "fly", label: "Fruit Fly Brain" },
+  { id: "stockfish", label: "Stockfish 19 NNUE" },
+];
+const SPARRING_LABEL = Object.fromEntries(SPARRING_ENGINES.map((e) => [e.id, e.label])) as Record<
+  EngineId,
+  string
+>;
+
+// Depth pengajar. 14 = plafon di StockfishEngine.play (lib/engines/stockfish.ts).
+// Setiap "go depth N" di lib/stockfish.ts selalu dibarengi movetime 1200, jadi
+// naik 12 -> 14 menambah kualitas tanpa menambah waktu tunggu.
+const COACH_DEPTH = 14;
 
 function classifyLoss(cpLoss: number | null, isBest: boolean): "brilliant" | "best" | "good" | "inaccuracy" | "mistake" | "blunder" {
   if (isBest || cpLoss === null || cpLoss < 15) return "best";
@@ -58,6 +79,7 @@ export function CoachModeView({ lang = "id" }: Props) {
   const [fen, setFen] = useState(() => new Chess().fen());
   const [history, setHistory] = useState<string[]>([]);
   const [playerSide, setPlayerSide] = useState<"white" | "black">("white");
+  const [sparring, setSparring] = useState<EngineId>("jev-fly");
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
   const [outcome, setOutcome] = useState<GameOutcome>(() => describeOutcome(new Chess()));
   const [showConfetti, setShowConfetti] = useState(false);
@@ -132,7 +154,7 @@ export function CoachModeView({ lang = "id" }: Props) {
   const computeCoachAdvice = useCallback(async (currentFen: string) => {
     try {
       const [bestData, threatData] = await Promise.all([
-        engineBest(currentFen, "stockfish", 12),
+        engineBest(currentFen, "stockfish", COACH_DEPTH),
         probeThreat(currentFen),
       ]);
       if (bestData) {
@@ -167,12 +189,13 @@ export function CoachModeView({ lang = "id" }: Props) {
     setShowHintArrow(false);
   };
 
-  const resetGame = useCallback(async (side: "white" | "black" = "white") => {
+  const resetGame = useCallback(async (side: "white" | "black" = "white", opponent: EngineId = sparring) => {
     const c = new Chess();
     setChess(c);
     setFen(c.fen());
     setHistory([]);
     setPlayerSide(side);
+    setSparring(opponent);
     setBoardOrientation(side);
     setOutcome(describeOutcome(c));
     setShowConfetti(false);
@@ -188,7 +211,7 @@ export function CoachModeView({ lang = "id" }: Props) {
     } else {
       setThinking(true);
       thinkingRef.current = true;
-      const botMove = await engineBest(c.fen(), "jev-fly", 12);
+      const botMove = await engineBest(c.fen(), opponent, 12);
       if (botMove) {
         const move = findLegalMove(c, botMove.uci.slice(0, 2) as Square, botMove.uci.slice(2, 4) as Square);
         if (move && c.move(move)) {
@@ -202,7 +225,7 @@ export function CoachModeView({ lang = "id" }: Props) {
       thinkingRef.current = false;
       setThinking(false);
     }
-  }, [computeCoachAdvice]);
+  }, [computeCoachAdvice, sparring]);
 
   const tryMove = async (from: string, to: string) => {
     if (outcome.over || thinkingRef.current || !isPlayerTurn) return false;
@@ -219,7 +242,7 @@ export function CoachModeView({ lang = "id" }: Props) {
     thinkingRef.current = true;
     clearPreMoveState();
 
-    const bestMoveData = hint ?? (await engineBest(c.fen(), "stockfish", 10));
+    const bestMoveData = hint ?? (await engineBest(c.fen(), "stockfish", COACH_DEPTH));
     const bestUci = bestMoveData?.uci ?? "";
     const bestSan = bestMoveData?.san ?? "";
     const evalBefore = evalCp ?? 0;
@@ -276,7 +299,7 @@ export function CoachModeView({ lang = "id" }: Props) {
       cpLoss,
     });
 
-    const botData = await engineBest(c.fen(), "jev-fly", 12);
+    const botData = await engineBest(c.fen(), sparring, 12);
     if (botData) {
       const oppMove = findLegalMove(c, botData.uci.slice(0, 2) as Square, botData.uci.slice(2, 4) as Square,
         botData.uci.length > 4 ? (botData.uci[4] as "q") : undefined);
@@ -396,8 +419,9 @@ export function CoachModeView({ lang = "id" }: Props) {
     >
       {showConfetti && <Confetti />}
 
-      {/* Header Info Matchup with Standardized BoardControls */}
-      <div className="bg-[var(--card)] px-3 py-2 rounded-xl border border-[var(--border)] shadow-md grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 shrink-0 min-h-14 overflow-visible">
+      {/* Header Info Matchup with Standardized BoardControls.
+          HP: 3 baris bertumpuk (info / bidak / kendali papan). Desktop: 1 baris 3 kolom. */}
+      <div className="bg-[var(--card)] px-3 py-2 rounded-xl border border-[var(--border)] shadow-md flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center gap-2 shrink-0 sm:min-h-14 overflow-visible">
         <div className="flex items-center gap-2 min-w-0">
           <IconBot3D size={22} className="shrink-0" />
           <div className="min-w-0">
@@ -405,36 +429,46 @@ export function CoachModeView({ lang = "id" }: Props) {
               {lang === "id" ? "AI Coach — Mode Latih" : "AI Coach — Training"}
             </h2>
             <div className="text-xs md:text-xs text-neutral-400 truncate">
-              Lawan: Jev + Fly Brain (Hybrid) · Dilatih Stockfish 19
+              {lang === "id"
+                ? `Lawan: ${SPARRING_LABEL[sparring]} · Pelatih: Stockfish 19 depth ${COACH_DEPTH}`
+                : `Opponent: ${SPARRING_LABEL[sparring]} · Coach: Stockfish 19 depth ${COACH_DEPTH}`}
             </div>
           </div>
         </div>
 
-        {/* Compact 2-way Side Toggle Switch: Putih / Hitam */}
-        <div className="flex items-center bg-[var(--surface)] p-0.5 rounded-lg border border-[var(--border)] shrink-0">
+        {/* Sisi bidak. Di HP selebar layar supaya sasaran sentuh >= 44px. */}
+        <div
+          role="group"
+          aria-label={lang === "id" ? "Pilih sisi bidak" : "Choose your side"}
+          className="flex w-full sm:w-auto items-stretch bg-[var(--surface)] p-0.5 rounded-lg border border-[var(--border)] shrink-0"
+        >
           <button
+            type="button"
             onClick={() => void resetGame("white")}
             disabled={thinking}
-            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+            aria-pressed={playerSide === "white"}
+            className={`flex-1 sm:flex-none min-h-11 sm:min-h-9 px-2 sm:px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 ${
               playerSide === "white"
                 ? "bg-[var(--primary)] text-white shadow-sm"
                 : "text-neutral-400 hover:text-white"
             }`}
           >
-            <IconKingWhite3D size={16} />
-            <span className="hidden sm:inline">Putih</span>
+            <IconKingWhite3D size={18} />
+            <span>Putih</span>
           </button>
           <button
+            type="button"
             onClick={() => void resetGame("black")}
             disabled={thinking}
-            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+            aria-pressed={playerSide === "black"}
+            className={`flex-1 sm:flex-none min-h-11 sm:min-h-9 px-2 sm:px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 ${
               playerSide === "black"
                 ? "bg-[var(--primary)] text-white shadow-sm"
                 : "text-neutral-400 hover:text-white"
             }`}
           >
-            <IconKingBlack3D size={16} />
-            <span className="hidden sm:inline">Hitam</span>
+            <IconKingBlack3D size={18} />
+            <span>Hitam</span>
           </button>
         </div>
 
@@ -445,19 +479,44 @@ export function CoachModeView({ lang = "id" }: Props) {
           isFullscreen={fullscreenCoach}
           onToggleFullscreen={() => setFullscreenCoach((v) => !v)}
           showShortcuts={true}
-          className="border-0 bg-transparent p-0 shadow-none"
+          className="border-0 bg-transparent p-0 shadow-none w-full sm:w-auto min-w-0"
         />
+      </div>
+
+      {/* Pilih lawan tanding. Pelatih tetap Stockfish 19 (lihat kartu Rekomendasi Coach). */}
+      <div className="mt-2 shrink-0">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
+          {lang === "id" ? "Lawan Sparring" : "Sparring Opponent"}
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto custom-scrollbar -mx-0.5 px-0.5 pb-0.5">
+          {SPARRING_ENGINES.map((eng) => (
+            <button
+              key={eng.id}
+              type="button"
+              onClick={() => void resetGame(playerSide, eng.id)}
+              disabled={thinking}
+              aria-pressed={sparring === eng.id}
+              className={`shrink-0 min-h-9 px-3 rounded-lg border text-xs font-bold transition-all disabled:opacity-60 ${
+                sparring === eng.id
+                  ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white ring-1 ring-[var(--primary)]"
+                  : "bg-[var(--background)] border-[var(--border)] text-neutral-400 hover:border-neutral-500 hover:text-white"
+              }`}
+            >
+              {eng.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
       <div className="flex-1 grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-3 items-stretch min-h-0 overflow-y-auto lg:overflow-hidden pt-1">
         {/* LEFT COLUMN: Chessboard strictly anchored */}
-        <div className="flex flex-col justify-between items-center h-full min-h-0 w-full max-w-[calc(100vh-140px)] mx-auto py-0.5 space-y-1">
+        <div className="flex flex-col justify-between items-center h-full min-h-0 w-full max-w-[calc(100vh-190px)] mx-auto py-0.5 space-y-1">
           {/* Integrated Opponent Bar with Eval Badge & Captured Pieces */}
           <div className="w-full flex items-center justify-between px-3 py-1 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-neutral-800 border-neutral-600" : "bg-white border-neutral-300"}`} />
-              <span className="text-xs md:text-sm font-bold text-white truncate">Jev + Fly Brain</span>
+              <span className="text-xs md:text-sm font-bold text-white truncate">{SPARRING_LABEL[sparring]}</span>
               <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/40 shrink-0">
                 {evalCp !== null ? (evalCp > 0 ? `+${(evalCp / 100).toFixed(1)}` : (evalCp / 100).toFixed(1)) : "="}
               </span>
@@ -467,7 +526,7 @@ export function CoachModeView({ lang = "id" }: Props) {
 
           {/* Chessboard Row with Vertical Eval Bar */}
           <div className="flex justify-center w-full flex-1 min-h-0">
-            <div className="flex gap-2.5 items-center w-full max-w-[min(100%,calc(100dvh-210px))]">
+            <div className="flex gap-2.5 items-center w-full max-w-[min(100%,calc(100dvh-260px))]">
               <EvalBar fen={fen} scoreCp={evalCp} orientation={boardOrientation} />
               <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
                 <Chessboard
@@ -526,7 +585,7 @@ export function CoachModeView({ lang = "id" }: Props) {
               <div className="flex items-center gap-2">
                 <IconLightning3D size={20} />
                 <span className="text-xs font-black uppercase tracking-wider text-[#81b64c]">
-                  {lang === "id" ? "Rekomendasi Coach (Stockfish 19)" : "Coach Recommendation (Stockfish 19)"}
+                  {lang === "id" ? `Rekomendasi Coach (Stockfish 19 · depth ${COACH_DEPTH})` : `Coach Recommendation (Stockfish 19 · depth ${COACH_DEPTH})`}
                 </span>
               </div>
 
@@ -569,13 +628,13 @@ export function CoachModeView({ lang = "id" }: Props) {
                 ) : (
                   <div className="text-xs text-neutral-400 py-3 text-center animate-pulse flex items-center justify-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#81b64c] animate-ping" />
-                    {lang === "id" ? "Jev sedang menganalisis papan..." : "Calculating optimal tactic..."}
+                    {lang === "id" ? `Stockfish 19 depth ${COACH_DEPTH} sedang menganalisis...` : `Stockfish 19 depth ${COACH_DEPTH} is analysing...`}
                   </div>
                 )
               ) : thinking ? (
                 <div className="text-xs text-neutral-400 py-3 text-center animate-pulse flex items-center justify-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#81b64c] animate-ping" />
-                  {lang === "id" ? "Stockfish sedang merespon..." : "Stockfish is responding..."}
+                  {lang === "id" ? `${SPARRING_LABEL[sparring]} sedang merespon...` : `${SPARRING_LABEL[sparring]} is responding...`}
                 </div>
               ) : (
                 <div className="text-xs text-neutral-400 py-2 text-center">
@@ -650,8 +709,8 @@ export function CoachModeView({ lang = "id" }: Props) {
           {history.length > 0 && (
             <NotationTable
               title={lang === "id" ? "Riwayat Langkah" : "Move History"}
-              whiteLabel={playerSide === "white" ? (lang === "id" ? "Anda (Player)" : "You (Player)") : "Jev + Fly Brain"}
-              blackLabel={playerSide === "black" ? (lang === "id" ? "Anda (Player)" : "You (Player)") : "Jev + Fly Brain"}
+              whiteLabel={playerSide === "white" ? (lang === "id" ? "Anda (Player)" : "You (Player)") : SPARRING_LABEL[sparring]}
+              blackLabel={playerSide === "black" ? (lang === "id" ? "Anda (Player)" : "You (Player)") : SPARRING_LABEL[sparring]}
               plyCount={history.length}
               rows={Array.from({ length: Math.ceil(history.length / 2) }).map((_, i) => ({
                 no: i + 1,
