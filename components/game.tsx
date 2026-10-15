@@ -886,7 +886,7 @@ export function Game() {
           <span className="text-neutral-500">vs</span>
           <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-neutral-900 border border-neutral-500" /> {m.blackName || "Hitam"}</span>
         </div>
-        <div className="w-full max-w-[min(100%,calc(100dvh-190px))] aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-xl">
+        <div className="w-full mx-auto max-w-[min(100%,calc(100vw-2.5rem),calc(100dvh-190px))] aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-xl">
           <Chessboard
             options={{
               id: "board-spectate",
