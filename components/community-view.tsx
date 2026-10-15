@@ -17,6 +17,7 @@ import {
   IconHistory3D,
   IconClose3D,
   IconThumbsUp3D,
+  IconTrash3D,
 } from "@/components/icons3d";
 
 import { ForumCategory, ForumPost, ForumThread } from "./community/types";
@@ -602,6 +603,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                       }}
                       className="ctl ctl-sm flex items-center gap-1 font-bold text-[var(--destructive)] hover:bg-[var(--destructive)] hover:text-white"
                     >
+                      <IconTrash3D size={12} />
                       <span>Hapus</span>
                     </button>
                   )}

@@ -460,7 +460,8 @@ export function IconCoach3D({ size = 24, className = "" }: IconProps) {
 export function IconQuote3D({ size = 18, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
-      <circle cx="24" cy="24" r="18" fill="#3b82f6" />
+      <circle cx="24" cy="24" r="18" fill="#3b82f6" opacity="0.25" />
+      <path d="M14 28c0-6 3-11 8-13l1.5 2.5c-3 1.5-4.5 3.5-4.8 5.5.4-.2 1-.3 1.6-.3 2.4 0 4.2 1.8 4.2 4.2S22.7 31 20.2 31C16.5 31 14 28.6 14 28Zm14 0c0-6 3-11 8-13l1.5 2.5c-3 1.5-4.5 3.5-4.8 5.5.4-.2 1-.3 1.6-.3 2.4 0 4.2 1.8 4.2 4.2S36.7 31 34.2 31C30.5 31 28 28.6 28 28Z" fill="#3b82f6"/>
     </svg>
   );
 }
@@ -485,7 +486,8 @@ export function IconShield3D({ size = 18, className = "" }: IconProps) {
 export function IconThumbsUp3D({ size = 18, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
-      <circle cx="24" cy="24" r="18" fill="#ec4899" />
+      <circle cx="24" cy="24" r="18" fill="#ec4899" opacity="0.25" />
+      <path d="M17 22v12M17 22l6-10c1.5-2.5 5-1.5 5 1.5V19h6.5c2 0 3.5 2 3 4l-2.5 9c-.4 1.5-1.7 2.5-3.2 2.5H17" stroke="#ec4899" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="#ec4899" fillOpacity="0.3"/>
     </svg>
   );
 }
@@ -519,6 +521,17 @@ export function IconCrossRed3D({ size = 18, className = "" }: IconProps) {
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
       <circle cx="16" cy="16" r="14" fill="#ef4444" />
       <path d="M11 11 L21 21 M21 11 L11 21" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+
+export function IconTrash3D({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className={className}>
+      <circle cx="24" cy="24" r="18" fill="#ef4444" opacity="0.25" />
+      <path d="M14 16h20M20 16v-3h8v3M17 16l1.5 19c.1 1.6 1.4 3 3 3h7c1.6 0 2.9-1.4 3-3L33 16" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M21 21v11M27 21v11" stroke="#ef4444" strokeWidth="3" strokeLinecap="round"/>
     </svg>
   );
 }

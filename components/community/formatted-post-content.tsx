@@ -8,6 +8,39 @@ export function FormattedPostContent({ text }: { text: string }) {
       {parts.map((paragraph, pIdx) => {
         const trimmed = paragraph.trim();
 
+        // Quote block yang berisi tabel markdown: parse tabel di dalam quote juga
+        if (trimmed.startsWith(">") && trimmed.includes("|")) {
+          const inner = trimmed.split("\n").map((l) => l.replace(/^>\s?/, "")).join("\n");
+          const qLines = inner.split("\n");
+          const qRows = qLines.filter((l) => l.trim().startsWith("|"));
+          const qIsSep = (l: string) => /^\s*\|?[\s:-]*-{2,}[\s:|-]*\|?\s*$/.test(l) && l.includes("-");
+          const qParse = (l: string) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+          if (qRows.length >= 2) {
+            const qHeader = qIsSep(qRows[1]) ? qParse(qRows[0]) : null;
+            const qBody = (qHeader ? qRows.slice(2) : qRows).filter((l) => !qIsSep(l));
+            if (qHeader || qBody.length > 0) {
+              return (
+                <blockquote key={pIdx} className="pl-3 py-1.5 my-1 rounded-r-lg border-l-2 border-[var(--primary)] bg-[var(--surface)] text-sm italic text-neutral-300">
+                  <div className="table-wrap my-1 rounded-xl border border-[var(--border)]">
+                    <table className="data-table">
+                      {qHeader && (
+                        <thead><tr>{qHeader.map((h, i) => <th key={i}>{h}</th>)}</tr></thead>
+                      )}
+                      <tbody>
+                        {qBody.map((r, i) => (
+                          <tr key={i}>
+                            {qParse(r).map((c, j) => <td key={j} className={/^[-+]?[\d.,]+%?$/.test(c) ? "num" : ""}>{c}</td>)}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </blockquote>
+              );
+            }
+          }
+        }
+
         if (trimmed.startsWith(">")) {
           const quoteLines = trimmed
             .split("\n")
