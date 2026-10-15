@@ -570,7 +570,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                     }}
                     className="ctl ctl-sm flex items-center gap-1 font-bold"
                   >
-                    <IconThumbsUp3D size={12} />
+                    <IconThumbsUp3D size={16} />
                     <span>{post.likes} Suka</span>
                   </button>
 
@@ -579,7 +579,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                     onClick={() => handleQuotePost(post)}
                     className="ctl ctl-sm ctl-quiet flex items-center gap-1 font-bold"
                   >
-                    <IconQuote3D size={12} />
+                    <IconQuote3D size={16} />
                     <span>Kutip Balas</span>
                   </button>
 
@@ -603,7 +603,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                       }}
                       className="ctl ctl-sm flex items-center gap-1 font-bold text-[var(--destructive)] hover:bg-[var(--destructive)] hover:text-white"
                     >
-                      <IconTrash3D size={12} />
+                      <IconTrash3D size={16} />
                       <span>Hapus</span>
                     </button>
                   )}
