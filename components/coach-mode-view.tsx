@@ -484,28 +484,26 @@ export function CoachModeView({ lang = "id" }: Props) {
       </div>
 
       {/* Pilih lawan tanding. Pelatih tetap Stockfish 19 (lihat kartu Rekomendasi Coach). */}
-      <div className="mt-2 shrink-0">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
+      <div className="mt-2 shrink-0 flex items-center gap-2">
+        <label
+          htmlFor="coach-sparring"
+          className="text-xs font-bold uppercase tracking-wider text-neutral-400 shrink-0"
+        >
           {lang === "id" ? "Lawan Sparring" : "Sparring Opponent"}
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto custom-scrollbar -mx-0.5 px-0.5 pb-0.5">
+        </label>
+        <select
+          id="coach-sparring"
+          value={sparring}
+          onChange={(e) => void resetGame(playerSide, e.target.value as EngineId)}
+          disabled={thinking}
+          className="flex-1 sm:flex-none min-w-0 bg-[var(--surface)] text-xs font-bold text-white border border-[var(--border)] rounded-lg px-2 py-1.5 focus:outline-none focus:border-[var(--primary)] cursor-pointer disabled:opacity-60"
+        >
           {SPARRING_ENGINES.map((eng) => (
-            <button
-              key={eng.id}
-              type="button"
-              onClick={() => void resetGame(playerSide, eng.id)}
-              disabled={thinking}
-              aria-pressed={sparring === eng.id}
-              className={`shrink-0 min-h-9 px-3 rounded-lg border text-xs font-bold transition-all disabled:opacity-60 ${
-                sparring === eng.id
-                  ? "bg-[var(--primary-strong)] border-[var(--primary)] text-white ring-1 ring-[var(--primary)]"
-                  : "bg-[var(--background)] border-[var(--border)] text-neutral-400 hover:border-neutral-500 hover:text-white"
-              }`}
-            >
+            <option key={eng.id} value={eng.id}>
               {eng.label}
-            </button>
+            </option>
           ))}
-        </div>
+        </select>
       </div>
 
       {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
