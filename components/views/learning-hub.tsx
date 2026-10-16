@@ -358,22 +358,25 @@ export function LearningHub({ lang = "id" }: Props) {
       }
     }
 
-    if (stage === "continuation") {
-      // Langkah lanjutan pemain (bisa memakan bidak sasaran!)
+    if (stage === "continuation" || stage === "completed") {
+      // Langkah lanjutan pemain: permainan tetap terus berlanjut melawan bot sampai tamat!
       setFen(c.fen());
       setSelected(null);
 
-      if (m.captured || m.san.includes("#") || c.isCheckmate()) {
-        const capName = m.captured ? (PIECE_NAMES[m.captured] || "Perwira") : "Target";
-        const msg = m.san.includes("#") || c.isCheckmate()
-          ? "🎉 Skakmat! Trik tuntas menyudahi perlawanan lawan."
-          : `🎯 Berhasil memakan ${capName} di ${m.to.toUpperCase()}! Trik sukses terlaksana!`;
+      if (c.isCheckmate() || c.isGameOver()) {
+        const msg = c.isCheckmate()
+          ? "🎉 Skakmat Mutlak! Raja lawan terkunci tanpa pelarian."
+          : "Permainan selesai (Remis/Stalemate).";
         setCaptureMsg(msg);
         setStage("completed");
         return true;
       }
 
-      // Jika belum memakan tapi langkah legal lanjutan, biarkan bot membalas lagi
+      if (m.captured) {
+        const capName = PIECE_NAMES[m.captured] || "Perwira";
+        setCaptureMsg(`🎯 Berhasil memakan ${capName} di ${m.to.toUpperCase()}! Terus lanjutkan penyerangan melawan bot.`);
+      }
+
       setStage("opponent_thinking");
       setTimeout(async () => {
         const reply = await getBotReply(c.fen());
@@ -381,8 +384,13 @@ export function LearningHub({ lang = "id" }: Props) {
           c.move(reply.san);
           setFen(c.fen());
         }
-        setStage(c.isGameOver() ? "completed" : "continuation");
-      }, 700);
+        if (c.isGameOver()) {
+          setStage("completed");
+          setCaptureMsg(c.isCheckmate() ? "🎉 Skakmat Mutlak! Lawan berhasil ditumbangkan." : "Permainan selesai.");
+        } else {
+          setStage("continuation");
+        }
+      }, 650);
       return true;
     }
 
@@ -756,7 +764,7 @@ export function LearningHub({ lang = "id" }: Props) {
                 <span>⚔️ Lanjutan Trik: Giliranmu!</span>
               </div>
               <p className="leading-relaxed text-xs">
-                Lawan telah membalas langkah. Sekarang lanjutkan gerakanmu di papan untuk <strong>memakan bidak sasaran</strong> atau melumpuhkan pertahanan lawan!
+                Lawan telah membalas. Terus mainkan langkahmu di papan untuk <strong>memakan sasaran</strong> dan selesaikan permainan melawan bot sampai skakmat/tuntas!
               </p>
             </div>
           )}
