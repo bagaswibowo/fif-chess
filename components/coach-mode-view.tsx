@@ -17,6 +17,7 @@ import {
   IconLightning3D,
   IconKingWhite3D,
   IconKingBlack3D,
+  IconDice3D,
   IconLightbulb3D,
   IconAlert3D,
   IconTarget3D,
@@ -79,6 +80,7 @@ export function CoachModeView({ lang = "id" }: Props) {
   const [fen, setFen] = useState(() => new Chess().fen());
   const [history, setHistory] = useState<string[]>([]);
   const [playerSide, setPlayerSide] = useState<"white" | "black">("white");
+  const [sideChoice, setSideChoice] = useState<"white" | "black" | "random">("white");
   const [sparring, setSparring] = useState<EngineId>("jev-fly");
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
   const [outcome, setOutcome] = useState<GameOutcome>(() => describeOutcome(new Chess()));
@@ -226,6 +228,13 @@ export function CoachModeView({ lang = "id" }: Props) {
       setThinking(false);
     }
   }, [computeCoachAdvice, sparring]);
+
+  const handleSideSelect = useCallback(async (choice: "white" | "black" | "random") => {
+    if (thinkingRef.current) return;
+    setSideChoice(choice);
+    const resolvedSide: "white" | "black" = choice === "random" ? (Math.random() < 0.5 ? "white" : "black") : choice;
+    await resetGame(resolvedSide, sparring);
+  }, [resetGame, sparring]);
 
   const tryMove = async (from: string, to: string) => {
     if (outcome.over || thinkingRef.current || !isPlayerTurn) return false;
@@ -419,9 +428,8 @@ export function CoachModeView({ lang = "id" }: Props) {
     >
       {showConfetti && <Confetti />}
 
-      {/* Header Info Matchup with Standardized BoardControls.
-          HP: 3 baris bertumpuk (info / bidak / kendali papan). Desktop: 1 baris 3 kolom. */}
-      <div className="bg-[var(--card)] px-3 py-2 rounded-xl border border-[var(--border)] shadow-md flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center gap-2 shrink-0 sm:min-h-14 overflow-visible">
+      {/* Header Info Matchup with Standardized BoardControls */}
+      <div className="bg-[var(--card)] px-3 py-2 rounded-xl border border-[var(--border)] shadow-md flex items-center justify-between gap-2 shrink-0 sm:min-h-14 overflow-visible">
         <div className="flex items-center gap-2 min-w-0">
           <IconBot3D size={22} className="shrink-0" />
           <div className="min-w-0">
@@ -436,42 +444,6 @@ export function CoachModeView({ lang = "id" }: Props) {
           </div>
         </div>
 
-        {/* Sisi bidak. Di HP selebar layar supaya sasaran sentuh >= 44px. */}
-        <div
-          role="group"
-          aria-label={lang === "id" ? "Pilih sisi bidak" : "Choose your side"}
-          className="flex w-full sm:w-auto items-stretch bg-[var(--surface)] p-0.5 rounded-lg border border-[var(--border)] shrink-0"
-        >
-          <button
-            type="button"
-            onClick={() => void resetGame("white")}
-            disabled={thinking}
-            aria-pressed={playerSide === "white"}
-            className={`flex-1 sm:flex-none min-h-11 sm:min-h-9 px-2 sm:px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 ${
-              playerSide === "white"
-                ? "bg-[var(--primary)] text-white shadow-sm"
-                : "text-neutral-400 hover:text-white"
-            }`}
-          >
-            <IconKingWhite3D size={18} />
-            <span>Putih</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => void resetGame("black")}
-            disabled={thinking}
-            aria-pressed={playerSide === "black"}
-            className={`flex-1 sm:flex-none min-h-11 sm:min-h-9 px-2 sm:px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 ${
-              playerSide === "black"
-                ? "bg-[var(--primary)] text-white shadow-sm"
-                : "text-neutral-400 hover:text-white"
-            }`}
-          >
-            <IconKingBlack3D size={18} />
-            <span>Hitam</span>
-          </button>
-        </div>
-
         <BoardControls
           variant="toolbar"
           orientation={boardOrientation}
@@ -479,42 +451,32 @@ export function CoachModeView({ lang = "id" }: Props) {
           isFullscreen={fullscreenCoach}
           onToggleFullscreen={() => setFullscreenCoach((v) => !v)}
           showShortcuts={true}
-          className="border-0 bg-transparent p-0 shadow-none w-full sm:w-auto min-w-0"
+          className="border-0 bg-transparent p-0 shadow-none w-auto min-w-0"
         />
-      </div>
-
-      {/* Pilih lawan tanding. Pelatih tetap Stockfish 19 (lihat kartu Rekomendasi Coach). */}
-      <div className="mt-2 shrink-0 flex items-center gap-2">
-        <label
-          htmlFor="coach-sparring"
-          className="text-xs font-bold uppercase tracking-wider text-neutral-400 shrink-0"
-        >
-          {lang === "id" ? "Lawan Sparring" : "Sparring Opponent"}
-        </label>
-        <select
-          id="coach-sparring"
-          value={sparring}
-          onChange={(e) => void resetGame(playerSide, e.target.value as EngineId)}
-          disabled={thinking}
-          className="flex-1 sm:flex-none min-w-0 bg-[var(--surface)] text-xs font-bold text-white border border-[var(--border)] rounded-lg px-2 py-1.5 focus:outline-none focus:border-[var(--primary)] cursor-pointer disabled:opacity-60"
-        >
-          {SPARRING_ENGINES.map((eng) => (
-            <option key={eng.id} value={eng.id}>
-              {eng.label}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
       <div className="flex-1 grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-3 items-stretch min-h-0 overflow-y-auto lg:overflow-hidden pt-1">
         {/* LEFT COLUMN: Chessboard strictly anchored */}
         <div className="flex flex-col justify-between items-center h-full min-h-0 w-full max-w-[calc(100vh-190px)] mx-auto py-0.5 space-y-1">
-          {/* Integrated Opponent Bar with Eval Badge & Captured Pieces */}
+          {/* Integrated Opponent Bar with Inline Engine Selector, Eval Badge & Captured Pieces */}
           <div className="w-full flex items-center justify-between px-3 py-1 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${playerSide === "white" ? "bg-neutral-800 border-neutral-600" : "bg-white border-neutral-300"}`} />
-              <span className="text-xs md:text-sm font-bold text-white truncate">{SPARRING_LABEL[sparring]}</span>
+              <select
+                id="coach-sparring"
+                aria-label={lang === "id" ? "Lawan Sparring" : "Sparring Opponent"}
+                value={sparring}
+                onChange={(e) => void resetGame(playerSide, e.target.value as EngineId)}
+                disabled={thinking}
+                className="bg-[var(--surface)] text-xs md:text-sm font-bold text-white border border-[var(--border)] rounded-lg px-2 py-1 focus:outline-none focus:border-[var(--primary)] cursor-pointer disabled:opacity-60"
+              >
+                {SPARRING_ENGINES.map((eng) => (
+                  <option key={eng.id} value={eng.id}>
+                    {eng.label}
+                  </option>
+                ))}
+              </select>
               <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/40 shrink-0">
                 {evalCp !== null ? (evalCp > 0 ? `+${(evalCp / 100).toFixed(1)}` : (evalCp / 100).toFixed(1)) : "="}
               </span>
@@ -577,6 +539,64 @@ export function CoachModeView({ lang = "id" }: Props) {
 
         {/* RIGHT COLUMN: Real-Time Coach Guidance, Threats & Move Review */}
         <div className="h-full overflow-y-auto pr-1 space-y-2.5 custom-scrollbar min-h-0">
+          {/* Sisi Bidak (3-Card Visual Selector: Putih / Acak / Hitam) */}
+          <div className="bg-[var(--card)] p-2.5 rounded-xl border border-[var(--border)] shadow-sm space-y-1.5 shrink-0">
+            <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center justify-between">
+              <span>{lang === "id" ? "Pilih Sisi Bidak" : "Choose Side"}</span>
+              <span className="text-xs text-[var(--primary)] font-bold">
+                {sideChoice === "random"
+                  ? (lang === "id" ? `Acak (${playerSide === "white" ? "Putih" : "Hitam"})` : `Random (${playerSide})`)
+                  : sideChoice === "white"
+                  ? (lang === "id" ? "Putih (Main Pertama)" : "White (1st Move)")
+                  : (lang === "id" ? "Hitam (Main Kedua)" : "Black (2nd Move)")}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => void handleSideSelect("white")}
+                disabled={thinking}
+                className={`p-1.5 rounded-lg border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer disabled:opacity-60 ${
+                  sideChoice === "white"
+                    ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
+                    : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
+                }`}
+              >
+                <IconKingWhite3D size={22} />
+                <span className="text-xs font-bold text-white">{lang === "id" ? "Putih" : "White"}</span>
+                <span className="text-[10px] text-neutral-400 font-medium">{lang === "id" ? "Main Pertama" : "1st Move"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSideSelect("random")}
+                disabled={thinking}
+                className={`p-1.5 rounded-lg border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer disabled:opacity-60 ${
+                  sideChoice === "random"
+                    ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
+                    : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
+                }`}
+              >
+                <IconDice3D size={22} />
+                <span className="text-xs font-bold text-white">{lang === "id" ? "Acak" : "Random"}</span>
+                <span className="text-[10px] text-neutral-400 font-medium">{lang === "id" ? "Otomatis" : "Automatic"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSideSelect("black")}
+                disabled={thinking}
+                className={`p-1.5 rounded-lg border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer disabled:opacity-60 ${
+                  sideChoice === "black"
+                    ? "bg-[var(--primary-strong)] border-[var(--primary)] shadow-sm ring-1 ring-[var(--primary)]"
+                    : "bg-[var(--background)] border-[var(--border)] hover:border-neutral-500 text-neutral-400"
+                }`}
+              >
+                <IconKingBlack3D size={22} />
+                <span className="text-xs font-bold text-white">{lang === "id" ? "Hitam" : "Black"}</span>
+                <span className="text-[10px] text-neutral-400 font-medium">{lang === "id" ? "Main Kedua" : "2nd Move"}</span>
+              </button>
+            </div>
+          </div>
+
           {/* REKOMENDASI LANGKAH AKTIF */}
           <Card className="bg-[#1f291e] border-2 border-[#81b64c]/60 text-white shadow-lg overflow-hidden">
             <CardHeader className="py-2.5 px-4 bg-[#81b64c]/10 border-b border-[#81b64c]/20 flex flex-row items-center justify-between">
