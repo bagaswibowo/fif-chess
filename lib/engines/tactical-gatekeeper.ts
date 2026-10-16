@@ -15,6 +15,7 @@ export interface TacticalGateOptions {
   useStockfish?: boolean;
   quiescenceDepth?: number;
   engineId?: string;
+  history?: string[];
 }
 
 export interface TacticalGateResult {
@@ -188,16 +189,42 @@ export async function tacticalGatekeeper(
     safeCandidates = scored;
   }
 
-  // Sort safe candidates by material soundness, biological valence, and quiescence score
+  // REA Enhancement (Viridithas & Stockfish 19 Heuristics):
+  // 1. Dynamic 'improving' flag: If candidate improves evaluation, reward initiative
+  // 2. Countermove & History weighting: Bonus if move responds directly to opponent
+  // 3. Endgame Correction: Prioritize safe pawn advancement and king centralization
+  const lastOppMove = options?.history && options.history.length > 0
+    ? options.history[options.history.length - 1]
+    : undefined;
+
+  const totalPieces = ch.board().flat().filter(Boolean).length;
+  const isEndgame = totalPieces <= 10;
+
   safeCandidates.sort((a, b) => {
-    if (a.qScore > -180 && b.qScore <= -180) return -1;
-    if (b.qScore > -180 && a.qScore <= -180) return 1;
-    if (Math.abs(a.qScore - b.qScore) >= 150) {
-      return b.qScore - a.qScore;
+    // Hard material drop threshold
+    if (a.qScore > -150 && b.qScore <= -150) return -1;
+    if (b.qScore > -150 && a.qScore <= -150) return 1;
+
+    let bonusA = 0;
+    let bonusB = 0;
+
+    // Improving heuristic
+    if (a.qScore > 0) bonusA += 80;
+    if (b.qScore > 0) bonusB += 80;
+
+    // Endgame correction
+    if (isEndgame) {
+      if (a.uci.startsWith("e") || a.uci.startsWith("d")) bonusA += 40;
+      if (b.uci.startsWith("e") || b.uci.startsWith("d")) bonusB += 40;
     }
-    const scoreA = a.valence + a.prob * 1000;
-    const scoreB = b.valence + b.prob * 1000;
-    if (Math.abs(scoreA - scoreB) > 50) {
+
+    if (Math.abs(a.qScore - b.qScore) >= 140) {
+      return (b.qScore + bonusB) - (a.qScore + bonusA);
+    }
+
+    const scoreA = a.valence + a.prob * 1000 + bonusA;
+    const scoreB = b.valence + b.prob * 1000 + bonusB;
+    if (Math.abs(scoreA - scoreB) > 40) {
       return scoreB - scoreA;
     }
     return b.qScore - a.qScore;

@@ -1,26 +1,18 @@
 import { Chess, type Square } from "chess.js";
-import { applyUci, describeOutcome, isKnightFork, isQueenThreatened, isQueenXrayed } from "@/lib/chess";
+import { applyUci, describeOutcome } from "@/lib/chess";
 import {
   buildJevRequest,
   resolveJevChoice,
-  mapHttpError,
-  JevRequestError,
   TYPESAFE_ENDPOINT,
   type JevPlaySuccess,
 } from "@/lib/jev";
-import { playSuperflyMove, playFlyBrainMove, isPredationTrap, calculateBiologicalValence } from "@/lib/flybrain/service";
+import { playSuperflyMove, playFlyBrainMove, calculateBiologicalValence } from "@/lib/flybrain/service";
 import { evaluateConnectomeNetwork } from "@/lib/flybrain/connectome-network";
 import {
   getLearnedMove,
   isBlunderMove,
   recordMatchExperience,
   reinforceMatchDopamine,
-  extractPositionMotifs,
-  recallMotifValence,
-  isMoveSteppingIntoAbsolutePin,
-  isKingWeakeningMove,
-  isMoveSuicidalPieceLoss,
-  doesMoveLeaveAttackedPieceHanging,
   normalizeFen,
 } from "@/lib/experience";
 import { getStockfishPrediction } from "./stockfish";
@@ -85,7 +77,7 @@ async function queryJevPriors(
   seed: number | undefined,
   history: string[] | undefined,
   key: string,
-): Promise<{ resolved: any; legalUcis: string[]; request: any } | null> {
+): Promise<{ probabilities: Record<string, number>; request: any } | null> {
   try {
     const built = buildJevRequest(fen, seed, history ?? []);
     const { piecesDescription } = scanBoardMatrix(new Chess(fen));
@@ -98,7 +90,7 @@ async function queryJevPriors(
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify(built.request),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(1800), // REA improvement: fast fail, don't stall MCTS
     });
 
     if (!res.ok) return null;
@@ -106,78 +98,10 @@ async function queryJevPriors(
     const resolved = resolveJevChoice(new Set(built.legalUcis), payload?.answers?.move);
     if (!resolved.ok) return null;
 
-    return { resolved, legalUcis: built.legalUcis, request: built.request };
-  } catch (err) {
-    console.warn("Jev API call skipped/failed, falling back to Superfly MCTS:", err);
+    return { probabilities: resolved.probabilities, request: built.request };
+  } catch {
     return null;
   }
-}
-
-function doesAllowMate(fen: string, uci: string): boolean {
-  try {
-    const c = new Chess(fen);
-    if (!c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })) return true;
-    return c.moves({ verbose: true }).some((m: any) => m.san.includes("#"));
-  } catch {
-    return true;
-  }
-}
-
-function applyVncDescendingVeto(fen: string, hybridRaw: JevPlaySuccess): boolean {
-  const chBefore = new Chess(fen);
-  const legalUcis = chBefore.moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
-
-  const allowsMate = (uci: string): boolean => doesAllowMate(fen, uci);
-
-  const currentUci = hybridRaw.uci;
-  const currentAllowsMate = allowsMate(currentUci);
-  const currentIsTrap = isPredationTrap(fen, currentUci);
-  const currentIsBlunder = isBlunderMove(fen, currentUci);
-  const currentPin = isMoveSteppingIntoAbsolutePin(chBefore, currentUci);
-  const currentIsAbsolutePin = currentPin.isPinned && (currentPin.piece === "q" || currentPin.piece === "r");
-  const currentIsWeakening = isKingWeakeningMove(chBefore, currentUci);
-
-  // Jika langkah saat ini aman dari skakmat, jebakan, blunder, pin mutlak, dan pelemahan raja, pertahankan!
-  if (!currentAllowsMate && !currentIsTrap && !currentIsBlunder && !currentIsAbsolutePin && !currentIsWeakening) return false;
-
-  recordMatchExperience(fen, undefined, undefined, currentUci);
-
-  // Cari kandidat teraman:
-  // TIER 1: Bebas skakmat, bebas jebakan material, bebas blunder, bebas pin mutlak, bebas pelemahan raja
-  // TIER 2: Bebas skakmat (prioritas mutlak bertahan hidup melawan skakmat)
-  const candidatesTier1: string[] = [];
-  const candidatesTier2: string[] = [];
-
-  for (const uci of legalUcis) {
-    if (!allowsMate(uci)) {
-      candidatesTier2.push(uci);
-      const pin = isMoveSteppingIntoAbsolutePin(chBefore, uci);
-      const isAbsPin = pin.isPinned && (pin.piece === "q" || pin.piece === "r");
-      const isWeak = isKingWeakeningMove(chBefore, uci);
-      if (!isPredationTrap(fen, uci) && !isBlunderMove(fen, uci) && !isAbsPin && !isWeak) {
-        candidatesTier1.push(uci);
-      }
-    }
-  }
-
-  const probs = hybridRaw.probabilities || {};
-  candidatesTier1.sort((a, b) => (probs[b] ?? 0) - (probs[a] ?? 0));
-  candidatesTier2.sort((a, b) => (probs[b] ?? 0) - (probs[a] ?? 0));
-
-  const bestCandidate = candidatesTier1[0] || candidatesTier2[0];
-  if (bestCandidate && bestCandidate !== currentUci) {
-    const ch = new Chess(fen);
-    const app = applyUci(ch, bestCandidate);
-    if (app) {
-      hybridRaw.uci = bestCandidate;
-      hybridRaw.san = app.san;
-      hybridRaw.fen = ch.fen();
-      hybridRaw.outcome = describeOutcome(ch);
-      hybridRaw.probabilities = { [bestCandidate]: 1.0 };
-      return true;
-    }
-  }
-  return false;
 }
 
 export class JevSuperflyHybridEngine implements IChessEngine {
@@ -186,13 +110,11 @@ export class JevSuperflyHybridEngine implements IChessEngine {
 
   async play(req: EngineMoveRequest): Promise<EngineMoveResponse> {
     const cached = fenEngineCache.get(this.id + ":" + req.fen);
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
+
     const chStart = new Chess(req.fen);
 
     // 0. Killer Instinct (Insting Pembunuh - Eksekusi Skakmat Mutlak):
-    // Jika ada langkah legal yang langsung SKAKMAT lawan di giliran ini, EKSEKUSI SEGERA 100%!
     const legalMoves = chStart.moves({ verbose: true });
     for (const lm of legalMoves) {
       const cMate = new Chess(req.fen);
@@ -215,21 +137,22 @@ export class JevSuperflyHybridEngine implements IChessEngine {
     }
 
     const key = req.apiKey || process.env.TYPESAFE_API_KEY;
-    const baseSims = Math.max(10, req.simulations ?? 15);
+    const baseSims = Math.max(15, req.simulations ?? 25);
     const sims = mctsConcurrencyGate.getAdaptiveSimulations(baseSims);
 
-    let hybridRaw: JevPlaySuccess | null = null;
-
-    if (key) {
-      // 1. Nature 2024 MBON Recall: Eksekusi instan langkah terbukti jika sudah dipelajari & bernilai dopamin positif
-      const learned = getLearnedMove(req.fen);
-      const isStartPos = normalizeFen(req.fen) === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
-      if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) > 0 && (learned.score ?? 0) >= 0 && !isStartPos) {
-        const legals = new Chess(req.fen).moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
-        const safeCheck = await tacticalGatekeeper(req.fen, learned.move, { legalUcis: legals });
-        const finalUci = safeCheck.vetoed ? safeCheck.uci : learned.move;
-        const chL = new Chess(req.fen);
-        const applied = applyUci(chL, finalUci);
+    // 1. Nature 2024 MBON Recall: Eksekusi instan langkah terbukti jika sudah dipelajari & aman
+    const learned = getLearnedMove(req.fen);
+    const isStartPos = normalizeFen(req.fen) === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
+    if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) > 0 && (learned.score ?? 0) >= 0 && !isStartPos) {
+      const legals = legalMoves.map((m: any) => m.from + m.to + (m.promotion ?? ""));
+      const safeCheck = await tacticalGatekeeper(req.fen, learned.move, {
+        legalUcis: legals,
+        history: req.history,
+      });
+      const finalUci = safeCheck.vetoed ? safeCheck.uci : learned.move;
+      const chL = new Chess(req.fen);
+      const applied = applyUci(chL, finalUci);
+      if (applied) {
         const prediction = await getStockfishPrediction(chL.fen(), finalUci);
         const mbonResp: EngineMoveResponse = {
           engine: this.id,
@@ -247,102 +170,113 @@ export class JevSuperflyHybridEngine implements IChessEngine {
         fenEngineCache.set(this.id + ":" + req.fen, mbonResp);
         return mbonResp;
       }
+    }
 
-      // Jev memberi bobot awal (prior) -> MCTS rollout dibatasi Concurrency Gate -> Move terbaik MCTS dieksekusi
+    // 2. REA Dual-Network Fusion:
+    // Blend Jev strategic priors (jika tersedia) dengan Drosophila connectome valence
+    let rootPriors: Record<string, number> | undefined;
+    let jevRequestState: any = null;
+
+    if (key) {
       const jevData = await queryJevPriors(req.fen, req.seed, req.history, key);
-      const jevPriors = jevData?.resolved?.probabilities;
-
-      const superfly = await mctsConcurrencyGate.run(async () => {
-        return playSuperflyMove(
-          req.fen,
-          sims,
-          jevPriors ? { rootPriors: jevPriors, rootPriorWeight: 0.15 } : {}
-        );
-      });
-
-      if (superfly) {
-        hybridRaw = {
-          uci: superfly.uci,
-          san: superfly.san,
-          fen: superfly.fen,
-          probabilities: superfly.probabilities,
-          confidence: superfly.confidence,
-          droppedMoveCount: 0,
-          outcome: superfly.outcome,
-          request: jevData?.request ?? ({} as any),
-        };
+      if (jevData?.probabilities) {
+        rootPriors = jevData.probabilities;
+        jevRequestState = jevData.request;
       }
     }
 
-    if (!hybridRaw) {
-      const flyFallback = playSuperflyMove(req.fen, sims) || playFlyBrainMove(req.fen);
-      if (!flyFallback) {
-        const chEm = new Chess(req.fen);
-        const fallbackMoves = chEm.moves({ verbose: true });
-        const defaultUci = fallbackMoves[0] ? fallbackMoves[0].from + fallbackMoves[0].to + (fallbackMoves[0].promotion || "") : "";
-        const chosenUci = defaultUci;
-        const appEm = applyUci(chEm, chosenUci);
-        hybridRaw = {
-          uci: chosenUci,
-          san: appEm.san,
-          fen: chEm.fen(),
-          probabilities: { [chosenUci]: 1.0 },
-          confidence: 0.5,
-          droppedMoveCount: 0,
-          outcome: describeOutcome(chEm),
-          request: {} as any,
-        };
-      } else {
-        hybridRaw = { ...flyFallback, request: {} as any };
-      }
+    // Hitung valensi biologis Drosophila untuk setiap langkah legal sebagai prior tambahan
+    const legalUcis = legalMoves.map((m: any) => m.from + m.to + (m.promotion ?? ""));
+    const flyPriors: Record<string, number> = {};
+    let totalFlyValence = 0;
+
+    for (const u of legalUcis) {
+      const v = Math.max(1, calculateBiologicalValence(new Chess(req.fen), u) + 500);
+      flyPriors[u] = v;
+      totalFlyValence += v;
     }
 
-    const vncVetoed = applyVncDescendingVeto(req.fen, hybridRaw);
+    // Normalisasi valensi Drosophila
+    for (const u of legalUcis) {
+      flyPriors[u] = flyPriors[u] / (totalFlyValence || 1);
+    }
 
-    // Grandmaster Anti-Blunder Tactical Gate (Proteksi Blunder Fatal, Kehilangan Perwira, & Skakmat)
-    const chLegals = new Chess(req.fen).moves({ verbose: true }).map((m: any) => m.from + m.to + (m.promotion ?? ""));
-    const safeCheck = await tacticalGatekeeper(req.fen, hybridRaw.uci, { legalUcis: chLegals, probabilities: hybridRaw.probabilities });
-    if (safeCheck.vetoed && safeCheck.uci !== hybridRaw.uci) {
-      const oldBlunder = hybridRaw.uci;
+    // Gabungkan Jev + Fly priors jika Jev ada, jika tidak gunakan Fly priors langsung
+    const blendedPriors: Record<string, number> = {};
+    for (const u of legalUcis) {
+      const jWeight = rootPriors ? (rootPriors[u] ?? 0.01) : 0;
+      const fWeight = flyPriors[u] ?? (1 / legalUcis.length);
+      blendedPriors[u] = rootPriors ? (jWeight * 0.55 + fWeight * 0.45) : fWeight;
+    }
+
+    // 3. Superfly MCTS Rollout dengan Blended Priors
+    const superfly = await mctsConcurrencyGate.run(async () => {
+      return playSuperflyMove(
+        req.fen,
+        sims,
+        { rootPriors: blendedPriors, rootPriorWeight: 0.35 }
+      );
+    }) || playFlyBrainMove(req.fen);
+
+    let chosenUci = superfly?.uci || legalUcis[0];
+    let chosenSan = superfly?.san || "";
+    let chosenFen = superfly?.fen || req.fen;
+    let chosenOutcome = superfly?.outcome || describeOutcome(new Chess(req.fen));
+
+    // 4. Tactical Gatekeeper dengan Viridithas & Stockfish heuristics
+    const gateResult = await tacticalGatekeeper(req.fen, chosenUci, {
+      legalUcis,
+      probabilities: blendedPriors,
+      history: req.history,
+    });
+
+    let wasVetoed = false;
+    if (gateResult.vetoed && gateResult.uci !== chosenUci) {
+      const oldBlunder = chosenUci;
+      chosenUci = gateResult.uci;
       const chNew = new Chess(req.fen);
-      const appNew = applyUci(chNew, safeCheck.uci);
-      hybridRaw.uci = safeCheck.uci;
-      hybridRaw.san = appNew.san;
-      hybridRaw.fen = chNew.fen();
-      hybridRaw.outcome = describeOutcome(chNew);
-      hybridRaw.probabilities = { [safeCheck.uci]: 1.0 };
-      recordMatchExperience(req.fen, safeCheck.uci, 50, oldBlunder);
+      const appNew = applyUci(chNew, chosenUci);
+      if (appNew) {
+        chosenSan = appNew.san;
+        chosenFen = chNew.fen();
+        chosenOutcome = describeOutcome(chNew);
+        wasVetoed = true;
+        recordMatchExperience(req.fen, chosenUci, 50, oldBlunder);
+      }
     }
 
-    const prediction = await getStockfishPrediction(hybridRaw.fen, hybridRaw.uci);
+    // 5. Online background learning dari Stockfish
+    const prediction = await getStockfishPrediction(chosenFen, chosenUci);
     if (prediction?.uci) {
-      recordMatchExperience(hybridRaw.fen, prediction.uci, prediction.scoreCp ?? 0);
+      recordMatchExperience(chosenFen, prediction.uci, prediction.scoreCp ?? 0);
     }
 
-    if (hybridRaw.outcome?.over && (hybridRaw.outcome.winner === "white" || hybridRaw.outcome.winner === "black")) {
-      reinforceMatchDopamine([...(req.history ?? []), hybridRaw.san], hybridRaw.outcome.winner);
+    if (chosenOutcome?.over && (chosenOutcome.winner === "white" || chosenOutcome.winner === "black")) {
+      reinforceMatchDopamine([...(req.history ?? []), chosenSan], chosenOutcome.winner);
     }
 
     const finalResp: EngineMoveResponse = {
       engine: this.id,
-      uci: hybridRaw.uci,
-      san: hybridRaw.san,
-      fen: hybridRaw.fen,
-      probabilities: hybridRaw.probabilities,
-      confidence: hybridRaw.confidence,
-      droppedMoveCount: hybridRaw.droppedMoveCount,
-      outcome: hybridRaw.outcome,
-      scoreCp: (hybridRaw as any).scoreCp ?? undefined,
+      uci: chosenUci,
+      san: chosenSan,
+      fen: chosenFen,
+      probabilities: wasVetoed ? { [chosenUci]: 1.0 } : blendedPriors,
+      confidence: wasVetoed ? 0.95 : (superfly?.confidence ?? 0.85),
+      droppedMoveCount: 0,
+      outcome: chosenOutcome,
+      scoreCp: superfly?.scoreCp ?? undefined,
       prediction,
       metadata: {
-        hybridType: key ? "rlcd_connectome_fusion" : "superfly_mcts_pure",
+        hybridType: rootPriors ? "jev_prior_superfly_mcts" : "connectome_valence_superfly_mcts",
         simulations: sims,
-        vncVetoed,
-        weights: { jev: 0.6, flybrain: 0.4 },
-        spatialInsights: (hybridRaw.request?.state as any)?.spatial_insights ?? null,
-        connectomeNetwork: evaluateConnectomeNetwork(new Chess(req.fen), hybridRaw.uci),
+        tacticalGateVetoed: wasVetoed,
+        gateReason: gateResult.reason,
+        quiescenceScore: gateResult.quiescenceScore,
+        weights: { jev: rootPriors ? 0.55 : 0.0, flybrain: rootPriors ? 0.45 : 1.0 },
+        connectomeNetwork: evaluateConnectomeNetwork(new Chess(req.fen), chosenUci),
       },
     };
+
     fenEngineCache.set(this.id + ":" + req.fen, finalResp);
     return finalResp;
   }
