@@ -32,6 +32,7 @@ import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import { CoachModeView } from "@/components/coach-mode-view";
 import { SpectatorView } from "@/components/spectator-view";
 import { GameOverModal } from "@/components/game-over-modal";
+import { useChessTheme } from "@/lib/chess-themes";
 import { EvalBar } from "@/components/eval-bar";
 import { useChessClock } from "@/lib/use-chess-clock";
 import {
@@ -145,6 +146,7 @@ function buildMatchCommentary(
 }
 
 export function Game() {
+  const { customPieces, notationStyles, boardTheme, boardThemeId, pieceThemeId } = useChessTheme();
   const [fen, setFen] = useState(START_FEN);
   const [gameStartFen, setGameStartFen] = useState(START_FEN);
   const [humanSide, setHumanSide] = useState<Side>("white");
@@ -888,14 +890,20 @@ export function Game() {
         </div>
         <div className="w-full mx-auto max-w-[min(100%,calc(100vw-2.5rem),calc(100dvh-190px))] aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-xl">
           <Chessboard
+            key={`spectate-board-${boardThemeId}-${pieceThemeId}`}
             options={{
               id: "board-spectate",
               position: m.fen || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
               boardOrientation: "white",
               allowDragging: false,
               arrows: spectateArrows,
-              darkSquareStyle: { backgroundColor: "var(--board-dark)" },
-              lightSquareStyle: { backgroundColor: "var(--board-light)" },
+              boardStyle: {
+                backgroundColor: boardTheme.dark,
+              },
+              darkSquareStyle: { backgroundColor: boardTheme.dark },
+              lightSquareStyle: { backgroundColor: boardTheme.light },
+              pieces: customPieces,
+              ...notationStyles,
             }}
           />
         </div>
@@ -1297,24 +1305,23 @@ export function Game() {
                   {/* Chessboard Container: strict aspect-square bound by both height & width */}
                   <div className="relative mx-auto shrink-0 overflow-hidden rounded-xl border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl md:rounded-2xl" style={{ width: "100%", maxWidth: "100%", maxHeight: "100%", aspectRatio: "1 / 1" }}>
                     <Chessboard
+                      key={`main-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`}
                       options={{
-                        id: "fif-chess-main",
+                        id: `fif-chess-main-${boardThemeId}-${pieceThemeId}`,
                         position: fen,
                         boardOrientation: boardOrientation,
                         allowDragging: humanToMove,
                         canDragPiece,
                         onPieceDrop,
                         alphaNotationStyle: {
+                          ...notationStyles.alphaNotationStyle,
                           bottom: "3px",
                           right: "5px",
-                          fontSize: "12px",
-                          fontWeight: "bold",
                         },
                         numericNotationStyle: {
+                          ...notationStyles.numericNotationStyle,
                           top: "3px",
                           left: "4px",
-                          fontSize: "12px",
-                          fontWeight: "bold",
                         },
                         onSquareClick: ({ square }) => {
                           if (!humanToMove) return;
@@ -1338,8 +1345,14 @@ export function Game() {
                           setSelectedSquare(isHumanPiece ? square : null);
                         },
                         squareStyles,
-                        lightSquareStyle: { backgroundColor: "var(--board-light)" },
-                        darkSquareStyle: { backgroundColor: "var(--board-dark)" },
+                        boardStyle: {
+                          backgroundColor: boardTheme.dark,
+                          width: "100%",
+                          height: "100%",
+                        },
+                        lightSquareStyle: { backgroundColor: boardTheme.light },
+                        darkSquareStyle: { backgroundColor: boardTheme.dark },
+                        pieces: customPieces,
                         animationDurationInMs: 200,
                         showNotation: true,
                       }}

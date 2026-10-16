@@ -12,6 +12,7 @@ import { Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confetti } from "@/components/confetti";
+import { useChessTheme } from "@/lib/chess-themes";
 import {
   IconBot3D,
   IconLightning3D,
@@ -76,6 +77,7 @@ const PRINCIPLES = [
 ];
 
 export function CoachModeView({ lang = "id" }: Props) {
+  const { customPieces, notationStyles, boardTheme, boardThemeId, pieceThemeId } = useChessTheme();
   const [chess, setChess] = useState<Chess>(() => new Chess());
   const [fen, setFen] = useState(() => new Chess().fen());
   const [history, setHistory] = useState<string[]>([]);
@@ -490,9 +492,9 @@ export function CoachModeView({ lang = "id" }: Props) {
               <EvalBar fen={fen} scoreCp={evalCp} orientation={boardOrientation} />
               <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
                 <Chessboard
-                  key={`coach-board-${boardOrientation}`}
+                  key={`coach-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`}
                   options={{
-                    id: `coach-board-${boardOrientation}`,
+                    id: `coach-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`,
                     position: fen,
                     boardOrientation: boardOrientation,
                     allowDragging: isPlayerTurn && !thinking,
@@ -508,15 +510,17 @@ export function CoachModeView({ lang = "id" }: Props) {
                     squareStyles,
                     arrows,
                     boardStyle: {
-                      backgroundColor: "var(--board-dark)",
+                      backgroundColor: boardTheme.dark,
                       gridTemplateRows: "repeat(8, 1fr)",
                       gap: 0,
                       width: "100%",
                       height: "100%",
                     },
-                    darkSquareStyle: { backgroundColor: "var(--board-dark)" },
-                    lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                    darkSquareStyle: { backgroundColor: boardTheme.dark },
+                    lightSquareStyle: { backgroundColor: boardTheme.light },
+                    pieces: customPieces,
                     animationDurationInMs: 200,
+                    ...notationStyles,
                   }}
                 />
               </div>

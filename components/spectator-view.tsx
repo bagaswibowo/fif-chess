@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Confetti } from "@/components/confetti";
+import { useChessTheme } from "@/lib/chess-themes";
 import { IconBot3D, IconLightning3D, IconTrophy3D, IconSwap3D, IconVision3D } from "@/components/icons3d";
 import { describeOutcome, findLegalMove, type GameOutcome } from "@/lib/chess";
 import {
@@ -136,6 +137,7 @@ export function SpectatorView({
   onTryPosition?: (fen: string, moves: string[]) => void;
   broadcastId?: string;
 }) {
+  const { customPieces, notationStyles, boardTheme, boardThemeId, pieceThemeId } = useChessTheme();
   const [whiteEngine, setWhiteEngine] = useState<EngineType>("stockfish");
   const [blackEngine, setBlackEngine] = useState<EngineType>("jev-fly");
   const [jevDepth, setJevDepth] = useState(10);
@@ -766,23 +768,26 @@ export function SpectatorView({
               {/* Chessboard */}
               <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
                 <Chessboard
+                  key={`spectator-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`}
                   options={{
-                    id: "spectator-board",
+                    id: `spectator-board-${boardThemeId}-${pieceThemeId}`,
                     position: currentFen,
                     boardOrientation: boardOrientation,
                     allowDragging: false,
                     arrows,
                     squareStyles,
                     boardStyle: {
-                      backgroundColor: "var(--board-dark)",
+                      backgroundColor: boardTheme.dark,
                       gridTemplateRows: "repeat(8, 1fr)",
                       gap: 0,
                       width: "100%",
                       height: "100%",
                     },
-                    darkSquareStyle: { backgroundColor: "var(--board-dark)" },
-                    lightSquareStyle: { backgroundColor: "var(--board-light)" },
+                    darkSquareStyle: { backgroundColor: boardTheme.dark },
+                    lightSquareStyle: { backgroundColor: boardTheme.light },
+                    pieces: customPieces,
                     animationDurationInMs: 300,
+                    ...notationStyles,
                   }}
                 />
               </div>

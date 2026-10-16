@@ -115,8 +115,22 @@ export function applyGlobalChessTheme(boardThemeId: BoardThemeId, pieceThemeId: 
 }
 
 export function useChessTheme() {
-  const [boardThemeId, setBoardThemeId] = useState<BoardThemeId>("wood");
-  const [pieceThemeId, setPieceThemeId] = useState<PieceThemeId>("standard");
+  const [boardThemeId, setBoardThemeId] = useState<BoardThemeId>(() => {
+    if (typeof window === "undefined") return "wood";
+    try {
+      const b = localStorage.getItem("jev_board_theme") as BoardThemeId;
+      if (BOARD_THEMES.some((t) => t.id === b)) return b;
+    } catch {}
+    return "wood";
+  });
+  const [pieceThemeId, setPieceThemeId] = useState<PieceThemeId>(() => {
+    if (typeof window === "undefined") return "standard";
+    try {
+      const p = localStorage.getItem("jev_piece_theme") as PieceThemeId;
+      if (PIECE_THEMES.some((t) => t.id === p)) return p;
+    } catch {}
+    return "standard";
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;

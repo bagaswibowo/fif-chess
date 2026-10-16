@@ -74,6 +74,8 @@ export function DockModals({
     try {
       const b = (localStorage.getItem("jev_board_theme") as BoardThemeId) || "wood";
       const p = (localStorage.getItem("jev_piece_theme") as PieceThemeId) || "standard";
+      const s = localStorage.getItem("jev_sound_enabled");
+      if (s !== null) setSoundEnabled(s === "true");
       if (BOARD_THEMES.some((t) => t.id === b)) setBoardTheme(b);
       if (PIECE_THEMES.some((item) => item.id === p)) setPieceTheme(p);
     } catch {}
@@ -81,8 +83,14 @@ export function DockModals({
 
   const handleSaveSettings = () => {
     applyGlobalChessTheme(boardTheme, pieceTheme);
+    try {
+      localStorage.setItem("jev_sound_enabled", String(soundEnabled));
+    } catch {}
     setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    setTimeout(() => {
+      setSaveSuccess(false);
+      onClose();
+    }, 300);
   };
 
   const activeBoardThemeObj = BOARD_THEMES.find((t) => t.id === boardTheme) || BOARD_THEMES[0];
