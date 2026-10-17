@@ -124,8 +124,29 @@ export async function tacticalGatekeeper(
   const isPredation = isPredationTrap(fen, candidateUci);
   const isBlunderRec = isBlunderMove(fen, candidateUci);
 
+  // STOCKFISH TACTICAL PRE-SCAN:
+  // Cek apakah balasan lawan setelah langkah ini unggul telak (score >= 300cp)
+  let opponentFatalAdvantage = false;
+  let opponentThreatScore = 0;
+  try {
+    const cAfter = new Chess(fen);
+    const appAfter = cAfter.move({
+      from: fromSq,
+      to: toSq,
+      promotion: candidateUci[4] || undefined,
+    });
+    if (appAfter) {
+      const sfReply = await playStockfishMove(cAfter.fen(), 6);
+      opponentThreatScore = sfReply?.scoreCp ?? 0;
+      if (opponentThreatScore >= 300) {
+        opponentFatalAdvantage = true;
+      }
+    }
+  } catch {}
+
   const isBlunder =
     allows1PlyMate ||
+    opponentFatalAdvantage ||
     candQScore <= -20000 ||
     candPromo ||
     candDangerousPin ||
@@ -218,13 +239,14 @@ export async function tacticalGatekeeper(
       if (b.uci.startsWith("e") || b.uci.startsWith("d")) bonusB += 40;
     }
 
-    if (Math.abs(a.qScore - b.qScore) >= 140) {
-      return (b.qScore + bonusB) - (a.qScore + bonusA);
+    // STRICT TACTICAL SAFETY: Selisih materi / quiescence >= 35cp mutlak menentukan!
+    if (Math.abs(a.qScore - b.qScore) >= 35) {
+      return b.qScore - a.qScore;
     }
 
     const scoreA = a.valence + a.prob * 1000 + bonusA;
     const scoreB = b.valence + b.prob * 1000 + bonusB;
-    if (Math.abs(scoreA - scoreB) > 40) {
+    if (Math.abs(scoreA - scoreB) > 30) {
       return scoreB - scoreA;
     }
     return b.qScore - a.qScore;
@@ -233,19 +255,23 @@ export async function tacticalGatekeeper(
   let selectedUci = safeCandidates[0].uci;
   let selectedQScore = safeCandidates[0].qScore;
 
-  if (options?.useStockfish === true) {
+  // GRANDMASTER TACTICAL ORACLE (Stockfish 19 Deep Defense):
+  // Aktifkan otomatis saat terdeteksi blunder / krisis taktis kecuali eksplisit dimatikan
+  if (options?.useStockfish !== false) {
     try {
       const sfBest = await playStockfishMove(fen, 10);
-      if (sfBest?.uci && safeCandidates.some((c) => c.uci === sfBest.uci)) {
+      if (sfBest?.uci && legalUcis.includes(sfBest.uci)) {
         selectedUci = sfBest.uci;
         const found = safeCandidates.find((c) => c.uci === sfBest.uci);
-        if (found) selectedQScore = found.qScore;
+        selectedQScore = found ? found.qScore : (sfBest.scoreCp ?? 0);
       }
     } catch {}
   }
 
   const reason = allows1PlyMate
     ? "checkmate_in_1_prevented"
+    : opponentFatalAdvantage
+    ? `opponent_fatal_counterattack_prevented (+${opponentThreatScore}cp threat)`
     : candQScore <= -20000
     ? "forced_checkmate_prevented"
     : candPromo
