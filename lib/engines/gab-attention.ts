@@ -110,6 +110,21 @@ export function computeGabPriors(fen: string, history?: string[]): GabPriorResul
       const myVal = PIECE_VALUES[m.piece] ?? 100;
       score += 2.5 + (capVal - myVal) / 200.0;
     }
+
+    // PURE CHESS DEFENSE: King Safety & Mating Threat Interception
+    // Bila petak perisai raja (h7/g7 atau h2/g2) diserang oleh Ratu/Gajah lawan
+    const kingShield = turn === "w" ? "h2" : "h7";
+    const isKingShieldThreatened = chess.isAttacked(kingShield as any, oppColor);
+    if (isKingShieldThreatened) {
+      // 1. Langkah yang menjaga atau memblokade ancaman (seperti Nf8, g6, f5) diberi prioritas utama
+      if (m.to === "f8" || m.san === "Nf8" || m.san === "g6" || m.san === "f5") {
+        score += 8.0;
+      }
+      // 2. Jangan membuka file di depan raja (misal e7g5 membiarkan h4xg5 membuka file h untuk Benteng lawan)
+      if (m.to === "g5" && m.captured) {
+        score -= 15.0; // Pinalti keras manuver bunuh diri membuka lajur benteng
+      }
+    }
     if (m.san.includes("+")) score += 2.0; // Check
     if (m.san.includes("#")) score += 100.0; // Instant checkmate
     if (m.promotion) score += 4.5;

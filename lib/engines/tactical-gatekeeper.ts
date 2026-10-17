@@ -7,7 +7,6 @@ import {
   recordMatchExperience,
 } from "@/lib/experience";
 import { calculateBiologicalValence, isPredationTrap } from "@/lib/flybrain/service";
-import { playStockfishMove } from "../stockfish";
 
 export interface TacticalGateOptions {
   legalUcis?: string[];
@@ -124,29 +123,10 @@ export async function tacticalGatekeeper(
   const isPredation = isPredationTrap(fen, candidateUci);
   const isBlunderRec = isBlunderMove(fen, candidateUci);
 
-  // STOCKFISH TACTICAL PRE-SCAN:
-  // Cek apakah balasan lawan setelah langkah ini unggul telak (score >= 300cp)
-  let opponentFatalAdvantage = false;
-  let opponentThreatScore = 0;
-  try {
-    const cAfter = new Chess(fen);
-    const appAfter = cAfter.move({
-      from: fromSq,
-      to: toSq,
-      promotion: candidateUci[4] || undefined,
-    });
-    if (appAfter) {
-      const sfReply = await playStockfishMove(cAfter.fen(), 6);
-      opponentThreatScore = sfReply?.scoreCp ?? 0;
-      if (opponentThreatScore >= 300) {
-        opponentFatalAdvantage = true;
-      }
-    }
-  } catch {}
+
 
   const isBlunder =
     allows1PlyMate ||
-    opponentFatalAdvantage ||
     candQScore <= -20000 ||
     candPromo ||
     candDangerousPin ||
@@ -255,23 +235,10 @@ export async function tacticalGatekeeper(
   let selectedUci = safeCandidates[0].uci;
   let selectedQScore = safeCandidates[0].qScore;
 
-  // GRANDMASTER TACTICAL ORACLE (Stockfish 19 Deep Defense):
-  // Aktifkan otomatis saat terdeteksi blunder / krisis taktis kecuali eksplisit dimatikan
-  if (options?.useStockfish !== false) {
-    try {
-      const sfBest = await playStockfishMove(fen, 10);
-      if (sfBest?.uci && legalUcis.includes(sfBest.uci)) {
-        selectedUci = sfBest.uci;
-        const found = safeCandidates.find((c) => c.uci === sfBest.uci);
-        selectedQScore = found ? found.qScore : (sfBest.scoreCp ?? 0);
-      }
-    } catch {}
-  }
+
 
   const reason = allows1PlyMate
     ? "checkmate_in_1_prevented"
-    : opponentFatalAdvantage
-    ? `opponent_fatal_counterattack_prevented (+${opponentThreatScore}cp threat)`
     : candQScore <= -20000
     ? "forced_checkmate_prevented"
     : candPromo
