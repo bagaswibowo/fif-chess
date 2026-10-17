@@ -1,3 +1,4 @@
+import { computeGabPriors } from "./gab-attention";
 import { Chess } from "chess.js";
 import { applyUci, describeOutcome } from "@/lib/chess";
 import { playSuperflyMove, playFlyBrainMove } from "@/lib/flybrain/service";
@@ -22,7 +23,7 @@ export class PureSuperflyEngine implements IChessEngine {
     // pernah dikunjungi. Mirip engines/jev.ts — sebelumnya engine fly HANYA menulis
     // DB, tidak pernah membaca, sehingga belajar dari training tidak memengaruhinya.
     const learned = getLearnedMove(req.fen);
-    if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) > 0 && (learned.score ?? 0) >= 0) {
+    if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) >= 0 && (learned.score ?? 0) >= 0) {
       const safeCheck = await tacticalGatekeeper(req.fen, learned.move);
       const finalUci = safeCheck.vetoed ? safeCheck.uci : learned.move;
       const chL = new Chess(req.fen);
@@ -47,7 +48,8 @@ export class PureSuperflyEngine implements IChessEngine {
 
     // 100% Pure Drosophila Connectome PUCT MCTS with Nature 2024 Circuits
     const flyRes = await mctsConcurrencyGate.run(async () => {
-      return playSuperflyMove(req.fen, sims) || playFlyBrainMove(req.fen);
+      const gab = computeGabPriors(req.fen, req.history);
+      return playSuperflyMove(req.fen, sims, { rootPriors: gab.priors, rootPriorWeight: 0.35 }) || playFlyBrainMove(req.fen);
     });
     if (!flyRes) {
       throw new Error("Superfly engine failed to evaluate position.");

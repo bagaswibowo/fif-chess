@@ -1,3 +1,4 @@
+import { computeGabPriors } from "./gab-attention";
 import { Chess, type Square } from "chess.js";
 import { applyUci, describeOutcome } from "@/lib/chess";
 import {
@@ -143,7 +144,7 @@ export class JevSuperflyHybridEngine implements IChessEngine {
     // 1. Nature 2024 MBON Recall: Eksekusi instan langkah terbukti jika sudah dipelajari & aman
     const learned = getLearnedMove(req.fen);
     const isStartPos = normalizeFen(req.fen) === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
-    if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) > 0 && (learned.score ?? 0) >= 0 && !isStartPos) {
+    if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) >= 0 && (learned.score ?? 0) >= 0 && !isStartPos) {
       const legals = legalMoves.map((m: any) => m.from + m.to + (m.promotion ?? ""));
       const safeCheck = await tacticalGatekeeper(req.fen, learned.move, {
         legalUcis: legals,
@@ -201,12 +202,17 @@ export class JevSuperflyHybridEngine implements IChessEngine {
       flyPriors[u] = flyPriors[u] / (totalFlyValence || 1);
     }
 
-    // Gabungkan Jev + Fly priors jika Jev ada, jika tidak gunakan Fly priors langsung
+    // GAB (Geometric Attention Bias) + GATEAU Edge Features Fusion
+    const gab = computeGabPriors(req.fen, req.history);
     const blendedPriors: Record<string, number> = {};
     for (const u of legalUcis) {
       const jWeight = rootPriors ? (rootPriors[u] ?? 0.01) : 0;
       const fWeight = flyPriors[u] ?? (1 / legalUcis.length);
-      blendedPriors[u] = rootPriors ? (jWeight * 0.55 + fWeight * 0.45) : fWeight;
+      const gWeight = gab.priors[u] ?? (1 / legalUcis.length);
+      // Dual-Network Fusion: Jev (0.40) + Connectome (0.30) + GAB Geometri (0.30)
+      blendedPriors[u] = rootPriors
+        ? (jWeight * 0.40 + fWeight * 0.30 + gWeight * 0.30)
+        : (fWeight * 0.50 + gWeight * 0.50);
     }
 
     // 3. Superfly MCTS Rollout dengan Blended Priors

@@ -1,3 +1,4 @@
+import { computeGabPriors } from "./gab-attention";
 import { Chess } from "chess.js";
 import { applyUci, describeOutcome } from "@/lib/chess";
 import {
@@ -47,7 +48,7 @@ export class PureJevEngine implements IChessEngine {
 
     // 1. Nature 2024 MBON Learned Recall: Ingat langkah terbaik jika sudah pernah dipelajari
     const learned = getLearnedMove(req.fen);
-    if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) > 0 && (learned.score ?? 0) >= 0) {
+    if (learned && !isBlunderMove(req.fen, learned.move) && (learned.dopamine ?? 0) >= 0 && (learned.score ?? 0) >= 0) {
       const safeCheck = await tacticalGatekeeper(req.fen, learned.move);
       const finalUci = safeCheck.vetoed ? safeCheck.uci : learned.move;
       const chL = new Chess(req.fen);
@@ -143,7 +144,8 @@ export class PureJevEngine implements IChessEngine {
 
     if (!resolved || !resolved.ok) {
       // REA Fallback: Never crash on timeout, smoothly fallback to Drosophila Connectome MCTS
-      const fb = playSuperflyMove(req.fen, 25) || playFlyBrainMove(req.fen);
+      const gab = computeGabPriors(req.fen, req.history);
+      const fb = playSuperflyMove(req.fen, 25, { rootPriors: gab.priors, rootPriorWeight: 0.4 }) || playFlyBrainMove(req.fen);
       if (fb) {
         resolved = { ok: true, uci: fb.uci, probabilities: fb.probabilities, confidence: fb.confidence };
       } else {
