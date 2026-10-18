@@ -238,14 +238,26 @@ function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w"
   // Analisis Untung vs Dihindari (Padat & Jelas)
   let gainHeadline = "Dominasi Serangan & Inisiatif Mutlak";
   let gainDetail = "Mengeksploitasi kelemahan koordinasi lawan.";
-  let avoidedDanger = "Menghindari posisi pasif dan mencegah serangan balik lawan.";
+  let avoidedDanger = "Menghindari posisi pasif dan mengunci perwira sentral kawan.";
+
+  // Hitung rute lanjutan dinamis berdasarkan respon riil posisi di atas papan
   let routeGuide = {
-    enemyMove: "Bila lawan tutup (misal g6)",
-    ourReply: "Makan e5 (Qxe5+) garpu Raja & Benteng",
-    outcome: "Rebut Benteng bersih (+5 Poin)",
+    enemyMove: "Jika lawan berusaha bertahan / menutup",
+    ourReply: "Lanjutkan serang titik terlemah",
+    outcome: "Keunggulan taktis mutlak",
   };
 
-  if (m.san.startsWith("Qh5") || m.to === "h5") {
+  // Kasus Taktik Italia / Giuoco Piano (Ng5 mengincar f7)
+  if (m.san === "Ng5" || (m.piece === "n" && toSq === "g5")) {
+    gainHeadline = "Serangan Titik Lemah f7 (Fried Liver Pattern)";
+    gainDetail = "Kuda g5 + Gajah c4 berkolaborasi membidik titik terlemah f7.";
+    avoidedDanger = "Peluncur di c4 aman! Jika lawan coba ancam dengan 1... d5, balas 2. exd5! merebut pion sentral.";
+    routeGuide = {
+      enemyMove: "Bila lawan coba 1... d5 ancam Peluncur",
+      ourReply: "Balas 2. exd5! (Peluncur tetap aman). Bila 2... Nxd5?, hancurkan dengan 3. Nxf7! (Fried Liver Attack)",
+      outcome: "Raja lawan terseret telanjang ke tengah & menang mutlak!",
+    };
+  } else if (m.san.startsWith("Qh5") || m.to === "h5") {
     gainHeadline = "Menteri TIDAK Hilang! Garpu Skak Ganda";
     gainDetail = "Qh5+ memberikan skak langsung. Lawan wajib merespons Raja, Menteri Anda 100% aman!";
     avoidedDanger = "Membongkar diagonal maut e8-h5 yang ditinggalkan pion f6 lawan.";
@@ -258,9 +270,19 @@ function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w"
     const val = PIECE_VALUES[m.captured] || 1;
     gainHeadline = `Menang Materi: ${PIECE_NAMES[m.captured]} (+${val} Poin)`;
     gainDetail = `Eksekusi perwira lawan di ${toSq.toUpperCase()} mengubah keseimbangan permainan.`;
+    routeGuide = {
+      enemyMove: "Lawan terpaksa memukul balik / mundur",
+      ourReply: `Konsolidasikan perwira di ${toSq.toUpperCase()}`,
+      outcome: `Unggul materi +${val} poin bersih`,
+    };
   } else if (targets.length > 1) {
     gainHeadline = `Garpu Ganda (Fork) Mengincar ${targets.length} Sasaran`;
     gainDetail = `Menyerang ${targets.map((t) => t.pieceName).join(" & ")} — lawan tak bisa menjaga keduanya!`;
+    routeGuide = {
+      enemyMove: `Lawan hanya bisa menyelamatkan salah satu sasaran`,
+      ourReply: `Eksekusi sasaran kedua yang tertinggal`,
+      outcome: "Rebut perwira gratis & dominasi permainan",
+    };
   }
 
   let summary = "";
