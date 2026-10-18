@@ -479,7 +479,67 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   </span>
                 </div>
 
-                {/* 2. Legenda Badge ala Chess.com di Atas Papan */}
+                {/* 3. Baris Navigasi Langkah (Awal, Mundur, Putar/Jeda, 21/24, Maju, Akhir) DI ATAS PAPAN */}
+                <div className="flex items-center justify-between gap-1.5 w-full max-w-[min(100%,calc(100dvh-260px))] mb-1.5 px-1 py-1 rounded-xl bg-[var(--surface)] border border-[var(--border)] shrink-0">
+                  <div className="flex items-center gap-1">
+                    <button
+                      className="px-2 py-1 rounded-lg bg-[var(--card)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer transition-colors disabled:opacity-40"
+                      onClick={() => { setIsPlaying(false); setMoveIndex(0); }}
+                      disabled={moveIndex === 0}
+                      title="Langkah Pertama [Home]"
+                    >
+                      ⏮ Awal
+                    </button>
+                    <button
+                      className="px-2 py-1 rounded-lg bg-[var(--card)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                      onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.max(0, i - 1)); }}
+                      disabled={moveIndex === 0}
+                      title="Mundur [←]"
+                    >
+                      <ChevronLeft size={15} /> Mundur
+                    </button>
+                  </div>
+
+                  {/* Indikator Pagination Langkah & Auto-Play */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      className={`px-2 py-1 rounded-lg text-xs font-bold border flex items-center gap-1 transition-all cursor-pointer ${
+                        isPlaying
+                          ? "bg-amber-600 text-white border-amber-500 shadow-sm"
+                          : "bg-[var(--card)] text-neutral-200 border-[var(--border)] hover:text-white"
+                      }`}
+                      onClick={() => setIsPlaying((p) => !p)}
+                      title="Putar Otomatis [Spasi]"
+                    >
+                      {isPlaying ? <Pause size={13} /> : <Play size={13} />}
+                      <span>{isPlaying ? "Jeda" : "Putar"}</span>
+                    </button>
+                    <span className="font-mono text-xs font-black text-white px-2 py-0.5 rounded-md bg-[var(--card)] border border-[var(--border)]">
+                      {moveIndex} / {active?.moves.length || 0}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      className="px-2.5 py-1 rounded-lg bg-[var(--primary)] text-white border border-[var(--primary)] text-xs font-bold flex items-center gap-1 hover:brightness-110 cursor-pointer transition-colors disabled:opacity-40 shadow-xs"
+                      onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.min(fenList.length - 1, i + 1)); }}
+                      disabled={moveIndex >= fenList.length - 1}
+                      title="Maju [→]"
+                    >
+                      Maju <ChevronRight size={15} />
+                    </button>
+                    <button
+                      className="px-2 py-1 rounded-lg bg-[var(--card)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer transition-colors disabled:opacity-40"
+                      onClick={() => { setIsPlaying(false); setMoveIndex(fenList.length - 1); }}
+                      disabled={moveIndex >= fenList.length - 1}
+                      title="Langkah Terakhir [End]"
+                    >
+                      Akhir ⏭
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Legenda Badge ala Chess.com di Atas Papan */}
                 <div className="mb-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] shadow-sm shrink-0">
                   <div className="flex items-center gap-1.5">
                     <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50">!!</span>
@@ -539,65 +599,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   </div>
                 </div>
 
-                {/* 4. Scrubber & Pagination Langkah (Persis Sesuai Permintaan) */}
-                <div className="flex items-center justify-between gap-1.5 w-full max-w-[min(100%,calc(100dvh-260px))] mt-2 px-1">
-                  <div className="flex items-center gap-1">
-                    <button
-                      className="px-2 py-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer transition-colors disabled:opacity-40"
-                      onClick={() => { setIsPlaying(false); setMoveIndex(0); }}
-                      disabled={moveIndex === 0}
-                      title="Langkah Pertama [Home]"
-                    >
-                      ⏮ Awal
-                    </button>
-                    <button
-                      className="px-2.5 py-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                      onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.max(0, i - 1)); }}
-                      disabled={moveIndex === 0}
-                      title="Mundur [←]"
-                    >
-                      <ChevronLeft size={16} /> Mundur
-                    </button>
-                  </div>
 
-                  {/* Indikator Pagination Langkah & Auto-Play */}
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-1 transition-all cursor-pointer ${
-                        isPlaying
-                          ? "bg-amber-600 text-white border-amber-500 shadow-sm"
-                          : "bg-[var(--surface)] text-neutral-200 border-[var(--border)] hover:text-white hover:border-neutral-500"
-                      }`}
-                      onClick={() => setIsPlaying((p) => !p)}
-                      title="Putar Otomatis [Spasi]"
-                    >
-                      {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-                      <span>{isPlaying ? "Jeda" : "Putar"}</span>
-                    </button>
-                    <span className="font-mono text-xs font-black text-white px-2.5 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] shadow-xs">
-                      {moveIndex} / {active?.moves.length || 0}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      className="px-2.5 py-1.5 rounded-lg bg-[var(--primary)] text-white border border-[var(--primary)] text-xs font-bold flex items-center gap-1 hover:brightness-110 cursor-pointer transition-colors disabled:opacity-40"
-                      onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.min(fenList.length - 1, i + 1)); }}
-                      disabled={moveIndex >= fenList.length - 1}
-                      title="Maju [→]"
-                    >
-                      Maju <ChevronRight size={16} />
-                    </button>
-                    <button
-                      className="px-2 py-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer transition-colors disabled:opacity-40"
-                      onClick={() => { setIsPlaying(false); setMoveIndex(fenList.length - 1); }}
-                      disabled={moveIndex >= fenList.length - 1}
-                      title="Langkah Terakhir [End]"
-                    >
-                      Akhir ⏭
-                    </button>
-                  </div>
-                </div>
               </div>
 
                             {/* RIGHT: BLUNDER & THREAT CARD + RUNNING MOVE LIST */}
