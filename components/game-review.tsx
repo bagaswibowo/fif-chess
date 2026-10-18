@@ -432,97 +432,6 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 : "h-full min-h-0 flex flex-col gap-2 overflow-hidden"
             }
           >
-            {/* UNIFIED REVIEW CONTROLS (Single cohesive bar, 0 redundancy) */}
-            <div className="panel px-2.5 py-1.5 rounded-xl flex items-center justify-between gap-2 flex-wrap border border-[var(--border)] shadow-sm shrink-0" style={{ background: "var(--card)" }}>
-              {/* Left: Match & Engine Selector */}
-              <div className="flex items-center gap-2 flex-wrap min-w-0">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <label className="text-xs font-bold text-neutral-400" htmlFor="sel-game">
-                    Pertandingan:
-                  </label>
-                  <select
-                    id="sel-game"
-                    className="ctl ctl-sm text-xs font-bold truncate max-w-[220px] py-1 px-2 cursor-pointer"
-                    style={{ background: "var(--surface)" }}
-                    value={active.id}
-                    onChange={(e) => setSelectedId(e.target.value)}
-                  >
-                    {sorted.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {formatWhen(g.playedAt)} · {g.opponent} ({g.winner === g.humanSide ? "Menang" : g.winner ? "Kalah" : "Remis"})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-neutral-400 font-medium">Engine:</span>
-                  <select
-                    className="ctl ctl-sm text-xs font-bold py-1 px-2 cursor-pointer"
-                    style={{ background: "var(--surface)" }}
-                    value={engine}
-                    onChange={(e) => setEngine(e.target.value as Engine)}
-                    aria-label="Engine review"
-                  >
-                    <option value="stockfish">Stockfish 19 NNUE</option>
-                    <option value="jev">Jev AI Connectome</option>
-                    <option value="fly">Fruit Fly Brain</option>
-                    <option value="jev-fly">Jev + Fly Brain</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Center: Clean Playback Navigation (Only Maju & Mundur, no redundant blunder or putar buttons) */}
-              <div className="flex items-center gap-2">
-                <button
-                  className={`ctl ctl-sm font-bold px-3 py-1.5 rounded-lg border transition-colors ${isPlaying ? "bg-[var(--primary)] border-[var(--primary)] text-white shadow-sm" : "border-[var(--border)] text-neutral-200 hover:text-white hover:bg-[var(--surface)]"}`}
-                  onClick={() => {
-                    if (moveIndex >= fenList.length - 1) setMoveIndex(0);
-                    setIsPlaying((playing) => !playing);
-                  }}
-                  disabled={fenList.length <= 1}
-                  title={isPlaying ? "Jeda pemutaran" : "Putar otomatis"}
-                >
-                  <span className="flex items-center gap-1.5">{isPlaying ? <Pause size={14} className="shrink-0" /> : <Play size={14} className="shrink-0" />}<span>{isPlaying ? "Jeda" : "Putar"}</span></span>
-                </button>
-
-                <button
-                  className="ctl ctl-sm font-bold px-3 py-1.5 rounded-lg border border-[var(--border)] text-neutral-200 hover:text-white hover:bg-[var(--surface)] disabled:opacity-40"
-                  onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.max(0, i - 1)); }}
-                  disabled={moveIndex === 0}
-                  title="Langkah Sebelumnya (Mundur) [←]"
-                >
-                  <ChevronLeft size={16} className="shrink-0" /><span>Mundur</span>
-                </button>
-
-                <span className="font-mono text-xs font-bold text-neutral-200 px-3 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] shrink-0">
-                  Langkah {moveIndex} / {active.moves.length}
-                </span>
-
-                <button
-                  className="ctl ctl-sm font-bold px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white hover:brightness-110 disabled:opacity-40"
-                  onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.min(fenList.length - 1, i + 1)); }}
-                  disabled={moveIndex >= fenList.length - 1}
-                  title="Langkah Berikutnya (Maju) [→]"
-                >
-                  <span>Maju</span><ChevronRight size={16} className="shrink-0" />
-                </button>
-              </div>
-
-              {/* Right: Symmetrical Board Controls */}
-                  <div className="flex items-center gap-2 shrink-0">
-                <BoardControls
-                  variant="compact"
-                  orientation={active ? (flipOrientation ? (active.humanSide === "white" ? "black" : "white") : active.humanSide) : "white"}
-                  onFlipOrientation={() => setFlipOrientation((v) => !v)}
-                  isFullscreen={fullscreenReview}
-                  onToggleFullscreen={() => setFullscreenReview((v) => !v)}
-                  showShortcuts={true}
-                  className="border-0 bg-transparent p-0 shadow-none"
-                />
-              </div>
-            </div>
-
             {/* REVIEW BOARD + BLUNDER & THREAT ANALYSIS PANEL: Seragam dengan Arena & Trik */}
             <div
               className={
@@ -536,16 +445,37 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
               <div
                 className="rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-start items-center"
               >
-                {/* 1. Header Informasi Pertandingan */}
-                <div className="w-full flex items-center justify-between px-2.5 py-1 bg-[var(--surface)] rounded-xl border border-[var(--border)] mb-1.5 shrink-0 max-w-[min(100%,calc(100dvh-260px))]">
-                  <div className="flex items-center gap-2 min-w-0">
+                {/* 1. Toolbar Kontrol Papan (Putar Papan, Fokus Layar, Shortcuts) */}
+                <BoardControls
+                  variant="toolbar"
+                  orientation={active ? (flipOrientation ? (active.humanSide === "white" ? "black" : "white") : active.humanSide) : "white"}
+                  onFlipOrientation={() => setFlipOrientation((v) => !v)}
+                  isFullscreen={fullscreenReview}
+                  onToggleFullscreen={() => setFullscreenReview((v) => !v)}
+                  showShortcuts={true}
+                  className="w-full shrink-0 mb-1.5"
+                />
+
+                {/* 2. Header Rekaman Pertandingan (Dropdown Ringkas & Bersih) */}
+                <div className="w-full flex items-center justify-between px-2.5 py-1.5 bg-[var(--surface)] rounded-xl border border-[var(--border)] mb-1.5 shrink-0 max-w-[min(100%,calc(100dvh-260px))] gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="text-xs font-bold text-white truncate">
-                      {active ? (active.opponent || "Lawan AI") : "Lawan"} vs {active?.humanSide === "white" ? "Anda (Putih)" : "Anda (Hitam)"}
-                    </span>
+                    <select
+                      id="sel-game"
+                      className="bg-transparent text-xs font-bold text-white truncate w-full cursor-pointer focus:outline-none"
+                      value={active?.id || ""}
+                      onChange={(e) => setSelectedId(e.target.value)}
+                      title="Pilih rekaman pertandingan yang ingin di-review"
+                    >
+                      {sorted.map((g) => (
+                        <option key={g.id} value={g.id} className="bg-[var(--card)] text-white">
+                          {formatWhen(g.playedAt)} · vs {g.opponent || "AI"} ({g.winner === g.humanSide ? "Menang" : g.winner ? "Kalah" : "Remis"})
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <span className="font-mono text-xs font-bold text-neutral-300">
-                    Langkah {moveIndex} / {active?.moves.length || 0}
+                  <span className="font-mono text-xs font-bold text-emerald-400 shrink-0 px-2 py-0.5 rounded-md bg-[var(--card)] border border-[var(--border)]">
+                    {active ? (active.winner === active.humanSide ? "Menang" : active.winner ? "Kalah" : "Remis") : "-"}
                   </span>
                 </div>
 
@@ -609,11 +539,11 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   </div>
                 </div>
 
-                {/* 4. Scrubber / Navigasi Langkah di Bawah Papan */}
+                {/* 4. Scrubber & Pagination Langkah (Persis Sesuai Permintaan) */}
                 <div className="flex items-center justify-between gap-1.5 w-full max-w-[min(100%,calc(100dvh-260px))] mt-2 px-1">
                   <div className="flex items-center gap-1">
                     <button
-                      className="p-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer"
+                      className="px-2 py-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer transition-colors disabled:opacity-40"
                       onClick={() => { setIsPlaying(false); setMoveIndex(0); }}
                       disabled={moveIndex === 0}
                       title="Langkah Pertama [Home]"
@@ -621,7 +551,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                       ⏮ Awal
                     </button>
                     <button
-                      className="px-2.5 py-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
                       onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.max(0, i - 1)); }}
                       disabled={moveIndex === 0}
                       title="Mundur [←]"
@@ -630,22 +560,28 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                     </button>
                   </div>
 
-                  <button
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
-                      isPlaying
-                        ? "bg-amber-600 text-white border-amber-500 shadow-sm"
-                        : "bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm hover:brightness-110"
-                    }`}
-                    onClick={() => setIsPlaying((p) => !p)}
-                    title="Putar Otomatis [Spasi]"
-                  >
-                    {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-                    <span>{isPlaying ? "Jeda" : "Putar"}</span>
-                  </button>
+                  {/* Indikator Pagination Langkah & Auto-Play */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-1 transition-all cursor-pointer ${
+                        isPlaying
+                          ? "bg-amber-600 text-white border-amber-500 shadow-sm"
+                          : "bg-[var(--surface)] text-neutral-200 border-[var(--border)] hover:text-white hover:border-neutral-500"
+                      }`}
+                      onClick={() => setIsPlaying((p) => !p)}
+                      title="Putar Otomatis [Spasi]"
+                    >
+                      {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                      <span>{isPlaying ? "Jeda" : "Putar"}</span>
+                    </button>
+                    <span className="font-mono text-xs font-black text-white px-2.5 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] shadow-xs">
+                      {moveIndex} / {active?.moves.length || 0}
+                    </span>
+                  </div>
 
                   <div className="flex items-center gap-1">
                     <button
-                      className="px-2.5 py-1.5 rounded-lg bg-[var(--primary)] text-white border border-[var(--primary)] text-xs font-bold flex items-center gap-1 hover:brightness-110 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--primary)] text-white border border-[var(--primary)] text-xs font-bold flex items-center gap-1 hover:brightness-110 cursor-pointer transition-colors disabled:opacity-40"
                       onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.min(fenList.length - 1, i + 1)); }}
                       disabled={moveIndex >= fenList.length - 1}
                       title="Maju [→]"
@@ -653,7 +589,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                       Maju <ChevronRight size={16} />
                     </button>
                     <button
-                      className="p-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer"
+                      className="px-2 py-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer transition-colors disabled:opacity-40"
                       onClick={() => { setIsPlaying(false); setMoveIndex(fenList.length - 1); }}
                       disabled={moveIndex >= fenList.length - 1}
                       title="Langkah Terakhir [End]"
