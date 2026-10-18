@@ -1,3 +1,4 @@
+import { queryKenariJev, KENARI_MODEL } from "@/lib/kenari-client";
 import { computeGabPriors } from "./gab-attention";
 import { Chess } from "chess.js";
 import { applyUci, describeOutcome } from "@/lib/chess";
@@ -109,36 +110,31 @@ export class PureJevEngine implements IChessEngine {
             tacticalGateVetoed: gate.vetoed,
             gateReason: gate.reason,
             quiescenceScore: gate.quiescenceScore,
-            model: "jev-latest",
+            model: KENARI_MODEL,
           },
         };
       }
       throw new JevRequestError("TYPESAFE_API_KEY not set", 503, false);
     }
 
-    const built = buildJevRequest(req.fen, req.seed, req.history ?? []);
-
-    const legalSet = new Set(built.legalUcis);
-
+    // 1. Kenari AI Endpoint Integration (jev-1-13-free via https://kenari.id/v1/systemone)
     let resolved: any = null;
     try {
-      const response = await fetch(TYPESAFE_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${key}`,
-        },
-        body: JSON.stringify(built.request),
-        signal: AbortSignal.timeout(2000),
-      });
+      const chMoves = new Chess(req.fen).moves({ verbose: true });
+      const candidates = chMoves.map((m: any) => ({
+        uci: m.from + m.to + (m.promotion || ""),
+        san: m.san,
+        desc: m.captured ? `Memukul perwira ${m.captured}` : `Langkah ${m.piece} ke ${m.to}`,
+      }));
 
-      if (response.ok) {
-        const payload = await response.json();
-        const answers =
-          payload && typeof payload === "object"
-            ? (payload as { answers?: { move?: unknown } }).answers
-            : undefined;
-        resolved = resolveJevChoice(legalSet, answers?.move);
+      const kenariResult = await queryKenariJev(req.fen, candidates, req.history ?? [], 2500);
+      if (kenariResult) {
+        resolved = {
+          ok: true,
+          uci: kenariResult.bestUci,
+          probabilities: kenariResult.probabilities,
+          confidence: kenariResult.confidence,
+        };
       }
     } catch {}
 
@@ -190,7 +186,7 @@ export class PureJevEngine implements IChessEngine {
       fen: nextFen,
       probabilities: resolved.probabilities,
       confidence: resolved.confidence ?? 0.8,
-      droppedMoveCount: built.droppedUcis.length,
+      droppedMoveCount: 0,
       outcome,
       scoreCp: undefined,
       prediction,
@@ -199,7 +195,7 @@ export class PureJevEngine implements IChessEngine {
         vncVetoed: gateResult.vetoed,
         gateReason: gateResult.reason,
         quiescenceScore: gateResult.quiescenceScore,
-        model: "jev-latest",
+        model: KENARI_MODEL,
       },
     };
   }

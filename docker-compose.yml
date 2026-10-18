@@ -38,7 +38,8 @@ services:
     ports:
       - "43173:43173"
     environment:
-      - TYPESAFE_API_KEY=${TYPESAFE_API_KEY}
+      - TYPESAFE_API_KEY=
+      - KENARI_API_KEY=kn-2d8e9086471b9f5a62ed9bc47d233cd0e595e1e4c2ff6ba6${TYPESAFE_API_KEY}
       - SITE_HMAC_KEY=${SITE_HMAC_KEY:-}
       - SITE_PASSWORD_HMAC=${SITE_PASSWORD_HMAC:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?ADMIN_PASSWORD wajib diset di .env}

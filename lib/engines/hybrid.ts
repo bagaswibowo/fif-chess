@@ -1,3 +1,4 @@
+import { queryKenariJev } from "@/lib/kenari-client";
 import { computeGabPriors } from "./gab-attention";
 import { Chess, type Square } from "chess.js";
 import { applyUci, describeOutcome } from "@/lib/chess";
@@ -80,26 +81,18 @@ async function queryJevPriors(
   key: string,
 ): Promise<{ probabilities: Record<string, number>; request: any } | null> {
   try {
-    const built = buildJevRequest(fen, seed, history ?? []);
-    const { piecesDescription } = scanBoardMatrix(new Chess(fen));
-    (built.request.state as any).pieces_on_board = piecesDescription;
+    const chMoves = new Chess(fen).moves({ verbose: true });
+    const candidates = chMoves.map((m: any) => ({
+      uci: m.from + m.to + (m.promotion || ""),
+      san: m.san,
+      desc: m.captured ? `Memukul ${m.captured}` : `Langkah ke ${m.to}`,
+    }));
 
-    const res = await fetch(TYPESAFE_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify(built.request),
-      signal: AbortSignal.timeout(1800), // REA improvement: fast fail, don't stall MCTS
-    });
-
-    if (!res.ok) return null;
-    const payload = await res.json();
-    const resolved = resolveJevChoice(new Set(built.legalUcis), payload?.answers?.move);
-    if (!resolved.ok) return null;
-
-    return { probabilities: resolved.probabilities, request: built.request };
+    const kenari = await queryKenariJev(fen, candidates, history ?? [], 2000);
+    if (kenari) {
+      return { probabilities: kenari.probabilities, request: { kenari: true } };
+    }
+    return null;
   } catch {
     return null;
   }
