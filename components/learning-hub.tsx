@@ -3,14 +3,13 @@
 // Trik & Quest (Gabungan)
 //
 // Fitur "Quest" dan "Bank Teka-Teki" kini menjadi satu tampilan dengan filter
-// kategori — keduanya menarik dari sumber data yang sama (lib/puzzle-data.ts),
-// sehingga tidak ada lagi dua mode terpisah. Semua puzzle memberikan XP.
+// kategori — keduanya menarik dari sumber data yang sama (lib/puzzle-data.ts).
 // Konten diperkaya dari Buku Pintar Catur-Pedia (Fienso Suharsono):
-// Bab 7 Taktik Catur, Bab 10 Permainan Akhir, Bab 11 Jebakan, dan
-// Bab 12 Taktik Skak Mat.
+// Bab 7 Taktik Catur, Bab 10 Permainan Akhir, Bab 11 Jebakan, dan Bab 12 Taktik Skak Mat.
+// Ditambah analisis: Untung vs Bahaya yang Dihindari & Multi-Step Continuation (Minimal 2x Gerakan).
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, ShieldCheck, TrendingUp, BookOpen } from "lucide-react";
 import { BoardControls } from "@/components/board-controls";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
@@ -81,7 +80,33 @@ const PIECE_NAMES: Record<string, string> = {
   k: "Raja",
 };
 
-function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w" | "b") {
+const PIECE_VALUES: Record<string, number> = {
+  p: 1,
+  n: 3,
+  b: 3.2,
+  r: 5,
+  q: 9,
+  k: 100,
+};
+
+interface TacticalAnalysisResult {
+  targets: { from: string; to: string; pieceName: string }[];
+  guardSquares: string[];
+  coordinatingAttackers: { from: string; to: string }[];
+  summary: string;
+  san: string;
+  captured?: string;
+  // Keuntungan & Bahaya yang Dihindari (Prinsip Catur)
+  gains: string[];
+  avoidedDangers: string[];
+  chessPrinciple: {
+    category: string;
+    chapterRef: string;
+    concept: string;
+  };
+}
+
+function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w" | "b"): TacticalAnalysisResult | null {
   const c = new Chess(fen);
   const m = c.move({ from: fromSq as Square, to: toSq as Square, promotion: "q" });
   if (!m) return null;
@@ -142,7 +167,7 @@ function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w"
     }
   }
 
-  // Cari kawan yang ikut mengincar target yang sama
+  // Scan kawan yang ikut mengincar target yang sama
   for (const t of targets) {
     for (let r = 0; r < 8; r++) {
       for (let f = 0; f < 8; f++) {
@@ -150,7 +175,6 @@ function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w"
         if (sq === toSq) continue;
         const p = c.get(sq as Square);
         if (p && p.color === turn) {
-          // Check if piece p attacks target t.to
           const pCol = f;
           const pRow = r;
           let doesAttack = false;
@@ -192,6 +216,55 @@ function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w"
     }
   }
 
+  // Analisis Untung vs Bahaya yang Dihindari
+  const gains: string[] = [];
+  const avoidedDangers: string[] = [];
+
+  if (m.captured) {
+    const val = PIECE_VALUES[m.captured] || 1;
+    gains.push(`Memenangkan keuntungan materi ${PIECE_NAMES[m.captured]} (+${val} poin).`);
+  }
+  if (targets.length > 1) {
+    gains.push(`Menciptakan Serangan Ganda (Fork) mengincar ${targets.length} sasaran sekaligus.`);
+  }
+  if (coordinatingAttackers.length > 0) {
+    gains.push(`Membentuk baterai koordinasi serang mematikan ke petak ${targets[0]?.to.toUpperCase() || "sasaran"}.`);
+  }
+  if (guardSquares.some((s) => ["d4", "e4", "d5", "e5"].includes(s))) {
+    gains.push(`Mendominasi pengawalan petak sentral strategis (e4/d4/e5/d5).`);
+  }
+  if (m.san.includes("+")) {
+    gains.push(`Memberikan skak langsung, merebut inisiatif tempo dan membatasi mobilitas Raja lawan.`);
+  }
+
+  avoidedDangers.push(`Menggagalkan rencana serangan balik lawan dan menolak posisi pasif.`);
+  if (m.piece === "k" || m.san === "O-O" || m.san === "O-O-O") {
+    avoidedDangers.push(`Menjauhkan Raja dari jaring skakmat dan menghubungkan perwira Benteng.`);
+  } else {
+    avoidedDangers.push(`Menjaga perwira kawan dari ancaman gantung (undefended piece drop).`);
+  }
+
+  // Prinsip Catur Buku Pintar Catur-Pedia
+  let chessPrinciple = {
+    category: "Taktik & Kombinasi",
+    chapterRef: "Buku Pintar Catur-Pedia · Bab 7 Taktik Catur",
+    concept: "Prinsip Garpu & Serangan Ganda: Menyerang dua titik sekaligus memaksa lawan mengorbankan salah satu perwira.",
+  };
+
+  if (c.board().flat().filter(Boolean).length <= 12) {
+    chessPrinciple = {
+      category: "Babak Akhir (Endgame)",
+      chapterRef: "Buku Pintar Catur-Pedia · Bab 10 Permainan Akhir",
+      concept: "Prinsip Endgame: Aktifkan Raja ke sentral dan kawal lajur pion bebas (passed pawn) menuju promosi.",
+    };
+  } else if (m.san.includes("#") || c.isCheckmate()) {
+    chessPrinciple = {
+      category: "Skakmat Mutlak",
+      chapterRef: "Buku Pintar Catur-Pedia · Bab 12 Taktik Skak Mat",
+      concept: "Prinsip Skakmat: Memutus seluruh petak pelarian Raja lawan melalui kolaborasi minimal dua perwira.",
+    };
+  }
+
   let summary = "";
   if (targets.length > 1) {
     summary = `⚡ Garpu / Serangan Ganda! ${PIECE_NAMES[m.piece] || "Perwira"} di ${toSq.toUpperCase()} mengincar ${targets.map((t) => t.pieceName).join(" dan ")}!`;
@@ -205,10 +278,20 @@ function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w"
     summary = `🛡️ Mengawal & menjaga ${guardSquares.length} petak strategis (${guardSquares.slice(0, 4).map((s) => s.toUpperCase()).join(", ")}).`;
   }
 
-  return { targets, guardSquares, coordinatingAttackers, summary, san: m.san, captured: m.captured };
+  return {
+    targets,
+    guardSquares,
+    coordinatingAttackers,
+    summary,
+    san: m.san,
+    captured: m.captured,
+    gains,
+    avoidedDangers,
+    chessPrinciple,
+  };
 }
 
-async function getBotReply(currentFen: string): Promise<{ uci: string; san: string } | null> {
+async function getEngineMove(currentFen: string): Promise<{ uci: string; san: string } | null> {
   try {
     const res = await fetch("/api/engine-move", {
       method: "POST",
@@ -270,12 +353,7 @@ export function LearningHub({ lang = "id" }: Props) {
   const [hint, setHint] = useState(0);
   const [playAsBlack, setPlayAsBlack] = useState(false);
   const [captureMsg, setCaptureMsg] = useState<string | null>(null);
-  const [tacticalInfo, setTacticalInfo] = useState<{
-    targets: { from: string; to: string; pieceName: string }[];
-    guardSquares: string[];
-    coordinatingAttackers: { from: string; to: string }[];
-    summary: string;
-  } | null>(null);
+  const [tacticalInfo, setTacticalInfo] = useState<TacticalAnalysisResult | null>(null);
 
   const list = useMemo(() => filterPuzzles(mergePuzzles(saved), category), [saved, category]);
   const puzzle = list[Math.min(puzzleIndex, Math.max(0, list.length - 1))];
@@ -292,7 +370,6 @@ export function LearningHub({ lang = "id" }: Props) {
     setStage("initial");
     setHint(0);
     setCaptureMsg(null);
-    // Pre-calculate tactical targets so player immediately sees green preview on hint
     const from = c.solutionUci.slice(0, 2);
     const to = c.solutionUci.slice(2, 4);
     const preInfo = analyzeMoveTactics(c.fen, from, to, c.turn);
@@ -328,7 +405,7 @@ export function LearningHub({ lang = "id" }: Props) {
         setStatus("correct");
         complete(puzzle.id, puzzle.xp);
 
-        // Kunci info taktis langkah 1
+        // Kunci info taktis langkah 1 & Analisis Untung vs Dihindari
         const info = analyzeMoveTactics(puzzle.fen, fromSq, toSq, puzzle.turn);
         if (info) setTacticalInfo(info);
 
@@ -341,12 +418,10 @@ export function LearningHub({ lang = "id" }: Props) {
         // Trik belum skakmat -> lawan merespon otomatis
         setStage("opponent_thinking");
         setTimeout(async () => {
-          const reply = await getBotReply(c.fen());
+          const reply = await getEngineMove(c.fen());
           if (reply) {
-            const oppMove = c.move(reply.san);
-            if (oppMove) {
-              setFen(c.fen());
-            }
+            c.move(reply.san);
+            setFen(c.fen());
           }
           setStage("continuation");
         }, 700);
@@ -359,13 +434,16 @@ export function LearningHub({ lang = "id" }: Props) {
     }
 
     if (stage === "continuation" || stage === "completed") {
-      // Langkah lanjutan pemain: permainan tetap terus berlanjut melawan bot sampai tamat!
+      // Langkah lanjutan pemain (Langkah ke-2 dan seterusnya)
       setFen(c.fen());
       setSelected(null);
 
+      const postInfo = analyzeMoveTactics(fen, fromSq, toSq, puzzle.turn);
+      if (postInfo) setTacticalInfo(postInfo);
+
       if (c.isCheckmate() || c.isGameOver()) {
         const msg = c.isCheckmate()
-          ? "🎉 Skakmat Mutlak! Raja lawan terkunci tanpa pelarian."
+          ? "🎉 Skakmat Mutlak! Rangkaian taktik berhasil menyudahi perlawanan lawan."
           : "Permainan selesai (Remis/Stalemate).";
         setCaptureMsg(msg);
         setStage("completed");
@@ -374,27 +452,87 @@ export function LearningHub({ lang = "id" }: Props) {
 
       if (m.captured) {
         const capName = PIECE_NAMES[m.captured] || "Perwira";
-        setCaptureMsg(`🎯 Berhasil memakan ${capName} di ${m.to.toUpperCase()}! Terus lanjutkan penyerangan melawan bot.`);
+        setCaptureMsg(`🎯 Langkah ke-2 Sukses: Berhasil memakan ${capName} di ${m.to.toUpperCase()}! Keunggulan materi berhasil diamankan.`);
       }
 
       setStage("opponent_thinking");
       setTimeout(async () => {
-        const reply = await getBotReply(c.fen());
+        const reply = await getEngineMove(c.fen());
         if (reply) {
           c.move(reply.san);
           setFen(c.fen());
         }
-        if (c.isGameOver()) {
-          setStage("completed");
-          setCaptureMsg(c.isCheckmate() ? "🎉 Skakmat Mutlak! Lawan berhasil ditumbangkan." : "Permainan selesai.");
-        } else {
-          setStage("continuation");
-        }
+        setStage(c.isGameOver() ? "completed" : "continuation");
       }, 650);
       return true;
     }
 
     return false;
+  };
+
+  // MULTI-STEP SOLVER: Menjalankan minimal 2x gerakan kawan secara berantai!
+  const handleSolveMultiStep = async () => {
+    if (!puzzle) return;
+    try {
+      const c = new Chess(puzzle.fen);
+      const from = puzzle.solutionUci.slice(0, 2) as Square;
+      const to = puzzle.solutionUci.slice(2, 4) as Square;
+      const move1 = c.move({ from, to, promotion: puzzle.solutionUci[4] || "q" });
+      if (!move1) return;
+
+      // Langkah 1 Kawan
+      setFen(c.fen());
+      setStatus("correct");
+      setHint(2);
+      const info1 = analyzeMoveTactics(puzzle.fen, from, to, puzzle.turn);
+      if (info1) setTacticalInfo(info1);
+
+      if (c.isCheckmate() || c.isGameOver()) {
+        setStage("completed");
+        setCaptureMsg("🎉 Skakmat Mutlak! Raja lawan terkunci pada langkah pertama.");
+        return;
+      }
+
+      // Langkah 1 Lawan (Respon Bertahan)
+      setStage("opponent_thinking");
+      setTimeout(async () => {
+        const reply1 = await getEngineMove(c.fen());
+        if (!reply1) {
+          setStage("continuation");
+          return;
+        }
+        c.move(reply1.san);
+        setFen(c.fen());
+
+        if (c.isGameOver()) {
+          setStage("completed");
+          return;
+        }
+
+        // Langkah 2 Kawan (Eksekusi Taktis Lanjutan / Pemukulan Bidak)
+        setTimeout(async () => {
+          const followUp = await getEngineMove(c.fen());
+          if (followUp) {
+            const m2 = c.move(followUp.san);
+            if (m2) {
+              setFen(c.fen());
+              const info2 = analyzeMoveTactics(c.fen(), m2.from, m2.to, puzzle.turn);
+              if (info2) setTacticalInfo(info2);
+
+              if (m2.captured) {
+                const capName = PIECE_NAMES[m2.captured] || "Perwira";
+                setCaptureMsg(`🎯 Langkah ke-2 Tuntas: Berhasil memakan ${capName} di ${m2.to.toUpperCase()}! Trik sukses terlaksana.`);
+              } else if (c.isCheckmate()) {
+                setCaptureMsg("🎉 Skakmat! Rangkaian 2-langkah tuntas menumbangkan lawan.");
+              } else {
+                setCaptureMsg(`✨ Eksekusi ${m2.san} sukses melumpuhkan pertahanan lawan.`);
+              }
+            }
+          }
+          setStage(c.isGameOver() ? "completed" : "continuation");
+        }, 800);
+      }, 700);
+    } catch {}
   };
 
   const onSquareClick = ({ square }: { square: string }) => {
@@ -749,11 +887,57 @@ export function LearningHub({ lang = "id" }: Props) {
             </div>
           )}
 
+          {/* KARTU ANALISIS UNTUNG VS BAHAYA YANG DIHINDARI (PRINSIP CATUR) */}
+          {tacticalInfo && (
+            <div className="p-3.5 rounded-xl bg-neutral-900/95 border border-neutral-700/80 shadow-md space-y-2.5 animate-in fade-in">
+              <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-amber-300 border-b border-neutral-800 pb-1.5">
+                <BookOpen size={15} className="shrink-0 text-amber-400" />
+                <span>Analisis Untung vs Bahaya yang Dihindari</span>
+              </div>
+
+              {/* KEUNTUNGAN */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
+                  <TrendingUp size={14} className="shrink-0" />
+                  <span>Keuntungan Posisi & Taktis (Untung Di Mana):</span>
+                </div>
+                <ul className="text-xs text-neutral-200 space-y-1 pl-4 list-disc marker:text-emerald-400">
+                  {tacticalInfo.gains.map((g, idx) => (
+                    <li key={idx} className="leading-snug">{g}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* BAHAYA YANG DIHINDARI */}
+              <div className="space-y-1 pt-1 border-t border-neutral-800/70">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-sky-400">
+                  <ShieldCheck size={14} className="shrink-0" />
+                  <span>Bahaya yang Berhasil Dihindari (Proteksi):</span>
+                </div>
+                <ul className="text-xs text-neutral-200 space-y-1 pl-4 list-disc marker:text-sky-400">
+                  {tacticalInfo.avoidedDangers.map((d, idx) => (
+                    <li key={idx} className="leading-snug">{d}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* PRINSIP BUKU PINTAR CATUR-PEDIA */}
+              <div className="p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/40 space-y-1">
+                <div className="text-[10px] font-mono font-bold text-amber-300 uppercase">
+                  {tacticalInfo.chessPrinciple.chapterRef}
+                </div>
+                <p className="text-xs text-amber-100/90 leading-relaxed italic">
+                  &ldquo;{tacticalInfo.chessPrinciple.concept}&rdquo;
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* STATUS RESPON LAWAN & KELANJUTAN */}
           {stage === "opponent_thinking" && (
             <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/50 text-xs font-bold text-amber-200 flex items-center gap-2 animate-pulse">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-              <span>Langkah kunci tepat! Lawan sedang membalas di papan...</span>
+              <span>Menganalisis rangkaian 2-langkah taktis... lawan sedang membalas.</span>
             </div>
           )}
 
@@ -761,10 +945,10 @@ export function LearningHub({ lang = "id" }: Props) {
             <div className="p-3.5 rounded-xl bg-sky-950/60 border-2 border-sky-500/70 text-xs text-sky-100 space-y-1.5 animate-in fade-in">
               <div className="font-black text-xs text-sky-300 flex items-center gap-1.5 uppercase tracking-wide">
                 <IconLightning3D size={16} />
-                <span>⚔️ Lanjutan Trik: Giliranmu!</span>
+                <span>⚔️ Lanjutan Trik (Langkah ke-2): Giliranmu!</span>
               </div>
               <p className="leading-relaxed text-xs">
-                Lawan telah membalas. Terus mainkan langkahmu di papan untuk <strong>memakan sasaran</strong> dan selesaikan permainan melawan bot sampai skakmat/tuntas!
+                Lawan telah membalas. Sekarang lanjutkan <strong>langkah ke-2</strong> di papan untuk <strong>memakan perwira sasaran</strong> atau menyudahi perlawanan lawan sampai tuntas!
               </p>
             </div>
           )}
@@ -776,7 +960,7 @@ export function LearningHub({ lang = "id" }: Props) {
                 <span>{captureMsg}</span>
               </div>
               <p className="text-[11px] text-emerald-200/90">
-                Seluruh rangkaian manuver taktis berhasil diselesaikan sampai tuntas.
+                Rangkaian manuver taktis minimal 2 langkah berhasil diselesaikan sesuai prinsip catur.
               </p>
             </div>
           )}
@@ -843,7 +1027,7 @@ export function LearningHub({ lang = "id" }: Props) {
           {/* ACTIONS */}
           <div className="flex items-center gap-2 pt-1 flex-wrap mt-auto">
             <button
-              className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--border)] text-neutral-300 hover:text-white flex items-center gap-1.5"
+              className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--border)] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer"
               onClick={() => load(puzzle)}
             >
               <RotateCcw size={13} />
@@ -852,41 +1036,17 @@ export function LearningHub({ lang = "id" }: Props) {
             {stage === "initial" && (
               <>
                 <button
-                  className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-xl border border-amber-500/40 text-amber-300 hover:bg-amber-950/30"
+                  className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-xl border border-amber-500/40 text-amber-300 hover:bg-amber-950/30 cursor-pointer"
                   onClick={() => setHint((h) => Math.min(2, h + 1))}
                 >
                   Petunjuk {hint + 1}
                 </button>
                 <button
-                  className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--border)] text-neutral-400 hover:text-white"
-                  onClick={() => {
-                    try {
-                      const c = new Chess(puzzle.fen);
-                      const move = c.move({ from: from as Square, to: to as Square, promotion: puzzle.solutionUci[4] || "q" });
-                      if (!move || move.san !== puzzle.solutionSan) return;
-                      setFen(c.fen());
-                      const info = analyzeMoveTactics(puzzle.fen, from, to, puzzle.turn);
-                      if (info) setTacticalInfo(info);
-                      setStatus("correct");
-                      setHint(2);
-                      if (c.isCheckmate() || c.isGameOver()) {
-                        setStage("completed");
-                        setCaptureMsg("🎉 Skakmat Mutlak! Raja lawan terkunci tanpa pelarian.");
-                      } else {
-                        setStage("opponent_thinking");
-                        setTimeout(async () => {
-                          const reply = await getBotReply(c.fen());
-                          if (reply) {
-                            c.move(reply.san);
-                            setFen(c.fen());
-                          }
-                          setStage("continuation");
-                        }, 700);
-                      }
-                    } catch {}
-                  }}
+                  className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--border)] text-neutral-400 hover:text-white cursor-pointer"
+                  onClick={handleSolveMultiStep}
+                  title="Mainkan demonstrasi berantai 2 langkah otomatis"
                 >
-                  Buka solusi
+                  Buka solusi (2 Langkah)
                 </button>
               </>
             )}
