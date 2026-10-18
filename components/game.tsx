@@ -1241,47 +1241,10 @@ export function Game() {
         {navTab === "admin" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><AdminPanel user={currentUser} /></div>}
 
         {navTab === "play" && (
-          <div className="lg:h-full lg:max-h-full lg:min-h-0 lg:grid lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] lg:gap-2 md:lg:gap-3 lg:items-center lg:justify-center w-full lg:items-stretch">
-            {/* CENTER CHESSBOARD ARENA */}
-            {/* Mobile: board sized by viewport WIDTH, sidebar flows below & scrolls with the page.
-                Desktop (lg+): original h-full grid layout. */}
-            <div className="lg:flex lg:flex-col lg:justify-center lg:items-center lg:h-full lg:max-h-full lg:min-h-0 flex flex-col justify-start items-center w-full lg:max-w-[min(100%,calc(100dvh-130px))] max-w-full mx-auto space-y-1 md:space-y-1.5">
-              {/* Opponent Card (Top) with 3D Bot Icon / Player Icon */}
-              <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center shrink-0">
-                    {playMode === "ai" ? <IconBot3D size={20} /> : <IconCommunity3D size={20} />}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5 truncate">
-                      <span>{playMode === "ai"
-                        ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain (Hybrid)" : selectedAiOpponent === "fly" ? "Fruit Fly Brain (134k)" : selectedAiOpponent === "jev" ? "Jev System One" : "Stockfish 19 NNUE")
-                        : pvpOpponentName}</span>
-                      <span className="text-xs font-normal text-neutral-400">
-                        ({playMode === "ai" ? "3550" : "PvP Online"})
-                      </span>
-                    </div>
-                    <div className="text-xs text-neutral-400 font-medium">
-                      {thinking
-                        ? (lang === "id" ? "Sedang menghitung..." : "Thinking...")
-                        : !humanToMove && gameActive && !effectiveOutcome.over
-                          ? (lang === "id" ? "Giliran lawan..." : "Opponent's turn...")
-                          : (lang === "id" ? "Siap melangkah" : "Ready")}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <CapturedPiecesBar fen={fen} side={humanSide === "white" ? "black" : "white"} />
-                  <div className={`px-2.5 py-1 rounded-lg font-mono font-black text-sm md:text-lg border transition-all ${
-                    !humanToMove && gameActive && !effectiveOutcome.over
-                      ? "bg-[var(--primary-strong)] text-[var(--primary)] border-[var(--primary)] shadow-sm"
-                      : "bg-[var(--surface)] text-white border-[var(--border)]"
-                  }`}>
-                    {humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
-                  </div>
-                </div>
-              </div>
-
+          <div className="lg:h-full lg:max-h-full lg:min-h-0 lg:grid lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-3 items-start w-full min-h-0">
+            {/* CENTER CHESSBOARD ARENA: Desain Seragam Mengikuti Layout Trik & Quest */}
+            <div className="rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-start items-center">
+              {/* 1. Toolbar Kontrol Papan */}
               <BoardControls
                 variant="toolbar"
                 orientation={boardOrientation}
@@ -1289,126 +1252,160 @@ export function Game() {
                 isFullscreen={fullscreenClocks}
                 onToggleFullscreen={() => setFullscreenClocks((open) => !open)}
                 showShortcuts={true}
-                className="w-full shrink-0"
+                className="w-full shrink-0 mb-1.5"
                 onSaveTrick={saveOpponentTrick}
                 trickSaved={opponentTacticSaved}
                 canSaveTrick={gameActive && moves.length > 0}
                 trickLabel={lang === "id" ? "Simpan Trik Lawan" : "Simpan Trik"}
               />
 
-              {/* Badges Legend: Di Atas Papan */}
-              <div className="flex justify-center w-full shrink-0 mb-1">
-                <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-310px))]" />
+              {/* 2. Kartu Pemain Lawan (Kompak & Elegan) */}
+              <div className="w-full flex items-center justify-between px-2.5 py-1 bg-[var(--surface)] rounded-xl border border-[var(--border)] mb-1.5 shrink-0 max-w-[min(100%,calc(100dvh-260px))]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-md bg-[var(--card)] border border-[var(--border)] flex items-center justify-center shrink-0">
+                    {playMode === "ai" ? <IconBot3D size={16} /> : <IconCommunity3D size={16} />}
+                  </div>
+                  <div className="min-w-0 flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-white truncate max-w-[140px] md:max-w-[200px]">
+                      {playMode === "ai"
+                        ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev AI" : "Stockfish 19")
+                        : pvpOpponentName}
+                    </span>
+                    <span className="text-[10px] text-neutral-400">
+                      ({playMode === "ai" ? "3550" : "PvP"})
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CapturedPiecesBar fen={fen} side={humanSide === "white" ? "black" : "white"} />
+                  <div className={`px-2 py-0.5 rounded-lg font-mono font-bold text-xs md:text-sm border ${
+                    !humanToMove && gameActive && !effectiveOutcome.over
+                      ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-xs"
+                      : "bg-[var(--card)] text-white border-[var(--border)]"
+                  }`}>
+                    {humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
+                  </div>
+                </div>
               </div>
 
-              {/* Board Row with Left Vertical Eval Bar (Chess.com Signature) */}
-              <div className="flex justify-center items-center w-full flex-1 min-h-0">
-                <div className="flex gap-2 md:gap-2.5 items-center justify-center h-full max-h-full max-w-full flex-1 min-h-0 min-w-0">
-                  {/* Vertical Eval Bar: Responsif instan terhadap makan pion & evaluasi engine */}
-                  <EvalBar
-                    fen={fen}
-                    scoreCp={
-                      typeof analysis?.scoreCp === "number"
-                        ? humanSide === "white"
-                          ? analysis.scoreCp
-                          : -analysis.scoreCp
-                        : null
-                    }
-                    orientation={humanSide}
-                  />
+              {/* 3. Baris Legenda Badge ala Chess.com (Persis Seperti Trik & Quest) */}
+              <div className="mb-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] shadow-sm shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50">!!</span>
+                  <span className="font-bold text-white text-[11px]">Brilian</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center font-black text-[9px] border border-white/50">✓</span>
+                  <span className="text-[11px]">Terbaik</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-[#d97706] text-white flex items-center justify-center font-black text-[9px] border border-white/50">📖</span>
+                  <span className="text-[11px]">Buku</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-[#dc2626] text-white flex items-center justify-center font-black text-[9px] border border-white/50">??</span>
+                  <span className="text-[11px]">Blunder</span>
+                </div>
+              </div>
 
-                  {/* Chessboard Container: strict aspect-square bound by both height & width */}
-                  <div className="relative mx-auto shrink-0 overflow-hidden rounded-xl border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl md:rounded-2xl aspect-square w-[min(100%,calc(100dvh-155px))] h-[min(100%,calc(100dvh-155px))]">
-                    <Chessboard
-                      key={`main-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}-${moves.length}-${fen.split(" ")[0]}`}
-                      options={{
-                        id: `fif-chess-main-${boardThemeId}-${pieceThemeId}`,
-                        position: fen,
-                        boardOrientation: boardOrientation,
-                        allowDragging: humanToMove,
-                        canDragPiece,
-                        onPieceDrop,
-                        alphaNotationStyle: {
-                          ...notationStyles.alphaNotationStyle,
-                          bottom: "3px",
-                          right: "5px",
-                        },
-                        numericNotationStyle: {
-                          ...notationStyles.numericNotationStyle,
-                          top: "3px",
-                          left: "4px",
-                        },
-                        squareRenderer: createSquareBadgeRenderer(moveBadges, fen, squareStyles),
-                        onSquareClick: ({ square }) => {
-                          if (!humanToMove) return;
-                          if (selectedSquare) {
-                            if (selectedSquare === square) {
-                              setSelectedSquare(null);
-                              return;
-                            }
-                            if (isPromotionAttempt(chess, selectedSquare, square)) {
-                              setPendingPromotion({ from: selectedSquare, to: square });
-                              setSelectedSquare(null);
-                              return;
-                            }
-                            if (tryHumanMove(selectedSquare, square)) return;
+              {/* 4. Papan Catur & Bar Evaluasi Vertikal */}
+              <div className="flex items-center justify-center gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] min-h-0">
+                <EvalBar
+                  fen={fen}
+                  scoreCp={
+                    typeof analysis?.scoreCp === "number"
+                      ? humanSide === "white"
+                        ? analysis.scoreCp
+                        : -analysis.scoreCp
+                      : null
+                  }
+                  orientation={humanSide}
+                />
+                <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative">
+                  <Chessboard
+                    key={`main-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}-${moves.length}-${fen.split(" ")[0]}`}
+                    options={{
+                      id: `fif-chess-main-${boardThemeId}-${pieceThemeId}`,
+                      position: fen,
+                      boardOrientation: boardOrientation,
+                      allowDragging: humanToMove,
+                      canDragPiece,
+                      onPieceDrop,
+                      alphaNotationStyle: {
+                        ...notationStyles.alphaNotationStyle,
+                        bottom: "3px",
+                        right: "5px",
+                      },
+                      numericNotationStyle: {
+                        ...notationStyles.numericNotationStyle,
+                        top: "3px",
+                        left: "4px",
+                      },
+                      squareRenderer: createSquareBadgeRenderer(moveBadges, fen, squareStyles),
+                      onSquareClick: ({ square }) => {
+                        if (!humanToMove) return;
+                        if (selectedSquare) {
+                          if (selectedSquare === square) {
+                            setSelectedSquare(null);
+                            return;
                           }
-                          const piece = chess.get(square as Square);
-                          const isHumanPiece =
-                            piece &&
-                            ((humanSide === "white" && piece.color === "w") ||
-                              (humanSide === "black" && piece.color === "b"));
-                          setSelectedSquare(isHumanPiece ? square : null);
-                        },
-                        squareStyles,
-                        boardStyle: {
-                          backgroundColor: boardTheme.dark,
-                          width: "100%",
-                          height: "100%",
-                        },
-                        lightSquareStyle: { backgroundColor: boardTheme.light },
-                        darkSquareStyle: { backgroundColor: boardTheme.dark },
-                        pieces: customPieces,
-                        animationDurationInMs: 200,
-                        showNotation: true,
-                      }}
-                    />
-                  </div>
+                          if (isPromotionAttempt(chess, selectedSquare, square)) {
+                            setPendingPromotion({ from: selectedSquare, to: square });
+                            setSelectedSquare(null);
+                            return;
+                          }
+                          if (tryHumanMove(selectedSquare, square)) return;
+                        }
+                        const piece = chess.get(square as Square);
+                        const isHumanPiece =
+                          piece &&
+                          ((humanSide === "white" && piece.color === "w") ||
+                            (humanSide === "black" && piece.color === "b"));
+                        setSelectedSquare(isHumanPiece ? square : null);
+                      },
+                      squareStyles,
+                      boardStyle: {
+                        backgroundColor: boardTheme.dark,
+                        width: "100%",
+                        height: "100%",
+                      },
+                      lightSquareStyle: { backgroundColor: boardTheme.light },
+                      darkSquareStyle: { backgroundColor: boardTheme.dark },
+                      pieces: customPieces,
+                      animationDurationInMs: 200,
+                      showNotation: true,
+                    }}
+                  />
                 </div>
               </div>
 
-              {/* Player Card (Bottom) */}
-              <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow shrink-0">
-                    {me.initials}
+              {/* 5. Kartu Pemain User (Bawah Papan) */}
+              <div className="w-full flex items-center justify-between px-2.5 py-1 bg-[var(--surface)] rounded-xl border border-[var(--border)] mt-1.5 shrink-0 max-w-[min(100%,calc(100dvh-260px))]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-md bg-[var(--card)] border border-[var(--border)] flex items-center justify-center font-bold text-xs text-white shrink-0">
+                    {currentUser?.fullName ? currentUser.fullName[0].toUpperCase() : "B"}
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5 truncate">
-                      <span>{me.name}</span>
-                      {me.elo !== null && <span className="text-xs font-normal text-neutral-400">({me.elo})</span>}
-                    </div>
-                    <div className="text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
-                      <span className={`w-1.5 h-1.5 rounded-full inline-block ${
-                        humanToMove && gameActive && !effectiveOutcome.over ? "bg-emerald-400 animate-pulse" : "bg-neutral-500"
-                      }`} />
-                      <span>{humanSide === "white" ? (lang === "id" ? "Bidak Putih" : "White") : (lang === "id" ? "Bidak Hitam" : "Black")}</span>
-                    </div>
+                  <div className="min-w-0 flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-white truncate max-w-[140px] md:max-w-[200px]">
+                      {currentUser?.fullName ?? (lang === "id" ? "Pak Bagas Wibowo" : "Player")}
+                    </span>
+                    <span className="text-[10px] text-neutral-400">(1650)</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <CapturedPiecesBar fen={fen} side={humanSide} />
-                  <div className={`px-2.5 py-1 rounded-lg font-mono font-black text-sm md:text-lg border transition-all ${
+                  <div className={`px-2 py-0.5 rounded-lg font-mono font-bold text-xs md:text-sm border ${
                     humanToMove && gameActive && !effectiveOutcome.over
-                      ? "bg-[var(--primary-strong)] text-[var(--primary)] border-[var(--primary)] shadow-sm"
-                      : "bg-[var(--surface)] text-white border-[var(--border)]"
+                      ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-xs"
+                      : "bg-[var(--card)] text-white border-[var(--border)]"
                   }`}>
                     {humanSide === "white" ? formattedWhiteTime : formattedBlackTime}
                   </div>
                 </div>
               </div>
+            </div>
 
-              {fullscreenClocks && (
+            {fullscreenClocks && (
                 <ClockMovesFullscreen
                   fen={fen}
                   moveBadges={moveBadges}
@@ -1459,7 +1456,6 @@ export function Game() {
                   scoreCp={(analysis as any)?.scoreCp ?? 0}
                 />
               )}
-            </div>
 
             {/* RIGHT SIDEBAR (Control Panel - 100% Chess.com) */}
             {/* Mobile: natural height below the board (scrolls with page); desktop: h-full panel */}
