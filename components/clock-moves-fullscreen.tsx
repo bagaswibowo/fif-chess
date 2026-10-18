@@ -71,7 +71,7 @@ export function ClockMovesFullscreen({
   onAuthRequest,
   moveBadges = {},
 }: Props) {
-  const { customPieces, notationStyles } = useChessTheme();
+  const { customPieces, notationStyles, boardThemeId, pieceThemeId } = useChessTheme();
   const isSpectating = Boolean(isSpectator || isGuestSpectator);
   const [copiedLink, setCopiedLink] = useState(false);
   const [currentOrientation, setCurrentOrientation] = useState<"white" | "black">(boardOrientation);
@@ -290,6 +290,7 @@ export function ClockMovesFullscreen({
             {/* CONTAINER PAPAN CATUR (Preserve Perfect Square without Right Cutoff) */}
             <div className="aspect-square h-[min(calc(100vw-4rem),calc(100dvh-190px))] max-w-[calc(100dvh-190px)] rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] shrink-0">
               <Chessboard
+                key={`fs-board-${currentOrientation}-${boardThemeId}-${pieceThemeId}-${moves.length}-${fen.split(" ")[0]}`}
                 options={{
                   id: isSpectating ? "spectator-focus-board" : "fullscreen-focus-board",
                   squareRenderer: createSquareBadgeRenderer(moveBadges, fen, squareStyles),
@@ -299,7 +300,7 @@ export function ClockMovesFullscreen({
                   canDragPiece: isSpectating ? () => false : canDragPiece,
                   onPieceDrop: onPieceDrop ?? (() => false),
                   onSquareClick: onSquareClick,
-                  squareStyles: squareStyles,
+                  squareStyles: squareStyles || {},
                   arrows: isSpectating ? spectatorArrows : [],
                   boardStyle: {
                     backgroundColor: "var(--board-dark)",

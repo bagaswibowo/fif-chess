@@ -1320,7 +1320,7 @@ export function Game() {
                   {/* Chessboard Container: strict aspect-square bound by both height & width */}
                   <div className="relative mx-auto shrink-0 overflow-hidden rounded-xl border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl md:rounded-2xl aspect-square w-[min(100%,calc(100dvh-155px))] h-[min(100%,calc(100dvh-155px))]">
                     <Chessboard
-                      key={`main-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`}
+                      key={`main-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}-${moves.length}-${fen.split(" ")[0]}`}
                       options={{
                         id: `fif-chess-main-${boardThemeId}-${pieceThemeId}`,
                         position: fen,

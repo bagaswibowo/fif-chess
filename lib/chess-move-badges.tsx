@@ -237,7 +237,7 @@ export function createSquareBadgeRenderer(
               position: "absolute",
               top: "-5px",
               right: "-5px",
-              zIndex: 40,
+              zIndex: 50,
               width: "22px",
               height: "22px",
               borderRadius: "50%",
