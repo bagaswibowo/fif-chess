@@ -1245,7 +1245,7 @@ export function Game() {
             {/* CENTER CHESSBOARD ARENA */}
             {/* Mobile: board sized by viewport WIDTH, sidebar flows below & scrolls with the page.
                 Desktop (lg+): original h-full grid layout. */}
-            <div className="lg:flex lg:flex-col lg:justify-center lg:items-center lg:h-full lg:max-h-full lg:min-h-0 flex flex-col justify-start items-center w-full lg:max-w-[min(100%,calc(100dvh-310px))] max-w-full mx-auto space-y-1 md:space-y-1.5">
+            <div className="lg:flex lg:flex-col lg:justify-center lg:items-center lg:h-full lg:max-h-full lg:min-h-0 flex flex-col justify-start items-center w-full lg:max-w-[min(100%,calc(100dvh-130px))] max-w-full mx-auto space-y-1 md:space-y-1.5">
               {/* Opponent Card (Top) with 3D Bot Icon / Player Icon */}
               <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -1318,7 +1318,7 @@ export function Game() {
                   />
 
                   {/* Chessboard Container: strict aspect-square bound by both height & width */}
-                  <div className="relative mx-auto shrink-0 overflow-hidden rounded-xl border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl md:rounded-2xl" style={{ width: "auto", height: "100%", maxHeight: "calc(100dvh - 310px)", maxWidth: "min(100%, calc(100dvh - 310px))", aspectRatio: "1 / 1" }}>
+                  <div className="relative mx-auto shrink-0 overflow-hidden rounded-xl border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl md:rounded-2xl aspect-square w-[min(100%,calc(100dvh-155px))] h-[min(100%,calc(100dvh-155px))]">
                     <Chessboard
                       key={`main-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`}
                       options={{
@@ -1411,6 +1411,7 @@ export function Game() {
               {fullscreenClocks && (
                 <ClockMovesFullscreen
                   fen={fen}
+                  moveBadges={moveBadges}
                   moves={moves}
                   whiteName={
                     humanSide === "white"

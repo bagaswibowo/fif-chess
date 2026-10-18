@@ -1,4 +1,5 @@
 "use client";
+import { createSquareBadgeRenderer, ChessBadgeLegend, type MoveBadge } from "@/lib/chess-move-badges";
 import { useChessTheme } from "@/lib/chess-themes";
 import { TacticalCommentaryCard, type TacticalCommentaryData } from "@/components/tactical-commentary-card";
 import { Share2, Check } from "lucide-react";
@@ -44,6 +45,7 @@ type Props = {
   isSpectator?: boolean;
   isGuestSpectator?: boolean;
   onAuthRequest?: () => void;
+  moveBadges?: Record<string, MoveBadge>;
 };
 
 export function ClockMovesFullscreen({
@@ -67,6 +69,7 @@ export function ClockMovesFullscreen({
   isSpectator = false,
   isGuestSpectator = false,
   onAuthRequest,
+  moveBadges = {},
 }: Props) {
   const { customPieces, notationStyles } = useChessTheme();
   const isSpectating = Boolean(isSpectator || isGuestSpectator);
@@ -237,8 +240,8 @@ export function ClockMovesFullscreen({
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col lg:flex-row items-center justify-center p-2 sm:p-3 gap-2.5 lg:gap-5 max-w-7xl mx-auto w-full overflow-y-auto lg:overflow-hidden min-h-0">
         
-        {/* KOLOM KIRI: EVAL BAR + PAPAN CATUR + KARTU PEMAIN (100% Anti-Clipping & Anti-Sekat) */}
-        <div className="flex flex-col items-center justify-center w-full max-w-[min(92vw,calc(100dvh-180px))] shrink-0 min-h-0">
+        {/* KOLOM KIRI: EVAL BAR + PAPAN CATUR + KARTU PEMAIN (Uniform Standard Geometry) */}
+        <div className="flex flex-col items-center justify-center w-full max-w-[min(92vw,calc(100dvh-120px))] shrink-0 min-h-0">
           
           {/* KARTU PEMAIN LAWAN (ATAS) */}
           <div className="w-full flex items-center justify-between px-3 py-1 bg-[var(--card)] rounded-xl border border-[var(--border)] mb-1 shadow-sm h-9 shrink-0">
@@ -265,12 +268,12 @@ export function ClockMovesFullscreen({
             </div>
           </div>
 
-          {/* AREA PAPAN CATUR DENGAN EVAL BAR (Square Preserved) */}
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2 w-full aspect-square min-h-0">
+          {/* AREA PAPAN CATUR DENGAN EVAL BAR (100% Anti-Clipping Kanan & Sesuai Aspect Ratio) */}
+          <div className="flex items-center justify-center gap-2 w-full max-h-[calc(100dvh-190px)] min-h-0">
             
             {/* EVALUATION BAR VERTIKAL */}
             <div
-              className="w-3 sm:w-3.5 h-full rounded-full bg-neutral-900 border border-[var(--border)] overflow-hidden flex flex-col justify-end relative shadow-inner shrink-0"
+              className="w-3 sm:w-3.5 self-stretch rounded-full bg-neutral-900 border border-[var(--border)] overflow-hidden flex flex-col justify-end relative shadow-inner shrink-0"
               title={`Evaluasi: ${evalValue > 0 ? "+" + evalValue.toFixed(1) : evalValue.toFixed(1)}`}
             >
               <div
@@ -284,11 +287,12 @@ export function ClockMovesFullscreen({
               </span>
             </div>
 
-            {/* CONTAINER PAPAN CATUR (100% Anti-Sekat & Anti-Clipping) */}
-            <div className="flex-1 aspect-square h-full rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] min-h-0">
+            {/* CONTAINER PAPAN CATUR (Preserve Perfect Square without Right Cutoff) */}
+            <div className="aspect-square h-[min(calc(100vw-4rem),calc(100dvh-190px))] max-w-[calc(100dvh-190px)] rounded-xl md:rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] shrink-0">
               <Chessboard
                 options={{
                   id: isSpectating ? "spectator-focus-board" : "fullscreen-focus-board",
+                  squareRenderer: createSquareBadgeRenderer(moveBadges, fen, squareStyles),
                   position: fen,
                   boardOrientation: currentOrientation,
                   allowDragging: isSpectating ? false : isHumanTurn,
