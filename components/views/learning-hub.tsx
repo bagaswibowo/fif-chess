@@ -911,94 +911,57 @@ export function LearningHub({ lang = "id" }: Props) {
             </p>
           </div>
 
-          {/* KARTU VISUAL TAKTIK & ANCAMAN (TANDA HIJAU) */}
+          {/* KARTU TAKTIK & ANCAMAN RINGKAS (TANPA OVERLOAD KOORDINAT) */}
           {tacticalInfo && (
-            <div className="p-3 rounded-xl bg-emerald-950/60 border-2 border-emerald-500/70 shadow-lg space-y-2 animate-in fade-in">
+            <div className="p-3 rounded-xl bg-emerald-950/50 border border-emerald-500/60 shadow-md space-y-1.5 animate-in fade-in">
               <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-emerald-300">
                 <span className="flex items-center gap-1.5">
                   <IconTarget3D size={15} />
-                  <span>Target & Pengawalan Petak</span>
+                  <span>Target Taktis</span>
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-900/90 border border-emerald-400/60 text-emerald-200">
-                  Tanda Hijau Aktif
+                <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-900/80 px-2 py-0.5 rounded border border-emerald-500/40">
+                  {tacticalInfo.targets.length} Sasaran
                 </span>
               </div>
-
               <div className="text-xs font-bold text-white leading-snug">
                 {tacticalInfo.summary}
               </div>
-
-              {tacticalInfo.targets.length > 0 && (
-                <div className="space-y-1 pt-1.5 border-t border-emerald-800/60">
-                  <div className="text-[11px] font-bold text-emerald-300 flex items-center gap-1.5">
-                    <span>🎯 Bidak Sasaran yang Diincar:</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {tacticalInfo.targets.map((t, idx) => (
-                      <span key={idx} className="px-2 py-0.5 rounded-md bg-emerald-900 border border-emerald-400 text-xs font-bold text-white flex items-center gap-1.5 shadow-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                        {t.pieceName}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {tacticalInfo.guardSquares.length > 0 && (
-                <div className="space-y-1 pt-1 border-t border-emerald-800/60">
-                  <div className="text-[11px] font-bold text-emerald-300">
-                    🛡️ Wilayah / Kotak yang Dikawal:
-                  </div>
-                  <div className="text-xs text-emerald-200/90 font-mono font-bold">
-                    {tacticalInfo.guardSquares.slice(0, 8).map((s) => s.toUpperCase()).join(", ")}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
-          {/* KARTU ANALISIS UNTUNG VS BAHAYA YANG DIHINDARI (PRINSIP CATUR) */}
+          {/* KARTU PANDUAN KELANJUTAN MASTER (UNTUNG DI MANA & CARA BALAS) */}
           {tacticalInfo && (
-            <div className="p-3.5 rounded-xl bg-neutral-900/95 border border-neutral-700/80 shadow-md space-y-2.5 animate-in fade-in">
-              <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-amber-300 border-b border-neutral-800 pb-1.5">
-                <BookOpen size={15} className="shrink-0 text-amber-400" />
-                <span>Analisis Untung vs Bahaya yang Dihindari</span>
+            <div className="p-3 rounded-xl bg-neutral-900/95 border border-neutral-700/80 shadow-md space-y-2 animate-in fade-in">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-1">
+                <span className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <BookOpen size={14} className="text-amber-400" />
+                  <span>Untung Di Mana & Rute Balasan</span>
+                </span>
+                <span className="text-[10px] font-mono font-bold text-emerald-400">
+                  {tacticalInfo.gains[0] ? "+Untung Materi" : "Inisiatif Posisi"}
+                </span>
               </div>
 
-              {/* KEUNTUNGAN */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
-                  <TrendingUp size={14} className="shrink-0" />
-                  <span>Keuntungan Posisi & Taktis (Untung Di Mana):</span>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-start gap-1.5 text-emerald-300">
+                  <TrendingUp size={13} className="shrink-0 mt-0.5 text-emerald-400" />
+                  <span className="leading-snug">{tacticalInfo.gains[0] || "Mengunci inisiatif dan membatasi mobilitas lawan."}</span>
                 </div>
-                <ul className="text-xs text-neutral-200 space-y-1 pl-4 list-disc marker:text-emerald-400">
-                  {tacticalInfo.gains.map((g, idx) => (
-                    <li key={idx} className="leading-snug">{g}</li>
-                  ))}
-                </ul>
+                <div className="flex items-start gap-1.5 text-sky-300">
+                  <ShieldCheck size={13} className="shrink-0 mt-0.5 text-sky-400" />
+                  <span className="leading-snug">{tacticalInfo.avoidedDangers[0] || "Menggagalkan serangan lawan dan mengamankan perwira kawan."}</span>
+                </div>
               </div>
 
-              {/* BAHAYA YANG DIHINDARI */}
-              <div className="space-y-1 pt-1 border-t border-neutral-800/70">
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-sky-400">
-                  <ShieldCheck size={14} className="shrink-0" />
-                  <span>Bahaya yang Berhasil Dihindari (Proteksi):</span>
+              {/* RUTE BALASAN KONKRET (CONTOH MASTER) */}
+              <div className="p-2 rounded-lg bg-neutral-950/80 border border-neutral-800 text-[11px] space-y-1 font-mono">
+                <div className="text-neutral-400 font-bold">♟️ Rute Jawaban Lawan:</div>
+                <div className="text-neutral-200">
+                  ├─ Bila lawan tutup/lari: <span className="text-amber-300 font-bold">Lanjutkan serang petak gantung</span>
                 </div>
-                <ul className="text-xs text-neutral-200 space-y-1 pl-4 list-disc marker:text-sky-400">
-                  {tacticalInfo.avoidedDangers.map((d, idx) => (
-                    <li key={idx} className="leading-snug">{d}</li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* PRINSIP BUKU PINTAR CATUR-PEDIA */}
-              <div className="p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/40 space-y-1">
-                <div className="text-[10px] font-mono font-bold text-amber-300 uppercase">
-                  {tacticalInfo.chessPrinciple.chapterRef}
+                <div className="text-neutral-200">
+                  └─ Bila lawan pasif: <span className="text-emerald-300 font-bold">Eksekusi perwira terlemah lawan</span>
                 </div>
-                <p className="text-xs text-amber-100/90 leading-relaxed italic">
-                  &ldquo;{tacticalInfo.chessPrinciple.concept}&rdquo;
-                </p>
               </div>
             </div>
           )}
