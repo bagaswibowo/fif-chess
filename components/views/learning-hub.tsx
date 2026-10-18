@@ -247,7 +247,17 @@ function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w"
     outcome: "Keunggulan taktis mutlak",
   };
 
-  // Kasus Taktik Italia / Giuoco Piano (Ng5 mengincar f7)
+  // Kasus Jebakan Legal (Légall's Mate: Bxf7+)
+  if (m.san === "Bxf7+" || (m.piece === "b" && toSq === "f7")) {
+    gainHeadline = "Gajah TIDAK Dikorbankan! (Dijaga Kuda e5)";
+    gainDetail = "Gajah di f7 100% AMAN terlindungi Kuda e5. Raja Hitam dilarang memakannya dan wajib lari ke e7!";
+    avoidedDanger = "Mengunci pelarian Raja Hitam agar Kuda c3 bisa mengeksekusi skakmat.";
+    routeGuide = {
+      enemyMove: "Raja lawan terpaksa lari 1... Ke7 (tak bisa makan Gajah)",
+      ourReply: "Balas 2. Nd5# (Kuda melompat skakmat mutlak!)",
+      outcome: "🎉 Skakmat Mutlak di Langkah ke-2! Raja Hitam Terkunci!",
+    };
+  } else   // Kasus Taktik Italia / Giuoco Piano (Ng5 mengincar f7)
   if (m.san === "Ng5" || (m.piece === "n" && toSq === "g5")) {
     gainHeadline = "Serangan Titik Lemah f7 (Fried Liver Pattern)";
     gainDetail = "Kuda g5 + Gajah c4 berkolaborasi membidik titik terlemah f7.";
