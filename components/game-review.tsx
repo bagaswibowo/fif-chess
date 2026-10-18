@@ -1,4 +1,5 @@
 "use client";
+import { classifyMove, createSquareBadgeRenderer, ChessBadgeLegend, type MoveBadge } from "@/lib/chess-move-badges";
 
 // Riwayat permainan & Smart Blunder Review (v3.0)
 // Fitur Lengkap:
@@ -149,6 +150,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [fullscreenReview]);
   const [evalResult, setEvalResult] = useState<AiEval | null>(null);
+
   const [loadingEval, setLoadingEval] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed] = useState(1200);
@@ -184,6 +186,21 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   const currentFen = fenList[moveIndex] ?? fenList[0];
   const playedNow = moveIndex > 0 ? played[moveIndex - 1] : null;
   const previousFen = moveIndex > 0 ? fenList[moveIndex - 1] : currentFen;
+
+  // Klasifikasi Kualitas Langkah ala Chess.com (!! Brilian, ✓ Terbaik, 📖 Buku, ?? Blunder)
+  const currentBadge = useMemo(() => {
+    if (!previousFen || !playedNow) return null;
+    return classifyMove(previousFen, `${playedNow.from}${playedNow.to}`, playedNow.san, {
+      evalBefore: evalResult?.playedScoreCp ?? undefined,
+      evalAfter: evalResult?.scoreCp ?? undefined,
+      isEngineBest: evalResult?.bestUci === `${playedNow.from}${playedNow.to}`,
+    });
+  }, [previousFen, playedNow, evalResult]);
+
+  const moveBadges: Record<string, MoveBadge> = useMemo(() => {
+    if (!playedNow || !currentBadge) return {};
+    return { [playedNow.to]: currentBadge };
+  }, [playedNow, currentBadge]);
 
   useEffect(() => {
     setMoveIndex(0);
@@ -506,48 +523,72 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
               </div>
             </div>
 
-            {/* REVIEW BOARD + BLUNDER & THREAT ANALYSIS PANEL */}
+            {/* REVIEW BOARD + BLUNDER & THREAT ANALYSIS PANEL: Seragam dengan Arena & Trik */}
             <div
               className={
-                  fullscreenReview
-                  ? "flex-1 grid grid-cols-1 lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_430px] gap-3 items-stretch min-h-0 overflow-hidden w-full pt-1"
-                  : "flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-2 w-full overflow-y-auto"
+                fullscreenReview
+                  ? "flex-1 grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-3 items-stretch min-h-0 overflow-hidden w-full pt-1"
+                  : "flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-3 items-start w-full overflow-y-auto"
               }
             >
               
-              {/* LEFT: BOARD WITH DUAL ARROWS */}
+              {/* LEFT: BOARD WITH DUAL ARROWS & FLOATING BADGES (Unified Golden Layout) */}
               <div
-                className={
-                  fullscreenReview
-                    ? "flex flex-col items-center justify-between h-full min-h-0 w-full max-w-[min(96vw,calc(100dvh-140px))] mx-auto py-0.5 panel p-3 rounded-2xl"
-                    : "panel p-2 flex flex-col items-center min-h-0 rounded-xl overflow-visible"
-                }
-                style={{ background: "var(--card)" }}
+                className="rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-start items-center"
               >
-                <div className="flex gap-2.5 items-center justify-center w-full flex-1 min-h-0">
+                {/* 1. Header Informasi Pertandingan */}
+                <div className="w-full flex items-center justify-between px-2.5 py-1 bg-[var(--surface)] rounded-xl border border-[var(--border)] mb-1.5 shrink-0 max-w-[min(100%,calc(100dvh-260px))]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
+                    <span className="text-xs font-bold text-white truncate">
+                      {active ? (active.opponent || "Lawan AI") : "Lawan"} vs {active?.humanSide === "white" ? "Anda (Putih)" : "Anda (Hitam)"}
+                    </span>
+                  </div>
+                  <span className="font-mono text-xs font-bold text-neutral-300">
+                    Langkah {moveIndex} / {active?.moves.length || 0}
+                  </span>
+                </div>
+
+                {/* 2. Legenda Badge ala Chess.com di Atas Papan */}
+                <div className="mb-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] shadow-sm shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50">!!</span>
+                    <span className="font-bold text-white text-[11px]">Brilian</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center font-black text-[9px] border border-white/50">✓</span>
+                    <span className="text-[11px]">Terbaik</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-[#d97706] text-white flex items-center justify-center font-black text-[9px] border border-white/50">📖</span>
+                    <span className="text-[11px]">Buku</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-[#dc2626] text-white flex items-center justify-center font-black text-[9px] border border-white/50">??</span>
+                    <span className="text-[11px]">Blunder</span>
+                  </div>
+                </div>
+
+                {/* 3. Papan Catur + EvalBar Vertikal (Aspect Square Sempurna) */}
+                <div className="flex items-center justify-center gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] min-h-0">
                   <EvalBar
                     fen={currentFen}
                     scoreCp={evalResult?.scoreCp}
-                    orientation={flipOrientation ? (active.humanSide === "white" ? "black" : "white") : active.humanSide}
+                    orientation={flipOrientation ? (active?.humanSide === "white" ? "black" : "white") : active?.humanSide}
                   />
-                  <div
-                    className={
-                      fullscreenReview
-                        ? "aspect-square self-center flex-1 max-h-[calc(100dvh-200px)] rounded-xl overflow-hidden border-2 border-[var(--border)] shadow-2xl relative bg-[var(--board-dark)] flex items-center justify-center min-h-0"
-                        : "aspect-square self-center flex-1 max-w-[min(78dvh,calc(100dvh-18rem),760px)] shrink-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-xl relative bg-[var(--board-dark)]"
-                    }
-                  >
+                  <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative">
                     <Chessboard
+                      key={`review-board-${active?.id}-${moveIndex}-${currentFen.split(" ")[0]}`}
                       options={{
-                        id: `review-${active.id}`,
+                        id: `review-${active?.id}`,
                         position: currentFen,
-                        boardOrientation: flipOrientation ? (active.humanSide === "white" ? "black" : "white") : active.humanSide,
+                        boardOrientation: flipOrientation ? (active?.humanSide === "white" ? "black" : "white") : active?.humanSide,
                         allowDragging: false,
-                        boardStyle: { backgroundColor: "var(--board-dark)" },
+                        squareRenderer: createSquareBadgeRenderer(moveBadges, currentFen, {}),
+                        boardStyle: { backgroundColor: "var(--board-dark)", width: "100%", height: "100%" },
                         darkSquareStyle: { backgroundColor: "var(--board-dark)" },
                         lightSquareStyle: { backgroundColor: "var(--board-light)" },
                         arrows: [
-                          // Panah Merah/Orange untuk langkah yang dibuat
                           ...(playedNow
                             ? [{
                                 startSquare: playedNow.from,
@@ -555,7 +596,6 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                                 color: (evalResult?.deltaCp ?? 0) >= 90 ? "var(--destructive)" : "var(--ring)",
                               }]
                             : []),
-                          // Panah Hijau untuk langkah saran engine
                           ...(evalResult?.bestUci
                             ? [{
                                 startSquare: evalResult.bestUci.slice(0, 2),
@@ -569,19 +609,62 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-center gap-3 flex-wrap w-full pt-1.5 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
-                    <span className="text-neutral-300">Langkah dimainkan</span>
+                {/* 4. Scrubber / Navigasi Langkah di Bawah Papan */}
+                <div className="flex items-center justify-between gap-1.5 w-full max-w-[min(100%,calc(100dvh-260px))] mt-2 px-1">
+                  <div className="flex items-center gap-1">
+                    <button
+                      className="p-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer"
+                      onClick={() => { setIsPlaying(false); setMoveIndex(0); }}
+                      disabled={moveIndex === 0}
+                      title="Langkah Pertama [Home]"
+                    >
+                      ⏮ Awal
+                    </button>
+                    <button
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.max(0, i - 1)); }}
+                      disabled={moveIndex === 0}
+                      title="Mundur [←]"
+                    >
+                      <ChevronLeft size={16} /> Mundur
+                    </button>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />
-                    <span className="text-emerald-400 font-bold">Saran {ENGINE_LABELS[engine]}</span>
+
+                  <button
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
+                      isPlaying
+                        ? "bg-amber-600 text-white border-amber-500 shadow-sm"
+                        : "bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm hover:brightness-110"
+                    }`}
+                    onClick={() => setIsPlaying((p) => !p)}
+                    title="Putar Otomatis [Spasi]"
+                  >
+                    {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                    <span>{isPlaying ? "Jeda" : "Putar"}</span>
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--primary)] text-white border border-[var(--primary)] text-xs font-bold flex items-center gap-1 hover:brightness-110 cursor-pointer"
+                      onClick={() => { setIsPlaying(false); setMoveIndex((i) => Math.min(fenList.length - 1, i + 1)); }}
+                      disabled={moveIndex >= fenList.length - 1}
+                      title="Maju [→]"
+                    >
+                      Maju <ChevronRight size={16} />
+                    </button>
+                    <button
+                      className="p-1.5 rounded-lg bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer"
+                      onClick={() => { setIsPlaying(false); setMoveIndex(fenList.length - 1); }}
+                      disabled={moveIndex >= fenList.length - 1}
+                      title="Langkah Terakhir [End]"
+                    >
+                      Akhir ⏭
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* RIGHT: BLUNDER & THREAT CARD + RUNNING MOVE LIST */}
+                            {/* RIGHT: BLUNDER & THREAT CARD + RUNNING MOVE LIST */}
               <div
                 className={
                   fullscreenReview
