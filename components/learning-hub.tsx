@@ -593,10 +593,11 @@ export function LearningHub({ lang = "id" }: Props) {
         simChess.move(s1.san);
         setFen(simChess.fen());
 
-        setMoveBadges((prev) => ({
-          ...prev,
+        // Tampilkan badge hanya untuk langkah aktif di papan
+        setMoveBadges({
+          [s0.to]: { type: "brilliant", ...BADGE_CONFIGS.brilliant },
           [s1.to]: { type: "mistake", ...BADGE_CONFIGS.mistake },
-        }));
+        });
 
         if (steps.length <= 2) {
           setStage("completed");
@@ -609,10 +610,11 @@ export function LearningHub({ lang = "id" }: Props) {
           simChess.move(s2.san);
           setFen(simChess.fen());
 
-          setMoveBadges((prev) => ({
-            ...prev,
+          // Bidak s0 sudah berpindah atau dilanjutkan, ganti badge ke langkah aktif terbaru
+          setMoveBadges({
             [s2.to]: { type: "best", ...BADGE_CONFIGS.best },
-          }));
+            [s1.to]: { type: "mistake", ...BADGE_CONFIGS.mistake },
+          });
 
           const info2 = analyzeMoveTactics(simChess.fen(), s2.from, s2.to, puzzle.turn);
           if (info2) setTacticalInfo(info2);
@@ -633,10 +635,10 @@ export function LearningHub({ lang = "id" }: Props) {
             simChess.move(s3.san);
             setFen(simChess.fen());
 
-            setMoveBadges((prev) => ({
-              ...prev,
+            setMoveBadges({
+              [s2.to]: { type: "best", ...BADGE_CONFIGS.best },
               [s3.to]: { type: "blunder", ...BADGE_CONFIGS.blunder },
-            }));
+            });
 
             // STEP 5: Langkah 3 Kawan (Eksekusi Puncak)
             setTimeout(() => {
@@ -645,10 +647,9 @@ export function LearningHub({ lang = "id" }: Props) {
                 simChess.move(s4.san);
                 setFen(simChess.fen());
 
-                setMoveBadges((prev) => ({
-                  ...prev,
+                setMoveBadges({
                   [s4.to]: { type: "great", ...BADGE_CONFIGS.great },
-                }));
+                });
 
                 const cap4 = s4.captured ? ` (Memakan ${PIECE_NAMES[s4.captured] || "Perwira"} di ${s4.to.toUpperCase()})` : "";
                 const finalMsg = s4.isCheckmate
@@ -748,9 +749,19 @@ export function LearningHub({ lang = "id" }: Props) {
     }
   }
 
-  // CHESS.COM SQUARE RENDERER: Renders floating badge directly on the square!
+  // CHESS.COM SQUARE RENDERER: Badge HANYA muncul di petak yang ADA BIDAKNYA dan langsung HILANG jika bidak berpindah!
   const customSquareRenderer = ({ square, children }: any) => {
     const badge = moveBadges[square];
+    let hasPiece = false;
+    try {
+      hasPiece = Boolean(new Chess(fen).get(square as Square));
+    } catch {
+      hasPiece = false;
+    }
+
+    // Jika petak kosong (bidak sudah pindah atau dimakan), JANGAN PERNAH TAMPILKAN BADGE!
+    const shouldShow = Boolean(badge && hasPiece);
+
     return (
       <div
         style={{
@@ -761,7 +772,7 @@ export function LearningHub({ lang = "id" }: Props) {
         }}
       >
         {children}
-        {badge && (
+        {shouldShow && badge && (
           <div
             title={badge.desc}
             className="animate-in zoom-in duration-150"
