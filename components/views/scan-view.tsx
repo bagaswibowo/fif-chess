@@ -896,6 +896,20 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                   <span className="text-xs text-red-400">{liveDetectError || "Gagal membaca papan."}</span>
                 )}
               </div>
+              {liveDetectFen && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (liveDetectFen) {
+                      applyNewInitialFen(liveDetectFen, "Posisi dari kamera live berhasil dikunci!");
+                      stopLiveDetection();
+                    }
+                  }}
+                  className="ctl ctl-sm w-full font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md flex items-center justify-center gap-1.5 cursor-pointer py-2"
+                >
+                  <IconCheck3D size={16} /> Kunci & Gunakan Posisi Ini
+                </button>
+              )}
               <button type="button" onClick={stopLiveDetection} className="ctl ctl-sm w-full font-bold">
                 Tutup Live Detection
               </button>

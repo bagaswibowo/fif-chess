@@ -574,7 +574,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       const video = liveVideoRef.current;
       if (!video || video.readyState < 2 || !liveStreamRef.current) break;
 
-      if (failCount >= 6) {
+      if (failCount >= 40) {
         setLiveDetectStatus("error");
         setLiveDetectError(
           "Papan tidak terbaca dari kamera. Pastikan kamera menghadap papan dengan pencahayaan cukup dan seluruh 64 petak terlihat, lalu coba lagi."
@@ -607,20 +607,22 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
         if (liveAbortRef.current) break;
 
         if (data.ok && data.fen && typeof data.fen === "string") {
-          // Bandingkan hanya bagian posisi (field pertama FEN) supaya stabil
           const fenBoard = (data.fen as string).split(" ")[0];
+          setLiveDetectFen(data.fen as string);
+          failCount = 0;
+
+          // Cek kesamaan posisi dengan toleransi (stabil jika identik atau minimal terdeteksi 2x)
           if (fenBoard === lastFen) {
             stableCount += 1;
           } else {
-            stableCount = 1;
+            stableCount += 1; // Terus akumulasi deteksi
             lastFen = fenBoard;
           }
-          failCount = 0;
-          setLiveDetectFen(data.fen as string);
+
           if (stableCount >= 2) {
             setLiveDetectStatus("success");
-            applyNewInitialFen(data.fen as string, "Live detection berhasil, posisi stabil terbaca!");
-            setTimeout(() => stopLiveDetection(), 900);
+            applyNewInitialFen(data.fen as string, "Live detection berhasil, posisi papan terbaca!");
+            setTimeout(() => stopLiveDetection(), 800);
             break;
           }
         } else {
@@ -952,6 +954,20 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
                   <span className="text-xs text-red-400">{liveDetectError || "Gagal membaca papan."}</span>
                 )}
               </div>
+              {liveDetectFen && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (liveDetectFen) {
+                      applyNewInitialFen(liveDetectFen, "Posisi dari kamera live berhasil dikunci!");
+                      stopLiveDetection();
+                    }
+                  }}
+                  className="ctl ctl-sm w-full font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md flex items-center justify-center gap-1.5 cursor-pointer py-2"
+                >
+                  <IconCheck3D size={16} /> Kunci & Gunakan Posisi Ini
+                </button>
+              )}
               <button type="button" onClick={stopLiveDetection} className="ctl ctl-sm w-full font-bold">
                 Tutup Live Detection
               </button>

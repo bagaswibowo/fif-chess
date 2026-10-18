@@ -462,7 +462,18 @@ export async function POST(req: NextRequest) {
 
     // 1. Coba service lokal YOLO11 terlebih dahulu (instan di VPS)
     const yoloRes = await scanWithYolo11(image, prewarped);
-    if (yoloRes) return NextResponse.json(yoloRes);
+    if (yoloRes) {
+      if (yoloRes.ok) return NextResponse.json(yoloRes);
+      if (yoloRes.suggestedFen) {
+        return NextResponse.json({
+          ok: true,
+          fen: yoloRes.suggestedFen,
+          confidence: 0.80,
+          source: "yolo11-candidate",
+          needEdit: true,
+        });
+      }
+    }
 
     // 2. Coba service lokal Chesscog (instan di VPS)
     const cogRes = await scanWithChesscog(image, prewarped);
