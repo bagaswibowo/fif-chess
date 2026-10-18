@@ -14,7 +14,14 @@
     "hintPiece": "Menteri putih di h5.",
     "hintExplanation": "Menteri memukul bidak di f7 dengan perlindungan Gajah c4 untuk skakmat langsung.",
     "trickExplanation": "Tips Blokh: Titik f7/f2 sebelum rokade adalah titik terlemah di papan karena hanya dilindungi Raja.",
-    "xp": 50
+    "xp": 50,
+    "continuationLine": [
+      {
+        "san": "Qxf7#",
+        "badge": "great",
+        "desc": "Skakmat Scholar mutlak di langkah pertama!"
+      }
+    ]
   },
   {
     "id": "p02",
@@ -31,7 +38,34 @@
     "hintPiece": "Menteri putih di d1.",
     "hintExplanation": "Luncurkan Menteri ke h5 untuk skak. Bila ditutup g6, makan pion e5 sambil garpu Raja dan Benteng h8!",
     "trickExplanation": "Jebakan Damiano (1.e4 e5 2.Nf3 f6? 3.Nxe5! fxe5? 4.Qh5+ g6 5.Qxe5+ Qe7 6.Qxh8): Memajukan pion-f merusak pertahanan diagonal Raja secara fatal dan kehilangan Benteng bersih (+5 poin).",
-    "xp": 50
+    "xp": 50,
+    "continuationLine": [
+      {
+        "san": "Qh5+",
+        "badge": "brilliant",
+        "desc": "Menteri meluncur skak di diagonal e8-h5!"
+      },
+      {
+        "san": "g6",
+        "badge": "mistake",
+        "desc": "Lawan mencoba menutup skak dengan pion g6."
+      },
+      {
+        "san": "Qxe5+",
+        "badge": "best",
+        "desc": "Menteri memukul e5 skak Raja sekaligus membidik Benteng h8!"
+      },
+      {
+        "san": "Qe7",
+        "badge": "mistake",
+        "desc": "Lawan terpaksa menutup skak dengan Menteri."
+      },
+      {
+        "san": "Qxh8",
+        "badge": "best",
+        "desc": "Memukul Benteng h8! Unggul Benteng bersih (+5 Poin) & posisi menang total."
+      }
+    ]
   },
   {
     "id": "p03",
@@ -48,7 +82,44 @@
     "hintPiece": "Kuda putih di f3.",
     "hintExplanation": "Langkahkan Kuda f3 ke g5 untuk menambah ancaman ganda ke petak f7.",
     "trickExplanation": "Taktik Italia (Giuoco Piano): Koordinasi Gajah c4 + Kuda g5 mengeksploitasi titik terlemah f7 sebelum Raja Hitam sempat mengamankan diri lewat rokade.",
-    "xp": 100
+    "xp": 100,
+    "continuationLine": [
+      {
+        "san": "Ng5",
+        "badge": "brilliant",
+        "desc": "Kuda melompat ke g5, berkolaborasi dengan Gajah c4 mengancam titik lemah f7!"
+      },
+      {
+        "san": "d5",
+        "badge": "best",
+        "desc": "Lawan memajukan pion d5 untuk memblokir diagonal Gajah c4."
+      },
+      {
+        "san": "exd5",
+        "badge": "best",
+        "desc": "Pion e4 memukul d5! Gajah c4 Anda tetap aman dan Putih unggul pion."
+      },
+      {
+        "san": "Nxd5",
+        "badge": "blunder",
+        "desc": "Lawan ceroboh memukul balik pion d5 (masuk ke jebakan Fried Liver)."
+      },
+      {
+        "san": "Nxf7",
+        "badge": "brilliant",
+        "desc": "Fried Liver Attack: Kuda memukul f7 menggarpu Menteri d8 dan Benteng h8!"
+      },
+      {
+        "san": "Kxf7",
+        "badge": "mistake",
+        "desc": "Raja lawan terpaksa memukul Kuda Anda."
+      },
+      {
+        "san": "Qf3+",
+        "badge": "best",
+        "desc": "Menteri meluncur skak Raja f7 sekaligus mengincar Kuda d5 yang gantung! Menang mutlak."
+      }
+    ]
   },
   {
     "id": "p04",
@@ -65,7 +136,34 @@
     "hintPiece": "Kuda hitam di f6.",
     "hintExplanation": "Pukul pion e4 dengan Kuda hitam.",
     "trickExplanation": "Tips Blokh: Jika Putih membalas Nxe4, Hitam melangkah d7-d5 menggarpu Gajah dan Kuda putih.",
-    "xp": 100
+    "xp": 100,
+    "continuationLine": [
+      {
+        "san": "Nxe4",
+        "badge": "brilliant",
+        "desc": "Kuda memukul pion e4 untuk memancing pertukaran perwira!"
+      },
+      {
+        "san": "Nxe4",
+        "badge": "best",
+        "desc": "Kuda putih memukul balik di e4."
+      },
+      {
+        "san": "d5",
+        "badge": "best",
+        "desc": "Center Fork Trick: Majukan pion d5 menggarpu Gajah c4 dan Kuda e4!"
+      },
+      {
+        "san": "Bd3",
+        "badge": "best",
+        "desc": "Gajah putih mundur ke d3."
+      },
+      {
+        "san": "dxe4",
+        "badge": "best",
+        "desc": "Pion memukul Kuda e4! Mengembalikan perwira dengan dominasi pusat catur."
+      }
+    ]
   },
   {
     "id": "p05",
@@ -82,7 +180,24 @@
     "hintPiece": "Gajah putih di c4.",
     "hintExplanation": "Pukul pion f7 dengan Gajah (Bxf7+). Gajah aman dijaga Kuda e5, memaksa Raja ke e7.",
     "trickExplanation": "Jebakan Legal (1.Bxf7+ Ke7 2.Nd5# Skakmat): Raja Hitam dilarang memakan Gajah karena dikawal Kuda e5. Begitu Raja lari ke e7, Kuda c3 melompat ke d5 memberikan skakmat mutlak!",
-    "xp": 175
+    "xp": 175,
+    "continuationLine": [
+      {
+        "san": "Bxf7+",
+        "badge": "brilliant",
+        "desc": "Gajah memukul f7 skak! Gajah aman dijaga Kuda e5, memaksa Raja lawan lari."
+      },
+      {
+        "san": "Ke7",
+        "badge": "mistake",
+        "desc": "Raja lawan dilarang memakan Gajah dan dipaksa melangkah ke e7."
+      },
+      {
+        "san": "Nd5#",
+        "badge": "great",
+        "desc": "Légall's Mate: Kuda c3 melompat ke d5 memberikan SKAKMAT MUTLAK!"
+      }
+    ]
   },
   {
     "id": "p06",

@@ -318,9 +318,45 @@ function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w"
   };
 }
 
-// Menghitung rangkaian taktik dinamis sampai benar-benar tuntas (skakmat / merebut perwira besar / kemenangan mutlak)
-function computeFullContinuationSequence(fen: string, solutionSan: string, maxPlies = 10) {
+// Menghitung rangkaian taktik dinamis sampai tuntas menggunakan jalur resmi Master Buku (jika ada)
+function computeFullContinuationSequence(
+  fen: string,
+  solutionSan: string,
+  continuationLineOrMaxPlies?: any[] | number,
+  maxPlies = 10
+) {
+  const continuationLine = Array.isArray(continuationLineOrMaxPlies) ? continuationLineOrMaxPlies : undefined;
+  if (typeof continuationLineOrMaxPlies === "number") {
+    maxPlies = continuationLineOrMaxPlies;
+  }
   const c = new Chess(fen);
+
+  // Jika puzzle memiliki jalur taktik resmi Grandmaster (continuationLine), gunakan jalur resmi tersebut 100%!
+  if (Array.isArray(continuationLine) && continuationLine.length > 0) {
+    const sequence: any[] = [];
+    for (const step of continuationLine) {
+      if (c.isGameOver()) break;
+      let m = null;
+      try {
+        m = c.move(step.san);
+      } catch {
+        m = null;
+      }
+      if (!m) break;
+      sequence.push({
+        san: m.san,
+        uci: m.from + m.to + (m.promotion || ""),
+        from: m.from,
+        to: m.to,
+        captured: m.captured,
+        isCheckmate: c.isCheckmate(),
+        badge: (step.badge as MoveBadgeType) || "best",
+        desc: step.desc,
+      });
+    }
+    if (sequence.length > 0) return sequence;
+  }
+
   let m1 = null;
   try {
     m1 = c.move(solutionSan);
@@ -378,10 +414,9 @@ function computeFullContinuationSequence(fen: string, solutionSan: string, maxPl
       badge: badgeType,
     });
 
-    // Syarat Tuntas Alami: Jika skakmat atau pemain telah merebut perwira besar (Menteri/Benteng/Perwira)
     if (c.isCheckmate()) break;
     if (!isBot && m.captured && (m.captured === "r" || m.captured === "q" || m.captured === "b" || m.captured === "n") && p >= 3) {
-      break; // Trik tuntas: perwira sasaran berhasil direbut!
+      break;
     }
   }
   return sequence;
@@ -510,14 +545,20 @@ export function LearningHub({ lang = "id" }: Props) {
             return;
           }
 
-          // Prioritaskan respons realistis: blokade skak / serang balik
-          opponentMoves.sort((a, b) => {
-            if (a.san.includes("x")) return -10;
-            if (a.piece === "p" && (a.to === "g6" || a.to === "d5" || a.to === "e6")) return -5;
-            return 0;
-          });
-
-          const oppM = opponentMoves[0];
+          // Gunakan langkah balasan resmi Grandmaster dari continuationLine bila tersedia
+          const cLine = (puzzle as any).continuationLine;
+          let oppM = opponentMoves[0];
+          if (Array.isArray(cLine) && cLine.length > 1) {
+            const planned = opponentMoves.find((m: any) => m.san === cLine[1].san);
+            if (planned) oppM = planned;
+          } else {
+            opponentMoves.sort((a, b) => {
+              if (a.san.includes("x")) return -10;
+              if (a.piece === "p" && (a.to === "g6" || a.to === "d5" || a.to === "e6")) return -5;
+              return 0;
+            });
+            oppM = opponentMoves[0];
+          }
           c.move(oppM.san);
           setFen(c.fen());
 
