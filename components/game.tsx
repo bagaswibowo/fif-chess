@@ -1,6 +1,6 @@
 "use client";
 
-import { classifyMove, createSquareBadgeRenderer, type MoveBadge } from "@/lib/chess-move-badges";
+import { classifyMove, createSquareBadgeRenderer, ChessBadgeLegend, type MoveBadge } from "@/lib/chess-move-badges";
 import { Copy, Check, Download, Share2 } from "lucide-react";
 import { DockModals, type DockModalType } from "@/components/dock-modals";
 
@@ -916,6 +916,7 @@ export function Game() {
             }}
           />
         </div>
+        <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100vw-2.5rem),calc(100dvh-190px))]" />
         <div className="text-sm font-black">
           {m.over ? (
             <span className="text-amber-400">⏹ Pertandingan Selesai — {m.outcomeLabel || "selesai"}</span>
@@ -1368,6 +1369,7 @@ export function Game() {
                       }}
                     />
                   </div>
+                  <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))]" />
                 </div>
               </div>
 

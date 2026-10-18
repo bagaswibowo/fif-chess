@@ -1,6 +1,6 @@
 "use client";
 
-import { classifyMove, createSquareBadgeRenderer, type MoveBadge } from "@/lib/chess-move-badges";
+import { classifyMove, createSquareBadgeRenderer, ChessBadgeLegend, type MoveBadge } from "@/lib/chess-move-badges";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { BoardControls } from "@/components/board-controls";
 import { NotationTable } from "@/components/notation-table";

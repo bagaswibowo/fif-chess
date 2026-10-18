@@ -136,13 +136,12 @@ export function classifyMove(
     const targetVal = targetPiece ? (PIECE_VALS[targetPiece.type] || 0) : 0;
 
     // Jika masuk petak diserang, tidak dikawal, dan bukan skak balik: BLUNDER BESAR!
-    if (isAttacked && !isDefended && !moveSan.includes("+") && moverVal > targetVal) {
+    if (isAttacked && !isDefended && moverVal > targetVal + 100) {
       return BADGE_CONFIGS.blunder;
     }
 
     // Jika dikawal tapi diserang pion lawan (perwira mahal dimakan pion murah): MISTAKE / BLUNDER
-    if (moverVal >= 500 && isAttacked && !moveSan.includes("+") && targetVal < 300) {
-      // Cek apakah ada pion lawan yang menyerang petak ini
+    if (moverVal >= 500 && isAttacked && targetVal < 300) {
       return BADGE_CONFIGS.blunder;
     }
   }
@@ -260,4 +259,42 @@ export function createSquareBadgeRenderer(
       </div>
     );
   };
+}
+
+/**
+ * Komponen Legenda Badge ala Chess.com:
+ * Menampilkan baris indikator (!! Brilian, ✓ Terbaik, 📖 Buku, ?? Blunder)
+ * yang dipasang di bawah papan catur pada semua mode.
+ */
+export function ChessBadgeLegend({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`mt-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 shadow-sm ${className}`}
+    >
+      <div className="flex items-center gap-1.5">
+        <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50 shadow-sm">
+          !!
+        </span>
+        <span className="font-bold text-white text-[11px]">Brilian</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center font-black text-[9px] border border-white/50 shadow-sm">
+          ✓
+        </span>
+        <span className="font-medium text-[11px]">Terbaik</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="w-4 h-4 rounded-full bg-[#d97706] text-white flex items-center justify-center font-black text-[9px] border border-white/50 shadow-sm">
+          📖
+        </span>
+        <span className="font-medium text-[11px]">Buku</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="w-4 h-4 rounded-full bg-[#dc2626] text-white flex items-center justify-center font-black text-[9px] border border-white/50 shadow-sm">
+          ??
+        </span>
+        <span className="font-medium text-[11px]">Blunder</span>
+      </div>
+    </div>
+  );
 }

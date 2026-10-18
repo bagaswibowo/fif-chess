@@ -1,6 +1,6 @@
 "use client";
 
-import { classifyMove, createSquareBadgeRenderer, type MoveBadge } from "@/lib/chess-move-badges";
+import { classifyMove, createSquareBadgeRenderer, ChessBadgeLegend, type MoveBadge } from "@/lib/chess-move-badges";
 // AI vs Engine Catur Arena (v2.0)
 // Fitur:
 // 1. Label resmi "AI vs Engine Catur" dengan pemilih engine cepat.
