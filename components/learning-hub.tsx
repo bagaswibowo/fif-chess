@@ -286,8 +286,8 @@ function analyzeMoveTactics(fen: string, fromSq: string, toSq: string, turn: "w"
   };
 }
 
-// Pre-computes full continuation line (up to 8 plies / 4 moves each) without freezing
-function computeFullContinuationSequence(fen: string, solutionSan: string, maxPlies = 8) {
+// Menghitung rangkaian taktik dinamis sampai benar-benar tuntas (skakmat / merebut perwira besar / kemenangan mutlak)
+function computeFullContinuationSequence(fen: string, solutionSan: string, maxPlies = 10) {
   const c = new Chess(fen);
   let m1 = null;
   try {
@@ -317,7 +317,7 @@ function computeFullContinuationSequence(fen: string, solutionSan: string, maxPl
     const moves = c.moves({ verbose: true });
     if (moves.length === 0) break;
 
-    // Tactical prioritization: Checkmate -> High Value Capture -> Check -> Center
+    // Prioritas AI: Skakmat -> Makan Perwira Terbesar -> Skak
     moves.sort((a, b) => {
       if (a.san.includes("#")) return -10000;
       if (b.san.includes("#")) return 10000;
@@ -331,10 +331,10 @@ function computeFullContinuationSequence(fen: string, solutionSan: string, maxPl
 
     const chosen = moves[0];
     const m = c.move(chosen);
-    const isBot = p % 2 === 1; // 1 = Bot (Opponent), 2 = Player, etc.
+    const isBot = p % 2 === 1; // 1 = Bot (Opponent), 2 = Player
     const badgeType: MoveBadgeType = isBot
       ? (m.captured ? "mistake" : "blunder")
-      : (m.captured || m.san.includes("+") ? "best" : "great");
+      : (m.captured ? "best" : m.san.includes("+") ? "great" : "best");
 
     sequence.push({
       san: m.san,
@@ -345,6 +345,12 @@ function computeFullContinuationSequence(fen: string, solutionSan: string, maxPl
       isCheckmate: c.isCheckmate(),
       badge: badgeType,
     });
+
+    // Syarat Tuntas Alami: Jika skakmat atau pemain telah merebut perwira besar (Menteri/Benteng/Perwira)
+    if (c.isCheckmate()) break;
+    if (!isBot && m.captured && (m.captured === "r" || m.captured === "q" || m.captured === "b" || m.captured === "n") && p >= 3) {
+      break; // Trik tuntas: perwira sasaran berhasil direbut!
+    }
   }
   return sequence;
 }
@@ -709,13 +715,13 @@ export function LearningHub({ lang = "id" }: Props) {
     squareStyles[to] = { boxShadow: "inset 0 0 0 3px var(--primary)", backgroundColor: "rgba(129, 182, 76, 0.35)" };
   }
 
-  // Tanda Hijau di Papan:
-  if (stage !== "initial") {
+  // Tanda Hijau di Papan: OTOMATIS DIBERSIHKAN saat langkah/trik selesai (stage === "completed")
+  if (stage !== "initial" && stage !== "completed") {
     squareStyles[from] = { backgroundColor: "rgba(34, 197, 94, 0.25)" };
     squareStyles[to] = { backgroundColor: "rgba(34, 197, 94, 0.45)", boxShadow: "inset 0 0 0 2px rgb(34, 197, 94)" };
   }
 
-  if (tacticalInfo && (stage !== "initial" || hint >= 2)) {
+  if (tacticalInfo && stage !== "completed" && (stage !== "initial" || hint >= 2)) {
     for (const t of tacticalInfo.targets) {
       squareStyles[t.to] = {
         backgroundColor: "rgba(34, 197, 94, 0.45)",
@@ -725,18 +731,20 @@ export function LearningHub({ lang = "id" }: Props) {
     }
   }
 
-  // Panah hijau di papan
+  // Panah hijau di papan: DIBERSIHKAN saat puzzle tuntas (stage === "completed")
   const arrows: { startSquare: string; endSquare: string; color: string }[] = [];
-  if (hint >= 3 && stage === "initial") {
-    arrows.push({ startSquare: from, endSquare: to, color: "rgb(34, 197, 94)" });
-  }
-
-  if (tacticalInfo && (stage !== "initial" || hint >= 2)) {
-    for (const t of tacticalInfo.targets) {
-      arrows.push({ startSquare: t.from, endSquare: t.to, color: "rgb(34, 197, 94)" });
+  if (stage !== "completed") {
+    if (hint >= 3 && stage === "initial") {
+      arrows.push({ startSquare: from, endSquare: to, color: "rgb(34, 197, 94)" });
     }
-    for (const coord of tacticalInfo.coordinatingAttackers) {
-      arrows.push({ startSquare: coord.from, endSquare: coord.to, color: "rgba(34, 197, 94, 0.85)" });
+
+    if (tacticalInfo && (stage !== "initial" || hint >= 2)) {
+      for (const t of tacticalInfo.targets) {
+        arrows.push({ startSquare: t.from, endSquare: t.to, color: "rgb(34, 197, 94)" });
+      }
+      for (const coord of tacticalInfo.coordinatingAttackers) {
+        arrows.push({ startSquare: coord.from, endSquare: coord.to, color: "rgba(34, 197, 94, 0.85)" });
+      }
     }
   }
 
@@ -1113,9 +1121,9 @@ export function LearningHub({ lang = "id" }: Props) {
                 <button
                   className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--border)] text-neutral-400 hover:text-white cursor-pointer"
                   onClick={handleSolveMultiStep}
-                  title="Mainkan demonstrasi kombinasi berantai 3+ langkah otomatis dengan badge catur"
+                  title="Mainkan demonstrasi kombinasi taktis dinamis sampai tuntas (skakmat / untung perwira)"
                 >
-                  Buka solusi (Rantai 3 Langkah)
+                  Buka solusi (Rangkaian Tuntas)
                 </button>
               </>
             )}
