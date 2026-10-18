@@ -965,7 +965,7 @@ export function Game() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen max-h-screen overflow-hidden bg-[var(--background)] text-white select-none">
+    <div className="app-shell flex flex-col md:flex-row h-screen max-h-screen overflow-hidden bg-[var(--background)] text-white select-none">
       {/* MOBILE TOP BAR (Hidden on Desktop) */}
       <header className="mobile-safe-top flex md:hidden items-center justify-between px-3.5 pb-2 bg-[var(--card)] border-b border-[var(--border)] shrink-0 z-30 shadow-md">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick("play")}>
@@ -999,11 +999,11 @@ export function Game() {
       </header>
 
       {/* DESKTOP LEFT SIDEBAR (Hidden on Mobile) */}
-      <aside className="hidden md:flex md:w-56 lg:w-60 bg-[var(--card)] border-r border-[var(--border)] flex-col justify-between p-2.5 lg:p-3 shrink-0 h-screen overflow-y-auto select-none">
+      <aside className="app-sidebar hidden md:flex md:w-[15.5rem] lg:w-[16.5rem] bg-[var(--card)] border-r border-[var(--border)] flex-col justify-between p-3 lg:p-3.5 shrink-0 h-screen overflow-y-auto select-none">
         <div>
           {/* Logo with 3D Pawn */}
-          <div className="flex items-center gap-3 px-3 py-3 mb-2 cursor-pointer" onClick={() => handleNavClick("play")}>
-            <div className="w-9 h-9 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center shadow-lg">
+          <div className="flex items-center gap-3 px-2 py-3 mb-4 cursor-pointer" onClick={() => handleNavClick("play")}>
+            <div className="w-10 h-10 rounded-xl bg-[var(--primary-strong)] border border-[var(--primary)]/40 flex items-center justify-center shadow-lg">
               <IconPawn3D size={26} />
             </div>
             <div>
@@ -1015,7 +1015,7 @@ export function Game() {
           </div>
 
           {/* Navigation Menu with 3D Icons */}
-          <nav className="space-y-1.5">
+          <nav className="space-y-1" aria-label="Navigasi utama">
             <button
               onClick={() => handleNavClick("play")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
@@ -1185,7 +1185,7 @@ export function Game() {
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col p-2 md:p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-3 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
+      <main className="app-main flex-1 flex flex-col p-2.5 md:p-5 xl:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
         {!currentUser ? (
           <div className="w-full max-w-lg mx-auto p-3 sm:p-6 min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center overflow-y-auto">
             <div className="w-full max-w-md mx-auto">
@@ -1250,9 +1250,9 @@ export function Game() {
         {navTab === "admin" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><AdminPanel user={currentUser} /></div>}
 
         {navTab === "play" && (
-          <div className="lg:h-full lg:max-h-full lg:min-h-0 lg:grid lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-3 items-start w-full min-h-0">
+          <div className="play-layout lg:h-full lg:max-h-full lg:min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem] gap-4 items-start w-full min-h-0 max-w-[1320px] mx-auto">
             {/* CENTER CHESSBOARD ARENA: Desain Seragam Mengikuti Layout Trik & Quest */}
-            <div className="rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-start items-center">
+            <div className="board-card rounded-2xl p-2.5 md:p-3 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-start items-center">
               {/* 1. Toolbar Kontrol Papan */}
               <BoardControls
                 variant="toolbar"

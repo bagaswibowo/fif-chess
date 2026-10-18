@@ -46,6 +46,7 @@
   /* Backgrounds: Chess.com Charcoal & Slate */
   --background: #1a1714;
   --surface: #211f1d;
+  --surface-hover: #2a2825;
   --card: #262421;
   --foreground: #ffffff;
   --card-foreground: #ffffff;
@@ -423,6 +424,93 @@ select.field { padding-right: 2rem; }
 /* Amankan area notch iPhone (header) & home bar (nav bawah) */
 .mobile-safe-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
 .mobile-safe-bottom { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+
+/* Application shell: calm navigation chrome and a focused play surface. */
+.app-shell {
+  background:
+    radial-gradient(circle at 70% -10%, rgba(129, 182, 76, 0.08), transparent 32rem),
+    var(--background);
+}
+
+.app-sidebar {
+  background: rgba(38, 36, 33, 0.92);
+  box-shadow: 12px 0 32px rgba(0, 0, 0, 0.12);
+}
+
+.app-sidebar nav button {
+  min-height: 44px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted-foreground);
+  box-shadow: none;
+}
+
+.app-sidebar nav button:hover:not(:disabled) {
+  background: var(--muted);
+  border-color: transparent;
+  color: var(--foreground);
+}
+
+.app-sidebar nav button[aria-current="page"],
+.app-sidebar nav button.bg-\[var\(--primary-strong\)\] {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+  color: var(--foreground);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.app-main {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 18rem);
+}
+
+.play-layout {
+  align-content: start;
+}
+
+.board-card {
+  background: linear-gradient(145deg, rgba(48, 46, 43, 0.96), rgba(33, 31, 29, 0.98));
+  border-color: rgba(74, 71, 64, 0.9);
+}
+
+.board-card .aspect-square {
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+}
+
+@media (min-width: 1024px) {
+  .play-layout {
+    height: 100%;
+  }
+
+  .play-layout > .board-card {
+    max-height: 100%;
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-shell {
+    min-height: 100dvh;
+    height: auto;
+    max-height: none;
+  }
+
+  .app-main {
+    min-height: calc(100dvh - 4rem);
+    overflow: visible;
+  }
+
+  .play-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .board-card {
+    border-radius: 1rem;
+    padding: 0.625rem;
+  }
+}
 
 /* Pastikan notasi koordinat angka (1-8) dan huruf (a-h) selalu tebal, kontras tinggi, dan tidak terpotong */
 [data-square] > span,
