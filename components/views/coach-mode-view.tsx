@@ -1,6 +1,6 @@
 "use client";
 
-
+import { classifyMove, createSquareBadgeRenderer, type MoveBadge } from "@/lib/chess-move-badges";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { BoardControls } from "@/components/board-controls";
 import { NotationTable } from "@/components/notation-table";
@@ -82,6 +82,7 @@ export function CoachModeView({ lang = "id" }: Props) {
   const [fen, setFen] = useState(() => new Chess().fen());
   const [history, setHistory] = useState<string[]>([]);
   const [playerSide, setPlayerSide] = useState<"white" | "black">("white");
+  const [moveBadges, setMoveBadges] = useState<Record<string, MoveBadge>>({});
   const [sideChoice, setSideChoice] = useState<"white" | "black" | "random">("white");
   const [sparring, setSparring] = useState<EngineId>("jev-fly");
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
@@ -265,6 +266,8 @@ export function CoachModeView({ lang = "id" }: Props) {
     setChess(c);
     setFen(c.fen());
     setHistory(h => [...h, move.san]);
+    const coachBadge = classifyMove(chess.fen(), userUci, move.san, { isEngineBest: isBest });
+    setMoveBadges({ [move.to]: coachBadge });
     const out = describeOutcome(c);
     setOutcome(out);
 
@@ -495,6 +498,7 @@ export function CoachModeView({ lang = "id" }: Props) {
                   key={`coach-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`}
                   options={{
                     id: `coach-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`,
+                    squareRenderer: createSquareBadgeRenderer(moveBadges, fen, squareStyles),
                     position: fen,
                     boardOrientation: boardOrientation,
                     allowDragging: isPlayerTurn && !thinking,

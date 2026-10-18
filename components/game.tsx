@@ -1,4 +1,6 @@
 "use client";
+
+import { classifyMove, createSquareBadgeRenderer, type MoveBadge } from "@/lib/chess-move-badges";
 import { Copy, Check, Download, Share2 } from "lucide-react";
 import { DockModals, type DockModalType } from "@/components/dock-modals";
 
@@ -155,6 +157,7 @@ export function Game() {
   const [error, setError] = useState<JevError | null>(null);
   const [thinking, setThinking] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [moveBadges, setMoveBadges] = useState<Record<string, MoveBadge>>({});
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
   const [navTab, setNavTab] = useState<NavTab>("play");
   const [coachSubTab, setCoachSubTab] = useState<CoachSubTab>("coach");
@@ -420,6 +423,9 @@ export function Game() {
           // Fallback if load fails
         }
         setFen(payload.fen);
+        const aiToSq = payload.uci!.slice(2, 4);
+        const aiBadge = classifyMove(position, payload.uci!, payload.san!, { isEngineBest: true });
+        setMoveBadges({ [aiToSq]: aiBadge });
         setMoves((current) => [
           ...current,
           {
@@ -620,9 +626,12 @@ export function Game() {
       const legal = findLegalMove(chess, from, to, promotion);
       if (!legal) return false;
 
+      const fenBefore = chess.fen();
       const applied = applyUci(chess, legal.uci);
       const nextFen = chess.fen();
       setFen(nextFen);
+      const badge = classifyMove(fenBefore, legal.uci, applied.san);
+      setMoveBadges({ [legal.to]: badge });
       setSelectedSquare(null);
       setMoves((current) => [
         ...current,
@@ -1323,6 +1332,7 @@ export function Game() {
                           top: "3px",
                           left: "4px",
                         },
+                        squareRenderer: createSquareBadgeRenderer(moveBadges, fen, squareStyles),
                         onSquareClick: ({ square }) => {
                           if (!humanToMove) return;
                           if (selectedSquare) {

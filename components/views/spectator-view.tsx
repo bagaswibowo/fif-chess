@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyMove, createSquareBadgeRenderer, type MoveBadge } from "@/lib/chess-move-badges";
 // AI vs Engine Catur Arena (v2.0)
 // Fitur:
 // 1. Label resmi "AI vs Engine Catur" dengan pemilih engine cepat.
@@ -157,6 +158,7 @@ export function SpectatorView({
   const [commentary, setCommentary] = useState<Commentary | null>(null);
   const pendingPredictionRef = useRef<{ uci: string; san: string } | null>(null);
   const [predictionComparison, setPredictionComparison] = useState<string | null>(null);
+  const [moveBadges, setMoveBadges] = useState<Record<string, MoveBadge>>({});
 
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
   const [fullscreenSpectator, setFullscreenSpectator] = useState(false);
@@ -312,6 +314,10 @@ export function SpectatorView({
       } else {
         setPredictionComparison(null);
       }
+
+      const specTo = data.uci.slice(2, 4);
+      const specBadge = classifyMove(currentFen, data.uci, data.san, { isEngineBest: true });
+      setMoveBadges({ [specTo]: specBadge });
 
       // Simpan prediksi respons lawan dari Stockfish untuk perbandingan berikutnya
       if (data.prediction?.uci && data.prediction?.san) {
@@ -771,6 +777,7 @@ export function SpectatorView({
                   key={`spectator-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`}
                   options={{
                     id: `spectator-board-${boardThemeId}-${pieceThemeId}`,
+                    squareRenderer: createSquareBadgeRenderer(moveBadges, currentFen, squareStyles),
                     position: currentFen,
                     boardOrientation: boardOrientation,
                     allowDragging: false,
