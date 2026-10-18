@@ -269,31 +269,32 @@ export function createSquareBadgeRenderer(
 export function ChessBadgeLegend({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`mt-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 shadow-sm ${className}`}
+      className={`h-6 py-0.5 px-2.5 rounded-lg bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border)] flex items-center justify-between text-[11px] text-neutral-300 gap-2 shrink-0 ${className}`}
+      style={{ minHeight: "24px" }}
     >
-      <div className="flex items-center gap-1.5">
-        <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50 shadow-sm">
+      <div className="flex items-center gap-1">
+        <span className="w-3.5 h-3.5 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[8px] border border-white/60 shadow-xs">
           !!
         </span>
-        <span className="font-bold text-white text-[11px]">Brilian</span>
+        <span className="font-bold text-white text-[10px]">Brilian</span>
       </div>
-      <div className="flex items-center gap-1.5">
-        <span className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center font-black text-[9px] border border-white/50 shadow-sm">
+      <div className="flex items-center gap-1">
+        <span className="w-3.5 h-3.5 rounded-full bg-[#16a34a] text-white flex items-center justify-center font-black text-[8px] border border-white/60 shadow-xs">
           ✓
         </span>
-        <span className="font-medium text-[11px]">Terbaik</span>
+        <span className="font-medium text-neutral-200 text-[10px]">Terbaik</span>
       </div>
-      <div className="flex items-center gap-1.5">
-        <span className="w-4 h-4 rounded-full bg-[#d97706] text-white flex items-center justify-center font-black text-[9px] border border-white/50 shadow-sm">
+      <div className="flex items-center gap-1">
+        <span className="w-3.5 h-3.5 rounded-full bg-[#d97706] text-white flex items-center justify-center font-black text-[8px] border border-white/60 shadow-xs">
           📖
         </span>
-        <span className="font-medium text-[11px]">Buku</span>
+        <span className="font-medium text-neutral-200 text-[10px]">Buku</span>
       </div>
-      <div className="flex items-center gap-1.5">
-        <span className="w-4 h-4 rounded-full bg-[#dc2626] text-white flex items-center justify-center font-black text-[9px] border border-white/50 shadow-sm">
+      <div className="flex items-center gap-1">
+        <span className="w-3.5 h-3.5 rounded-full bg-[#dc2626] text-white flex items-center justify-center font-black text-[8px] border border-white/60 shadow-xs">
           ??
         </span>
-        <span className="font-medium text-[11px]">Blunder</span>
+        <span className="font-medium text-neutral-200 text-[10px]">Blunder</span>
       </div>
     </div>
   );
