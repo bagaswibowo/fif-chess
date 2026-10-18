@@ -470,7 +470,7 @@ export function LearningHub({ lang = "id" }: Props) {
     return false;
   };
 
-  // MULTI-STEP SOLVER: Menjalankan minimal 2x gerakan kawan secara berantai!
+  // DEEP MULTI-STEP SOLVER: Menjalankan kombinasi penuh minimal 3 langkah kawan secara berantai!
   const handleSolveMultiStep = async () => {
     if (!puzzle) return;
     try {
@@ -480,12 +480,13 @@ export function LearningHub({ lang = "id" }: Props) {
       const move1 = c.move({ from, to, promotion: puzzle.solutionUci[4] || "q" });
       if (!move1) return;
 
-      // Langkah 1 Kawan
+      // --- LANGKAH 1 KAWAN (Inisiasi Taktik) ---
       setFen(c.fen());
       setStatus("correct");
       setHint(2);
       const info1 = analyzeMoveTactics(puzzle.fen, from, to, puzzle.turn);
       if (info1) setTacticalInfo(info1);
+      setCaptureMsg(`⚡ Langkah 1: ${move1.san} mengunci inisiatif dan mengancam sasaran lawan.`);
 
       if (c.isCheckmate() || c.isGameOver()) {
         setStage("completed");
@@ -493,45 +494,65 @@ export function LearningHub({ lang = "id" }: Props) {
         return;
       }
 
-      // Langkah 1 Lawan (Respon Bertahan)
+      // --- LANGKAH 1 LAWAN (Respon Bertahan) ---
       setStage("opponent_thinking");
       setTimeout(async () => {
         const reply1 = await getEngineMove(c.fen());
-        if (!reply1) {
-          setStage("continuation");
-          return;
-        }
+        if (!reply1) { setStage("continuation"); return; }
         c.move(reply1.san);
         setFen(c.fen());
+        if (c.isGameOver()) { setStage("completed"); return; }
 
-        if (c.isGameOver()) {
-          setStage("completed");
-          return;
-        }
-
-        // Langkah 2 Kawan (Eksekusi Taktis Lanjutan / Pemukulan Bidak)
+        // --- LANGKAH 2 KAWAN (Penetrasi Taktis / Pemukulan Bidak) ---
         setTimeout(async () => {
-          const followUp = await getEngineMove(c.fen());
-          if (followUp) {
-            const m2 = c.move(followUp.san);
-            if (m2) {
-              setFen(c.fen());
-              const info2 = analyzeMoveTactics(c.fen(), m2.from, m2.to, puzzle.turn);
-              if (info2) setTacticalInfo(info2);
+          const followUp2 = await getEngineMove(c.fen());
+          if (!followUp2) { setStage("continuation"); return; }
+          const m2 = c.move(followUp2.san);
+          if (!m2) { setStage("continuation"); return; }
+          setFen(c.fen());
+          const info2 = analyzeMoveTactics(c.fen(), m2.from, m2.to, puzzle.turn);
+          if (info2) setTacticalInfo(info2);
 
-              if (m2.captured) {
-                const capName = PIECE_NAMES[m2.captured] || "Perwira";
-                setCaptureMsg(`🎯 Langkah ke-2 Tuntas: Berhasil memakan ${capName} di ${m2.to.toUpperCase()}! Trik sukses terlaksana.`);
-              } else if (c.isCheckmate()) {
-                setCaptureMsg("🎉 Skakmat! Rangkaian 2-langkah tuntas menumbangkan lawan.");
-              } else {
-                setCaptureMsg(`✨ Eksekusi ${m2.san} sukses melumpuhkan pertahanan lawan.`);
-              }
-            }
+          const cap2 = m2.captured ? ` (Memakan ${PIECE_NAMES[m2.captured] || "Perwira"} di ${m2.to.toUpperCase()})` : "";
+          setCaptureMsg(`⚔️ Langkah 2: ${m2.san}${cap2} menghancurkan koordinasi pertahanan lawan.`);
+
+          if (c.isCheckmate() || c.isGameOver()) {
+            setStage("completed");
+            setCaptureMsg(`🎉 Skakmat di Langkah 2! Rangkaian taktik sukses menuntaskan lawan.`);
+            return;
           }
-          setStage(c.isGameOver() ? "completed" : "continuation");
-        }, 800);
-      }, 700);
+
+          // --- LANGKAH 2 LAWAN (Upaya Terakhir Lawan) ---
+          setStage("opponent_thinking");
+          setTimeout(async () => {
+            const reply2 = await getEngineMove(c.fen());
+            if (!reply2) { setStage("continuation"); return; }
+            c.move(reply2.san);
+            setFen(c.fen());
+            if (c.isGameOver()) { setStage("completed"); return; }
+
+            // --- LANGKAH 3 KAWAN (Eksekusi Puncak / Keuntungan Mutlak) ---
+            setTimeout(async () => {
+              const followUp3 = await getEngineMove(c.fen());
+              if (followUp3) {
+                const m3 = c.move(followUp3.san);
+                if (m3) {
+                  setFen(c.fen());
+                  const info3 = analyzeMoveTactics(c.fen(), m3.from, m3.to, puzzle.turn);
+                  if (info3) setTacticalInfo(info3);
+
+                  const cap3 = m3.captured ? ` (Memakan ${PIECE_NAMES[m3.captured] || "Perwira"} di ${m3.to.toUpperCase()})` : "";
+                  const finMsg = c.isCheckmate()
+                    ? `🎉 Skakmat Sempurna di Langkah 3 (${m3.san})! Lawan lumpuh total.`
+                    : `🏆 Kombinasi 3 Langkah Tuntas: ${m3.san}${cap3}! Posisi menang mutlak (+materi & kontrol papan penuh).`;
+                  setCaptureMsg(finMsg);
+                }
+              }
+              setStage(c.isGameOver() ? "completed" : "continuation");
+            }, 750);
+          }, 650);
+        }, 700);
+      }, 600);
     } catch {}
   };
 
@@ -1044,9 +1065,9 @@ export function LearningHub({ lang = "id" }: Props) {
                 <button
                   className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--border)] text-neutral-400 hover:text-white cursor-pointer"
                   onClick={handleSolveMultiStep}
-                  title="Mainkan demonstrasi berantai 2 langkah otomatis"
+                  title="Mainkan demonstrasi kombinasi berantai 3+ langkah otomatis"
                 >
-                  Buka solusi (2 Langkah)
+                  Buka solusi (Rantai 3 Langkah)
                 </button>
               </>
             )}
