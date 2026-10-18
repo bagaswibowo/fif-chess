@@ -17,42 +17,42 @@ export const BADGE_CONFIGS: Record<MoveBadgeType, MoveBadge> = {
     label: "!!",
     bg: "#06b6d4", // Cyan
     color: "#ffffff",
-    desc: "Brilian (Pengorbanan Taktis Jenius)",
+    desc: "Brilian (Pengorbanan Taktis Jenius & Inisiatif Serang)",
   },
   great: {
     type: "great",
     label: "★",
     bg: "#0284c7", // Sky blue
     color: "#ffffff",
-    desc: "Luar Biasa (Satu-satunya Langkah Menang)",
+    desc: "Luar Biasa (Langkah Kunci Skakmat / Garpu Kemenangan)",
   },
   best: {
     type: "best",
     label: "✓",
     bg: "#16a34a", // Green
     color: "#ffffff",
-    desc: "Langkah Terbaik (Best Move)",
+    desc: "Langkah Terbaik (Best Move Sesuai Rekomendasi Mesin)",
   },
   book: {
     type: "book",
     label: "📖",
     bg: "#d97706", // Amber
     color: "#ffffff",
-    desc: "Teori Buku Pembukaan (Book Move)",
+    desc: "Teori Buku Pembukaan Resmi (ECO Book Move)",
   },
   blunder: {
     type: "blunder",
     label: "??",
     bg: "#dc2626", // Red
     color: "#ffffff",
-    desc: "Blunder Fatal (Kehilangan Materi)",
+    desc: "Blunder Fatal (Menggantung Bidak / Membuka Celah Skakmat)",
   },
   mistake: {
     type: "mistake",
     label: "?",
     bg: "#ea580c", // Orange
     color: "#ffffff",
-    desc: "Ketidaktelitian (Mistake)",
+    desc: "Ketidaktelitian (Mistake - Melemahkan Pertahanan)",
   },
 };
 
@@ -65,9 +65,17 @@ const PIECE_VALS: Record<string, number> = {
   k: 20000,
 };
 
+// Langkah-langkah pembukaan teori standar (ECO Master Opening Book)
+const COMMON_BOOK_MOVES = new Set([
+  "e2e4", "e7e5", "d2d4", "d7d5", "c2c4", "c7c5", "g1f3", "g8f6",
+  "b1c3", "b8c6", "f1c4", "f8c5", "f1b5", "f8b4", "e1g1", "e8g8",
+  "c2c3", "d2d3", "d7d6", "g2g3", "g7g6", "c8g4", "c1g5", "a2a3",
+  "a7a6", "c8e6", "c1e3", "d8e7", "d1e2", "d8c7", "d1c2"
+]);
+
 /**
- * Mengklasifikasikan kualitas langkah catur ala Chess.com:
- * 📖 Book, ‼️ Brilliant, ⭐️ Great, 🟢 Best, ⚠️ Mistake, ❌ Blunder
+ * Mesin Analisis Kualitas Langkah Catur Real-time:
+ * Mengombinasikan Stockfish Evaluation + Client Tactical Blunder Detection + ECO Book
  */
 export function classifyMove(
   fenBefore: string,
@@ -78,61 +86,114 @@ export function classifyMove(
     evalBefore?: number;
     evalAfter?: number;
     isEngineBest?: boolean;
+    forceBadge?: MoveBadgeType;
   }
 ): MoveBadge {
-  if (options?.isBook) {
-    return BADGE_CONFIGS.book;
+  // Jika dipaksa oleh modul taktik (misal Trik & Quest)
+  if (options?.forceBadge && BADGE_CONFIGS[options.forceBadge]) {
+    return BADGE_CONFIGS[options.forceBadge];
   }
 
-  const c = new Chess(fenBefore);
+  const cBefore = new Chess(fenBefore);
   const from = moveUci.slice(0, 2) as Square;
   const to = moveUci.slice(2, 4) as Square;
-  const moverPiece = c.get(from);
-  const targetPiece = c.get(to);
+  const moverPiece = cBefore.get(from);
+  const targetPiece = cBefore.get(to);
 
-  // Checkmate is always great / brilliant
+  // 1. Skakmat Mutlak = Langkah Luar Biasa (★ Great)
   if (moveSan.includes("#")) {
     return BADGE_CONFIGS.great;
   }
 
-  // Deteksi Pengorbanan Brilian (Brilliant Move):
-  // Menempatkan perwira berharga ke petak yang diserang atau membiarkannya dipukul
-  if (moverPiece && moverPiece.type !== "p") {
-    const moverVal = PIECE_VALS[moverPiece.type] ?? 100;
-    const oppColor = moverPiece.color === "w" ? "b" : "w";
+  // Simulasikan langkah di papan baru
+  let cAfter: Chess;
+  try {
+    cAfter = new Chess(fenBefore);
+    cAfter.move({ from, to, promotion: moveUci[4] });
+  } catch {
+    return BADGE_CONFIGS.mistake;
+  }
 
-    // Cek apakah petak tujuan diserang oleh bidak lawan yang lebih murah
-    const isAttacked = c.isAttacked(to, oppColor);
-    const targetVal = targetPiece ? (PIECE_VALS[targetPiece.type] ?? 0) : 0;
+  const moverColor = moverPiece ? moverPiece.color : "w";
+  const oppColor = moverColor === "w" ? "b" : "w";
 
-    // Jika mengorbankan perwira (target bernilai lebih kecil dari yang dikorbankan)
-    // namun langkah ini adalah taktik kunci (skak, garpu, atau langkah rekomendasi)
-    if (isAttacked && moverVal > targetVal + 100 && (moveSan.includes("+") || options?.isEngineBest)) {
-      return BADGE_CONFIGS.brilliant;
+  // 2. DETEKSI BLUNDER FATAL 1: Mengizinkan lawan melakukan Skakmat di langkah berikutnya
+  const oppMoves = cAfter.moves({ verbose: true });
+  for (const om of oppMoves) {
+    const cCheckMate = new Chess(cAfter.fen());
+    cCheckMate.move(om);
+    if (cCheckMate.isCheckmate()) {
+      return BADGE_CONFIGS.blunder; // Blunder fatal: membiarkan Raja diskakmat!
     }
   }
 
-  // Jika ada data evaluasi delta
-  if (typeof options?.evalBefore === "number" && typeof options?.evalAfter === "number") {
-    const delta = options.evalBefore - options.evalAfter; // drop in centipawns
-    if (delta >= 250) return BADGE_CONFIGS.blunder;
-    if (delta >= 120) return BADGE_CONFIGS.mistake;
-    if (options.evalAfter >= 400 && delta <= 20) return BADGE_CONFIGS.great;
+  // 3. DETEKSI BLUNDER FATAL 2: Menggantung Bidak Berharga Gratis (Hanging Piece)
+  // Menempatkan Perwira (Menteri/Benteng/Gajah/Kuda) ke petak yang diserang lawan tanpa perlindungan kawan
+  if (moverPiece && moverPiece.type !== "p") {
+    const isAttacked = cAfter.isAttacked(to, oppColor);
+    const isDefended = cAfter.isAttacked(to, moverColor);
+    const moverVal = PIECE_VALS[moverPiece.type] || 100;
+    const targetVal = targetPiece ? (PIECE_VALS[targetPiece.type] || 0) : 0;
+
+    // Jika masuk petak diserang, tidak dikawal, dan bukan skak balik: BLUNDER BESAR!
+    if (isAttacked && !isDefended && !moveSan.includes("+") && moverVal > targetVal) {
+      return BADGE_CONFIGS.blunder;
+    }
+
+    // Jika dikawal tapi diserang pion lawan (perwira mahal dimakan pion murah): MISTAKE / BLUNDER
+    if (moverVal >= 500 && isAttacked && !moveSan.includes("+") && targetVal < 300) {
+      // Cek apakah ada pion lawan yang menyerang petak ini
+      return BADGE_CONFIGS.blunder;
+    }
   }
 
-  // Jika langkah ini adalah langkah terbaik engine atau langkah kunci
-  if (options?.isEngineBest) {
+  // 4. DETEKSI PENGORBANAN BRILIAN (‼️ Brilliant Move)
+  // Menempatkan perwira berharga ke petak diserang atau membiarkannya dipukul,
+  // tapi menghasilkan skak (+), garpu taktis ganda, atau inisiatif serangan menang!
+  if (moverPiece && moverPiece.type !== "p") {
+    const moverVal = PIECE_VALS[moverPiece.type] || 100;
+    const isAttacked = cAfter.isAttacked(to, oppColor);
+
+    if (isAttacked && moverVal >= 320) {
+      // Jika langkah ini memberikan skak atau garpu
+      if (moveSan.includes("+")) {
+        return BADGE_CONFIGS.brilliant;
+      }
+      // Jika langkah ini merupakan rekomendasi terbaik engine (pengorbanan terhitung)
+      if (options?.isEngineBest) {
+        return BADGE_CONFIGS.brilliant;
+      }
+    }
+  }
+
+  // 5. DETEKSI EVALUASI DELTA STOCKFISH (Centipawn Drop)
+  if (typeof options?.evalBefore === "number" && typeof options?.evalAfter === "number") {
+    const delta = options.evalBefore - options.evalAfter; // drop evaluasi
+    if (delta >= 200) return BADGE_CONFIGS.blunder;
+    if (delta >= 80) return BADGE_CONFIGS.mistake;
+    if (options.evalAfter >= 350 && delta <= 15) return BADGE_CONFIGS.great;
+  }
+
+  // 6. DETEKSI TEORI BUKU PEMBUKAAN (📖 Book Move)
+  // Di 6 langkah pertama jika memainkan jalur teori catur terkenal
+  const moveNumber = parseInt(fenBefore.split(" ")[5] || "1", 10);
+  if (options?.isBook || (moveNumber <= 4 && COMMON_BOOK_MOVES.has(moveUci))) {
+    return BADGE_CONFIGS.book;
+  }
+
+  // 7. Rekomendasi Utama Mesin / Langkah Unggul
+  if (options?.isEngineBest || moveSan.includes("+") || (targetPiece && PIECE_VALS[targetPiece.type] >= 300)) {
     return BADGE_CONFIGS.best;
   }
 
-  // Default: Langkah Bagus / Terbaik
+  // Default untuk langkah solid
   return BADGE_CONFIGS.best;
 }
 
 /**
- * Membuat custom square renderer untuk react-chessboard
- * yang secara reaktif menempelkan badge melayang di atas bidak
- * dan OTOMATIS HILANG jika bidak berpindah dari petak tersebut.
+ * Renderer Petak Papan Catur:
+ * Merender badge kualitas mengambang persis di atas petak yang berisi bidak
+ * dan langsung membersihkannya saat bidak berpindah.
  */
 export function createSquareBadgeRenderer(
   moveBadges: Record<string, MoveBadge>,
