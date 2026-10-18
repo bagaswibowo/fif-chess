@@ -489,6 +489,11 @@ export function CoachModeView({ lang = "id" }: Props) {
             <CapturedPiecesBar fen={fen} side={playerSide === "white" ? "black" : "white"} />
           </div>
 
+          {/* Badge Legend: Di Atas Papan */}
+          <div className="flex justify-center w-full shrink-0 mb-1">
+            <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))]" />
+          </div>
+
           {/* Chessboard Row with Vertical Eval Bar */}
           <div className="flex justify-center w-full flex-1 min-h-0">
             <div className="flex gap-2.5 items-center w-full max-w-[min(100%,calc(100dvh-260px))]">

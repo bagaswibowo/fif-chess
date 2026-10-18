@@ -993,6 +993,25 @@ export function LearningHub({ lang = "id" }: Props) {
             className="w-full shrink-0 mb-1"
           />
 
+          {/* LEGENDA BADGE ALA CHESS.COM DI ATAS PAPAN */}
+          <div className="mb-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] shadow-sm shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50">!!</span>
+              <span className="font-bold text-white text-[11px]">Brilian</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center font-black text-[9px] border border-white/50">✓</span>
+              <span className="text-[11px]">Terbaik</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-[#d97706] text-white flex items-center justify-center font-black text-[9px] border border-white/50">📖</span>
+              <span className="text-[11px]">Buku</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-[#dc2626] text-white flex items-center justify-center font-black text-[9px] border border-white/50">??</span>
+              <span className="text-[11px]">Blunder</span>
+            </div>
+          </div>
           <div
             className="aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full max-w-[min(100%,calc(100dvh-260px))]"
           >
@@ -1027,25 +1046,7 @@ export function LearningHub({ lang = "id" }: Props) {
             />
           </div>
 
-          {/* LEGENDA BADGE ALA CHESS.COM DI BAWAH PAPAN */}
-          <div className="mt-2.5 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] shadow-sm">
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50">!!</span>
-              <span className="font-bold text-white text-[11px]">Brilian</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center font-black text-[9px] border border-white/50">✓</span>
-              <span className="text-[11px]">Terbaik</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded-full bg-[#d97706] text-white flex items-center justify-center font-black text-[9px] border border-white/50">📖</span>
-              <span className="text-[11px]">Buku</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded-full bg-[#dc2626] text-white flex items-center justify-center font-black text-[9px] border border-white/50">??</span>
-              <span className="text-[11px]">Blunder</span>
-            </div>
-          </div>
+
         </div>
 
         {/* RIGHT: INFO PANEL (KOMPAK, PAS 1 LAYAR TANPA SCROLL BERLEBIHAN) */}

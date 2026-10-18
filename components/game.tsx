@@ -897,6 +897,7 @@ export function Game() {
           <span className="text-neutral-500">vs</span>
           <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-neutral-900 border border-neutral-500" /> {m.blackName || "Hitam"}</span>
         </div>
+        <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100vw-2.5rem),calc(100dvh-190px))] mb-1.5" />
         <div className="w-full mx-auto max-w-[min(100%,calc(100vw-2.5rem),calc(100dvh-190px))] aspect-square rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-xl">
           <Chessboard
             key={`spectate-board-${boardThemeId}-${pieceThemeId}`}
@@ -916,7 +917,6 @@ export function Game() {
             }}
           />
         </div>
-        <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100vw-2.5rem),calc(100dvh-190px))]" />
         <div className="text-sm font-black">
           {m.over ? (
             <span className="text-amber-400">⏹ Pertandingan Selesai — {m.outcomeLabel || "selesai"}</span>
@@ -1296,6 +1296,11 @@ export function Game() {
                 trickLabel={lang === "id" ? "Simpan Trik Lawan" : "Simpan Trik"}
               />
 
+              {/* Badges Legend: Di Atas Papan */}
+              <div className="flex justify-center w-full shrink-0 mb-1">
+                <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))]" />
+              </div>
+
               {/* Board Row with Left Vertical Eval Bar (Chess.com Signature) */}
               <div className="flex justify-center items-center w-full flex-1 min-h-0">
                 <div className="flex gap-2 md:gap-2.5 items-center justify-center h-full max-h-full max-w-full flex-1 min-h-0 min-w-0">
@@ -1369,7 +1374,6 @@ export function Game() {
                       }}
                     />
                   </div>
-                  <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))]" />
                 </div>
               </div>
 

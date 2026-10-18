@@ -759,6 +759,11 @@ export function SpectatorView({
             <CapturedPiecesBar fen={currentFen} side="black" />
           </div>
 
+          {/* Badge Legend: Di Atas Papan */}
+          <div className="flex justify-center w-full shrink-0 mb-1">
+            <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-215px))]" />
+          </div>
+
           {/* 4. Board Container with Sleek Vertical Dual-Bar Eval */}
           <div className="flex justify-center w-full">
             <div
