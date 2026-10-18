@@ -188,7 +188,8 @@ export function Game() {
   const { user: currentUser, login, register, logout } = useSession();
     const [activeDockModal, setActiveDockModal] = useState<DockModalType>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [fullscreenClocks, setFullscreenClocks] = useState(false);
+    const [authNotice, setAuthNotice] = useState<string | null>(null);
+    const [fullscreenClocks, setFullscreenClocks] = useState(false);
 
   // Global Hotkeys: [F] = Putar Papan, [Z] = Fokus 1 Layar
   useEffect(() => {
@@ -216,7 +217,10 @@ export function Game() {
 
   const handleNavClick = (tab: NavTab) => {
     if (!currentUser) {
-      // Don't open modal - just stay on landing page which already shows auth form
+      if (tab !== "play") {
+        setAuthNotice("Masuk terlebih dahulu untuk membuka fitur ini.");
+        window.setTimeout(() => setAuthNotice(null), 2800);
+      }
       return;
     }
     setNavTab(tab);
@@ -1178,7 +1182,7 @@ export function Game() {
               className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
             >
               <IconSettings3D size={18} />
-              <span className="text-xs font-bold text-neutral-400">Atur</span>
+              <span className="text-xs font-bold text-neutral-400">Pengaturan</span>
             </button>
           </div>
         </div>
@@ -1187,7 +1191,7 @@ export function Game() {
       {/* MAIN CONTENT AREA */}
       <main className="app-main flex-1 flex flex-col p-2.5 md:p-5 xl:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
         {!currentUser ? (
-          <div className="w-full max-w-lg mx-auto p-3 sm:p-6 min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center overflow-y-auto">
+          <div className="auth-page w-full max-w-lg mx-auto p-3 pt-6 sm:p-6 min-h-[calc(100vh-4rem)] flex flex-col justify-start md:justify-center items-center overflow-y-auto">
             <div className="w-full max-w-md mx-auto">
               <AuthPanel
                 user={currentUser}
@@ -1234,10 +1238,10 @@ export function Game() {
             </div>
           </div>
         )}
-        {navTab === "vision" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><LearningHub lang={lang} /></div>}
+        {navTab === "vision" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><LearningHub lang={lang} /></div>}
 
         {navTab === "review" && (
-          <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
             <GameReview
               history={gameHistory}
               onBackToPlay={() => setNavTab("play")}
@@ -1245,9 +1249,9 @@ export function Game() {
             />
           </div>
         )}
-        {navTab === "scan" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><ScanView onLoadFen={(f) => { setGameStartFen(f); setFen(f); setMoves([]); setNavTab("play"); }} lang={lang} /></div>}
-        {navTab === "community" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><CommunityView user={currentUser} lang={lang} /></div>}
-        {navTab === "admin" && <div className="h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><AdminPanel user={currentUser} /></div>}
+        {navTab === "scan" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><ScanView onLoadFen={(f) => { setGameStartFen(f); setFen(f); setMoves([]); setNavTab("play"); }} lang={lang} /></div>}
+        {navTab === "community" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><CommunityView user={currentUser} lang={lang} /></div>}
+        {navTab === "admin" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><AdminPanel user={currentUser} /></div>}
 
         {navTab === "play" && (
           <div className="play-layout lg:h-full lg:max-h-full lg:min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem] gap-4 items-start w-full min-h-0 max-w-[1320px] mx-auto">
@@ -1468,7 +1472,7 @@ export function Game() {
 
             {/* RIGHT SIDEBAR (Control Panel - 100% Chess.com) */}
             {/* Mobile: natural height below the board (scrolls with page); desktop: h-full panel */}
-            <div className="lg:h-full lg:max-h-full lg:min-h-0 lg:flex lg:flex-col flex flex-col">
+            <div className="game-side-panel lg:h-full lg:max-h-full lg:min-h-0 lg:flex lg:flex-col flex flex-col">
               <Card className="bg-[var(--card)] border border-[var(--border)] shadow-xl rounded-2xl overflow-hidden lg:h-full lg:max-h-full flex flex-col lg:min-h-0">
                 <CardHeader className="p-2 border-b border-[var(--border)] bg-[var(--muted)] shrink-0">
                   <div className="flex w-full bg-[var(--surface)] p-1 rounded-full border border-[var(--border)] gap-1">
@@ -1498,7 +1502,7 @@ export function Game() {
                     </button>
                   </div>
                 </CardHeader>
-<CardContent className="p-3.5 flex-1 min-h-0 overflow-y-auto space-y-3 custom-scrollbar">
+<CardContent className="game-side-panel-content p-3.5 flex-1 min-h-0 overflow-y-auto space-y-3 custom-scrollbar">
                   {/* TAB 1: GAME SETUP OR ACTIVE MATCH HUB */}
                   {rightTab === "game-setup" && (
                     <div className="space-y-4">
@@ -1933,6 +1937,15 @@ export function Game() {
       </>
         )}
       </main>
+
+      {authNotice && (
+        <div
+          role="status"
+          className="fixed left-1/2 top-20 z-50 w-[min(92vw,28rem)] -translate-x-1/2 rounded-xl border border-[var(--primary)]/40 bg-[var(--card)] px-4 py-3 text-center text-sm font-semibold text-white shadow-2xl"
+        >
+          {authNotice}
+        </div>
+      )}
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 min-h-14 bg-[var(--card)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md border-t border-[var(--border)] shadow-2xl">

@@ -496,14 +496,60 @@ select.field { padding-right: 2rem; }
   }
 
   .app-main {
-    min-height: calc(100dvh - 4rem);
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    flex: 1 1 auto;
     overflow: visible;
+  }
+
+  .app-main:has(.auth-page) {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .auth-page {
+    min-height: 0;
+    height: auto;
+    padding-bottom: 1rem;
+  }
+
+  .app-main button {
+    min-height: 44px;
+  }
+
+  .app-main .board-controls button {
+    min-height: 44px;
   }
 
   .play-layout {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+  }
+
+  .game-side-panel {
+    height: min(34rem, calc(100dvh - 8rem));
+    max-height: min(34rem, calc(100dvh - 8rem));
+    min-height: 0;
+  }
+
+  .game-side-panel > [data-slot="card"] {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .game-side-panel-content {
+    min-height: 0;
+    overscroll-behavior: contain;
+  }
+
+  .mobile-feature-page {
+    height: calc(100dvh - 4rem);
+    max-height: calc(100dvh - 4rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 0.5rem;
   }
 
   .board-card {

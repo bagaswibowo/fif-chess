@@ -160,7 +160,7 @@ export function BoardControls({
 
   // variant === "toolbar" (Sleek horizontal toolbar outside the board)
   return (
-    <div className={`flex items-center gap-2 px-2.5 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0 ${className}`}>
+    <div className={`board-controls flex items-center gap-2 px-2.5 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0 ${className}`}>
       <div className={`flex-1 flex flex-wrap ${hasTrickButton ? "" : "sm:grid sm:grid-cols-2"} gap-2 [&>*]:flex-1 [&>*]:min-w-[calc(50%-0.25rem)]`}>
         <button
           type="button"
@@ -170,7 +170,8 @@ export function BoardControls({
           aria-label={`Putar Orientasi Papan (${currentSideLabel})`}
         >
           <IconSwap3D size={16} />
-          <span className="truncate">{flipLabel}</span>
+          <span className="hidden sm:inline truncate">{flipLabel}</span>
+          <span className="sm:hidden">Putar</span>
           {showShortcuts && (
             <kbd className="hidden sm:inline px-1 py-0.5 rounded bg-neutral-800 text-[11px] text-neutral-300 font-mono border border-neutral-700">
               Z
@@ -191,7 +192,8 @@ export function BoardControls({
             aria-label={isFullscreen ? "Keluar Layar Penuh" : fullscreenLabel}
           >
             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            <span className="truncate">{isFullscreen ? "Keluar Fokus" : fullscreenLabel}</span>
+            <span className="hidden sm:inline truncate">{isFullscreen ? "Keluar Fokus" : fullscreenLabel}</span>
+            <span className="sm:hidden">{isFullscreen ? "Keluar" : "Fokus"}</span>
             {showShortcuts && (
               <kbd className="hidden sm:inline px-1 py-0.5 rounded bg-neutral-800 text-[11px] text-neutral-300 font-mono border border-neutral-700">
                 {isFullscreen ? "Esc" : "F"}
@@ -221,7 +223,8 @@ export function BoardControls({
             }
           >
             {trickSaved ? <Check size={15} className="text-emerald-400 shrink-0" /> : <BookmarkPlus size={15} className="shrink-0" />}
-            <span className="truncate">{trickSaved ? "Trik Tersimpan" : trickLabel}</span>
+            <span className="hidden sm:inline truncate">{trickSaved ? "Trik Tersimpan" : trickLabel}</span>
+            <span className="sm:hidden">{trickSaved ? "Tersimpan" : "Simpan"}</span>
           </button>
         )}
       </div>
