@@ -67,6 +67,15 @@ import type { JevAnalysis, JevError, PlayedMove } from "@/lib/types";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+const getAiElo = (engine: "stockfish" | "jev-fly" | "jev" | "fly", depth = 14): string => {
+  if (engine === "fly") return "3178";
+  if (engine === "jev") return "3127";
+  if (engine === "jev-fly") return "2536";
+  if (depth <= 4) return "800";
+  if (depth <= 8) return "1600";
+  return "3550+";
+};
+
 const AI_LABEL: Record<string, string> = {
   stockfish: "Stockfish 19 NNUE",
   "jev-fly": "Jev + Fly Brain",
@@ -1271,8 +1280,8 @@ export function Game() {
                         ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev AI" : "Stockfish 19")
                         : pvpOpponentName}
                     </span>
-                    <span className="text-[10px] text-neutral-400">
-                      ({playMode === "ai" ? "3550" : "PvP"})
+                    <span className="text-[10px] text-neutral-400 font-mono font-medium">
+                      ({playMode === "ai" ? `Elo ${getAiElo(selectedAiOpponent, aiDepth)}` : "PvP"})
                     </span>
                   </div>
                 </div>
@@ -1695,12 +1704,12 @@ export function Game() {
                           {/* Pilihan Engine hanya untuk mode AI */}
                           {playMode === "ai" && <div className="space-y-1">
                             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Mode Lawan</div>
-                            <div className="grid grid-cols-2 gap-1">
+                            <div className="grid grid-cols-2 gap-1.5">
                               {[
-                                { id: "stockfish", label: "Stockfish 19 NNUE", sub: "Engine Elo 3550+" },
-                                { id: "jev-fly", label: "Jev + Fly Brain", sub: "Hybrid Connectome" },
-                                { id: "jev", label: "Jev System One", sub: "Semantik Posisi" },
-                                { id: "fly", label: "Fruit Fly Brain", sub: "134k Neuron Biologis" },
+                                { id: "stockfish", label: "Stockfish 19 NNUE", sub: `Elo ${aiDepth <= 4 ? "800" : aiDepth <= 8 ? "1600" : "3550+"}` },
+                                { id: "fly", label: "Fruit Fly Brain", sub: "Elo 3178 (Connectome)" },
+                                { id: "jev", label: "Jev System One", sub: "Elo 3127 (Kenari AI)" },
+                                { id: "jev-fly", label: "Jev + Fly Brain", sub: "Elo 2536 (Hybrid GAB)" },
                               ].map((eng) => (
                                 <button
                                   key={eng.id}
