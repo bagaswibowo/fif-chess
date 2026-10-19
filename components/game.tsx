@@ -7,6 +7,8 @@ import { DockModals, type DockModalType } from "@/components/dock-modals";
 
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { BoardControls } from "@/components/board-controls";
+import { PlayerStrip } from "@/components/board";
+import { BOT_PERSONAS } from "@/lib/bot-personas";
 import { BoardShell } from "@/components/board-workspace";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
@@ -1283,33 +1285,20 @@ export function Game() {
                 trickLabel={lang === "id" ? "Simpan Trik Lawan" : "Simpan Trik"}
               />
 
-              {/* 2. Kartu Pemain Lawan (Kompak & Elegan) */}
-              <div className="w-full flex items-center justify-between px-2.5 py-1 bg-[var(--surface)] rounded-xl border border-[var(--border)] mb-1.5 shrink-0 max-w-[min(100%,calc(100dvh-260px))]">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-md bg-[var(--card)] border border-[var(--border)] flex items-center justify-center shrink-0">
-                    {playMode === "ai" ? <IconBot3D size={16} /> : <IconCommunity3D size={16} />}
-                  </div>
-                  <div className="min-w-0 flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-white truncate max-w-[140px] md:max-w-[200px]">
-                      {playMode === "ai"
-                        ? (selectedAiOpponent === "jev-fly" ? "Jev + Fly Brain" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev AI" : "Stockfish 19")
-                        : pvpOpponentName}
-                    </span>
-                    <span className="text-[10px] text-neutral-400 font-mono font-medium">
-                      ({playMode === "ai" ? `Elo ${getAiElo(selectedAiOpponent, aiDepth)}` : "PvP"})
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CapturedPiecesBar fen={fen} side={humanSide === "white" ? "black" : "white"} />
-                  <div className={`px-2 py-0.5 rounded-lg font-mono font-bold text-xs md:text-sm border ${
-                    !humanToMove && gameActive && !effectiveOutcome.over
-                      ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-xs"
-                      : "bg-[var(--card)] text-white border-[var(--border)]"
-                  }`}>
-                    {humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
-                  </div>
-                </div>
+              {/* 2. Kartu Pemain Lawan (Dual Player Strip ala Chess.com) */}
+              <div className="w-full max-w-[min(100%,calc(100dvh-260px))] mb-1.5 shrink-0">
+                <PlayerStrip
+                  name={playMode === "ai"
+                    ? (selectedAiOpponent === "jev-fly" ? "Master JEV Connectome" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev AI" : "Stockfish 19 NNUE")
+                    : (pvpOpponentName || "Lawan Online")}
+                  rating={playMode === "ai" ? getAiElo(selectedAiOpponent, aiDepth) : "1500"}
+                  title={playMode === "ai" ? "BOT" : undefined}
+                  isBot={playMode === "ai"}
+                  clockFormatted={humanSide === "white" ? formattedBlackTime : formattedWhiteTime}
+                  isActiveTurn={!humanToMove && gameActive && !effectiveOutcome.over}
+                  isCriticalTime={false}
+                  capturedElements={<CapturedPiecesBar fen={fen} side={humanSide === "white" ? "black" : "white"} />}
+                />
               </div>
 
               {/* 3. Baris Legenda Badge ala Chess.com */}
@@ -1386,29 +1375,17 @@ export function Game() {
                 </div>
               </div>
 
-              {/* 5. Kartu Pemain User (Bawah Papan) */}
-              <div className="w-full flex items-center justify-between px-2.5 py-1 bg-[var(--surface)] rounded-xl border border-[var(--border)] mt-1.5 shrink-0 max-w-[min(100%,calc(100dvh-260px))]">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-md bg-[var(--card)] border border-[var(--border)] flex items-center justify-center font-bold text-xs text-white shrink-0">
-                    {currentUser?.fullName ? currentUser.fullName[0].toUpperCase() : "B"}
-                  </div>
-                  <div className="min-w-0 flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-white truncate max-w-[140px] md:max-w-[200px]">
-                      {currentUser?.fullName ?? (lang === "id" ? "Pak Bagas Wibowo" : "Player")}
-                    </span>
-                    <span className="text-[10px] text-neutral-400">(1650)</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CapturedPiecesBar fen={fen} side={humanSide} />
-                  <div className={`px-2 py-0.5 rounded-lg font-mono font-bold text-xs md:text-sm border ${
-                    humanToMove && gameActive && !effectiveOutcome.over
-                      ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-xs"
-                      : "bg-[var(--card)] text-white border-[var(--border)]"
-                  }`}>
-                    {humanSide === "white" ? formattedWhiteTime : formattedBlackTime}
-                  </div>
-                </div>
+              {/* 5. Kartu Pemain User (Dual Player Strip ala Chess.com) */}
+              <div className="w-full max-w-[min(100%,calc(100dvh-260px))] mt-1.5 shrink-0">
+                <PlayerStrip
+                  name={currentUser?.fullName ?? (lang === "id" ? "Pak Bagas Wibowo" : "Player")}
+                  rating={1650}
+                  isBot={false}
+                  clockFormatted={humanSide === "white" ? formattedWhiteTime : formattedBlackTime}
+                  isActiveTurn={humanToMove && gameActive && !effectiveOutcome.over}
+                  isCriticalTime={false}
+                  capturedElements={<CapturedPiecesBar fen={fen} side={humanSide} />}
+                />
               </div>
             </div>
 
@@ -2007,6 +1984,11 @@ export function Game() {
         onClose={() => setShowGameOverModal(false)}
         onNewGame={() => startGame(humanSide)}
         onExportPgn={downloadGamePgn}
+        onReview={() => {
+          setShowGameOverModal(false);
+          setNavTab("review");
+        }}
+        history={moves.map((m) => m.san)}
       />
 
       <PromotionDialog
