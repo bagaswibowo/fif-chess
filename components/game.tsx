@@ -1060,18 +1060,16 @@ export function Game() {
               <span>{lang === "id" ? "Lawan Bot" : "Play Bots"}</span>
             </button>
 
-
-
             <button
-              onClick={() => handleNavClick("review")}
+              onClick={() => handleNavClick("vision")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "review"
+                navTab === "vision"
                   ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
                   : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
-              <IconMedal3D size={26} />
-              <span>{lang === "id" ? "Review Blunder" : "Game Review"}</span>
+              <IconPuzzle3D size={26} />
+              <span>{lang === "id" ? "Teka-Teki" : "Puzzles"}</span>
             </button>
 
             <button
@@ -1082,8 +1080,44 @@ export function Game() {
                   : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
-              <IconBot3D size={26} />
-              <span>{lang === "id" ? "AI Coach & Latih" : "AI Coach & Train"}</span>
+              <IconCoach3D size={26} />
+              <span>{lang === "id" ? "Belajar" : "Learn"}</span>
+            </button>
+
+            <button
+              onClick={() => handleNavClick("review")}
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
+                navTab === "review"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+              }`}
+            >
+              <IconMedal3D size={26} />
+              <span>{lang === "id" ? "Analisis" : "Analysis"}</span>
+            </button>
+
+            <button
+              onClick={() => handleNavClick("community")}
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
+                navTab === "community"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+              }`}
+            >
+              <IconCommunity3D size={26} />
+              <span>{lang === "id" ? "Komunitas" : "Community"}</span>
+            </button>
+
+            <button
+              onClick={() => handleNavClick("more")}
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
+                navTab === "more"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+              }`}
+            >
+              <IconTarget3D size={26} />
+              <span>{lang === "id" ? "Selengkapnya" : "More"}</span>
             </button>
 
             {currentUser?.isAdmin && (
@@ -1100,54 +1134,6 @@ export function Game() {
                 <span>Admin</span>
               </button>
             )}
-
-            <button
-              onClick={() => handleNavClick("vision")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "vision"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconVision3D size={22} />
-              <span>{lang === "id" ? "Trik & Quest" : "Tricks & Quest"}</span>
-            </button>
-
-            <button
-              onClick={() => handleNavClick("scan")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "scan"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconScan3D size={22} />
-              <span>{lang === "id" ? "Import Posisi" : "Import Position"}</span>
-            </button>
-
-            <button
-              onClick={() => handleNavClick("community")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "community"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconCommunity3D size={26} />
-              <span>{lang === "id" ? "Komunitas FIF" : "FIF Community"}</span>
-            </button>
-
-            <button
-              onClick={() => handleNavClick("more")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "more"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconTarget3D size={26} />
-              <span>{lang === "id" ? "Selengkapnya" : "More"}</span>
-            </button>
           </nav>
         </div>
 

@@ -155,6 +155,16 @@ export function MoreHubView({ user, lang = "id", onOpenDockModal, onNavigateTab 
       badge: "30 Detik",
     },
     {
+      id: "scan",
+      titleId: "Import & Scan Papan",
+      titleEn: "Board Scanner & FEN",
+      descId: "Scan foto papan catur fisik atau import notasi FEN / PGN",
+      descEn: "Scan physical chessboard photo or import FEN/PGN notation",
+      icon: <IconScan3D size={28} />,
+      action: () => onNavigateTab("scan"),
+      badge: "AI Vision",
+    },
+    {
       id: "community",
       titleId: "Forum & Klub Catur",
       titleEn: "Community & Clubs",
