@@ -90,7 +90,7 @@ const AI_LABEL: Record<string, string> = {
 };
 
 type PendingPromotion = { from: string; to: string };
-type NavTab = "play" | "bots" | "vision" | "scan" | "community" | "review" | "coach" | "more" | "admin";
+type NavTab = "play" | "bots" | "vision" | "scan" | "community" | "review" | "coach" | "admin";
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
 type CoachSubTab = "coach" | "spectator";
@@ -1045,6 +1045,7 @@ export function Game() {
 
           {/* Navigation Menu with 3D Icons */}
           <nav className="space-y-1" aria-label="Navigasi utama">
+            {/* 1. Bermain (Play) */}
             <button
               onClick={() => handleNavClick("play")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
@@ -1057,6 +1058,7 @@ export function Game() {
               <span>{lang === "id" ? "Bermain" : "Play"}</span>
             </button>
 
+            {/* 2. Lawan Bot (Versus Bots) */}
             <button
               onClick={() => handleNavClick("bots")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
@@ -1069,6 +1071,7 @@ export function Game() {
               <span>{lang === "id" ? "Lawan Bot" : "Play Bots"}</span>
             </button>
 
+            {/* 3. Teka-Teki (Puzzles & Rush) */}
             <button
               onClick={() => handleNavClick("vision")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
@@ -1081,6 +1084,7 @@ export function Game() {
               <span>{lang === "id" ? "Teka-Teki" : "Puzzles"}</span>
             </button>
 
+            {/* 4. AI Coach & Spectator (Jev vs Stockfish) */}
             <button
               onClick={() => handleNavClick("coach")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
@@ -1090,9 +1094,10 @@ export function Game() {
               }`}
             >
               <IconCoach3D size={26} />
-              <span>{lang === "id" ? "Belajar" : "Learn"}</span>
+              <span>{lang === "id" ? "AI Coach & Latih" : "AI Coach & Train"}</span>
             </button>
 
+            {/* 5. Review Blunder & Analisis (Game Review) */}
             <button
               onClick={() => handleNavClick("review")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
@@ -1102,9 +1107,23 @@ export function Game() {
               }`}
             >
               <IconMedal3D size={26} />
-              <span>{lang === "id" ? "Analisis" : "Analysis"}</span>
+              <span>{lang === "id" ? "Review Blunder" : "Game Review"}</span>
             </button>
 
+            {/* 6. Scan Papan (AI Vision Scanner) */}
+            <button
+              onClick={() => handleNavClick("scan")}
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
+                navTab === "scan"
+                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
+                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
+              }`}
+            >
+              <IconScan3D size={26} />
+              <span>{lang === "id" ? "Scan Papan" : "Scan Board"}</span>
+            </button>
+
+            {/* 7. Komunitas (Community & Clubs) */}
             <button
               onClick={() => handleNavClick("community")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
@@ -1115,18 +1134,6 @@ export function Game() {
             >
               <IconCommunity3D size={26} />
               <span>{lang === "id" ? "Komunitas" : "Community"}</span>
-            </button>
-
-            <button
-              onClick={() => handleNavClick("more")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "more"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconTarget3D size={26} />
-              <span>{lang === "id" ? "Selengkapnya" : "More"}</span>
             </button>
 
             {currentUser?.isAdmin && (
@@ -1301,16 +1308,7 @@ export function Game() {
             />
           </div>
         )}
-        {navTab === "more" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
-            <MoreHubView
-              user={currentUser}
-              lang={lang}
-              onOpenDockModal={(t) => setActiveDockModal(t)}
-              onNavigateTab={(t) => handleNavClick(t)}
-            />
-          </div>
-        )}
+
 
         {navTab === "play" && (
           <div className="play-layout lg:h-full lg:max-h-full lg:min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem] gap-4 items-start w-full min-h-0 max-w-[1320px] mx-auto">
