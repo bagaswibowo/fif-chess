@@ -43,7 +43,7 @@ import { useChessTheme } from "@/lib/chess-themes";
 import { EvalBar } from "@/components/eval-bar";
 import { useChessClock } from "@/lib/use-chess-clock";
 import {
-  IconPawn3D, IconKingWhite3D, IconKingBlack3D, IconDice3D, IconFriends3D, IconMessages3D, IconBell3D, IconSettings3D, IconPlay3D,
+  IconPawn3D, IconPuzzle3D, IconKingWhite3D, IconKingBlack3D, IconDice3D, IconFriends3D, IconMessages3D, IconBell3D, IconSettings3D, IconPlay3D,
 
   IconVision3D,
   IconScan3D,
@@ -1973,12 +1973,12 @@ export function Game() {
       <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 min-h-14 bg-[var(--card)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md border-t border-[var(--border)] shadow-2xl">
         <div className="flex justify-around items-center py-1.5 px-0.5 gap-0.5 min-w-full">
           {[
-            { id: "play", icon: IconPlay3D, labelId: "Bermain", labelEn: "Play" },
-            { id: "coach", icon: IconCoach3D, labelId: "Latih", labelEn: "Train" },
-            { id: "vision", icon: IconVision3D, labelId: "Trik", labelEn: "Tricks" },
-            { id: "scan", icon: IconScan3D, labelId: "Scan", labelEn: "Scan" },
+            { id: "play", icon: IconPlay3D, labelId: "Main", labelEn: "Play" },
+            { id: "bots", icon: IconBot3D, labelId: "Bot", labelEn: "Bots" },
+            { id: "vision", icon: IconPuzzle3D, labelId: "Teka-teki", labelEn: "Puzzles" },
+            { id: "coach", icon: IconCoach3D, labelId: "Belajar", labelEn: "Learn" },
             { id: "review", icon: IconMedal3D, labelId: "Review", labelEn: "Review" },
-            { id: "community", icon: IconCommunity3D, labelId: "Klub", labelEn: "Club" },
+            { id: "more", icon: IconTarget3D, labelId: "Lainnya", labelEn: "More" },
           ].map(tab => (
             <button
               key={tab.id}
