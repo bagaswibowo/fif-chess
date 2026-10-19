@@ -1,4 +1,5 @@
 "use client";
+import { chessSound } from "@/lib/chess-sound";
 
 import { classifyMove, createSquareBadgeRenderer, ChessBadgeLegend, type MoveBadge } from "@/lib/chess-move-badges";
 import { Copy, Check, Download, Share2 } from "lucide-react";
@@ -346,6 +347,7 @@ export function Game() {
   // Show Game Over Modal automatically after game ends
   useEffect(() => {
     if (effectiveOutcome.over) {
+      chessSound.playGameEnd(effectiveOutcome.winner === humanSide);
       const timer = setTimeout(() => setShowGameOverModal(true), 500);
       return () => clearTimeout(timer);
     } else {
@@ -644,6 +646,15 @@ export function Game() {
       const nextFen = chess.fen();
       setFen(nextFen);
       const badge = classifyMove(fenBefore, legal.uci, applied.san);
+      if (chess.isCheck()) {
+        chessSound.playCheck();
+      } else if (applied.san.includes("x")) {
+        chessSound.playCapture();
+      } else if (applied.san.includes("O-O")) {
+        chessSound.playCastle();
+      } else {
+        chessSound.playMove();
+      }
       setMoveBadges({ [legal.to]: badge });
       setSelectedSquare(null);
       setMoves((current) => [
@@ -868,19 +879,19 @@ export function Game() {
     if (!m) return list;
     // Kuning: langkah terakhir
     if (m.lastUci && m.lastUci.length >= 4) {
-      list.push({ startSquare: m.lastUci.slice(0, 2), endSquare: m.lastUci.slice(2, 4), color: "#eab308" });
+      list.push({ startSquare: m.lastUci.slice(0, 2), endSquare: m.lastUci.slice(2, 4), color: "rgb(234, 179, 8)" });
     }
     const comm = m.commentary;
     if (!comm) return list;
     // Merah: ancaman
     if (comm.threat?.from && comm.threat?.to) {
-      list.push({ startSquare: comm.threat.from, endSquare: comm.threat.to, color: "#ef4444" });
+      list.push({ startSquare: comm.threat.from, endSquare: comm.threat.to, color: "rgb(239, 68, 68)" });
     }
     // Biru: prediksi respons lawan
     if (comm.predFrom && comm.predTo) {
-      list.push({ startSquare: comm.predFrom, endSquare: comm.predTo, color: "#38bdf8" });
+      list.push({ startSquare: comm.predFrom, endSquare: comm.predTo, color: "rgb(56, 189, 248)" });
     } else if (comm.tektokkan?.hasExchange && comm.tektokkan.defenderFrom && comm.tektokkan.targetSq) {
-      list.push({ startSquare: comm.tektokkan.defenderFrom, endSquare: comm.tektokkan.targetSq, color: "#38bdf8" });
+      list.push({ startSquare: comm.tektokkan.defenderFrom, endSquare: comm.tektokkan.targetSq, color: "rgb(56, 189, 248)" });
     }
     // Hijau: strategi / trajektori bidak
     const traj = Array.isArray(comm.pieceTrajectory) && comm.pieceTrajectory.length > 0
@@ -888,11 +899,11 @@ export function Game() {
       : (Array.isArray(comm.futureLine) ? comm.futureLine : []);
     traj.forEach((step: any, idx: number) => {
       if (step?.from && step?.to && step.from !== step.to) {
-        list.push({ startSquare: step.from, endSquare: step.to, color: idx === 0 ? "#10b981" : "#059669cc" });
+        list.push({ startSquare: step.from, endSquare: step.to, color: idx === 0 ? "rgb(16, 185, 129)" : "rgba(5, 150, 105, 0.8)" });
       }
     });
     if (traj.length === 0 && comm.stratFrom && comm.stratTo) {
-      list.push({ startSquare: comm.stratFrom, endSquare: comm.stratTo, color: "#10b981" });
+      list.push({ startSquare: comm.stratFrom, endSquare: comm.stratTo, color: "rgb(16, 185, 129)" });
     }
     return list;
   }, [spectateMatchData]);
@@ -1301,25 +1312,8 @@ export function Game() {
                 </div>
               </div>
 
-              {/* 3. Baris Legenda Badge ala Chess.com (Persis Seperti Trik & Quest) */}
-              <div className="mb-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] shadow-sm shrink-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50">!!</span>
-                  <span className="font-bold text-white text-[11px]">Brilian</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center font-black text-[9px] border border-white/50">✓</span>
-                  <span className="text-[11px]">Terbaik</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-[#d97706] text-white flex items-center justify-center font-black text-[9px] border border-white/50">📖</span>
-                  <span className="text-[11px]">Buku</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-[#dc2626] text-white flex items-center justify-center font-black text-[9px] border border-white/50">??</span>
-                  <span className="text-[11px]">Blunder</span>
-                </div>
-              </div>
+              {/* 3. Baris Legenda Badge ala Chess.com */}
+              <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))] mb-2" />
 
               {/* 4. Papan Catur & Bar Evaluasi Vertikal */}
               <div className="flex items-center justify-center gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] min-h-0">

@@ -123,28 +123,28 @@ export function ClockMovesFullscreen({
       list.push({
         startSquare: tacticalCommentary.lastUci.slice(0, 2),
         endSquare: tacticalCommentary.lastUci.slice(2, 4),
-        color: "#eab308",
+        color: "rgb(234, 179, 8)",
       });
     }
     if (tacticalCommentary.threatFrom && tacticalCommentary.threatTo && tacticalCommentary.threatFrom !== tacticalCommentary.threatTo) {
       list.push({
         startSquare: tacticalCommentary.threatFrom,
         endSquare: tacticalCommentary.threatTo,
-        color: "#ef4444",
+        color: "rgb(239, 68, 68)",
       });
     }
     if (tacticalCommentary.predFrom && tacticalCommentary.predTo && tacticalCommentary.predFrom !== tacticalCommentary.predTo) {
       list.push({
         startSquare: tacticalCommentary.predFrom,
         endSquare: tacticalCommentary.predTo,
-        color: "#38bdf8",
+        color: "rgb(56, 189, 248)",
       });
     }
     if (tacticalCommentary.stratFrom && tacticalCommentary.stratTo && tacticalCommentary.stratFrom !== tacticalCommentary.stratTo) {
       list.push({
         startSquare: tacticalCommentary.stratFrom,
         endSquare: tacticalCommentary.stratTo,
-        color: "#10b981",
+        color: "rgb(16, 185, 129)",
       });
     }
     return list;

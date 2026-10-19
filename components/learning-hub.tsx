@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, RotateCcw, ShieldCheck, TrendingUp, BookOpen, Sparkles } from "lucide-react";
 import { BoardControls } from "@/components/board-controls";
+import { ChessBadgeLegend } from "@/lib/chess-move-badges";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Square } from "chess.js";
 import { PUZZLE_CATEGORIES, type Puzzle, type PuzzleCategory } from "@/lib/puzzle-data";
@@ -84,12 +85,12 @@ export interface MoveBadge {
 }
 
 const BADGE_CONFIGS: Record<MoveBadgeType, { label: string; bg: string; color: string; desc: string }> = {
-  brilliant: { label: "!!", bg: "#06b6d4", color: "#ffffff", desc: "Brilian (Pengorbanan Taktis Jenius)" },
-  great: { label: "★", bg: "#0284c7", color: "#ffffff", desc: "Luar Biasa (Satu-satunya Langkah Menang)" },
-  best: { label: "✓", bg: "#16a34a", color: "#ffffff", desc: "Langkah Terbaik (Best Move)" },
-  book: { label: "📖", bg: "#d97706", color: "#ffffff", desc: "Teori Buku Pembukaan (Book Move)" },
-  blunder: { label: "??", bg: "#dc2626", color: "#ffffff", desc: "Blunder Fatal Lawan" },
-  mistake: { label: "?", bg: "#ea580c", color: "#ffffff", desc: "Kesalahan Posisi Lawan" },
+  brilliant: { label: "!!", bg: "rgb(6, 182, 212)", color: "rgb(255, 255, 255)", desc: "Brilian (Pengorbanan Taktis Jenius)" },
+  great: { label: "★", bg: "rgb(2, 132, 199)", color: "rgb(255, 255, 255)", desc: "Luar Biasa (Satu-satunya Langkah Menang)" },
+  best: { label: "✓", bg: "rgb(22, 163, 74)", color: "rgb(255, 255, 255)", desc: "Langkah Terbaik (Best Move)" },
+  book: { label: "📖", bg: "rgb(217, 119, 6)", color: "rgb(255, 255, 255)", desc: "Teori Buku Pembukaan (Book Move)" },
+  blunder: { label: "??", bg: "rgb(220, 38, 38)", color: "rgb(255, 255, 255)", desc: "Blunder Fatal Lawan" },
+  mistake: { label: "?", bg: "rgb(234, 88, 12)", color: "rgb(255, 255, 255)", desc: "Kesalahan Posisi Lawan" },
 };
 
 const PIECE_NAMES: Record<string, string> = {
@@ -994,24 +995,7 @@ export function LearningHub({ lang = "id" }: Props) {
           />
 
           {/* LEGENDA BADGE ALA CHESS.COM DI ATAS PAPAN */}
-          <div className="mb-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] shadow-sm shrink-0">
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50">!!</span>
-              <span className="font-bold text-white text-[11px]">Brilian</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center font-black text-[9px] border border-white/50">✓</span>
-              <span className="text-[11px]">Terbaik</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded-full bg-[#d97706] text-white flex items-center justify-center font-black text-[9px] border border-white/50">📖</span>
-              <span className="text-[11px]">Buku</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded-full bg-[#dc2626] text-white flex items-center justify-center font-black text-[9px] border border-white/50">??</span>
-              <span className="text-[11px]">Blunder</span>
-            </div>
-          </div>
+          <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))] mb-2" />
           <div
             className="aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full max-w-[min(100%,calc(100dvh-260px))]"
           >

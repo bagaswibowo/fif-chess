@@ -540,24 +540,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 </div>
 
                 {/* 4. Legenda Badge ala Chess.com di Atas Papan */}
-                <div className="mb-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] shadow-sm shrink-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50">!!</span>
-                    <span className="font-bold text-white text-[11px]">Brilian</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded-full bg-[#16a34a] text-white flex items-center justify-center font-black text-[9px] border border-white/50">✓</span>
-                    <span className="text-[11px]">Terbaik</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded-full bg-[#d97706] text-white flex items-center justify-center font-black text-[9px] border border-white/50">📖</span>
-                    <span className="text-[11px]">Buku</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded-full bg-[#dc2626] text-white flex items-center justify-center font-black text-[9px] border border-white/50">??</span>
-                    <span className="text-[11px]">Blunder</span>
-                  </div>
-                </div>
+                <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))] mb-2" />
 
                 {/* 3. Papan Catur + EvalBar Vertikal (Aspect Square Sempurna) */}
                 <div className="flex items-center justify-center gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] min-h-0">

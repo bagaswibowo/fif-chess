@@ -3,3 +3,4 @@ export * from './notation-table';
 export * from './captured-pieces';
 export * from './board-controls';
 export * from './promotion-dialog';
+export * from './player-strip';
