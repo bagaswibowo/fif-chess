@@ -22858,7 +22858,7 @@
     "score": 120
   },
   "rnbq1rk1/pppnbppp/4p3/3pP1B1/3P3P/2N5/PPP2PP1/R2QKBNR w KQ -": {
-    "timesEncountered": 13,
+    "timesEncountered": 16,
     "bestMove": "d1h5",
     "score": 100,
     "dopamine": 1000
@@ -121341,9 +121341,9 @@
     "dopamine": 400
   },
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -": {
-    "timesEncountered": 65137,
+    "timesEncountered": 65139,
     "dopamine": 1000,
-    "bestMove": "c2c4",
+    "bestMove": "d2d4",
     "score": 100,
     "blunders": [
       "d2d4",
@@ -127090,9 +127090,9 @@
     "dopamine": 400
   },
   "rnbqkbnr/pppp1ppp/4p3/8/3PP3/8/PPP2PPP/RNBQKBNR b KQkq -": {
-    "timesEncountered": 25611,
+    "timesEncountered": 25612,
     "bestMove": "d7d5",
-    "score": 100,
+    "score": -50,
     "dopamine": 1000
   },
   "3k4/1p6/2p2B2/2b4p/8/6P1/PP3P2/6K1 b - -": {
@@ -127600,10 +127600,10 @@
     "dopamine": 400
   },
   "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq -": {
-    "timesEncountered": 12677,
+    "timesEncountered": 12678,
     "dopamine": 1000,
     "bestMove": "e7e6",
-    "score": 100
+    "score": -50
   },
   "2r3k1/1R3p2/1R2p2p/p3n1p1/2N5/2q1N3/P3BKPP/8 w - -": {
     "timesEncountered": 1,
@@ -137392,27 +137392,27 @@
     "score": -50
   },
   "rnbqkbnr/ppp2ppp/4p3/3p4/3PP3/8/PPP2PPP/RNBQKBNR w KQkq -": {
-    "timesEncountered": 28304,
+    "timesEncountered": 28306,
     "dopamine": 1000,
     "bestMove": "b1c3",
     "score": 100
   },
   "rnbqkb1r/ppp2ppp/4pn2/3p4/3PP3/2N5/PPP2PPP/R1BQKBNR w KQkq -": {
-    "timesEncountered": 28303,
+    "timesEncountered": 28305,
     "dopamine": 1000,
     "bestMove": "c1g5",
     "score": 100
   },
   "rnbqk2r/ppp1bppp/4pn2/3p2B1/3PP3/2N5/PPP2PPP/R2QKBNR w KQkq -": {
-    "timesEncountered": 28303,
+    "timesEncountered": 28305,
     "dopamine": 1000,
     "bestMove": "e4e5",
     "score": 100
   },
   "rnbqk2r/pppnbppp/4p3/3pP1B1/3P4/2N5/PPP2PPP/R2QKBNR w KQkq -": {
-    "timesEncountered": 28303,
+    "timesEncountered": 28305,
     "dopamine": 1000,
-    "bestMove": "g5f4",
+    "bestMove": "h2h4",
     "score": 100
   },
   "rnbqkb1r/pp3ppp/5n2/2ppp1B1/8/2NP1N2/PPP1PPPP/R2QKB1R w KQkq -": {
@@ -139762,7 +139762,7 @@
     "dopamine": 400
   },
   "rnbqkbnr/pppp1ppp/4p3/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq -": {
-    "timesEncountered": 18493,
+    "timesEncountered": 18495,
     "dopamine": 1000,
     "bestMove": "e2e4",
     "score": 100
@@ -145698,22 +145698,22 @@
     "dopamine": 1000
   },
   "rnbqkbnr/ppp2ppp/4p3/3p4/3PP3/2N5/PPP2PPP/R1BQKBNR b KQkq -": {
-    "timesEncountered": 25605,
+    "timesEncountered": 25606,
     "dopamine": 1000,
     "bestMove": "g8f6",
-    "score": 100
+    "score": -50
   },
   "rnbqkb1r/ppp2ppp/4pn2/3p2B1/3PP3/2N5/PPP2PPP/R2QKBNR b KQkq -": {
-    "timesEncountered": 25605,
+    "timesEncountered": 25606,
     "dopamine": 1000,
     "bestMove": "f8e7",
-    "score": 100
+    "score": -50
   },
   "rnbqk2r/ppp1bppp/4pn2/3pP1B1/3P4/2N5/PPP2PPP/R2QKBNR b KQkq -": {
-    "timesEncountered": 25605,
+    "timesEncountered": 25606,
     "dopamine": 1000,
     "bestMove": "f6d7",
-    "score": 100
+    "score": -50
   },
   "rnbqr1k1/pppnbppp/4p3/3pP3/3P1P2/8/PPPBN1PP/R2QKBNR b KQ -": {
     "timesEncountered": 7,
@@ -603283,12 +603283,12 @@
     "dopamine": 1000
   },
   "rnbq1rk1/pppnbppp/4p3/3pP1BQ/3P3P/2N5/PPP2PP1/R3KBNR b KQ -": {
-    "timesEncountered": 6,
+    "timesEncountered": 7,
     "blunders": [
       "e7g5",
       "g7g6"
     ],
-    "bestMove": "g7g6",
+    "bestMove": "f8e8",
     "score": -50
   },
   "r1bq1rk1/pppnbppp/2n1p3/3pP1BQ/3P3P/2N5/PPP2PP1/R3KBNR w KQ -": {
@@ -603491,7 +603491,7 @@
     "dopamine": 400
   },
   "rnbqk2r/pppnbppp/4p3/3pP1B1/3P3P/2N5/PPP2PP1/R2QKBNR b KQkq -": {
-    "timesEncountered": 4,
+    "timesEncountered": 5,
     "bestMove": "e8g8",
     "score": -50
   },
@@ -641326,10 +641326,10 @@
     "score": 100
   },
   "rnbqr1k1/pppnbppp/4p3/3pP1BQ/3P3P/2N5/PPP2PP1/R3KBNR w KQ -": {
-    "timesEncountered": 6,
+    "timesEncountered": 9,
     "bestMove": "f1d3",
     "score": 100,
-    "dopamine": 800
+    "dopamine": 1000
   },
   "rnbqr1k1/pppn1ppp/4p3/3pP1PQ/3P4/2NB4/PPP2PP1/R3K1NR b KQ -": {
     "timesEncountered": 7,
@@ -641402,9 +641402,9 @@
     "dopamine": 400
   },
   "rnbqr1k1/pppnbppp/4p3/3pP1BQ/3P3P/2NB4/PPP2PP1/R3K1NR b KQ -": {
-    "timesEncountered": 21,
+    "timesEncountered": 24,
     "bestMove": "g7g6",
-    "score": 50,
+    "score": -50,
     "dopamine": -600,
     "blunders": [
       "e7g5",
@@ -641418,7 +641418,8 @@
       "h7h6",
       "e7f6",
       "b7b6",
-      "a7a5"
+      "a7a5",
+      "d7f8"
     ]
   },
   "rnbqr1k1/pppn1ppp/4p3/3pP1bQ/3P3P/2NB4/PPP2PP1/R3K1NR w KQ -": {
@@ -644906,9 +644907,10 @@
     ]
   },
   "rnbqr1k1/pppnbp1p/4p1p1/3pP1BQ/3P3P/2NB4/PPP2PP1/R3K1NR w KQ -": {
-    "timesEncountered": 4,
+    "timesEncountered": 7,
     "bestMove": "g5e7",
-    "score": 215
+    "score": 100,
+    "dopamine": 400
   },
   "2R2k2/8/8/3pp3/5ppP/6p1/P5N1/2R4K b - -": {
     "timesEncountered": 1,
@@ -654918,11 +654920,123 @@
     "dopamine": 400
   },
   "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6": {
-    "timesEncountered": 1,
+    "timesEncountered": 12,
     "bestMove": "g1f3",
     "score": 35,
     "blunders": [
       "f1c4"
+    ]
+  },
+  "rnbqkbnr/pppp1ppp/8/4p3/8/5P2/PPPPP1PP/RNBQKBNR w KQkq -": {
+    "timesEncountered": 1,
+    "bestMove": "b1c3",
+    "score": -50
+  },
+  "r1bqkbnr/pppp1ppp/2n5/4p3/3P4/5P2/PPP1P1PP/RNBQKBNR w KQkq -": {
+    "timesEncountered": 1,
+    "bestMove": "d4d5",
+    "score": 36
+  },
+  "rnb1r1k1/pppnqp1p/4p1p1/3pP2Q/3P3P/2NB4/PPP2PP1/R3K1NR w KQ -": {
+    "timesEncountered": 3,
+    "bestMove": "h5h6",
+    "score": 100,
+    "dopamine": 400
+  },
+  "r1b1r1k1/pppnqp1p/2n1p1pQ/3pP3/3P3P/2NB4/PPP2PP1/R3K1NR w KQ -": {
+    "timesEncountered": 3,
+    "bestMove": "h4h5",
+    "score": 100,
+    "dopamine": 400
+  },
+  "1rb1r1k1/pppnqp1p/2n1p1pQ/3pP2P/3P4/2NB4/PPP2PP1/R3K1NR w KQ -": {
+    "timesEncountered": 3,
+    "bestMove": "h5g6",
+    "score": 100,
+    "dopamine": 400
+  },
+  "1rb1r1k1/pppnq2p/2n1p1pQ/3pP3/3P4/2NB4/PPP2PP1/R3K1NR w KQ -": {
+    "timesEncountered": 3,
+    "bestMove": "d3g6",
+    "score": 100,
+    "dopamine": 400
+  },
+  "1rb1r1k1/pppnq2p/2n1p1BQ/3pP3/3P4/2N5/PPP2PP1/R3K1NR b KQ -": {
+    "timesEncountered": 3,
+    "bestMove": "c6d4",
+    "score": -50,
+    "blunders": [
+      "h7g6",
+      "c6d4"
+    ],
+    "dopamine": -300
+  },
+  "1rb1r1k1/pppnq2p/4p1BQ/3pP3/3n4/2N5/PPP2PP1/R3K1NR w KQ -": {
+    "timesEncountered": 3,
+    "bestMove": "g6h7",
+    "score": 100,
+    "dopamine": 400
+  },
+  "1rb1r1k1/pppnq2B/4p2Q/3pP3/3n4/2N5/PPP2PP1/R3K1NR b KQ -": {
+    "timesEncountered": 3,
+    "blunders": [
+      "g8f7"
+    ],
+    "bestMove": "g8f7",
+    "score": -50,
+    "dopamine": -300
+  },
+  "1rb1r3/pppnqk1B/4p2Q/3pP3/3n4/2N5/PPP2PP1/R3K1NR w KQ -": {
+    "timesEncountered": 3,
+    "bestMove": "h6g6",
+    "score": 100,
+    "dopamine": 400
+  },
+  "1rb1r3/pppnqk1B/4p1Q1/3pP3/3n4/2N5/PPP2PP1/R3K1NR b KQ -": {
+    "timesEncountered": 3,
+    "blunders": [
+      "f7f8"
+    ],
+    "bestMove": "f7f8",
+    "score": -50,
+    "dopamine": -300
+  },
+  "1rb1rk2/pppnq2B/4p1Q1/3pP3/3n4/2N5/PPP2PP1/R3K1NR w KQ -": {
+    "timesEncountered": 3,
+    "bestMove": "g6g8",
+    "score": 100,
+    "dopamine": 400
+  },
+  "rnbqr1k1/pppnBp1p/4p1p1/3pP2Q/3P3P/2NB4/PPP2PP1/R3K1NR b KQ -": {
+    "timesEncountered": 1,
+    "bestMove": "d8e7",
+    "score": -50
+  },
+  "rnb1r1k1/pppnqp1p/4p1pQ/3pP3/3P3P/2NB4/PPP2PP1/R3K1NR b KQ -": {
+    "timesEncountered": 2,
+    "bestMove": "b8c6",
+    "score": -50,
+    "dopamine": -300,
+    "blunders": [
+      "b8c6"
+    ]
+  },
+  "r1b1r1k1/pppnqp1p/2n1p1pQ/3pP2P/3P4/2NB4/PPP2PP1/R3K1NR b KQ -": {
+    "timesEncountered": 2,
+    "bestMove": "a8b8",
+    "score": -50,
+    "dopamine": -300,
+    "blunders": [
+      "a8b8"
+    ]
+  },
+  "1rb1r1k1/pppnqp1p/2n1p1PQ/3pP3/3P4/2NB4/PPP2PP1/R3K1NR b KQ -": {
+    "timesEncountered": 2,
+    "bestMove": "f7g6",
+    "score": -50,
+    "dopamine": -300,
+    "blunders": [
+      "f7g6"
     ]
   }
 }

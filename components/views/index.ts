@@ -5,4 +5,3 @@ export * from './guided-play-view';
 export * from './scan-view';
 export * from './learning-hub';
 export * from './versus-bots-view';
-export * from './more-hub-view';

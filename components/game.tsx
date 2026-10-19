@@ -36,7 +36,6 @@ import { useSession } from "@/lib/use-session";
 import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import { CoachModeView } from "@/components/coach-mode-view";
 import { VersusBotsView } from "@/components/views/versus-bots-view";
-import { MoreHubView } from "@/components/views/more-hub-view";
 import { SpectatorView } from "@/components/spectator-view";
 import { GameOverModal } from "@/components/game-over-modal";
 import { useChessTheme } from "@/lib/chess-themes";
