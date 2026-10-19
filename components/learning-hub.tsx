@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, RotateCcw, ShieldCheck, TrendingUp, BookOpen, Sparkles } from "lucide-react";
+import { chessSound } from "@/lib/chess-sound";
 import { BoardControls } from "@/components/board-controls";
 import { ChessBadgeLegend } from "@/lib/chess-move-badges";
 import { Chessboard } from "react-chessboard";
@@ -642,6 +643,15 @@ export function LearningHub({ lang = "id" }: Props) {
       const s0 = steps[0];
       simChess.move(s0.san);
       setFen(simChess.fen());
+      if (simChess.isCheck()) {
+        chessSound.playCheck();
+      } else if (s0.san.includes("x")) {
+        chessSound.playCapture();
+      } else if (s0.san.includes("O-O")) {
+        chessSound.playCastle();
+      } else {
+        chessSound.playMove();
+      }
       setStatus("correct");
       setHint(2);
       complete(puzzle.id, puzzle.xp);

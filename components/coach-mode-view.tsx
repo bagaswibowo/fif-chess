@@ -1,5 +1,6 @@
 "use client";
 
+import { chessSound } from "@/lib/chess-sound";
 import { classifyMove, createSquareBadgeRenderer, ChessBadgeLegend, type MoveBadge } from "@/lib/chess-move-badges";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { BoardControls } from "@/components/board-controls";
@@ -265,6 +266,15 @@ export function CoachModeView({ lang = "id" }: Props) {
 
     setChess(c);
     setFen(c.fen());
+    if (c.isCheck()) {
+      chessSound.playCheck();
+    } else if (move.san.includes("x")) {
+      chessSound.playCapture();
+    } else if (move.san.includes("O-O")) {
+      chessSound.playCastle();
+    } else {
+      chessSound.playMove();
+    }
     setHistory(h => [...h, move.san]);
     const coachBadge = classifyMove(chess.fen(), userUci, move.san, { isEngineBest: isBest });
     setMoveBadges({ [move.to]: coachBadge });
@@ -320,6 +330,15 @@ export function CoachModeView({ lang = "id" }: Props) {
       if (oppMove && c.move(oppMove)) {
         setChess(c);
         setFen(c.fen());
+        if (c.isCheck()) {
+          chessSound.playCheck();
+        } else if (botData.san.includes("x")) {
+          chessSound.playCapture();
+        } else if (botData.san.includes("O-O")) {
+          chessSound.playCastle();
+        } else {
+          chessSound.playMove();
+        }
         setHistory(h => [...h, botData.san]);
         setEvalCp(botData.scoreCp !== null ? -botData.scoreCp : null);
         const nextOut = describeOutcome(c);

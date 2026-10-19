@@ -443,6 +443,15 @@ export function Game() {
           // Fallback if load fails
         }
         setFen(payload.fen);
+        if (chess.isCheck()) {
+          chessSound.playCheck();
+        } else if (payload.san!.includes("x")) {
+          chessSound.playCapture();
+        } else if (payload.san!.includes("O-O")) {
+          chessSound.playCastle();
+        } else {
+          chessSound.playMove();
+        }
         const aiToSq = payload.uci!.slice(2, 4);
         const aiBadge = classifyMove(position, payload.uci!, payload.san!, { isEngineBest: true });
         setMoveBadges({ [aiToSq]: aiBadge });
