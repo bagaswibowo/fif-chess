@@ -127,15 +127,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication required. Login first.", retryable: false }, { status: 401 });
   }
 
-  if (op === "create") {
-    return handleCreate(request, userId);
-  }
-  if (op === "join") {
-    return handleJoin(request, userId);
-  }
-  if (op === "move") {
-    return handleMove(request, userId);
-  }
+  // Live room lifecycle first (matches PvpPanel client actions)
+  if (op === "create") return roomCreate(request, userId);
+  if (op === "join") return roomJoin(request, userId);
+  if (op === "move") return roomMove(request, userId);
+  if (op === "leave") return roomLeave(request, userId);
+  if (op === "resign" || op === "draw") return roomOutcome(request, userId, op);
+  // Legacy DB-backed game records (opt-in via op=db-*)
+  if (op === "db-create") return handleCreate(request, userId);
+  if (op === "db-join") return handleJoin(request, userId);
+  if (op === "db-move") return handleMove(request, userId);
   return NextResponse.json({ error: "Unknown op.", retryable: false }, { status: 400 });
 }
 
