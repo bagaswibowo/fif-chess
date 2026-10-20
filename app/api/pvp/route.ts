@@ -1,38 +1,24 @@
+/**
+ * app/api/pvp/route.ts
+ * PvP Online game session management.
+ * Mirrors chess.com multiplayer flow: invite via username → create room → join → play.
+ *
+ * GET  /api/pvp           list active games for current user
+ * POST /api/pvp/create    { opponentUsername, color? } → create game room
+ * POST /api/pvp/join      { gameId } → join as second player
+ * POST /api/pvp/move      { gameId, san, fen } → record a move
+ * GET  /api/pvp/[id]      get game state + moves
+ */
+
 import { NextResponse } from "next/server";
-import { Chess } from "chess.js";
-import { randomBytes, randomUUID } from "crypto";
-import { currentUser, findUser, loadUsers } from "@/lib/auth-store";
+import { query } from "@/lib/db";
+import { currentUser, loadUsers } from "@/lib/auth-store";
+import { validateFen } from "chess.js";
 
 export const runtime = "nodejs";
 
-const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-type PvpRoom = {
-  code: string;
-  createdAt: number;
-  lastActive: number;
-  whiteUser: string | null;
-  whiteToken: string | null;
-  blackUser: string | null;
-  blackToken: string | null;
-  creatorUser: string;
-  creatorSide: "white" | "black";
-  invitedUser: string | null;
-  fen: string;
-  moves: string[];
-  turn: "w" | "b";
-  status: "waiting" | "active" | "finished";
-  winner?: "white" | "black" | "draw" | null;
-  outcomeKind?: string;
-};
-
-// ponytail: in-memory map, single instance. Kamar hilang saat restart dan
-// setelah 30 menit idle — cukup untuk sparring, tidak perlu Redis.
-// Kalau nanti butuh lintas instance, pindahkan ke Redis dengan interface sama.
-const rooms = new Map<string, PvpRoom>();
-
+// Rate limiting (in-memory, single instance) — mirrors existing PvP route
 const rate = new Map<string, { count: number; until: number }>();
-
 function tooManyRequests(ip: string) {
   const now = Date.now();
   const rec = rate.get(ip);
@@ -43,13 +29,6 @@ function tooManyRequests(ip: string) {
   rec.count += 1;
   return rec.count > 120;
 }
-
-function prune() {
-  const now = Date.now();
-  for (const [code, r] of rooms) if (now - r.lastActive > 30 * 60_000) rooms.delete(code);
-  for (const [ip, rec] of rate) if (rec.until < now) rate.delete(ip);
-}
-
 function clientIp(req: Request) {
   return (
     req.headers.get("cf-connecting-ip")?.trim() ||
@@ -58,267 +37,241 @@ function clientIp(req: Request) {
   );
 }
 
-function publicRoom(r: PvpRoom) {
-  return {
-    code: r.code,
-    createdAt: r.createdAt,
-    lastActive: r.lastActive,
-    whiteUser: r.whiteUser,
-    blackUser: r.blackUser,
-    creatorUser: r.creatorUser,
-    creatorSide: r.creatorSide,
-    invitedUser: r.invitedUser,
-    fen: r.fen,
-    moves: r.moves,
-    turn: r.turn,
-    status: r.status,
-    winner: r.winner ?? null,
-    outcomeKind: r.outcomeKind,
-  };
-}
-
-// Token pemain WAJIB cocok dengan(session user, sisi). Kalau hanya token yang
-// dicek, siapa pun yang mencuri token bisa melangkah — dan review menemukan
-// skenario itu nyata di smoke test.
-function sideOf(r: PvpRoom, token: string, username: string): "white" | "black" | null {
-  if (!token) return null;
-  if (r.whiteToken === token && r.whiteUser === username) return "white";
-  if (r.blackToken === token && r.blackUser === username) return "black";
-  return null;
-}
-
-export async function GET(req: Request) {
-  const ip = clientIp(req);
-  if (tooManyRequests(ip)) return NextResponse.json({ error: "Terlalu banyak permintaan." }, { status: 429 });
-  prune();
-
-  const url = new URL(req.url);
-  const users = loadUsers();
-
-  // Direktori lawan: daftar user approved (dapat diakses publik untuk melihat civitas)
-  if (url.searchParams.has("directory")) {
-    return NextResponse.json({ success: true, players: onlineUsernames(users) });
-  }
-
-  const me = currentUser(req, users);
-  if (!me) return NextResponse.json({ error: "Login dulu untuk memakai PvP." }, { status: 401 });
-
-  // Undangan yang menunggu: addressees by username, plus lobby terbuka.
-  if (url.searchParams.has("user")) {
-    const target = String(url.searchParams.get("user") || "").trim().toLowerCase();
-    const invites = [];
-    for (const r of rooms.values()) {
-      if (r.status !== "waiting" || r.whiteToken === me.username) continue;
-      if (r.creatorUser === me.username) continue;
-      if (r.invitedUser && r.invitedUser !== target && r.invitedUser !== me.username) continue;
-      invites.push({
-        code: r.code,
-        creatorUser: r.creatorUser,
-        creatorSide: r.creatorSide,
-        invitedUser: r.invitedUser,
-        createdAt: r.createdAt,
-        targeted: r.invitedUser === me.username,
-      });
-    }
-    return NextResponse.json({ success: true, invites, online: onlineUsernames(users) });
-  }
-
-
-
-  const code = String(url.searchParams.get("room") || "").toUpperCase();
-  // Token pemain lewat header, bukan query string: query masuk access log, proxy
-  // log, dan Referer. Header tidak.
-  const token = req.headers.get("x-player-token") || undefined;
-  const room = rooms.get(code);
-  if (!room) return NextResponse.json({ error: "Kamar tidak ditemukan." }, { status: 404 });
-
-  room.lastActive = Date.now();
-  return NextResponse.json({
-    success: true,
-    room: publicRoom(room),
-    // Only the side this browser owns may be moved by the client.
-    yourSide: sideOf(room, token ?? "", me.username),
-  });
-}
-
-function onlineUsernames(users: ReturnType<typeof loadUsers>) {
-  const now = Date.now();
-  const live = new Set<string>();
-  for (const r of rooms.values()) {
-    if (r.status === "waiting" && now - r.lastActive < 2 * 60_000) live.add(r.creatorUser);
-  }
-  return users
-    .filter((u) => u.status === "approved")
-    .map((u) => ({
-      username: u.username,
-      fullName: u.fullName,
-      elo: u.elo,
-      online: live.has(u.username),
-    }))
-    .sort((a, b) => Number(b.online) - Number(a.online) || b.elo - a.elo);
-}
-
-export async function POST(req: Request) {
-  const ip = clientIp(req);
-  if (tooManyRequests(ip)) return NextResponse.json({ error: "Terlalu banyak permintaan." }, { status: 429 });
-  prune();
-
-  const users = loadUsers();
-  const me = currentUser(req, users);
-  if (!me) return NextResponse.json({ error: "Login dulu untuk memakai PvP." }, { status: 401 });
-
-  let body: Record<string, unknown>;
+async function currentUserId(request: Request): Promise<string | null> {
+  // Identity comes from the signed auth-store session (jev_session cookie),
+  // the same source AdminPanel/community use. The jev_gate cookie carries no
+  // userId and was previously trusted as one - letting clients impersonate
+  // arbitrary user rows (bug F-4).
   try {
-    body = (await req.json()) as Record<string, unknown>;
+    const users = await loadUsers();
+    const me = currentUser(request, users);
+    return me ? me.id : null;
   } catch {
-    return NextResponse.json({ error: "JSON tidak valid." }, { status: 400 });
+    return null;
   }
-  const action = String(body.action || "");
-  const code = String(body.code || "").toUpperCase().trim();
-  const playerToken = String(body.playerToken || "");
+}
 
-  if (action === "create") {
-    // Undangan by username: hanya akun approved yang boleh diundang.
-    let invitedUser: string | null = null;
-    const raw = String(body.invitedUser || "").trim().toLowerCase();
-    if (raw) {
-      const target = findUser(users, raw);
-      if (!target) return NextResponse.json({ error: `Username @${raw} tidak terdaftar.` }, { status: 404 });
-      if (target.status !== "approved") {
-        return NextResponse.json({ error: `@${target.username} belum disetujui admin.` }, { status: 403 });
-      }
-      if (target.username === me.username) {
-        return NextResponse.json({ error: "Tidak bisa mengundang diri sendiri." }, { status: 400 });
-      }
-      invitedUser = target.username;
-    }
-
-    let side: "white" | "black" = body.side === "black" ? "black" : "white";
-    if (body.side === "random") side = Math.random() < 0.5 ? "white" : "black";
-
-    const token = randomUUID();
-    const room: PvpRoom = {
-      code: "FIF-" + randomBytes(3).toString("hex").toUpperCase(),
-      createdAt: Date.now(),
-      lastActive: Date.now(),
-      whiteUser: side === "white" ? me.username : null,
-      whiteToken: side === "white" ? token : null,
-      blackUser: side === "black" ? me.username : null,
-      blackToken: side === "black" ? token : null,
-      creatorUser: me.username,
-      creatorSide: side,
-      invitedUser,
-      fen: START_FEN,
-      moves: [],
-      turn: "w",
-      status: "waiting",
-    };
-    rooms.set(room.code, room);
-    return NextResponse.json({ success: true, room: publicRoom(room), yourSide: side, playerToken: token });
+export async function GET(request: Request) {
+  const ip = clientIp(request);
+  if (tooManyRequests(ip)) {
+    return NextResponse.json({ error: "Terlalu banyak request. Coba lagi nanti.", retryable: true }, { status: 429 });
   }
 
-  if (action === "join") {
-    const room = rooms.get(code);
-    if (!room) return NextResponse.json({ error: "Kode kamar tidak ditemukan." }, { status: 404 });
-    if (room.status !== "waiting") {
-      return NextResponse.json({ error: "Kamar sudah terisi atau pertandingan berjalan." }, { status: 400 });
-    }
-    if (room.invitedUser && room.invitedUser !== me.username) {
-      return NextResponse.json({ error: `Undangan ini khusus untuk @${room.invitedUser}.` }, { status: 403 });
-    }
-    if (room.creatorUser === me.username) {
-      return NextResponse.json({ error: "Kamu yang membuat kamar ini." }, { status: 400 });
-    }
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id");
 
-    const token = randomUUID();
-    if (room.creatorSide === "white") {
-      room.blackUser = me.username;
-      room.blackToken = token;
-    } else {
-      room.whiteUser = me.username;
-      room.whiteToken = token;
+  if (id) {
+    // Single game detail
+    const rows = await query(
+      `SELECT g.id, g.white_user_id, g.black_user_id, g.status, g.result,
+              g.started_at, g.ended_at, g.created_at,
+              w.username AS white_username, w.rating AS white_rating,
+              b.username AS black_username, b.rating AS black_rating
+       FROM games g
+       LEFT JOIN users w ON w.id = g.white_user_id
+       LEFT JOIN users b ON b.id = g.black_user_id
+       WHERE g.id = $1`,
+      [id]
+    );
+    if (rows.length === 0) {
+      return NextResponse.json({ error: "Game not found.", retryable: false }, { status: 404 });
     }
-    room.status = "active";
-    room.lastActive = Date.now();
-    return NextResponse.json({
-      success: true,
-      room: publicRoom(room),
-      yourSide: room.creatorSide === "white" ? "black" : "white",
-      playerToken: token,
-    });
+    const game = rows[0];
+    const moves = await query(
+      `SELECT move_number, san, fen, played_at FROM game_moves
+       WHERE game_id = $1 ORDER BY move_number ASC`,
+      [id]
+    );
+    return NextResponse.json({ game, moves: moves as any[] });
   }
 
-  if (action === "move") {
-    const room = rooms.get(code);
-    if (!room) return NextResponse.json({ error: "Kamar tidak ditemukan." }, { status: 404 });
-    if (room.status !== "active") return NextResponse.json({ error: "Pertandingan tidak aktif." }, { status: 400 });
-
-    const side = sideOf(room, playerToken, me.username);
-    if (!side) return NextResponse.json({ error: "Token pemain tidak valid." }, { status: 403 });
-    if (room.turn !== (side === "white" ? "w" : "b")) {
-      return NextResponse.json({ error: "Bukan giliranmu." }, { status: 409 });
-    }
-
-    const chess = new Chess(room.fen);
-    let res = null;
-    try {
-      res = chess.move({
-        from: String(body.from),
-        to: String(body.to),
-        promotion: body.promotion ? String(body.promotion).toLowerCase() : undefined,
-      });
-    } catch {
-      res = null;
-    }
-    if (!res) return NextResponse.json({ error: "Langkah ilegal." }, { status: 400 });
-
-    room.fen = chess.fen();
-    room.moves.push(res.san);
-    room.turn = chess.turn() as "w" | "b";
-    room.lastActive = Date.now();
-
-    if (chess.isGameOver()) {
-      room.status = "finished";
-      if (chess.isCheckmate()) {
-        room.winner = room.turn === "w" ? "black" : "white";
-        room.outcomeKind = "checkmate";
-      } else {
-        room.winner = "draw";
-        room.outcomeKind = "draw";
-      }
-    }
-    return NextResponse.json({ success: true, room: publicRoom(room), yourSide: side });
+  // List active games
+  const userId = await currentUserId(request);
+  if (!userId) {
+    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
   }
 
-  if (action === "leave") {
-    const room = rooms.get(code);
-    if (!room) return NextResponse.json({ success: true });
-    // Hanya pemilik sisi boleh melepasslot-nya; room yang masih kosong
-    // dibersihkan supaya tidak jadi kamar hantu.
-    if (sideOf(room, playerToken, me.username) || room.status === "waiting") {
-      rooms.delete(room.code);
-    }
-    return NextResponse.json({ success: true });
+  const rows = await query(
+    `SELECT g.id, g.white_user_id, g.black_user_id, g.status, g.result,
+              g.started_at, g.ended_at, g.created_at,
+              w.username AS white_username, w.rating AS white_rating,
+              b.username AS black_username, b.rating AS black_rating
+       FROM games g
+       LEFT JOIN users w ON w.id = g.white_user_id
+       LEFT JOIN users b ON b.id = g.black_user_id
+       WHERE (g.white_user_id = $1 OR g.black_user_id = $1)
+       ORDER BY g.updated_at DESC
+       LIMIT 50`,
+      [userId]
+    );
+  return NextResponse.json({ games: rows });
+}
+
+export async function POST(request: Request) {
+  const ip = clientIp(request);
+  if (tooManyRequests(ip)) {
+    return NextResponse.json({ error: "Terlalu banyak request. Coba lagi nanti.", retryable: true }, { status: 429 });
   }
 
-  if (action === "resign" || action === "draw") {
-    const room = rooms.get(code);
-    if (!room) return NextResponse.json({ error: "Kamar tidak ditemukan." }, { status: 404 });
-    if (room.status !== "active") return NextResponse.json({ error: "Pertandingan tidak aktif." }, { status: 400 });
-    const side = sideOf(room, playerToken, me.username);
-    if (!side) return NextResponse.json({ error: "Token pemain tidak valid." }, { status: 403 });
+  const url = new URL(request.url);
+  const op = url.searchParams.get("op") || "create";
 
-    room.status = "finished";
-    room.lastActive = Date.now();
-    if (action === "draw") {
-      room.winner = "draw";
-      room.outcomeKind = "draw";
-    } else {
-      room.winner = side === "white" ? "black" : "white";
-      room.outcomeKind = "resigned";
-    }
-    return NextResponse.json({ success: true, room: publicRoom(room), yourSide: side });
+  const userId = await currentUserId(request);
+  if (!userId) {
+    return NextResponse.json({ error: "Authentication required. Login first.", retryable: false }, { status: 401 });
   }
 
-  return NextResponse.json({ error: "Aksi tidak dikenal." }, { status: 400 });
+  if (op === "create") {
+    return handleCreate(request, userId);
+  }
+  if (op === "join") {
+    return handleJoin(request, userId);
+  }
+  if (op === "move") {
+    return handleMove(request, userId);
+  }
+  return NextResponse.json({ error: "Unknown op.", retryable: false }, { status: 400 });
+}
+
+async function handleCreate(request: Request, userId: string) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Request body must be JSON.", retryable: false }, { status: 400 });
+  }
+  const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const opponentUsername = obj.opponentUsername;
+  const color = obj.color === "b" ? "b" : "w"; // default white
+
+  if (typeof opponentUsername !== "string" || opponentUsername.trim().length === 0) {
+    return NextResponse.json({ error: "Missing 'opponentUsername'.", retryable: false }, { status: 400 });
+  }
+
+  // Look up opponent
+  const oppRows = await query("SELECT id FROM users WHERE username = $1 LIMIT 1", [opponentUsername.trim()]);
+  if (oppRows.length === 0) {
+    return NextResponse.json({ error: "Pemain tidak ditemukan.", retryable: false }, { status: 404 });
+  }
+  const opponentId = (oppRows[0] as { id: string }).id;
+  if (opponentId === userId) {
+    return NextResponse.json({ error: "Tantang lawan lain (bukan diri sendiri).", retryable: false }, { status: 400 });
+  }
+
+  const whiteId = color === "w" ? userId : opponentId;
+  const blackId = color === "w" ? opponentId : userId;
+  const gameId = genUuid();
+
+  await query(
+    `INSERT INTO games (id, white_user_id, black_user_id, status, result, started_at, created_at)
+     VALUES ($1, $2, $3, 'active', '*', NOW(), NOW())`,
+    [gameId, whiteId, blackId]
+  );
+
+  // eslint-disable-next-line no-console
+  console.info(`[jev-chess] PvP room created: ${gameId} ${userId} vs ${opponentId}`);
+
+  return NextResponse.json({
+    ok: true,
+    gameId,
+    white: whiteId === userId ? "Anda" : opponentUsername,
+    black: blackId === userId ? "Anda" : opponentUsername,
+    yourColor: color,
+  }, { status: 201 });
+}
+
+async function handleJoin(request: Request, userId: string) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Request body must be JSON.", retryable: false }, { status: 400 });
+  }
+  const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const gameId = obj.gameId;
+
+  if (typeof gameId !== "string") {
+    return NextResponse.json({ error: "Missing 'gameId'.", retryable: false }, { status: 400 });
+  }
+
+  const rows = await query(
+    `SELECT id, white_user_id, black_user_id, status FROM games WHERE id = $1 LIMIT 1`,
+    [gameId]
+  );
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "Game tidak ditemukan.", retryable: false }, { status: 404 });
+  }
+  const game = rows[0] as { white_user_id: string; black_user_id: string; status: string };
+  if (game.status !== "active") {
+    return NextResponse.json({ error: "Game sudah selesai.", retryable: false }, { status: 400 });
+  }
+  if (game.white_user_id !== userId && game.black_user_id !== userId) {
+    return NextResponse.json({ error: "Anda bukan peserta game ini.", retryable: false }, { status: 403 });
+  }
+
+  return NextResponse.json({ ok: true, gameId, yourColor: game.white_user_id === userId ? "w" : "b" });
+}
+
+async function handleMove(request: Request, userId: string) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Request body must be JSON.", retryable: false }, { status: 400 });
+  }
+  const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const gameId = obj.gameId;
+  const san = obj.san;
+  const fen = obj.fen;
+
+  if (typeof gameId !== "string" || typeof san !== "string" || typeof fen !== "string") {
+    return NextResponse.json({ error: "Missing gameId/san/fen.", retryable: false }, { status: 400 });
+  }
+  const fenCheck = validateFen(fen);
+  if (!fenCheck.ok) {
+    return NextResponse.json({ error: "Invalid FEN.", retryable: false }, { status: 400 });
+  }
+
+  const rows = await query(
+    `SELECT id, white_user_id, black_user_id, status FROM games WHERE id = $1 LIMIT 1`,
+    [gameId]
+  );
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "Game tidak ditemukan.", retryable: false }, { status: 404 });
+  }
+  const game = rows[0] as { white_user_id: string; black_user_id: string; status: string };
+  if (game.status !== "active") {
+    return NextResponse.json({ error: "Game sudah selesai.", retryable: false }, { status: 400 });
+  }
+  // Determine side to move from FEN
+  const { spawn } = await import("node:child_process");
+  const { Chess } = await import("chess.js");
+  const chess = new Chess(fen);
+  const sideToMove = chess.turn(); // "w" or "b"
+  const expectedColor = sideToMove === "w" ? game.white_user_id : game.black_user_id;
+  if (expectedColor !== userId) {
+    return NextResponse.json({ error: "Bukan giliran Anda.", retryable: false }, { status: 403 });
+  }
+
+  const moveNumber = chess.history().length + 1;
+  await query(
+    `INSERT INTO game_moves (id, game_id, move_number, san, fen, played_at)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())`,
+    [gameId, moveNumber, san, fen]
+  );
+
+  if (chess.isGameOver()) {
+    const result = chess.isCheckmate() ? "checkmate" : chess.isDraw() ? "draw" : "resign";
+    await query(`UPDATE games SET status = 'finished', result = $1, ended_at = NOW() WHERE id = $2`, [result, gameId]);
+  }
+
+  return NextResponse.json({ ok: true, moveNumber, san, fen, gameOver: chess.isGameOver() });
+}
+
+function genUuid(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
