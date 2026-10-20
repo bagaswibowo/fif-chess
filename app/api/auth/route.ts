@@ -68,8 +68,14 @@ async function handleRegister(request: Request) {
   if (typeof username !== "string" || username.trim().length < 3) {
     return NextResponse.json({ error: "Username minimal 3 karakter.", retryable: false }, { status: 400 });
   }
-  if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: "Email tidak valid.", retryable: false }, { status: 400 });
+  // Email is optional: the registration UI does not collect it. Normalize to
+  // null when absent/empty so the nullable email column stays consistent.
+  let normalizedEmail: string | null = null;
+  if (typeof email === "string" && email.trim().length > 0) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return NextResponse.json({ error: "Email tidak valid.", retryable: false }, { status: 400 });
+    }
+    normalizedEmail = email.trim().toLowerCase();
   }
   if (typeof password !== "string" || password.length < 6) {
     return NextResponse.json({ error: "Password minimal 6 karakter.", retryable: false }, { status: 400 });
@@ -77,8 +83,8 @@ async function handleRegister(request: Request) {
 
   try {
     const existing = await query(
-      "SELECT id FROM users WHERE username = $1 OR email = $2",
-      [username.trim(), email.trim().toLowerCase()]
+      "SELECT id FROM users WHERE username = $1 OR (email IS NOT NULL AND email = $2)",
+      [username.trim(), normalizedEmail]
     );
     if (existing.length > 0) {
       return NextResponse.json({ error: "Username atau email sudah terdaftar.", retryable: false }, { status: 409 });
@@ -90,7 +96,7 @@ async function handleRegister(request: Request) {
       await client.query(
         `INSERT INTO users (username, email, password_hash, rating, created_at, updated_at)
          VALUES ($1, $2, $3, 1200, NOW(), NOW())`,
-        [username.trim(), email.trim().toLowerCase(), passwordHash]
+        [username.trim(), normalizedEmail, passwordHash]
       );
     });
 
