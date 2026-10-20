@@ -140,6 +140,39 @@ async function handleRegister(request: Request) {
       );
     });
 
+    // Mirror into users.json: the auth-store session table (jev_session) and
+    // AdminPanel/community/PvP identity resolve from this file. Without the
+    // mirror, a fresh registrant can log in (Postgres) but every session-
+    // backed feature sees an unknown user.
+    try {
+      const { mutateUsers, hashPassword } = await import("@/lib/auth-store");
+      const { salt: jsSalt, hash: jsHash } = hashPassword(password);
+      await mutateUsers((list) => {
+        if (list.find((u) => u.username === username.trim().toLowerCase())) {
+          return { duplicate: true };
+        }
+        list.push({
+          id: "u-" + crypto.randomUUID().slice(0, 8),
+          username: username.trim().toLowerCase(),
+          fullName: typeof obj.fullName === "string" ? obj.fullName : username.trim(),
+          role: typeof obj.role === "string" ? obj.role : "Anggota",
+          status: "pending",
+          isAdmin: false,
+          elo: 1200,
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          createdAt: new Date().toISOString(),
+          passwordHash: jsHash,
+          passwordSalt: jsSalt,
+        });
+        return { ok: true };
+      });
+    } catch (mirrorErr) {
+      // eslint-disable-next-line no-console
+      console.error("[jev-chess] users.json mirror error:", mirrorErr);
+    }
+
     // eslint-disable-next-line no-console
     console.info(`[jev-chess] new user registered (pending approval): ${username}`);
     return NextResponse.json({
