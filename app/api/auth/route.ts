@@ -11,7 +11,8 @@
 
 import { NextResponse } from "next/server";
 import { query, transaction } from "@/lib/db";
-import { currentUser, loadUsers, mutateUsers, publicUser } from "@/lib/auth-store";
+import { currentUser, loadUsers, mutateUsers, publicUser, startSession } from "@/lib/auth-store";
+import { sessionCookie as sessionCookie2 } from "@/lib/auth-store";
 import { passwordMatches, signSession, sessionCookie, readCookie, GATE_COOKIE } from "@/lib/gate";
 import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
 
@@ -242,16 +243,28 @@ async function handleLogin(request: Request) {
       return NextResponse.json({ error: "Sesi tidak dapat dibuat.", retryable: false }, { status: 500 });
     }
 
-    return NextResponse.json({
+    // auth-store session (jev_session) binds the cookie to a userId - the
+    // AdminPanel and community features resolve identity through it.
+    const { token, maxAge } = await startSession(user.id);
+    const full = await loadUsers();
+    const profile = full.find((u) => u.id === user.id);
+
+    const res = NextResponse.json({
       ok: true,
       message: "Login berhasil.",
-      user: { id: user.id, username: user.username, rating: user.rating },
+      user: profile
+        ? { ...publicUser(profile) }
+        : { id: user.id, username: user.username, rating: user.rating, fullName: user.username, role: "", status: "approved", isAdmin: false, elo: user.rating, wins: 0, losses: 0, draws: 0, createdAt: new Date().toISOString() },
     }, {
       status: 200,
       headers: {
-        "Set-Cookie": sessionCookie(session),
+        "Set-Cookie": [
+          sessionCookie(session),
+          sessionCookie2(token, maxAge, request),
+        ].join("; "),
       },
     });
+    return res;
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[jev-chess] login error:", err);
