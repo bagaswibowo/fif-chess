@@ -12,7 +12,7 @@
 import { NextResponse } from "next/server";
 import { query, transaction } from "@/lib/db";
 import { passwordMatches, signSession, sessionCookie, readCookie, GATE_COOKIE } from "@/lib/gate";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
 
 export const runtime = "nodejs";
 
@@ -113,6 +113,35 @@ async function handleRegister(request: Request) {
   }
 }
 
+/** Legacy per-user scrypt salts migrated from data/users.json. */
+const LEGACY_SALTS: Record<string, string> = (() => {
+  try {
+    const fs = require("node:fs") as typeof import("node:fs");
+    const path = process.env.JEV_DATA_DIR ?? "/app/data";
+    const raw = fs.readFileSync(`${path}/users.json`, "utf8");
+    const parsed = JSON.parse(raw) as Array<Record<string, unknown>>;
+    const list = Array.isArray(parsed) ? parsed : [];
+    const map: Record<string, string> = {};
+    for (const u of list) {
+      if (typeof u.username === "string" && typeof u.passwordSalt === "string") {
+        map[u.username] = u.passwordSalt;
+      }
+    }
+    return map;
+  } catch {
+    return {};
+  }
+})();
+
+function legacySaltFor(username: string): string | undefined {
+  return LEGACY_SALTS[username];
+}
+
+function equalHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"));
+}
+
 async function handleLogin(request: Request) {
   let body: unknown;
   try {
@@ -140,10 +169,32 @@ async function handleLogin(request: Request) {
     }
 
     const user = rows[0] as { id: string; username: string; password_hash: string; rating: number };
-    const key = process.env.SITE_HMAC_KEY ?? "dev-insecure-key-change-me";
-    const actual = await hmacSha256Hex(key, `password:${password}`);
 
-    if (!timingSafeEqual(Buffer.from(actual, "utf8"), Buffer.from(user.password_hash, "utf8"))) {
+    // Password hashes exist in two legacy formats:
+    //  - scrypt+salt 128-hex chars (original accounts; salt lives in data/users.json)
+    //  - HMAC-SHA256 64-hex chars (newer registrations)
+    // Verify by hash length so neither format is fed to the wrong comparator -
+    // timingSafeEqual throws on length mismatch (RangeError -> 500).
+    const storedHash = user.password_hash;
+    let ok = false;
+    if (storedHash.length === 64) {
+      const key = process.env.SITE_HMAC_KEY ?? "dev-insecure-key-change-me";
+      const actual = await hmacSha256Hex(key, `password:${password}`);
+      ok = equalHex(actual, storedHash);
+    } else {
+      // Legacy scrypt format: per-user salt lives in the migrated users.json.
+      const salt = legacySaltFor(user.username);
+      if (salt) {
+        try {
+          const actual = scryptSync(password, salt, 64).toString("hex");
+          ok = equalHex(actual, storedHash);
+        } catch {
+          ok = false;
+        }
+      }
+    }
+
+    if (!ok) {
       return NextResponse.json({ error: "Username atau password salah.", retryable: false }, { status: 401 });
     }
 
