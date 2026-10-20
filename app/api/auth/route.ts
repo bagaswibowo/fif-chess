@@ -11,6 +11,7 @@
 
 import { NextResponse } from "next/server";
 import { query, transaction } from "@/lib/db";
+import { currentUser, loadUsers, mutateUsers, publicUser } from "@/lib/auth-store";
 import { passwordMatches, signSession, sessionCookie, readCookie, GATE_COOKIE } from "@/lib/gate";
 import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
 
@@ -48,8 +49,46 @@ export async function POST(request: Request) {
   if (op === "login") {
     return handleLogin(request);
   }
+  if (op === "list" || op === "approve" || op === "reject") {
+    return handleAdminAction(request, op);
+  }
   return handleLogin(request);
 
+}
+
+/** Admin: list users or approve/reject a pending account. Identity comes
+ *  from the jev_session cookie (auth-store session table), not client input. */
+async function handleAdminAction(request: Request, op: string) {
+  const users = await loadUsers();
+  const me = currentUser(request, users);
+  if (!me || !me.isAdmin) {
+    return NextResponse.json({ error: "Hanya admin yang boleh melakukan ini." }, { status: 403 });
+  }
+
+  if (op === "list") {
+    return NextResponse.json({
+      success: true,
+      users: users.map(publicUser).sort((a, b) => Number(b.isAdmin) - Number(a.isAdmin)),
+    });
+  }
+
+  let body: unknown = {};
+  try { body = await request.json(); } catch { /* empty body */ }
+  const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const targetId = String(obj.userId || "");
+  const nextStatus = op === "approve" ? "approved" : "rejected";
+
+  const updated = await mutateUsers((list) => {
+    const target = list.find((u) => u.id === targetId);
+    if (!target) return { error: "Pengguna tidak ditemukan.", status: 404 } as const;
+    if (target.isAdmin) return { error: "Akun admin tidak bisa diubah.", status: 400 } as const;
+    target.status = nextStatus;
+    return { user: target } as const;
+  });
+  if ("error" in updated) {
+    return NextResponse.json({ error: updated.error }, { status: updated.status });
+  }
+  return NextResponse.json({ success: true, user: publicUser(updated.user) });
 }
 
 async function handleRegister(request: Request) {
