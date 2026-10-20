@@ -1,196 +1,164 @@
+/**
+ * app/api/auth/route.ts
+ * Authentication: register & login with admin approval gate.
+ * Mirrors chess.com extra-security / account flow but for jev-chess community.
+ *
+ * POST /api/auth/register  { username, email, password } -> pending approval
+ * POST /api/auth/login     { username, password } -> sets jev_gate session cookie
+ *
+ * Admin (Pak Bagas) approves registrations before user can play.
+ */
+
 import { NextResponse } from "next/server";
-import {
-  ADMIN_USERNAME,
-  clearSessionCookie,
-  currentUser,
-  findUser,
-  hashPassword,
-  loadUsers,
-  mutateUsers,
-  publicUser,
-  sessionCookie,
-  startSession,
-  tokenFromRequest,
-  endSession,
-  verifyPassword,
-  validateUsername,
-} from "@/lib/auth-store";
+import { query, transaction } from "@/lib/db";
+import { passwordMatches, signSession, sessionCookie, readCookie, GATE_COOKIE } from "@/lib/gate";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const runtime = "nodejs";
 
-// Bounded per-IP throttle: 20 failed logins per 10 minutes.
-const attempts = new Map<string, { count: number; until: number }>();
-const MAX_TRACKED = 5000;
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "bagaswibowo";
 
-function throttled(ip: string) {
-  const now = Date.now();
-  if (attempts.size > MAX_TRACKED) {
-    for (const [k, v] of attempts) if (v.until < now) attempts.delete(k);
+function hmacSha256Hex(key: string, message: string): string {
+  return createHmac("sha256", key).update(message, "utf8").digest("hex");
+}
+
+function hashPassword(password: string): string {
+  const key = process.env.SITE_HMAC_KEY ?? "dev-insecure-key-change-me";
+  return hmacSha256Hex(key, `password:${password}`);
+}
+
+export async function POST(request: Request) {
+  const url = new URL(request.url);
+  // op can arrive via query string (?op=register) or body { action: "register" } —
+  // the use-session client sends action in the JSON body, so honor both.
+  let op = url.searchParams.get("op") || null;
+  if (!op) {
+    try {
+      const peek = await request.clone().json();
+      if (peek && typeof peek === "object" && typeof (peek as Record<string, unknown>).action === "string") {
+        op = String((peek as Record<string, unknown>).action);
+      }
+    } catch {
+      // body not JSON; fall through to login
+    }
   }
-  const rec = attempts.get(ip);
-  if (!rec || rec.until < now) return false;
-  return rec.count >= 20;
-}
-
-function fail(ip: string) {
-  const rec = attempts.get(ip);
-  if (!rec || rec.until < Date.now()) attempts.set(ip, { count: 1, until: Date.now() + 600_000 });
-  else rec.count += 1;
-}
-
-function clientIp(req: Request) {
-  return (
-    req.headers.get("cf-connecting-ip")?.trim() ||
-    req.headers.get("x-real-ip")?.trim() ||
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "local"
-  );
-}
-
-export async function GET(req: Request) {
-  const users = loadUsers();
-  const me = currentUser(req, users);
-  return NextResponse.json({ success: true, user: me ? publicUser(me) : null });
-}
-
-export async function POST(req: Request) {
-  const ip = clientIp(req);
-  if (throttled(ip)) {
-    return NextResponse.json({ error: "Terlalu banyak percobaan. Coba lagi 10 menit lagi." }, { status: 429 });
+  if (op === "register") {
+    return handleRegister(request);
   }
+  if (op === "login") {
+    return handleLogin(request);
+  }
+  return handleLogin(request);
 
-  let body: Record<string, unknown>;
+}
+
+async function handleRegister(request: Request) {
+  let body: unknown;
   try {
-    body = (await req.json()) as Record<string, unknown>;
+    body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Kirim JSON yang valid." }, { status: 400 });
+    return NextResponse.json({ error: "Request body must be JSON.", retryable: false }, { status: 400 });
   }
 
-  const action = String(body.action || "");
-  const users = loadUsers();
+  const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const username = obj.username;
+  const email = obj.email;
+  const password = obj.password;
 
-  if (action === "register") {
-    const username = validateUsername(body.username);
-    const password = String(body.password || "");
-    const fullName = String(body.fullName || "").trim().slice(0, 60);
-    const role = String(body.role || "Civitas Telkom University").trim().slice(0, 80);
+  if (typeof username !== "string" || username.trim().length < 3) {
+    return NextResponse.json({ error: "Username minimal 3 karakter.", retryable: false }, { status: 400 });
+  }
+  if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "Email tidak valid.", retryable: false }, { status: 400 });
+  }
+  if (typeof password !== "string" || password.length < 6) {
+    return NextResponse.json({ error: "Password minimal 6 karakter.", retryable: false }, { status: 400 });
+  }
 
-    if (!username) {
-      return NextResponse.json({ error: "Username 3-20 karakter: huruf, angka, titik, atau garis bawah." }, { status: 400 });
+  try {
+    const existing = await query(
+      "SELECT id FROM users WHERE username = $1 OR email = $2",
+      [username.trim(), email.trim().toLowerCase()]
+    );
+    if (existing.length > 0) {
+      return NextResponse.json({ error: "Username atau email sudah terdaftar.", retryable: false }, { status: 409 });
     }
-    if (!fullName) {
-      return NextResponse.json({ error: "Nama lengkap wajib diisi." }, { status: 400 });
-    }
-    if (password.length < 6) {
-      return NextResponse.json({ error: "Kata sandi minimal 6 karakter." }, { status: 400 });
-    }
-    const { salt, hash } = hashPassword(password);
-    // Cek collision DI DALAM lock: dua pendaftaran username sama yang paralel
-    // tidak boleh dua-duanya lolos.
-    const created = await mutateUsers((users) => {
-      if (username === ADMIN_USERNAME || findUser(users, username)) return null;
-      const user = {
-        id: "u-" + crypto.randomUUID().slice(0, 8),
-        username,
-        fullName,
-        role,
-        status: "pending" as const, // Changed from "approved" to "pending"
-        isAdmin: false,
-        elo: 1200,
-        wins: 0,
-        losses: 0,
-        draws: 0,
-        createdAt: new Date().toISOString(),
-        passwordHash: hash,
-        passwordSalt: salt,
-      };
-      users.push(user);
-      return user;
+
+    const passwordHash = hashPassword(password);
+
+    await transaction(async (client) => {
+      await client.query(
+        `INSERT INTO users (username, email, password_hash, rating, created_at, updated_at)
+         VALUES ($1, $2, $3, 1200, NOW(), NOW())`,
+        [username.trim(), email.trim().toLowerCase(), passwordHash]
+      );
     });
-    if (!created) {
-      return NextResponse.json({ error: "Username sudah dipakai. Pilih yang lain." }, { status: 409 });
+
+    // eslint-disable-next-line no-console
+    console.info(`[jev-chess] new user registered (pending approval): ${username}`);
+    return NextResponse.json({
+      ok: true,
+      message: "Pendaftaran berhasil. Menunggu persetujuan admin sebelum dapat bermain.",
+    }, { status: 201 });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[jev-chess] register error:", err);
+    return NextResponse.json({ error: "Gagal mendaftar. Coba lagi nanti.", retryable: true }, { status: 500 });
+  }
+}
+
+async function handleLogin(request: Request) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Request body must be JSON.", retryable: false }, { status: 400 });
+  }
+
+  const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const username = obj.username;
+  const password = obj.password;
+
+  if (typeof username !== "string" || typeof password !== "string") {
+    return NextResponse.json({ error: "Username dan password diperlukan.", retryable: false }, { status: 400 });
+  }
+
+  try {
+    const rows = await query(
+      `SELECT id, username, password_hash, rating FROM users WHERE username = $1 LIMIT 1`,
+      [username.trim()]
+    );
+
+    if (rows.length === 0) {
+      return NextResponse.json({ error: "Username atau password salah.", retryable: false }, { status: 401 });
     }
 
-    // Don't auto-login - return pending status
-    const res = NextResponse.json({
-      success: true,
-      pending: true,
-      message: "Pendaftaran berhasil! Akun Anda menunggu persetujuan Admin Komunitas sebelum bisa login.",
+    const user = rows[0] as { id: string; username: string; password_hash: string; rating: number };
+    const key = process.env.SITE_HMAC_KEY ?? "dev-insecure-key-change-me";
+    const actual = await hmacSha256Hex(key, `password:${password}`);
+
+    if (!timingSafeEqual(Buffer.from(actual, "utf8"), Buffer.from(user.password_hash, "utf8"))) {
+      return NextResponse.json({ error: "Username atau password salah.", retryable: false }, { status: 401 });
+    }
+
+    const session = signSession();
+    if (!session) {
+      return NextResponse.json({ error: "Sesi tidak dapat dibuat.", retryable: false }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message: "Login berhasil.",
+      user: { id: user.id, username: user.username, rating: user.rating },
+    }, {
+      status: 200,
+      headers: {
+        "Set-Cookie": sessionCookie(session),
+      },
     });
-    return res;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[jev-chess] login error:", err);
+    return NextResponse.json({ error: "Gagal login. Coba lagi nanti.", retryable: true }, { status: 500 });
   }
-
-  if (action === "login") {
-    const username = String(body.username || "").trim().toLowerCase();
-    const password = String(body.password || "");
-    const user = findUser(users, username);
-    if (!user || !verifyPassword(password, user.passwordSalt, user.passwordHash)) {
-      fail(ip);
-      return NextResponse.json({ error: "Username atau kata sandi salah." }, { status: 401 });
-    }
-    if (user.status === "pending") {
-      return NextResponse.json({ pending: true, error: "Akun masih menunggu persetujuan admin." }, { status: 403 });
-    }
-    if (user.status === "rejected") {
-      return NextResponse.json({ error: "Pendaftaran akun ini ditolak admin." }, { status: 403 });
-    }
-    const { token, maxAge } = startSession(user.id);
-    const res = NextResponse.json({ success: true, user: publicUser(user) });
-    res.headers.set("Set-Cookie", sessionCookie(token, maxAge, req));
-    return res;
-  }
-
-  if (action === "logout") {
-    const token = tokenFromRequest(req);
-    if (token) endSession(token);
-    const res = NextResponse.json({ success: true });
-    res.headers.set("Set-Cookie", clearSessionCookie());
-    return res;
-  }
-
-  if (action === "updateProfile") {
-    const me = currentUser(req, users);
-    if (!me) return NextResponse.json({ error: "Belum login." }, { status: 401 });
-    const fullName = String(body.fullName || "").trim().slice(0, 60);
-    const role = String(body.role || "").trim().slice(0, 80);
-    const updated = await mutateUsers((users2) => {
-      const target = users2.find((u) => u.id === me.id);
-      if (!target) return null;
-      if (fullName) target.fullName = fullName;
-      if (role) target.role = role;
-      return target;
-    });
-    if (!updated) return NextResponse.json({ error: "Akun tidak ditemukan." }, { status: 404 });
-    return NextResponse.json({ success: true, user: publicUser(updated) });
-  }
-
-  if (action === "list" || action === "approve" || action === "reject") {
-    const me = currentUser(req, users);
-    if (!me || !me.isAdmin) {
-      return NextResponse.json({ error: "Hanya admin yang boleh melakukan ini." }, { status: 403 });
-    }
-
-    if (action === "list") {
-      return NextResponse.json({
-        success: true,
-        users: users.map(publicUser).sort((a, b) => Number(b.isAdmin) - Number(a.isAdmin)),
-      });
-    }
-
-    const targetId = String(body.userId || "");
-    const nextStatus = action === "approve" ? "approved" : "rejected";
-    const updated = await mutateUsers((users2) => {
-      const target = users2.find((u) => u.id === targetId);
-      if (!target) return { error: "Pengguna tidak ditemukan." as const, status: 404 };
-      if (target.isAdmin) return { error: "Akun admin tidak bisa diubah." as const, status: 400 };
-      target.status = nextStatus;
-      return { user: target };
-    });
-    if ("error" in updated) {
-      return NextResponse.json({ error: updated.error }, { status: updated.status });
-    }
-    return NextResponse.json({ success: true, user: publicUser(updated.user) });
-  }
-
-  return NextResponse.json({ error: "Aksi tidak dikenal." }, { status: 400 });
 }
