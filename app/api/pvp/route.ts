@@ -243,29 +243,58 @@ async function handleMove(request: Request, userId: string) {
   if (game.status !== "active") {
     return NextResponse.json({ error: "Game sudah selesai.", retryable: false }, { status: 400 });
   }
-  // Determine side to move from FEN
-  const { spawn } = await import("node:child_process");
+// Server-authoritative move: rebuild position from the last stored FEN
+  // (or the start position), apply the submitted SAN, and accept the client
+  // FEN only when it matches the resulting position. Clients can no longer
+  // submit arbitrary positions (QA critical finding).
   const { Chess } = await import("chess.js");
-  const chess = new Chess(fen);
-  const sideToMove = chess.turn(); // "w" or "b"
-  const expectedColor = sideToMove === "w" ? game.white_user_id : game.black_user_id;
-  if (expectedColor !== userId) {
+  const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+  const prevMoves = await query(
+    `SELECT fen FROM game_moves WHERE game_id = $1 ORDER BY move_number DESC LIMIT 1`,
+    [gameId]
+  );
+  const baseFen = prevMoves.length > 0
+    ? String((prevMoves[0] as { fen: string }).fen)
+    : START_FEN;
+  if (!validateFen(baseFen).ok) {
+    return NextResponse.json({ error: "Posisi game korup.", retryable: true }, { status: 500 });
+  }
+
+  const base = new Chess(baseFen);
+  const moverColor = base.turn() === "w" ? "w" : "b";
+  const expectedUserId = moverColor === "w" ? game.white_user_id : game.black_user_id;
+  if (expectedUserId !== userId) {
     return NextResponse.json({ error: "Bukan giliran Anda.", retryable: false }, { status: 403 });
   }
 
-  const moveNumber = chess.history().length + 1;
+  let applied;
+  try {
+    applied = base.move(san);
+  } catch {
+    return NextResponse.json({ error: "Langkah tidak legal.", retryable: false }, { status: 400 });
+  }
+  if (!applied) {
+    return NextResponse.json({ error: "Langkah tidak legal.", retryable: false }, { status: 400 });
+  }
+  const resultingFen = base.fen();
+  if (fen && fen !== resultingFen) {
+    return NextResponse.json({ error: "FEN tidak cocok dengan langkah yang disubmit.", retryable: false }, { status: 400 });
+  }
+
+  const moveNumber = base.history().length;
   await query(
     `INSERT INTO game_moves (id, game_id, move_number, san, fen, played_at)
      VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())`,
-    [gameId, moveNumber, san, fen]
+    [gameId, moveNumber, applied.san, resultingFen]
   );
 
-  if (chess.isGameOver()) {
-    const result = chess.isCheckmate() ? "checkmate" : chess.isDraw() ? "draw" : "resign";
+  if (base.isGameOver()) {
+    const result = base.isCheckmate() ? (moverColor === "w" ? "white" : "black") : "draw";
     await query(`UPDATE games SET status = 'finished', result = $1, ended_at = NOW() WHERE id = $2`, [result, gameId]);
   }
 
-  return NextResponse.json({ ok: true, moveNumber, san, fen, gameOver: chess.isGameOver() });
+  return NextResponse.json({ ok: true, moveNumber, san: applied.san, fen: resultingFen, gameOver: base.isGameOver() });
 }
 
 function genUuid(): string {
