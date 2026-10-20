@@ -245,9 +245,11 @@ async function handleLogin(request: Request) {
 
     // auth-store session (jev_session) binds the cookie to a userId - the
     // AdminPanel and community features resolve identity through it.
-    const { token, maxAge } = await startSession(user.id);
     const full = await loadUsers();
-    const profile = full.find((u) => u.id === user.id);
+    // users.json is the identity source for sessions; match by username
+    // because the Postgres row and users.json use different id schemes.
+    const profile = full.find((u) => u.username === user.username);
+    const { token, maxAge } = startSession(profile ? profile.id : user.id);
 
     const res = NextResponse.json({
       ok: true,
