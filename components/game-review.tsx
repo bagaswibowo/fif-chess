@@ -366,6 +366,15 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
         </button>
       </div>
 
+      {/* S4-T5: jalur keluar ke arsip server (S2-T2) — unduh PGN gabungan */}
+      <a
+        href="/api/games/archive/pgn"
+        className="px-3 py-1.5 rounded-full text-xs font-bold text-neutral-300 border border-[var(--border)] bg-[var(--surface)] hover:text-white hover:border-[var(--primary)] transition-all"
+        aria-label="Unduh arsip partai (PGN)"
+      >
+        {lang === "id" ? "Arsip (PGN)" : "Archive (PGN)"}
+      </a>
+
       {/* STANDARDIZED PILL TAB BAR (Consistent with Header) */}
       <div className="inline-flex p-1 rounded-full bg-[var(--surface)] border border-[var(--border)] self-start gap-1 shrink-0" role="tablist">
         <button
