@@ -14,6 +14,8 @@ import { NextResponse } from "next/server";
 import { randomBytes, randomUUID } from "crypto";
 import { query } from "@/lib/db";
 import { currentUser, loadUsers } from "@/lib/auth-store";
+import { publishBusEvent } from "@/lib/realtime/bus.ts";
+import { gameTopic, type GameStarted, type MoveMade } from "@/lib/realtime/events.ts";
 import { validateFen } from "chess.js";
 
 export const runtime = "nodejs";
@@ -178,6 +180,9 @@ async function handleCreate(request: Request, userId: string) {
   // eslint-disable-next-line no-console
   console.info(`[jev-chess] PvP room created: ${gameId} ${userId} vs ${opponentId}`);
 
+  const gameStarted: GameStarted = { type: "game_started", gameId, white: whiteId, black: blackId };
+  publishBusEvent(gameTopic(gameId), gameStarted);
+
   return NextResponse.json({
     ok: true,
     gameId,
@@ -300,6 +305,9 @@ async function handleMove(request: Request, userId: string) {
     const result = base.isCheckmate() ? (moverColor === "w" ? "white" : "black") : "draw";
     await query(`UPDATE games SET status = 'finished', result = $1, ended_at = NOW() WHERE id = $2`, [result, gameId]);
   }
+
+  const moveMade: MoveMade = { type: "move_made", gameId, san: applied.san, fen: resultingFen, moveNumber };
+  publishBusEvent(gameTopic(gameId), moveMade);
 
   return NextResponse.json({ ok: true, moveNumber, san: applied.san, fen: resultingFen, gameOver: base.isGameOver() });
 }

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { Chess } from "chess.js";
 import { reinforceMatchDopamine, recordMatchExperience } from "@/lib/experience";
+import { publishBusEvent } from "@/lib/realtime/bus.ts";
+import { gameTopic, type GameEnded } from "@/lib/realtime/events.ts";
 
 export async function POST(req: Request) {
   try {
@@ -22,6 +24,10 @@ export async function POST(req: Request) {
       if (winner === "white" || winner === "black") {
         reinforceMatchDopamine(history, winner);
       }
+      // S1-T1: result tersimpan -> publish GameEnded ke topik game (fire-and-forget).
+      const ended: GameEnded = { type: "game_ended", gameId: String(body.gameId ?? "local"), result: String(winner ?? "draw") };
+      publishBusEvent(gameTopic(ended.gameId), ended);
+
       return NextResponse.json({ ok: true, learned: true, plies: history.length });
     }
     return NextResponse.json({ ok: true, learned: false });
