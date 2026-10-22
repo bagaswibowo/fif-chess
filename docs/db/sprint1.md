@@ -95,3 +95,40 @@ CREATE INDEX "Challenge_from_user_id_status_idx" ON "Challenge"("from_user_id", 
 - **Challenge Redis-only:** kehilangan audit accept/decline dan outstanding state lintas refresh/restart.
 - **Menyimpan snapshot hasil match di Challenge (TC efektif, result, dsb.):** duplikasi `Game`; `game_id` FK cukup.
 - **Kolom audit `last_challenge_*` di User:** melanggar normalisasi (satu user bisa banyak challenge); tabel terpisah benar.
+## Migration (2026-10-22 — TL review S1-T2 C3, S1-T4 C9)
+
+Dijalankan manual via psql di container `jev-postgres`, database `jev_chess`:
+
+```bash
+docker exec -i jev-postgres psql -U jev -d jev_chess < docs/db/sprint1-migration.sql
+```
+
+1. **UNIQUE(username)** — constraint `users_username_key` pada `users.username`.
+   Username adalah **join key** antara auth-store (store id `u-...`) dan Postgres
+   (uuid, FK `games`/`challenges`) sampai konsolidasi identitas. Ini eksplisit,
+   bukan implisit: route `api/seek`, `api/challenge`, `api/match-result`
+   memetakan store id → pg uuid via `WHERE username = $1`. Username harus
+   immutable & unique — UNIQUE constraint sekarang dijamin di level DB.
+   (Constraint sudah terbentuk saat init container; migration ini idempoten.)
+2. **Tabel `challenges`** (model `Challenge` §2 — field, indeks, status enum
+   persis doc; SQL di §3):
+
+```sql
+CREATE TABLE IF NOT EXISTS challenges (
+  id            TEXT PRIMARY KEY,
+  from_user_id  TEXT NOT NULL REFERENCES users(id),
+  to_user_id    TEXT NOT NULL REFERENCES users(id),
+  time_control  TEXT NOT NULL,
+  rated         BOOLEAN NOT NULL DEFAULT false,
+  status        TEXT NOT NULL DEFAULT 'pending', -- pending | accepted | declined | cancelled | expired
+  game_id       TEXT REFERENCES games(id),
+  created_at    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  decided_at    TIMESTAMP(3)
+);
+CREATE INDEX IF NOT EXISTS challenges_to_user_id_status_idx   ON challenges(to_user_id, status);
+CREATE INDEX IF NOT EXISTS challenges_from_user_id_status_idx ON challenges(from_user_id, status);
+```
+
+Catatan: doc §2 menulis model Prisma; repo ini pakai raw `pg` (bukan Prisma),
+jadi tabel dibuat via SQL di atas — struktur kolom/indeks/status tetap persis
+desain §2. `expired` di-set lazy saat dibaca (created_at > TTL) — tidak butuh cron.
