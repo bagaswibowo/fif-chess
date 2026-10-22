@@ -13,9 +13,10 @@ const dev = process.env.NODE_ENV !== "production";
 
 const app = next({ dev });
 const handle = app.getRequestHandler();
-const upgradeHandler = app.getUpgradeHandler();
 
 await app.prepare();
+// getUpgradeHandler HANYA setelah prepare() - Next melempar bila dipanggil lebih awal
+const upgradeHandler = app.getUpgradeHandler();
 
 const server = createServer((req, res) => handle(req, res));
 attachWsGateway(server, upgradeHandler);
