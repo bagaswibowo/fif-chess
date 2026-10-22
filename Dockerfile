@@ -1,10 +1,11 @@
 # jev-chess — multi-stage Docker build (custom server.ts entry, realtime WS)
 FROM node:20-slim AS builder
 WORKDIR /app
-ENV NODE_ENV=production
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
-RUN npm ci
+# include dev deps: tailwind/postcss needed at build time; NODE_ENV=production set after install
+RUN npm ci --include=dev
+ENV NODE_ENV=production
 COPY . .
 RUN npm run build
 
