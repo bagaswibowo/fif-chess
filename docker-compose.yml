@@ -46,10 +46,7 @@ services:
       - ./yolo11-service/server.py:/app/server.py:ro
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: jev-chess:latest
+    image: ghcr.io/bagaswibowo/jev-chess:latest
     container_name: jev-chess
     restart: unless-stopped
     ports:
