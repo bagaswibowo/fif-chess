@@ -18,6 +18,8 @@ type Props = {
   onExportPgn?: () => void;
   onReview?: () => void;
   history?: string[];
+  /** S2-T1: jeda auto-redirect ke review (detik). 0 = tanpa timer. */
+  autoReviewSeconds?: number;
 };
 
 export function GameOverModal({
@@ -30,10 +32,46 @@ export function GameOverModal({
   onExportPgn,
   onReview,
   history = [],
+  autoReviewSeconds = 2.5,
 }: Props) {
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [autoReviewCountdown, setAutoReviewCountdown] = useState(false);
+  const primaryCtaRef = React.useRef<HTMLButtonElement | null>(null);
+  const autoRedirectFired = React.useRef(false);
   const [whiteCaps, setWhiteCaps] = useState<PlayerGameSummary | null>(null);
   const [blackCaps, setBlackCaps] = useState<PlayerGameSummary | null>(null);
+
+  // S2-T1: fokus awal modal di CTA utama (a11y floor — design doc §1.2).
+  useEffect(() => {
+    if (open) {
+      autoRedirectFired.current = false;
+      setAutoReviewCountdown(false);
+      requestAnimationFrame(() => primaryCtaRef.current?.focus());
+    }
+  }, [open]);
+
+  // S2-T1: auto-redirect ke review 2.5s setelah game finished — ATAU saat modal
+  // ditutup, mana yang lebih dulu. Dibatalkan saat tab tidak terlihat.
+  useEffect(() => {
+    if (!open || autoReviewSeconds <= 0) return;
+    if (autoRedirectFired.current) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    const timer = setTimeout(() => {
+      autoRedirectFired.current = true;
+      setAutoReviewCountdown(false);
+      onReview?.();
+    }, autoReviewSeconds * 1000);
+    setAutoReviewCountdown(true);
+    return () => clearTimeout(timer);
+  }, [open, autoReviewSeconds, onReview]);
+
+  const reviewNow = () => {
+    if (autoRedirectFired.current) return;
+    autoRedirectFired.current = true;
+    setAutoReviewCountdown(false);
+    onClose();
+    onReview?.();
+  };
 
   useEffect(() => {
     if (!open || history.length === 0) return;
@@ -201,29 +239,27 @@ export function GameOverModal({
             )}
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons — S2-T1: CTA utama "Review Permainan", sekunder "Kembali ke Lobby" */}
           <div className="flex flex-col sm:flex-row gap-2 pt-1">
             <Button
+              ref={primaryCtaRef}
+              onClick={reviewNow}
+              className="ctl ctl-primary flex-1 font-bold focus-visible:ring-2 focus-visible:ring-white/70"
+              aria-label={lang === "id" ? "Review Permainan" : "Review Game"}
+            >
+              {lang === "id" ? "Review Permainan" : "Review Game"}
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => {
+                autoRedirectFired.current = true;
                 onClose();
                 onNewGame();
               }}
-              className="ctl ctl-primary flex-1"
+              className="border-neutral-700 hover:bg-neutral-800 text-neutral-300 text-xs sm:text-sm font-semibold"
             >
-              {lang === "id" ? "Main Lagi" : "Play Again"}
+              {lang === "id" ? "Kembali ke Lobby" : "Back to Lobby"}
             </Button>
-            {onReview && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  onClose();
-                  onReview();
-                }}
-                className="border-amber-500/50 hover:bg-amber-500/10 text-amber-400 text-xs sm:text-sm font-semibold"
-              >
-                {lang === "id" ? "Tinjau Game (Review)" : "Game Review"}
-              </Button>
-            )}
             {onExportPgn && (
               <Button
                 variant="outline"
@@ -234,6 +270,13 @@ export function GameOverModal({
               </Button>
             )}
           </div>
+
+          {/* Countdown halus di bawah CTA — teks, bukan spinner penuh (design doc §1.2) */}
+          {autoReviewCountdown && (
+            <p className="text-[11px] text-neutral-400 animate-pulse" aria-live="polite">
+              {lang === "id" ? "Membuka review…" : "Opening review…"}
+            </p>
+          )}
         </div>
       </div>
     </>

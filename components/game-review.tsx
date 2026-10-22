@@ -10,7 +10,8 @@ import { classifyMove, createSquareBadgeRenderer, ChessBadgeLegend, type MoveBad
 // 5. Standardized Pill Tab Bar konsisten dengan UI FIF Chess.
 
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight, ArrowLeft, Play, Pause } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { loadCoachAudioMuted, saveCoachAudioMuted } from "@/lib/coach-audio";
 import { BoardControls } from "@/components/board-controls";
 import { NotationTable } from "@/components/notation-table";
 import { EvalBar } from "@/components/eval-bar";
@@ -119,6 +120,18 @@ type AiEval = {
 
 export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   const [tab, setTab] = useState<"list" | "review">("list");
+  // S2-T1: coach audio toggle — preferensi mute persist di localStorage (design doc §1.3).
+  const [coachMuted, setCoachMuted] = useState(false);
+  useEffect(() => {
+    setCoachMuted(loadCoachAudioMuted());
+  }, []);
+  const toggleCoachMuted = useCallback(() => {
+    setCoachMuted((prev) => {
+      const next = !prev;
+      saveCoachAudioMuted(next);
+      return next;
+    });
+  }, []);
   const [sortKey, setSortKey] = useState<SortKey>("when");
   const [dir, setDir] = useState<Dir>("desc");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -327,6 +340,27 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
     <div className="h-full max-h-full flex flex-col gap-2 min-h-0 overflow-hidden w-full max-w-7xl mx-auto">
       <div className="row-between flex-wrap gap-2 shrink-0">
         <h2 className="section-title m-0 text-lg md:text-xl">{lang === "id" ? "Riwayat & Review Blunder" : "History & Blunder Review"}</h2>
+        {/* S2-T1: Coach audio toggle (design doc §1.3) — mute persist localStorage */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-neutral-400 font-semibold">
+            {lang === "id" ? "Komentar Coach" : "Coach Commentary"}
+          </span>
+          <button
+            type="button"
+            aria-pressed={coachMuted}
+            aria-label={
+              coachMuted
+                ? lang === "id" ? "Putar komentar coach" : "Play coach commentary"
+                : lang === "id" ? "Bisukan komentar coach" : "Mute coach commentary"
+            }
+            onClick={toggleCoachMuted}
+            className={`p-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--muted)] transition-all duration-[var(--move-animation-duration,180ms)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+              coachMuted ? "text-neutral-500" : "text-emerald-400"
+            }`}
+          >
+            {coachMuted ? <VolumeX size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
+          </button>
+        </div>
         <button className="ctl ctl-sm font-bold" onClick={onBackToPlay}>
           <ArrowLeft size={16} className="shrink-0" /><span>{lang === "id" ? "Kembali Bermain" : "Back to Play"}</span>
         </button>
