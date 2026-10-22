@@ -21,6 +21,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/models ./models
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/server.ts ./server.ts
+COPY --from=builder /app/lib ./lib
 RUN rm -f /app/.env
 EXPOSE 43173
 # entry via Next custom server (ws attach) — see ADR-001
