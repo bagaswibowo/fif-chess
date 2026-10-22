@@ -32,7 +32,11 @@ import { AuthPanel } from "@/components/auth-panel";
 import { AdminPanel } from "@/components/admin-panel";
 import { PvpPanel, type PvpRoom } from "@/components/pvp-panel";
 import { ChallengeLayer, type ChallengeInfo, type ChallengeState } from "@/components/challenge-card";
-import { PlayingBadge } from "@/components/playing-badge";
+import { AppShell } from "@/components/shell/app-shell";
+import { HomeView } from "@/components/views/home-view";
+import { LeaderboardView } from "@/components/views/leaderboard-view";
+import { FriendsView } from "@/components/views/friends-view";
+import { EndgameDrillsView } from "@/components/views/endgame-drills-view";
 import { useRealtime } from "@/lib/use-realtime";
 import { matcherTopic, presenceTopic, type ChallengeReceived, type GameAdded, type PlayingCountChanged } from "@/lib/realtime/events";
 import { ClockMovesFullscreen } from "@/components/clock-moves-fullscreen";
@@ -47,21 +51,7 @@ import { GameOverModal } from "@/components/game-over-modal";
 import { useChessTheme } from "@/lib/chess-themes";
 import { EvalBar } from "@/components/eval-bar";
 import { useChessClock } from "@/lib/use-chess-clock";
-import {
-  IconPawn3D, IconPuzzle3D, IconKingWhite3D, IconKingBlack3D, IconDice3D, IconFriends3D, IconMessages3D, IconBell3D, IconSettings3D, IconPlay3D,
-
-  IconVision3D,
-  IconScan3D,
-  IconCommunity3D,
-  IconBot3D,
-  IconLightning3D,
-  IconClock3D,
-  IconSwap3D,
-  IconGlobe3D,
-  IconMedal3D,
-  IconCoach3D,
-  IconTarget3D,
-} from "@/components/icons3d";
+import { IconKingWhite3D, IconKingBlack3D, IconDice3D, IconPlay3D, IconSwap3D } from "@/components/icons3d";
 import {
   applyUci,
   describeOutcome,
@@ -101,7 +91,12 @@ const AI_LABEL: Record<string, string> = {
 };
 
 type PendingPromotion = { from: string; to: string };
-type NavTab = "play" | "bots" | "puzzles" | "vision" | "scan" | "community" | "review" | "coach" | "admin";
+type NavTab =
+  | "home" | "play" | "bots" | "coach" | "spectator"
+  | "puzzles" | "daily" | "rush" | "themes"
+  | "review" | "scan" | "vision" | "drills"
+  | "community" | "leaderboard" | "friends" | "archive"
+  | "admin";
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
 type CoachSubTab = "coach" | "spectator";
@@ -185,7 +180,30 @@ export function Game() {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveBadges, setMoveBadges] = useState<Record<string, MoveBadge>>({});
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
-  const [navTab, setNavTab] = useState<NavTab>("play");
+  // S4-T1: navTab diangkat ke shell-level; di sini tetap satu sumber state yang
+// dioper ke AppShell via props + hash URL (#/home, #/play, ...).
+const navTabFromHash = (): NavTab => {
+  if (typeof window === "undefined") return "home";
+  const h = window.location.hash.replace(/^#\//, "");
+  const all: NavTab[] = ["home", "play", "bots", "coach", "spectator", "puzzles", "daily", "rush", "themes", "review", "scan", "vision", "drills", "community", "leaderboard", "friends", "archive", "admin"];
+  return (all.includes(h as NavTab) ? (h as NavTab) : "home") as NavTab;
+};
+const [navTab, setNavTab] = useState<NavTab>(navTabFromHash);
+// Hash <-> state sinkron (deep-link & back button, design doc S4 §1.5).
+useEffect(() => {
+  const onHash = () => setNavTab(navTabFromHash());
+  window.addEventListener("hashchange", onHash);
+  return () => window.removeEventListener("hashchange", onHash);
+}, []);
+const navigate = useCallback((tab: NavTab) => {
+  setNavTab(tab);
+  const h = `#/${tab}`;
+  if (window.location.hash !== h) window.history.pushState(null, "", h);
+}, []);
+// S4-T1: Spectator item sidebar terpisah (grup Lainnya) → sub-tab coach.
+useEffect(() => {
+  if (navTab === "spectator") setCoachSubTab("spectator");
+}, [navTab]);
   const [coachSubTab, setCoachSubTab] = useState<CoachSubTab>("coach");
   const [aiDepth, setAiDepth] = useState(14);
   const [gameActive, setGameActive] = useState(false);
@@ -282,13 +300,13 @@ export function Game() {
 
   const handleNavClick = (tab: NavTab) => {
     if (!currentUser) {
-      if (tab !== "play") {
+      if (tab !== "play" && tab !== "home") {
         setAuthNotice("Masuk terlebih dahulu untuk membuka fitur ini.");
         window.setTimeout(() => setAuthNotice(null), 2800);
+        return;
       }
-      return;
     }
-    setNavTab(tab);
+    navigate(tab);
   };
 
 
@@ -1053,247 +1071,47 @@ export function Game() {
   }
 
   return (
-    <div className="app-shell flex flex-col md:flex-row h-screen max-h-screen overflow-hidden bg-[var(--background)] text-white select-none">
-      {/* MOBILE TOP BAR (Hidden on Desktop) */}
-      <header className="mobile-safe-top flex md:hidden items-center justify-between px-3.5 pb-2 bg-[var(--card)] border-b border-[var(--border)] shrink-0 z-30 shadow-md">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick("play")}>
-          <div className="w-8 h-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center shadow">
-            <IconPlay3D size={20} />
-          </div>
-          <div>
-            <div className="font-black text-sm uppercase leading-tight text-white flex items-center gap-1">
-              FIF <span className="text-[var(--primary)]">CHESS</span>
-            </div>
-          </div>
-        </div>
+    <AppShell
+      navTab={navTab}
+      onNavigate={handleNavClick}
+      user={currentUser ? { id: currentUser.id, username: currentUser.username, isAdmin: currentUser.isAdmin, elo: currentUser.elo } : null}
+      playingCount={playingCount}
+      lang={lang}
+      onToggleLang={() => setLang((l) => (l === "id" ? "en" : "id"))}
+      onOpenAuth={() => setShowAuthModal(true)}
+      onOpenDock={(m) => setActiveDockModal(m)}
+    >
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLang((l) => (l === "id" ? "en" : "id"))}
-            className="flex items-center gap-1 text-xs font-bold text-neutral-300 bg-[var(--surface)] border border-[var(--border)] px-2 py-1 rounded-md"
-          >
-            <IconGlobe3D size={13} />
-            <span>{lang.toUpperCase()}</span>
-          </button>
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow cursor-pointer"
-            title={currentUser ? `@${currentUser.username}` : "Masuk / daftar"}
-            aria-label={currentUser ? `Akun @${currentUser.username}` : "Masuk atau daftar"}
-          >
-            {currentUser ? currentUser.username.slice(0, 2).toUpperCase() : "?"}
-          </button>
-        </div>
-      </header>
-
-      {/* DESKTOP LEFT SIDEBAR (Hidden on Mobile) */}
-      <aside className="app-sidebar hidden md:flex md:w-[15.5rem] lg:w-[16.5rem] bg-[var(--card)] border-r border-[var(--border)] flex-col justify-between p-3 lg:p-3.5 shrink-0 h-screen overflow-y-auto select-none">
-        <div>
-          {/* Logo with 3D Pawn */}
-          <div className="flex items-center gap-3 px-2 py-3 mb-4 cursor-pointer" onClick={() => handleNavClick("play")}>
-            <div className="w-10 h-10 rounded-xl bg-[var(--primary-strong)] border border-[var(--primary)]/40 flex items-center justify-center shadow-lg">
-              <IconPawn3D size={26} />
-            </div>
-            <div>
-              <div className="font-black tracking-wider text-sm lg:text-base uppercase leading-tight text-white flex items-center gap-1.5">
-                FIF <span className="text-[var(--primary)]">CHESS</span>
-              </div>
-              <div className="text-xs text-neutral-400 font-semibold tracking-wide">ARENA CATUR TEL-U</div>
-            </div>
-          </div>
-
-          {/* Navigation Menu with 3D Icons */}
-          <nav className="space-y-1" aria-label="Navigasi utama">
-            {/* 1. Bermain (Play) */}
-            <button
-              onClick={() => handleNavClick("play")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "play"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconPlay3D size={26} aria-hidden="true" />
-              <span>{lang === "id" ? "Bermain" : "Play"}</span>
-              <PlayingBadge count={playingCount} />
-            </button>
-
-            {/* 2. Lawan Bot (Versus Bots) */}
-            <button
-              onClick={() => handleNavClick("bots")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "bots"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconBot3D size={26} />
-              <span>{lang === "id" ? "Lawan Bot" : "Play Bots"}</span>
-            </button>
-
-            {/* 3. Teka-Teki (Puzzles & Rush) — S3: PuzzleHub */}
-            <button
-              onClick={() => handleNavClick("puzzles")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "vision"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconPuzzle3D size={26} />
-              <span>{lang === "id" ? "Teka-Teki" : "Puzzles"}</span>
-            </button>
-
-            {/* 4. AI Coach & Spectator (Jev vs Stockfish) */}
-            <button
-              onClick={() => handleNavClick("coach")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "coach"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconCoach3D size={26} />
-              <span>{lang === "id" ? "AI Coach & Latih" : "AI Coach & Train"}</span>
-            </button>
-
-            {/* 5. Review Blunder & Analisis (Game Review) */}
-            <button
-              onClick={() => handleNavClick("review")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "review"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconMedal3D size={26} />
-              <span>{lang === "id" ? "Review Blunder" : "Game Review"}</span>
-            </button>
-
-            {/* 6. Scan Papan (AI Vision Scanner) */}
-            <button
-              onClick={() => handleNavClick("scan")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "scan"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconScan3D size={26} />
-              <span>{lang === "id" ? "Scan Papan" : "Scan Board"}</span>
-            </button>
-
-            {/* 7. Komunitas (Community & Clubs) */}
-            <button
-              onClick={() => handleNavClick("community")}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                navTab === "community"
-                  ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                  : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
-              }`}
-            >
-              <IconCommunity3D size={26} />
-              <span>{lang === "id" ? "Komunitas" : "Community"}</span>
-            </button>
-
-            {currentUser?.isAdmin && (
-              <button
-                onClick={() => handleNavClick("admin")}
-                className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
-                  navTab === "admin"
-                    ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
-                    : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)]"
-                }`}
-                aria-current={navTab === "admin"}
-              >
-                <IconMedal3D size={26} />
-                <span>Admin</span>
-              </button>
-            )}
-          </nav>
-        </div>
-
-        {/* Bottom Sidebar: Cari, User profile, & 4-Icon Utility Dock (Chess.com Parity) */}
-        <div className="pt-3 border-t border-[var(--border)] space-y-2.5">
-          {/* Quick Search */}
-          <div className="px-1">
-            <input
-              type="text"
-              placeholder="Cari pemain, taktik..."
-              onClick={() => setActiveDockModal("friends")}
-              readOnly
-              className="w-full px-3 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-neutral-300 placeholder-neutral-500 hover:border-neutral-400 cursor-pointer transition-all"
-            />
-          </div>
-
-          {/* User Profile Card */}
-          <div
-            onClick={() => currentUser ? setShowAuthModal(true) : undefined}
-            className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)] transition-all shadow-sm"
-          >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow shrink-0">
-              {me.initials}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold truncate text-white">{me.name}</div>
-              <div className="text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] inline-block"></span>
-                <span className="truncate">{currentUser ? `${currentUser.role} (${currentUser.elo})` : "Masuk untuk rating"}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 4-Icon Bottom Utility Dock (3D Icons) */}
-          <div className="grid grid-cols-4 gap-1 px-1">
-            <button
-              type="button"
-              onClick={() => setActiveDockModal("friends")}
-              title="Teman & Civitas"
-              className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
-            >
-              <IconFriends3D size={18} />
-              <span className="text-xs font-bold text-neutral-400">Teman</span>
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--primary)]"></span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveDockModal("messages")}
-              title="Pesan Masuk"
-              className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
-            >
-              <IconMessages3D size={18} />
-              <span className="text-xs font-bold text-neutral-400">Pesan</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveDockModal("notifications")}
-              title="Pemberitahuan"
-              className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
-            >
-              <IconBell3D size={18} />
-              <span className="text-xs font-bold text-neutral-400">Notif</span>
-              <span className="absolute top-1 right-1 px-1 py-0.2 rounded-full bg-red-600 text-xs font-black text-white">1</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveDockModal("settings")}
-              title="Pengaturan"
-              className="p-2 rounded-xl bg-[var(--background)] hover:bg-[var(--muted)] border border-[var(--border)] hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative"
-            >
-              <IconSettings3D size={18} />
-              <span className="text-xs font-bold text-neutral-400">Pengaturan</span>
-            </button>
-          </div>
-        </div>
-      </aside>
 
       {/* MAIN CONTENT AREA */}
       <main className="app-main flex-1 flex flex-col p-2.5 md:p-5 xl:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
         {challenge && (
           <ChallengeLayer challenge={challenge} state={challengeState} controlLabel={CHALLENGE_CONTROL_LABEL} onAccept={() => void resolveChallenge(true)} onDecline={() => void resolveChallenge(false)} />
+        )}
+        {/* S4-T2: Home Dashboard — default landing */}
+        {currentUser && navTab === "home" && (
+          <HomeView
+            onNavigate={(t) => navigate(t as NavTab)}
+            onPlayGame={() => navigate("play")}
+            onReviewGame={() => navigate("review")}
+          />
+        )}
+        {/* S4-T3: Leaderboard & Friends */}
+        {currentUser && navTab === "leaderboard" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <LeaderboardView onPlayOnline={() => navigate("play")} />
+          </div>
+        )}
+        {currentUser && navTab === "friends" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <FriendsView onChallenge={(u) => { setPlayMode("pvp"); navigate("play"); }} />
+          </div>
+        )}
+        {/* S4-T4: Endgame Drills */}
+        {currentUser && navTab === "drills" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <EndgameDrillsView />
+          </div>
         )}
         {!currentUser ? (
           <div className="auth-page w-full max-w-lg mx-auto p-3 pt-6 sm:p-6 min-h-[calc(100vh-4rem)] flex flex-col justify-start md:justify-center items-center overflow-y-auto">
@@ -2070,32 +1888,6 @@ export function Game() {
         </div>
       )}
 
-      {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 min-h-14 bg-[var(--card)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md border-t border-[var(--border)] shadow-2xl">
-        <div className="flex justify-around items-center py-1.5 px-0.5 gap-0.5 min-w-full">
-          {[
-            { id: "play", icon: IconPlay3D, labelId: "Main", labelEn: "Play" },
-            { id: "bots", icon: IconBot3D, labelId: "Bot", labelEn: "Bots" },
-            { id: "puzzles", icon: IconPuzzle3D, labelId: "Teka-teki", labelEn: "Puzzles" },
-            { id: "coach", icon: IconCoach3D, labelId: "Belajar", labelEn: "Learn" },
-            { id: "review", icon: IconMedal3D, labelId: "Review", labelEn: "Review" },
-            { id: "more", icon: IconTarget3D, labelId: "Lainnya", labelEn: "More" },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => handleNavClick(tab.id as NavTab)}
-              className={`flex flex-col items-center gap-0.5 px-1 py-1 rounded-lg transition-all min-w-0 flex-1 ${
-                navTab === tab.id ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
-              }`}
-            >
-              <div className={`p-1 rounded-lg ${navTab === tab.id ? "bg-[var(--muted)] text-white" : ""}`}>
-                <tab.icon size={20} />
-              </div>
-              <span className="text-[10px] leading-none">{lang === "id" ? tab.labelId : tab.labelEn}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
 
             {/* DOCK MODALS (Teman, Pesan, Pemberitahuan, Pengaturan) */}
       <DockModals
@@ -2153,6 +1945,6 @@ export function Game() {
           tryHumanMove(pendingPromotion.from, pendingPromotion.to, piece);
         }}
       />
-    </div>
+    </AppShell>
   );
 }
