@@ -30,6 +30,10 @@ import { GameReview } from "@/components/game-review";
 import { AuthPanel } from "@/components/auth-panel";
 import { AdminPanel } from "@/components/admin-panel";
 import { PvpPanel, type PvpRoom } from "@/components/pvp-panel";
+import { ChallengeLayer, type ChallengeInfo, type ChallengeState } from "@/components/challenge-card";
+import { PlayingBadge } from "@/components/playing-badge";
+import { useRealtime } from "@/lib/use-realtime";
+import { matcherTopic, presenceTopic, type ChallengeReceived, type PlayingCountChanged } from "@/lib/realtime/events";
 import { ClockMovesFullscreen } from "@/components/clock-moves-fullscreen";
 import { TacticalCommentaryCard } from "@/components/tactical-commentary-card";
 import { useSession } from "@/lib/use-session";
@@ -191,6 +195,41 @@ export function Game() {
   // Identitas: satu session server-side (cookie httpOnly). Tidak ada lagi
   // identitas client-side yang bisa dipalsukan.
   const { user: currentUser, login, register, logout } = useSession();
+
+  // Realtime inline challenge + badge "Bermain" (S1-T4). Kontrak event dari
+  // lib/realtime/events.ts — tidak diubah. Aksi lewat /api/challenge (S1-T2).
+  const [challenge, setChallenge] = useState<ChallengeInfo | null>(null);
+  const [challengeState, setChallengeState] = useState<ChallengeState>("incoming");
+  const [playingCount, setPlayingCount] = useState(0);
+  const userId = currentUser?.id;
+  useRealtime({
+    topics: userId ? [matcherTopic(userId), presenceTopic(userId)] : [],
+    enabled: Boolean(userId),
+    onEvent: (ev) => {
+      if (ev.type === "challenge_received") {
+        const c = ev as ChallengeReceived;
+        setChallenge({ challengeId: c.challengeId, fromUsername: c.fromUsername });
+        setChallengeState("incoming");
+      } else if (ev.type === "playing_count_changed") {
+        setPlayingCount((ev as PlayingCountChanged).count);
+      }
+    },
+  });
+
+  const resolveChallenge = useCallback(async (accept: boolean) => {
+    if (!challenge) return;
+    setChallengeState(accept ? "accepted" : "declined");
+    try {
+      await fetch("/api/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: accept ? "accept" : "decline", challengeId: challenge.challengeId }),
+      });
+    } catch {}
+    if (!accept) {
+      setTimeout(() => setChallenge(null), 2000);
+    }
+  }, [challenge]);
     const [activeDockModal, setActiveDockModal] = useState<DockModalType>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
     const [authNotice, setAuthNotice] = useState<string | null>(null);
@@ -1053,8 +1092,9 @@ export function Game() {
                   : "bg-[var(--surface)] text-neutral-300 hover:text-white border border-[var(--border)] hover:bg-[var(--surface)] active:bg-[var(--background)] active:border-[var(--primary)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,0.6)] active:translate-y-[1px]"
               }`}
             >
-              <IconPlay3D size={26} />
+              <IconPlay3D size={26} aria-hidden="true" />
               <span>{lang === "id" ? "Bermain" : "Play"}</span>
+              <PlayingBadge count={playingCount} />
             </button>
 
             {/* 2. Lawan Bot (Versus Bots) */}
@@ -1231,6 +1271,9 @@ export function Game() {
 
       {/* MAIN CONTENT AREA */}
       <main className="app-main flex-1 flex flex-col p-2.5 md:p-5 xl:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
+        {challenge && (
+          <ChallengeLayer challenge={challenge} state={challengeState} controlLabel="Cepat · 10 menit" onAccept={() => void resolveChallenge(true)} onDecline={() => void resolveChallenge(false)} />
+        )}
         {!currentUser ? (
           <div className="auth-page w-full max-w-lg mx-auto p-3 pt-6 sm:p-6 min-h-[calc(100vh-4rem)] flex flex-col justify-start md:justify-center items-center overflow-y-auto">
             <div className="w-full max-w-md mx-auto">
