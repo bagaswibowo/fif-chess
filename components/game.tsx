@@ -41,6 +41,7 @@ import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import { CoachModeView } from "@/components/coach-mode-view";
 import { VersusBotsView } from "@/components/views/versus-bots-view";
 import { SpectatorView } from "@/components/spectator-view";
+import { PasteBar } from "@/components/paste-bar";
 import { GameOverModal } from "@/components/game-over-modal";
 import { useChessTheme } from "@/lib/chess-themes";
 import { EvalBar } from "@/components/eval-bar";
@@ -66,6 +67,7 @@ import {
   findLegalMove,
   getLegalMoves,
   replaySanList,
+  parseFen as parseFenChess,
   isPromotionAttempt,
   sideToMove,
   type PromotionPiece,
@@ -1344,6 +1346,46 @@ export function Game() {
 
         {navTab === "review" && (
           <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            {/* S2-T4: paste bar fast-path di atas panel review (design doc §3.1) */}
+            <div className="px-1 pt-1 pb-1 shrink-0">
+              <PasteBar
+                lang={lang}
+                onLoadFen={(f) => {
+                  setGameStartFen(f);
+                  setFen(f);
+                  setMoves([]);
+                  setCustomOutcome(null);
+                  setNavTab("play");
+                }}
+                onLoadPgn={(sans, startFen) => {
+                  const replayed = replaySanList(startFen, sans);
+                  const boardAtEnd = parseFenChess(startFen);
+                  for (const m of replayed) {
+                    try {
+                      boardAtEnd.move(m.san);
+                    } catch {
+                      break;
+                    }
+                  }
+                  setGameStartFen(startFen);
+                  setFen(boardAtEnd.fen());
+                  setMoves(
+                    replayed.map((m, i) => ({
+                      san: m.san,
+                      uci: m.uci,
+                      by: i % 2 === 0 ? "human" : "jev",
+                      ply: i + 1,
+                    })),
+                  );
+                  setCustomOutcome(null);
+                  setNavTab("play");
+                }}
+                onOpenGame={(gameId) => {
+                  // Tautan game internal → panel review game tersebut.
+                  setNavTab("review");
+                }}
+              />
+            </div>
             <GameReview
               history={gameHistory}
               onBackToPlay={() => setNavTab("play")}
@@ -2090,6 +2132,7 @@ export function Game() {
         onExportPgn={downloadGamePgn}
         onReview={() => {
           setShowGameOverModal(false);
+          // S2-T1: idempoten — satu jalur review, view switching bukan route baru.
           setNavTab("review");
         }}
         history={moves.map((m) => m.san)}
