@@ -65,17 +65,33 @@ services:
       - JEV_DATA_DIR=/app/data
       - CHESSCOG_URL=http://chesscog:8000
       - YOLO11_URL=http://yolo11:8100
+      - REDIS_URL=redis://redis:6379
     volumes:
       - ./data:/app/data
       - ./models:/app/models
       - /home/sxz/Stockfish/src/stockfish:/usr/games/stockfish:ro
     depends_on:
+      redis:
+        condition: service_healthy
       chesscog:
         condition: service_started
       yolo11:
         condition: service_started
       postgres:
         condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: jev-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 128mb --maxmemory-policy noeviction --appendonly no
+    volumes:
+      - jev_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   cftunnel-jev-chess:
     image: cloudflare/cloudflared:latest
@@ -89,4 +105,5 @@ services:
     command: tunnel --no-autoupdate --protocol http2 run
 
 volumes:
+  jev_redis_data:
   jev_postgres_data:
