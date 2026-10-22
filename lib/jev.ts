@@ -378,7 +378,9 @@ export function buildJevRequest(fen: string, seed?: number, history: string[] = 
         }
         attacksMultiple = attackedCount >= 2;
       }
-    } catch {}
+    } catch {
+      // silent catch - continue with isPassedPawn default false
+    }
 
     if (allowsOpponentMate) {
       desc += "[CRITICAL DANGER: ALLOWS IMMEDIATE CHECKMATE] DO NOT PLAY! Allows opponent to deliver checkmate on the next move! (VETO)";
@@ -642,11 +644,14 @@ export async function playJevMove(
     flyMap[fm.uci] = fm.prob;
   }
 
+  const flyBlend = Number(process.env.JEV_FLY_BLEND_WEIGHT ?? "0.5");
+  const jevBlend = 1 - flyBlend;
+
   const blendedProbs: Record<string, number> = {};
   for (const uci of built.legalUcis) {
     const pJev = resolved.probabilities[uci] ?? 0;
     const pFly = flyMap[uci] ?? 0;
-    blendedProbs[uci] = Number((0.5 * pJev + 0.5 * pFly).toFixed(4));
+    blendedProbs[uci] = Number((jevBlend * pJev + flyBlend * pFly).toFixed(4));
   }
 
   const sortedBlended = Object.entries(blendedProbs).sort((a, b) => b[1] - a[1]);

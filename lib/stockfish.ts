@@ -1,6 +1,9 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { existsSync } from "node:fs";
-const SF_BIN = process.env.STOCKFISH_PATH || (existsSync("/home/sxz/Stockfish/src/stockfish") ? "/home/sxz/Stockfish/src/stockfish" : "/usr/games/stockfish");
+const SF_BIN = process.env.STOCKFISH_PATH ||
+  (existsSync("/home/sxz/Stockfish/src/stockfish")
+    ? "/home/sxz/Stockfish/src/stockfish"
+    : "/usr/games/stockfish");
 import { Chess } from "chess.js";
 import { applyUci, describeOutcome, isKnightFork, isQueenThreatened, isQueenXrayed, type GameOutcome } from "@/lib/chess";
 import { getLearnedMove, isBlunderMove, recordMatchExperience } from "./experience";

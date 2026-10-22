@@ -7,15 +7,10 @@ import { describeOutcome, staticExchangeEvaluation } from "../chess.ts";
 import fs from "node:fs";
 import path from "node:path";
 import { Chess } from "chess.js";
-// @ts-ignore
 import { parseArrays } from "./loader.js";
-// @ts-ignore
 import { FlyBrain } from "./flybrain.js";
-// @ts-ignore
 import { encodeBoard, legalMoveIndices, indexToMove } from "./encoding.js";
-// @ts-ignore
 import { runMCTS } from "./mcts.js";
-// @ts-ignore
 import * as enc from "./encoding.js";
 import { getLearnedMove, isBlunderMove, recordMatchExperience } from "../experience.ts";
 import { evaluateConnectomeNetwork } from "./connectome-network.ts";

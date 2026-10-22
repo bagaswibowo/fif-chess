@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: jev-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=jev
+      - POSTGRES_PASSWORD=jev_chess_dev
+      - POSTGRES_DB=jev_chess
+    ports:
+      - "5432:5432"
+    volumes:
+      - jev_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jev -d jev_chess"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   chesscog:
     build:
       context: ./chesscog-service
@@ -18,9 +36,8 @@ services:
     image: jev-yolo11:latest
     container_name: jev-yolo11
     restart: unless-stopped
-    # Model bidak catur pretrained diunduh OTOMATIS oleh entrypoint saat
-    # container start (yolo11n fine-tune, 12 kelas). Tidak perlu setup manual.
     environment:
+      - PYTHONUNBUFFERED=1
       - YOLO_MODEL_PATH=/app/models/best.pt
       - YOLO_MODEL_URL=${YOLO_MODEL_URL:-https://huggingface.co/dopaul/chess-piece-detector-merged-v2/resolve/main/best.pt}
       - YOLO_CONF_THRESHOLD=${YOLO_CONF_THRESHOLD:-0.25}
@@ -43,6 +60,7 @@ services:
       - SITE_HMAC_KEY=${SITE_HMAC_KEY:-}
       - SITE_PASSWORD_HMAC=${SITE_PASSWORD_HMAC:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?ADMIN_PASSWORD wajib diset di .env}
+      - DATABASE_URL=postgresql://jev:jev_chess_dev@postgres:5432/jev_chess?sslmode=disable
       - NODE_ENV=production
       - JEV_DATA_DIR=/app/data
       - CHESSCOG_URL=http://chesscog:8000
@@ -51,6 +69,13 @@ services:
       - ./data:/app/data
       - ./models:/app/models
       - /home/sxz/Stockfish/src/stockfish:/usr/games/stockfish:ro
+    depends_on:
+      chesscog:
+        condition: service_started
+      yolo11:
+        condition: service_started
+      postgres:
+        condition: service_healthy
 
   cftunnel-jev-chess:
     image: cloudflare/cloudflared:latest
@@ -62,3 +87,6 @@ services:
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     command: tunnel --no-autoupdate --protocol http2 run
+
+volumes:
+  jev_postgres_data:

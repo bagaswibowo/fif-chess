@@ -1,4 +1,3 @@
-node_modules
 !.next/standalone
 !.next/static
 .git
@@ -10,6 +9,5 @@ data/
 models/*.bin
 *.log
 tsconfig.tsbuildinfo
-package-lock.json
 chesscog-src
 chesscog-service

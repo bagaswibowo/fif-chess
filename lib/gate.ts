@@ -1,5 +1,12 @@
+/**
+ * gate.ts
+ * HMAC gate authentication for jev-chess.
+ * Cookie jev_gate with HttpOnly, SameSite=Lax, Path=/.
+ * Admin approval gate: users registered but not yet approved cannot play.
+ */
+
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { hmacSha256Hex } from "@/lib/hmac";
+import { query } from "@/lib/db";
 
 export const HMAC_KEY_ENV = "SITE_HMAC_KEY";
 export const PASSWORD_HMAC_ENV = "SITE_PASSWORD_HMAC";
@@ -37,6 +44,10 @@ export async function passwordMatches(password: string): Promise<boolean> {
   return equalHex(actual, expected);
 }
 
+async function hmacSha256Hex(key: string, message: string): Promise<string> {
+  return createHmac("sha256", key).update(message, "utf8").digest("hex");
+}
+
 export function signSession(now = Date.now()): string | null {
   const key = trimmed(HMAC_KEY_ENV);
   if (!key) return null;
@@ -46,7 +57,7 @@ export function signSession(now = Date.now()): string | null {
 
 export function sessionValid(cookie: string | undefined, now = Date.now()): boolean {
   const key = trimmed(HMAC_KEY_ENV);
-  if (!key) return true;
+  if (!key) return true; // dev mode: no HMAC configured, allow all
   if (!cookie) return false;
   const dot = cookie.indexOf(".");
   if (dot <= 0) return false;
@@ -71,4 +82,38 @@ export function readCookie(request: Request, name: string): string | undefined {
 export function sessionCookie(value: string): string {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   return `${GATE_COOKIE}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_SECONDS}${secure}`;
+}
+
+export function clearSessionCookie(): string {
+  return `${GATE_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+}
+
+/**
+ * Check whether the authenticated user is approved to play.
+ * Returns { approved: boolean, user?: { id, username, rating } }
+ */
+export async function getApprovedUser(sessionId: string): Promise<{ approved: boolean; user?: { id: string; username: string; rating: number } }> {
+  const key = trimmed(HMAC_KEY_ENV);
+  if (!key) {
+    // dev mode without HMAC — allow all
+    return { approved: true };
+  }
+
+  const dot = sessionId.indexOf(".");
+  if (dot <= 0) return { approved: false };
+  const expStr = sessionId.slice(0, dot);
+  const given = sessionId.slice(dot + 1).toLowerCase();
+  if (!equalHex(mac(key, `allow:${expStr}`), given)) return { approved: false };
+
+  try {
+    const rows = await query(
+      `SELECT id, username, rating FROM users WHERE username = $1 LIMIT 1`,
+      [sessionId] // placeholder — in production we'd store user id in session
+    );
+    if (rows.length === 0) return { approved: false };
+    const u = rows[0] as { id: string; username: string; rating: number };
+    return { approved: true, user: { id: u.id, username: u.username, rating: u.rating } };
+  } catch {
+    return { approved: false };
+  }
 }

@@ -1,0 +1,126 @@
+// ============================
+// PRISMA SCHEMA (prisma/schema.prisma)
+// Jev-Chess — FIF Chess Arena (Telkom University)
+// Ported from chess.com APK v4.10.20 REA decompilation
+// ============================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  username          String   @unique
+  email             String   @unique
+  password_hash     String
+  rating            Int      @default(1200)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  gamesAsWhite      Game[]   @relation("WhiteGames")
+  gamesAsBlack      Game[]   @relation("BlackGames")
+  puzzleAttempts    PuzzleAttempt[]
+  securitySessions  ExtraSecuritySession[]
+}
+
+model Game {
+  id          String   @id @default(uuid())
+  white_user_id String
+  black_user_id String
+  status      String   @default("active") // active | finished | resigned | draw
+  result      String?  // checkmate | draw | resign | *
+  started_at  DateTime @default(now())
+  ended_at    DateTime?
+  created_at  DateTime @default(now())
+
+  white  User      @relation("WhiteGames", fields: [white_user_id], references: [id])
+  black  User      @relation("BlackGames", fields: [black_user_id], references: [id])
+  moves  GameMove[]
+  analysis AnalysisResult?
+
+  @@index([white_user_id])
+  @@index([black_user_id])
+}
+
+model GameMove {
+  id         String   @id @default(uuid())
+  game_id    String
+  move_number Int
+  san        String
+  fen        String
+  played_at  DateTime @default(now())
+
+  game Game @relation(fields: [game_id], references: [id])
+
+  @@index([game_id])
+  @@index([game_id, move_number])
+}
+
+model AnalysisResult {
+  id        String   @id @default(uuid())
+  game_id   String   @unique
+  engine    String   // stockfish | jev | jev-fly | fly
+  depth     Int
+  score     Float
+  best_move String
+  evaluation String?
+  created_at DateTime @default(now())
+
+  game Game @relation(fields: [game_id], references: [id])
+}
+
+model Puzzle {
+  id            String   @id @default(uuid())
+  title         String
+  fen           String
+  solution_moves String // JSON array string
+  rating        Int      @default(1200)
+  theme         String?
+  created_at    DateTime @default(now())
+
+  attempts PuzzleAttempt[]
+}
+
+model PuzzleAttempt {
+  id             String   @id @default(uuid())
+  user_id        String
+  puzzle_id      String
+  correct        Boolean
+  time_spent_sec Int
+  attempted_at   DateTime @default(now())
+
+  user  User     @relation(fields: [user_id], references: [id])
+  puzzle Puzzle @relation(fields: [puzzle_id], references: [id])
+
+  @@index([user_id])
+  @@index([puzzle_id])
+}
+
+model ExtraSecuritySession {
+  id        String   @id @default(uuid())
+  user_id   String
+  token     String   @unique
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([token])
+}
+
+model RateLimit {
+  id           String   @id @default(uuid())
+  identifier   String
+  endpoint     String
+  request_count Int     @default(0)
+  window_start DateTime
+  updated_at   DateTime @updatedAt
+
+  @@index([identifier, endpoint])
+}
