@@ -4,6 +4,7 @@ import { reinforceMatchDopamine, recordMatchExperience } from "@/lib/experience"
 import { publishBusEvent } from "@/lib/realtime/bus.ts";
 import { query } from "@/lib/db";
 import { loadUsers } from "@/lib/auth-store";
+import { eloUpdate } from "@/lib/rating";
 import { gameTopic, type GameEnded, type PlayingCountChanged } from "@/lib/realtime/events.ts";
 import { clearPlaying } from "@/lib/realtime/playing-count.ts";
 
@@ -44,7 +45,41 @@ export async function POST(req: Request) {
             [gameId],
           );
           if (rows.length === 0) return; // bukan game DB (mis. vs bot) atau sudah di-update
-          await query(`UPDATE games SET status = 'finished', ended_at = NOW() WHERE id = $1`, [gameId]);
+          // S2-T3 rating snapshot: sebelum UPDATE finished, hitung delta elo
+          // (K=20, lib/rating.ts) dari users.rating kedua pemain dan simpan
+          // before/after di games — sumber arsip delta + stats graph.
+          try {
+            const pgIdsSnap = [String((rows[0] as { white_user_id: string }).white_user_id), String((rows[0] as { black_user_id: string }).black_user_id)];
+            const ratingRows = await query(
+              `SELECT id, rating FROM users WHERE id = ANY($1::uuid[]) ORDER BY array_position($1::uuid[], id)`,
+              [pgIdsSnap],
+            );
+            if (ratingRows.length === 2) {
+              const [wR, bR] = ratingRows as { id: string; rating: number }[];
+              const whiteBefore = Number(wR.rating) || 1200;
+              const blackBefore = Number(bR.rating) || 1200;
+              const score = winner === "white" ? 1 : winner === "black" ? 0 : 0.5;
+              const { whiteAfter, blackAfter } = eloUpdate(whiteBefore, blackBefore, score);
+              await query(
+                `UPDATE games SET status = 'finished', ended_at = NOW(),
+                        white_rating_before = $2, white_rating_after = $3,
+                        black_rating_before = $4, black_rating_after = $5
+                 WHERE id = $1`,
+                [gameId, whiteBefore, whiteAfter, blackBefore, blackAfter],
+              );
+              await query(
+                `UPDATE users SET rating = v.new_rating, updated_at = NOW()
+                 FROM (VALUES ($1::uuid, $2::int), ($3::uuid, $4::int)) AS v(id, new_rating)
+                 WHERE users.id = v.id`,
+                [pgIdsSnap[0], whiteAfter, pgIdsSnap[1], blackAfter],
+              );
+            } else {
+              await query(`UPDATE games SET status = 'finished', ended_at = NOW() WHERE id = $1`, [gameId]);
+            }
+          } catch (snapErr) {
+            console.error("[match-result] rating snapshot gagal (game tetap finished):", snapErr);
+            await query(`UPDATE games SET status = 'finished', ended_at = NOW() WHERE id = $1`, [gameId]);
+          }
           const pgIds = [String((rows[0] as { white_user_id: string }).white_user_id), String((rows[0] as { black_user_id: string }).black_user_id)];
           const pgRows = await query(`SELECT id, username FROM users WHERE id = ANY($1::uuid[])`, [pgIds]);
           const usernameByPg = new Map(pgRows.map((r) => [String((r as { id: string }).id), String((r as { username: string }).username)]));

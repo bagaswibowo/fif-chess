@@ -38,3 +38,21 @@ Lokasi INSERT yang harus disentuh (hasil grep `INSERT INTO games`, exclude .next
 
 Catatan: kolom dibuat nullable agar migration tidak merusak jalur existing;
 API path yang tidak mengisi kolom ini tetap jalan, tapi akan gagal filter stats G15.
+
+## Implementasi backend (S2-T2 + S2-T3, selesai)
+
+- INSERT games kini mengisi `time_control` + `game_type='live'` di tiga jalur:
+  `app/api/pvp/route.ts` (timeControl body opsional, default "10+0"),
+  `app/api/challenge/[id]/respond/route.ts` (dari challenges.time_control),
+  `lib/realtime/matcher.ts` (dari seek ticket tc).
+- `scripts/migrate-json-to-pg.ts` dibiarkan mengisi NULL untuk data lama —
+  game legacy tidak masuk filter game_type stats (diterima, data historis).
+- Rating snapshot (S2-T3): `app/api/match-result/route.ts` menghitung delta
+  elo K=20 (`lib/rating.ts`) dari `users.rating` sebelum UPDATE finished,
+  menyimpan before/after kedua pemain di games, lalu meng-update
+  `users.rating`. Tidak ada sistem rating baru — elo satu-fungsi + kolom
+  snapshot yang sudah dimigrasi.
+- API baru: `GET api/games/archive` (filter/pagination/counter),
+  `PATCH api/games/[id]/favorite`, `GET api/games/[id]/pgn`,
+  `GET api/games/archive/pgn?ids=`, `GET api/stats/summary?window=90|30|365|all`
+  (semua derive dari games; tanpa tabel baru — YAGNI).
