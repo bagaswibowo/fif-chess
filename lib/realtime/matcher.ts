@@ -32,12 +32,15 @@ async function runMatch(seek: SeekTicket): Promise<void> {
   const blackId = whiteId === a.userId ? b.userId : a.userId;
   const whitePg = (whiteId === a.userId ? a : b).pgUserId;
   const blackPg = (whiteId === a.userId ? b : a).pgUserId;
+  const whiteSeek = whiteId === a.userId ? a : b;
+  const blackSeek = whiteId === a.userId ? b : a;
 
-  // Pola db-create api/pvp/route.ts (handleCreate)
+  // Pola db-create api/pvp/route.ts (handleCreate). S2-T2: game_type 'live' +
+  // time_control snapshot dari seek ticket (kedua seek dijamin tc sama oleh pool).
   await query(
-    `INSERT INTO games (id, white_user_id, black_user_id, status, result, started_at, created_at)
-     VALUES ($1, $2, $3, 'active', '*', NOW(), NOW())`,
-    [gameId, whitePg, blackPg],
+    `INSERT INTO games (id, white_user_id, black_user_id, status, result, started_at, created_at, time_control, game_type)
+     VALUES ($1, $2, $3, 'active', '*', NOW(), NOW(), $4, 'live')`,
+    [gameId, whitePg, blackPg, (whiteSeek.tc ?? blackSeek.tc ?? "10+0").slice(0, 10)],
   );
 
   // Badge "Bermain N" (ticket S1-T3) — dua pemain masuk game.

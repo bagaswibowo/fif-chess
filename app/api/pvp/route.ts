@@ -152,6 +152,9 @@ async function handleCreate(request: Request, userId: string) {
   const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const opponentUsername = obj.opponentUsername;
   const color = obj.color === "b" ? "b" : "w"; // default white
+  const tc = typeof obj.timeControl === "string" && /^\d+\+\d+$/.test(obj.timeControl.trim())
+    ? obj.timeControl.trim().slice(0, 10)
+    : null;
 
   if (typeof opponentUsername !== "string" || opponentUsername.trim().length === 0) {
     return NextResponse.json({ error: "Missing 'opponentUsername'.", retryable: false }, { status: 400 });
@@ -172,9 +175,11 @@ async function handleCreate(request: Request, userId: string) {
   const gameId = genUuid();
 
   await query(
-    `INSERT INTO games (id, white_user_id, black_user_id, status, result, started_at, created_at)
-     VALUES ($1, $2, $3, 'active', '*', NOW(), NOW())`,
-    [gameId, whiteId, blackId]
+    // S2-T2: game_type/time_control wajib (docs/db/sprint2.md) — pvp = live.
+    // time_control "db-create" legacy tidak dikirim client → default "10+0".
+    `INSERT INTO games (id, white_user_id, black_user_id, status, result, started_at, created_at, time_control, game_type)
+     VALUES ($1, $2, $3, 'active', '*', NOW(), NOW(), $4, 'live')`,
+    [gameId, whiteId, blackId, tc ?? "10+0"]
   );
 
   // eslint-disable-next-line no-console

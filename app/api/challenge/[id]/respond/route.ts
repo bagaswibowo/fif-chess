@@ -96,10 +96,11 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const gameId = crypto.randomUUID();
   const whitePg = Math.random() < 0.5 ? fromPg : toPg;
   const blackPg = whitePg === fromPg ? toPg : fromPg;
+  // S2-T2: game_type 'live' + time_control snapshot dari challenge.
   await query(
-    `INSERT INTO games (id, white_user_id, black_user_id, status, result, started_at, created_at)
-     VALUES ($1, $2, $3, 'active', '*', NOW(), NOW())`,
-    [gameId, whitePg, blackPg],
+    `INSERT INTO games (id, white_user_id, black_user_id, status, result, started_at, created_at, time_control, game_type)
+     VALUES ($1, $2, $3, 'active', '*', NOW(), NOW(), $4, 'live')`,
+    [gameId, whitePg, blackPg, String(ch.time_control ?? "10+0").slice(0, 10)],
   );
   await query(`UPDATE challenges SET game_id = $1 WHERE id = $2`, [gameId, challengeId]);
 
