@@ -33,7 +33,7 @@ import { PvpPanel, type PvpRoom } from "@/components/pvp-panel";
 import { ChallengeLayer, type ChallengeInfo, type ChallengeState } from "@/components/challenge-card";
 import { PlayingBadge } from "@/components/playing-badge";
 import { useRealtime } from "@/lib/use-realtime";
-import { matcherTopic, presenceTopic, type ChallengeReceived, type PlayingCountChanged } from "@/lib/realtime/events";
+import { matcherTopic, presenceTopic, type ChallengeReceived, type GameAdded, type PlayingCountChanged } from "@/lib/realtime/events";
 import { ClockMovesFullscreen } from "@/components/clock-moves-fullscreen";
 import { TacticalCommentaryCard } from "@/components/tactical-commentary-card";
 import { useSession } from "@/lib/use-session";
@@ -75,6 +75,11 @@ import {
 import type { JevAnalysis, JevError, PlayedMove } from "@/lib/types";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+// Label control waktu untuk ChallengeCard. Event ChallengeReceived belum
+// membawa field tc (kontrak backend S1-T4), jadi label diambil dari
+// konstanta ini — satu sumber, tidak ada string tersebar di JSX.
+const CHALLENGE_CONTROL_LABEL = "Cepat · 10 menit";
 
 const getAiElo = (engine: "stockfish" | "jev-fly" | "jev" | "fly", depth = 14): string => {
   if (engine === "fly") return "3178";
@@ -212,6 +217,17 @@ export function Game() {
         setChallengeState("incoming");
       } else if (ev.type === "playing_count_changed") {
         setPlayingCount((ev as PlayingCountChanged).count);
+      } else if (ev.type === "game_added") {
+        // Match ditemukan (S1-T2 matcher) -> arahkan ke papan game (design doc:
+        // "navigasi ke game"). Pola view switching sama dengan onChallengePlayer.
+        const g = ev as GameAdded;
+        const opponent = userId && g.white === userId ? g.black : g.white;
+        if (opponent) setPvpOpponentName(opponent);
+        setPlayMode("pvp");
+        setNavTab("play");
+        setGameActive(true);
+        setChallenge(null);
+        setChallengeState("incoming");
       }
     },
   });
@@ -220,10 +236,12 @@ export function Game() {
     if (!challenge) return;
     setChallengeState(accept ? "accepted" : "declined");
     try {
-      await fetch("/api/challenge", {
+      // Kontrak S1-T4 (docs/db/sprint1.md): POST /api/challenge/[id]/respond
+      // { action: "accept" | "decline" } -> { gameId? }.
+      await fetch(`/api/challenge/${challenge.challengeId}/respond`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: accept ? "accept" : "decline", challengeId: challenge.challengeId }),
+        body: JSON.stringify({ action: accept ? "accept" : "decline" }),
       });
     } catch {}
     if (!accept) {
@@ -1272,7 +1290,7 @@ export function Game() {
       {/* MAIN CONTENT AREA */}
       <main className="app-main flex-1 flex flex-col p-2.5 md:p-5 xl:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
         {challenge && (
-          <ChallengeLayer challenge={challenge} state={challengeState} controlLabel="Cepat · 10 menit" onAccept={() => void resolveChallenge(true)} onDecline={() => void resolveChallenge(false)} />
+          <ChallengeLayer challenge={challenge} state={challengeState} controlLabel={CHALLENGE_CONTROL_LABEL} onAccept={() => void resolveChallenge(true)} onDecline={() => void resolveChallenge(false)} />
         )}
         {!currentUser ? (
           <div className="auth-page w-full max-w-lg mx-auto p-3 pt-6 sm:p-6 min-h-[calc(100vh-4rem)] flex flex-col justify-start md:justify-center items-center overflow-y-auto">

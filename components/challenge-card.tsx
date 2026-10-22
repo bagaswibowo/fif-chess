@@ -24,11 +24,17 @@ type Props = {
   onDecline: () => void;
 };
 
-function CardBody({ challenge, state, controlLabel, onAccept, onDecline }: Props) {
+function CardBody({ challenge, state, controlLabel, onAccept, onDecline, ariaHidden }: Props & { ariaHidden?: boolean }) {
   if (!challenge) return null;
   const settled = state !== "incoming";
   return (
-    <div className="challenge-card" data-state={state} role="status" aria-live="polite">
+    <div
+      className="challenge-card"
+      data-state={state}
+      role={ariaHidden ? undefined : "status"}
+      aria-live={ariaHidden ? undefined : "polite"}
+      aria-hidden={ariaHidden || undefined}
+    >
       <div className="flex items-center gap-3" aria-hidden="true">
         <span className="challenge-card-icons">
           <IconKingBlack3D size={30} />
@@ -49,6 +55,7 @@ function CardBody({ challenge, state, controlLabel, onAccept, onDecline }: Props
           className="challenge-decline"
           onClick={onDecline}
           disabled={settled}
+          tabIndex={ariaHidden ? -1 : undefined}
         >
           Tolak
         </button>
@@ -57,6 +64,7 @@ function CardBody({ challenge, state, controlLabel, onAccept, onDecline }: Props
           className="ctl ctl-primary challenge-accept"
           onClick={onAccept}
           disabled={settled}
+          tabIndex={ariaHidden ? -1 : undefined}
         >
           Terima
         </button>
@@ -69,7 +77,9 @@ export function ChallengeLayer(props: Props) {
   if (!props.challenge) return null;
   return (
     <>
-      {/* Desktop: kartu inline di area pairing (panel kanan). */}
+      {/* Desktop: kartu inline di area pairing (panel kanan). Instance yang
+          bisa diumumkan screen reader HANYA satu (role=status + aria-live
+          di sini); instance mobile aria-hidden supaya tidak dobel announce. */}
       <div className="hidden md:block" role="region" aria-label="Tantangan masuk">
         <CardBody {...props} />
       </div>
@@ -79,7 +89,7 @@ export function ChallengeLayer(props: Props) {
         role="region"
         aria-label="Tantangan masuk"
       >
-        <CardBody {...props} />
+        <CardBody {...props} ariaHidden />
       </div>
     </>
   );
