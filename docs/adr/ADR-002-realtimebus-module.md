@@ -91,3 +91,20 @@ Ticket S1-T2/T4 (`api/seek`, `api/challenge`) — route baru — publish `GameAd
   Redis & WS ikut flat; folder memberi boundary client/server yang jelas.
 - **Prisma model untuk event/presence:** event ephemeral, Redis stream cukup (S1-T2
   sudah memilih Redis-only untuk Seek dengan alasan sama).
+## Amend — subscribe(fromOffset?) (2026-10-22, TL review S1-T3)
+
+`RealtimeBus.subscribe` pada §2 kini punya parameter ketiga:
+
+```ts
+subscribe(
+  topic: string,
+  handler: (event: RealtimeEvent, offset: string) => void,
+  fromOffset?: string,
+): () => void;
+```
+
+**Alasan:** resume reconnect tanpa event hilang (S1-T3 use-realtime reconnect).
+Tanpa `fromOffset`, subscriber hanya menerima event baru (titik baca `"$"`);
+dengan `fromOffset`, poller memundurkan titik baca untuk overlap re-read dan
+setiap subscriber memfilter duplikat lewat offset terakhirnya sendiri
+(impl di `redis-bus.ts`). Consumer lain tidak berubah — parameter opsional.

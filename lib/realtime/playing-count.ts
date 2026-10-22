@@ -2,6 +2,7 @@
  * lib/realtime/playing-count.ts
  * Ticket S1-T3: hitung user dalam game + broadcast realtime.
  * Sumber: Redis SET `jev:playing` (userId). Di-update saat GameAdded (matcher),
+ * SREM saat game selesai (api/match-result, TL review C5), dan
  * PresenceChanged/PlayingCountChanged di-publish ke topik `presence` (global).
  */
 import Redis from "ioredis";
@@ -30,6 +31,15 @@ export async function setPlaying(userId: string, playing: boolean): Promise<void
   else await r.srem(PLAYING_KEY, userId);
   const after = await r.scard(PLAYING_KEY);
   if (before !== after) publishCount(after);
+}
+
+/** SREM dua pemain saat game selesai (TL C5) — fire-and-forget dari caller. */
+export async function clearPlaying(userIds: string[]): Promise<void> {
+  for (const userId of userIds) {
+    await setPlaying(userId, false).catch((err: unknown) =>
+      console.error("[playing] srem gagal:", userId, err),
+    );
+  }
 }
 
 export function publishCount(count: number): void {

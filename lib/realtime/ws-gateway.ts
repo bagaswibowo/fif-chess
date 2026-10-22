@@ -1,4 +1,5 @@
 /**
+ * lib/realtime/ws-gateway.ts
  * WS gateway: attach `ws` ke HTTP server Next.js (ADR-001 #1), handshake auth
  * via session `jev_session` yang sudah ada (ADR-001 #7 — tolak 401 sebelum
  * upgrade), framing JSON subscribe/ack/data/error (ADR-001 #3).
@@ -10,7 +11,7 @@
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
-import { loadUsers, tokenFromRequest, userForToken } from "../auth-store.ts";
+import { loadUsers, userForToken } from "../auth-store.ts";
 import { getBus, publishBusEvent } from "./bus.ts";
 import { playingRedis } from "./playing-count.ts";
 import type { Frame } from "./frame.ts";
@@ -19,11 +20,15 @@ import type { RealtimeEvent } from "./events.ts";
 type Conn = {
   ws: WebSocket;
   userId: string;
+  /** Naik setiap koneksi baru user yang sama (TL C6: race offline saat reconnect cepat). */
+  generation: number;
   /** topic -> unsubscribe */
   unsubs: Map<string, () => void>;
 };
 
 const conns = new Set<Conn>();
+/** userId -> generation koneksi terakhir yang terdaftar. */
+const connGenerations = new Map<string, number>();
 
 /** Validasi session cookie di handshake. Return userId atau null (= tolak). */
 async function handshakeUser(req: IncomingMessage): Promise<string | null> {
@@ -65,14 +70,27 @@ export function attachWsGateway(
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
-      const conn: Conn = { ws, userId, unsubs: new Map() };
+      // Generation counter per user (TL review C6): conn lama yang close
+      // setelah conn baru open tidak boleh menimpa presence online milik
+      // conn baru — hanya publish offline jika generation-nya masih terbaru.
+      const generation = (connGenerations.get(userId) ?? 0) + 1;
+      connGenerations.set(userId, generation);
+      const conn: Conn = { ws, userId, generation, unsubs: new Map() };
       conns.add(conn);
       publishPresence(conn.userId, true);
       ws.on("close", () => {
-        publishPresence(conn.userId, false);
+        conns.delete(conn);
+        // Refcount: masih ada conn lain (generation lebih baru) = masih online.
+        let newer = false;
+        for (const c of conns) {
+          if (c.userId === userId && c.generation > generation) {
+            newer = true;
+            break;
+          }
+        }
+        if (!newer) publishPresence(userId, false);
         for (const unsub of conn.unsubs.values()) unsub();
         conn.unsubs.clear();
-        conns.delete(conn);
       });
       ws.on("message", (raw) => onMessage(conn, raw.toString()));
       ws.on("error", (err) => console.error("[realtime] ws error:", err));
