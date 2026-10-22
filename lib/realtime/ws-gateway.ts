@@ -11,7 +11,8 @@ import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { loadUsers, tokenFromRequest, userForToken } from "../auth-store.ts";
-import { getBus } from "./bus.ts";
+import { getBus, publishBusEvent } from "./bus.ts";
+import { playingRedis } from "./playing-count.ts";
 import type { Frame } from "./frame.ts";
 import type { RealtimeEvent } from "./events.ts";
 
@@ -28,7 +29,16 @@ const conns = new Set<Conn>();
 async function handshakeUser(req: IncomingMessage): Promise<string | null> {
   try {
     const users = await loadUsers();
-    const me = userForToken(tokenFromRequest(req as unknown as Request), users);
+    // req adalah IncomingMessage: headers-nya objek polos (tanpa .get()),
+    // jadi baca cookie langsung — cast ke Request membuat tokenFromRequest
+    // selalu throw (req.headers.get is not a function) dan handshake selalu 401.
+    const raw = req.headers.cookie ?? "";
+    let token: string | undefined;
+    for (const part of raw.split(";")) {
+      const t = part.trim();
+      if (t.startsWith("jev_session=")) token = decodeURIComponent(t.slice("jev_session=".length));
+    }
+    const me = userForToken(token, users);
     return me ? me.id : null;
   } catch {
     return null;
@@ -57,7 +67,9 @@ export function attachWsGateway(
     wss.handleUpgrade(req, socket, head, (ws) => {
       const conn: Conn = { ws, userId, unsubs: new Map() };
       conns.add(conn);
+      publishPresence(conn.userId, true);
       ws.on("close", () => {
+        publishPresence(conn.userId, false);
         for (const unsub of conn.unsubs.values()) unsub();
         conn.unsubs.clear();
         conns.delete(conn);
@@ -66,6 +78,15 @@ export function attachWsGateway(
       ws.on("error", (err) => console.error("[realtime] ws error:", err));
     });
   });
+}
+
+/** Presence (ticket S1-T3): koneksi WS aktif = online. Publish event + set Redis. */
+function publishPresence(userId: string, online: boolean): void {
+  const key = "jev:online";
+  const op = online ? "sadd" : "srem";
+  void playingRedis()[op](key, userId)
+    .then(() => publishBusEvent(`presence/${userId}`, { type: "presence_changed", userId, online }))
+    .catch((err: unknown) => console.error("[presence] publish gagal:", err));
 }
 
 function send(conn: Conn, frame: Frame): void {
