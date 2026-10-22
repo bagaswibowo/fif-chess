@@ -33,18 +33,23 @@ export function EndgameDrillsView({ onExit }: { onExit?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [solveError, setSolveError] = useState<string | null>(null);
 
-  const loadSets = useCallback(async () => {
+  const loadSets = useCallback(async (): Promise<DrillSet[]> => {
+    // Kembalikan data hasil fetch agar pemanggil (refresh) tidak membaca
+    // state `sets` lama (stale closure) sebelum React meng-commit update.
     try {
       const res = await fetch("/api/endgames/drills", { cache: "no-store" });
       if (!res.ok) {
         setError(res.status === 401 ? "Masuk untuk melihat latihan permainan akhir." : "Gagal memuat set permainan akhir.");
-        return;
+        return [];
       }
       const data = await res.json();
-      setSets(data.sets as DrillSet[]);
+      const next = (data.sets ?? []) as DrillSet[];
+      setSets(next);
       setError(null);
+      return next;
     } catch {
       setError("Gagal memuat set permainan akhir.");
+      return [];
     }
   }, []);
 
@@ -120,8 +125,8 @@ export function EndgameDrillsView({ onExit }: { onExit?: () => void }) {
   // ===== Solve mode =====
   if (activeSet) {
     const refresh = async () => {
-      await loadSets();
-      const updated = sets?.find((s) => s.id === activeSet.id) ?? activeSet;
+      const next = await loadSets();
+      const updated = next.find((s) => s.id === activeSet.id) ?? activeSet;
       setActiveSet(updated);
       void loadNext(updated);
     };

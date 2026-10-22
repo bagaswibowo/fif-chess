@@ -16,7 +16,7 @@ type Person = { id?: string; username: string; rating: number; since?: string; o
 type FriendsPayload = { friends: Person[]; incoming: Person[]; outgoing: Person[] };
 
 type Props = {
-  onChallenge?: (username: string) => void;
+  onChallenge?: (username: string) => Promise<boolean> | boolean;
   onOpenProfile?: (username: string) => void;
 };
 
@@ -124,15 +124,19 @@ export function FriendsView({ onChallenge, onOpenProfile }: Props) {
   }, [addName, flash, load]);
 
   const challenge = useCallback(
-    (username: string) => {
-      // Challenge flow S1-T4 milik parent (Game/DockModals) — id store user
-      // tidak diekspos API friends, jadi delegasikan ke handler existing.
-      if (onChallenge) {
-        onChallenge(username);
-        setSentTo(username);
-        flash("Tantangan terkirim.");
-      } else {
+    async (username: string) => {
+      // Challenge nyata dikirim oleh parent via /api/challenge (S1-T4);
+      // hasil (boolean) menentukan feedback jujur — bukan toast misleading.
+      if (!onChallenge) {
         flash("Tantangan belum tersedia.");
+        return;
+      }
+      const ok = await onChallenge(username);
+      if (ok) {
+        setSentTo(username);
+        flash(`Tantangan terkirim ke @${username}.`);
+      } else {
+        flash("Gagal mengirim tantangan.");
       }
     },
     [onChallenge, flash],
@@ -238,7 +242,7 @@ export function FriendsView({ onChallenge, onOpenProfile }: Props) {
                   <Button
                     size="sm"
                     disabled={sentTo === p.username}
-                    onClick={() => challenge(p.username)}
+                    onClick={() => void challenge(p.username)}
                     aria-label={`Tantang ${p.username} bermain`}
                     className={sentTo === p.username ? "" : "bg-[var(--primary)] text-black font-black hover:bg-[var(--primary)]/90 shadow-[0_4px_0_#45753c]"}
                   >

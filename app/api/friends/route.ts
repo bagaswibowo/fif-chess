@@ -15,6 +15,7 @@ import { playingRedis } from "@/lib/realtime/playing-count.ts";
 export const runtime = "nodejs";
 
 type FriendRow = {
+  id: string;
   user_id: string;
   friend_user_id: string;
   username: string;
@@ -30,17 +31,18 @@ export async function GET(request: Request) {
 
   // Teman: dua arah accepted (row bisa dibuat satu arah saat request; list join kedua arah).
   const friends = await query<FriendRow>(
-    `SELECT f.user_id, f.friend_user_id, u.username, u.rating, f.created_at
+    `SELECT DISTINCT ON (LEAST(f.user_id, f.friend_user_id), GREATEST(f.user_id, f.friend_user_id))
+            f.id, f.user_id, f.friend_user_id, u.username, u.rating, f.created_at
      FROM friends f
      JOIN users u ON u.id = CASE WHEN f.user_id = $1::uuid THEN f.friend_user_id ELSE f.user_id END
      WHERE (f.user_id = $1::uuid OR f.friend_user_id = $1::uuid) AND f.status = 'accepted'
-     ORDER BY u.username`,
+     ORDER BY LEAST(f.user_id, f.friend_user_id), GREATEST(f.user_id, f.friend_user_id), u.username`,
     [me.pgId],
   );
 
   // Permintaan masuk: row pending di arah pengirim→saya.
   const incoming = await query<FriendRow>(
-    `SELECT f.user_id, f.friend_user_id, u.username, u.rating, f.created_at
+    `SELECT f.id, f.user_id, f.friend_user_id, u.username, u.rating, f.created_at
      FROM friends f
      JOIN users u ON u.id = f.user_id
      WHERE f.friend_user_id = $1::uuid AND f.status = 'pending'
@@ -50,7 +52,7 @@ export async function GET(request: Request) {
 
   // Permintaan keluar (untuk UI pending state).
   const outgoing = await query<FriendRow>(
-    `SELECT f.user_id, f.friend_user_id, u.username, u.rating, f.created_at
+    `SELECT f.id, f.user_id, f.friend_user_id, u.username, u.rating, f.created_at
      FROM friends f
      JOIN users u ON u.id = f.friend_user_id
      WHERE f.user_id = $1::uuid AND f.status = 'pending'
@@ -59,6 +61,7 @@ export async function GET(request: Request) {
   );
 
   const shape = (r: FriendRow) => ({
+    id: r.id,
     username: r.username,
     rating: Number(r.rating),
     since: r.created_at,
@@ -108,7 +111,7 @@ export async function POST(request: Request) {
 
   const target = await query<{ id: string }>("SELECT id FROM users WHERE username = $1 LIMIT 1", [username]);
   if (target.length === 0) {
-    return NextResponse.json({ error: "User tidak ditemukan.", retryable: false }, { status: 404 });
+    return NextResponse.json({ error: "Permintaan tidak dapat diproses. Periksa kembali username.", retryable: false }, { status: 404 });
   }
   const friendId = String(target[0].id);
 

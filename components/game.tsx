@@ -45,6 +45,10 @@ import { useSession } from "@/lib/use-session";
 import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import { CoachModeView } from "@/components/coach-mode-view";
 import { VersusBotsView } from "@/components/views/versus-bots-view";
+import { DailyPuzzleView } from "@/components/views/daily-puzzle-view";
+import { RushView } from "@/components/views/rush-view";
+import { ThemesMasteryView } from "@/components/views/themes-mastery-view";
+import { ArchiveView } from "@/components/views/archive-view";
 import { SpectatorView } from "@/components/spectator-view";
 import { PasteBar } from "@/components/paste-bar";
 import { GameOverModal } from "@/components/game-over-modal";
@@ -1104,7 +1108,34 @@ useEffect(() => {
         )}
         {currentUser && navTab === "friends" && (
           <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
-            <FriendsView onChallenge={(u) => { setPlayMode("pvp"); navigate("play"); }} />
+            <FriendsView
+              onChallenge={async (u) => {
+                try {
+                  // Challenge nyata via /api/challenge (S1-T4). Kontrak store:
+                  // toUserId = id store user. /api/auth/lookupByUsername
+                  // mengekspos id publik tanpa data sensitif (S4-fix).
+                  const lookRes = await fetch(
+                    `/api/auth/lookupByUsername?username=${encodeURIComponent(u)}`,
+                    { cache: "no-store" },
+                  );
+                  if (!lookRes.ok) return false;
+                  const look = await lookRes.json().catch(() => ({}));
+                  const toUserId = look?.id;
+                  if (!toUserId) return false;
+                  const res = await fetch("/api/challenge", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ toUserId, timeControl: "5+0", rated: false }),
+                  });
+                  if (!res.ok) return false;
+                  setPlayMode("pvp");
+                  navigate("play");
+                  return true;
+                } catch {
+                  return false;
+                }
+              }}
+            />
           </div>
         )}
         {/* S4-T4: Endgame Drills */}
@@ -1164,6 +1195,26 @@ useEffect(() => {
         {navTab === "puzzles" && (
           <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
             <PuzzleHub lang={lang} onBack={() => setNavTab("play")} />
+          </div>
+        )}
+        {navTab === "daily" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <DailyPuzzleView lang={lang} onGoPuzzles={() => setNavTab("puzzles")} />
+          </div>
+        )}
+        {navTab === "rush" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <RushView lang={lang} onBack={() => setNavTab("puzzles")} />
+          </div>
+        )}
+        {navTab === "themes" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <ThemesMasteryView lang={lang} onBack={() => setNavTab("puzzles")} />
+          </div>
+        )}
+        {currentUser && navTab === "archive" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <ArchiveView onGoReview={() => setNavTab("review")} />
           </div>
         )}
         {navTab === "vision" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><LearningHub lang={lang} /></div>}
