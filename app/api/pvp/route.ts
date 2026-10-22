@@ -221,6 +221,16 @@ async function handleJoin(request: Request, userId: string) {
     return NextResponse.json({ error: "Anda bukan peserta game ini.", retryable: false }, { status: 403 });
   }
 
+  // ADR-002 §4: setelah game row di-join, publish GameStarted agar lawan
+  // (dan seluruh subscriber topik game) menerima event game mulai.
+  const gameStarted: GameStarted = {
+    type: "game_started",
+    gameId,
+    white: game.white_user_id,
+    black: game.black_user_id,
+  };
+  publishBusEvent(gameTopic(gameId), gameStarted);
+
   return NextResponse.json({ ok: true, gameId, yourColor: game.white_user_id === userId ? "w" : "b" });
 }
 
@@ -487,6 +497,7 @@ async function roomMove(request: Request, userId: string) {
     room.winner = chess.isCheckmate() ? (side === "white" ? "white" : "black") : "draw";
     room.outcomeKind = chess.isCheckmate() ? "checkmate" : chess.isDraw() ? "draw" : "resign";
   }
+
   return NextResponse.json({ success: true, room: publicRoom(room) });
 }
 

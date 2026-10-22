@@ -6,6 +6,11 @@
  * Tiap subscription menyimpan offset-nya sendiri, jadi reconnect resume dari
  * offset klien benar-benar dipatuhi (poller boleh re-read overlap; event yang
  * sudah pernah dikirim ke subscriber tertentu di-skip di sini).
+ *
+ * Anti-race dua poller (TL review S1-T1 #3): setiap poller membawa generation
+ * token per topik. Poller keluar (dan TIDAK menyentuh readId/subs lagi) begitu
+ * generation-nya bukan yang aktif — XREAD BLOCK lama yang masih in-flight saat
+ * unsubscribe/subscribe cepat tidak bisa lagi berebut readId dengan poller baru.
  */
 import Redis from "ioredis";
 import type { RealtimeBus } from "./bus.ts";
@@ -40,7 +45,10 @@ export class RedisBus implements RealtimeBus {
   private subs = new Map<string, Set<Sub>>();
   /** Offset baca poller per topik (ID terakhir yang terbaca / titik mulai). */
   private readId = new Map<string, string>();
+  /** Topik yang sedang punya poller hidup. */
   private polling = new Set<string>();
+  /** Generation token per topik: naik setiap poller baru start / poller lama harus mati. */
+  private generation = new Map<string, number>();
 
   async publish(topic: string, event: RealtimeEvent): Promise<string> {
     const key = STREAM_PREFIX + topic;
@@ -62,7 +70,10 @@ export class RedisBus implements RealtimeBus {
       // kalau tidak, "$" = hanya event yang terbit setelah sekarang.
       this.readId.set(topic, fromOffset ?? "$");
       this.polling.add(topic);
-      void this.poll(topic);
+      // Generation baru = satu-satunya poller yang berhak memproses topik ini.
+      const myGen = (this.generation.get(topic) ?? 0) + 1;
+      this.generation.set(topic, myGen);
+      void this.poll(topic, myGen);
     } else if (fromOffset !== undefined) {
       // Poller sudah jalan: mundurkan titik baca agar overlap re-read,
       // subscriber lain memfilter duplikat lewat lastOffset masing-masing.
@@ -76,13 +87,16 @@ export class RedisBus implements RealtimeBus {
       if (s.size === 0) {
         this.subs.delete(topic);
         this.polling.delete(topic);
+        // Naikkan generation: poller lama yang masih BLOCK di XREAD akan
+        // keluar saat bangun, tanpa bisa mengotak-atik readId / mengirim event.
+        this.generation.set(topic, (this.generation.get(topic) ?? 0) + 1);
       }
     };
   }
 
-  private async poll(topic: string): Promise<void> {
+  private async poll(topic: string, myGen: number): Promise<void> {
     const key = STREAM_PREFIX + topic;
-    while (this.polling.has(topic)) {
+    while (this.generation.get(topic) === myGen && this.polling.has(topic)) {
       let res: Array<[string, Array<[string, string[]]>]> | null = null;
       try {
         res = await this.redis.xread(
@@ -93,10 +107,14 @@ export class RedisBus implements RealtimeBus {
           this.readId.get(topic) ?? "$",
         );
       } catch (err) {
+        if (this.generation.get(topic) !== myGen) return;
         console.error(`[realtime] XREAD ${topic} gagal:`, err);
         await new Promise((r) => setTimeout(r, ERROR_BACKOFF_MS));
         continue;
       }
+      // Poller ini sudah digantikan generation lebih baru: jangan sentuh
+      // readId atau dispatch apa pun — poller aktif yang urus.
+      if (this.generation.get(topic) !== myGen) return;
       if (!res) continue;
       for (const [, entries] of res) {
         for (const [id, fields] of entries) {

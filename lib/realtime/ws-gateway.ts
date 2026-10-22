@@ -2,6 +2,10 @@
  * WS gateway: attach `ws` ke HTTP server Next.js (ADR-001 #1), handshake auth
  * via session `jev_session` yang sudah ada (ADR-001 #7 — tolak 401 sebelum
  * upgrade), framing JSON subscribe/ack/data/error (ADR-001 #3).
+ *
+ * Upgrade non-`/ws` TIDAK di-destroy (TL review S1-T1 #4): di-delegate ke
+ * upgrade handler Next.js (`app.getUpgradeHandler()`) agar HMR dev
+ * (`/_next/webpack-hmr`) dan kebutuhan upgrade internal Next production tetap hidup.
  */
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
@@ -31,13 +35,17 @@ async function handshakeUser(req: IncomingMessage): Promise<string | null> {
   }
 }
 
-export function attachWsGateway(server: { on(event: "upgrade", cb: (req: IncomingMessage, socket: Duplex, head: Buffer) => void): void }): void {
+export function attachWsGateway(
+  server: { on(event: "upgrade", cb: (req: IncomingMessage, socket: Duplex, head: Buffer) => void): void },
+  /** Upgrade handler Next.js — menerima semua upgrade non-`/ws` (HMR dev, dst). */
+  nextUpgradeHandler: (req: IncomingMessage, socket: Duplex, head: Buffer) => void,
+): void {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on("upgrade", async (req, socket, head) => {
     const url = new URL(req.url ?? "/", "http://localhost");
     if (url.pathname !== "/ws") {
-      socket.destroy();
+      nextUpgradeHandler(req, socket, head);
       return;
     }
     const userId = await handshakeUser(req);

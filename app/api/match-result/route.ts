@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { Chess } from "chess.js";
 import { reinforceMatchDopamine, recordMatchExperience } from "@/lib/experience";
 import { publishBusEvent } from "@/lib/realtime/bus.ts";
-import { gameTopic, type GameEnded } from "@/lib/realtime/events.ts";
+import { query } from "@/lib/db";
+import { gameTopic, type GameEnded, type PlayingCountChanged } from "@/lib/realtime/events.ts";
 
 export async function POST(req: Request) {
   try {
@@ -27,6 +28,17 @@ export async function POST(req: Request) {
       // S1-T1: result tersimpan -> publish GameEnded ke topik game (fire-and-forget).
       const ended: GameEnded = { type: "game_ended", gameId: String(body.gameId ?? "local"), result: String(winner ?? "draw") };
       publishBusEvent(gameTopic(ended.gameId), ended);
+      // ADR-002 §4: publish PlayingCountChanged untuk badge nav "Bermain N" (S1-T3).
+      // Count = jumlah game berstatus active; fire-and-forget, kegagalan count
+      // tidak menggagalkan response (tetap publish dengan count 0 dan log).
+      try {
+        const cnt = await query(`SELECT COUNT(*)::int AS n FROM games WHERE status = 'active'`);
+        const count = Number((cnt[0] as { n: number }).n);
+        const playingCount: PlayingCountChanged = { type: "playing_count_changed", count };
+        publishBusEvent(gameTopic(ended.gameId), playingCount);
+      } catch (countErr) {
+        console.error("[match-result] PlayingCountChanged gagal:", countErr);
+      }
 
       return NextResponse.json({ ok: true, learned: true, plies: history.length });
     }

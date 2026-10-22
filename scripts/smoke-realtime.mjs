@@ -56,7 +56,29 @@ if (resumed.length !== 2 || types[0] !== "move_made" || types[1] !== "game_ended
 }
 console.log("OK resume dari offset", lastOffset, ":", types.join(", "));
 
-// 3. Cek XTRIM: panjang stream tidak melebihi MAXLEN.
+// 3. Race dua poller (TL review S1-T1 #3): unsubscribe + subscribe ulang cepat
+// sambil poller lama masih BLOCK. Subscribe ulang harus tetap menerima event
+// yang terbit setelah subscribe ulang (tidak ada event hilang).
+const race = [];
+let unsub3 = bus.subscribe(topic, (event, offset) => race.push({ event, offset }), lastOffset);
+unsub3();           // poller lama masih BLOCK ~5s di XREAD
+unsub3 = bus.subscribe(topic, (event, offset) => race.push({ event, offset }), lastOffset);
+await bus.publish(topic, { type: "move_made", gameId: topic, san: "Nf3", fen: "z", moveNumber: 3 });
+await new Promise((r) => setTimeout(r, 6000)); // lewat window BLOCK poller lama
+unsub3();
+// Kontrak: TIDAK ADA event yang terlewat. Overlap re-delivery (e5/ended)
+// memang by-design (resume dari offset lama); yang wajib: event terakhir
+// (Nf3) diterima dan offset termonoton naik.
+const nf3 = race.filter((r) => r.event.type === "move_made" && r.event.san === "Nf3");
+const offsets = race.map((r) => r.offset);
+const monotonic = offsets.every((o, i) => i === 0 || o > offsets[i - 1]);
+if (nf3.length === 0 || !monotonic) {
+  console.error("FAIL dua-poller race:", race);
+  process.exit(1);
+}
+console.log("OK dua-poller race: Nf3 diterima, offset monoton:", offsets.join(", "));
+
+// 4. Cek XTRIM: panjang stream tidak melebihi MAXLEN.
 const len = await redis.xlen("jev:rt:" + topic);
 console.log("stream len:", len);
 await redis.quit();
