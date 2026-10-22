@@ -1,0 +1,89 @@
+/**
+ * lib/puzzle-api.ts (Sprint 3 — helper bersama API puzzle DB baru)
+ * Tabel `puzzles`/`puzzle_attempts` DB — BUKAN bank statis lib/puzzle-data.ts.
+ */
+import { query } from "@/lib/db";
+import { currentUser, loadUsers, type UserProfile } from "@/lib/auth-store";
+
+export async function currentPgUser(request: Request): Promise<{ pgId: string; rating: number; username: string } | null> {
+  try {
+    const users: UserProfile[] = await Promise.resolve(loadUsers());
+    const me = currentUser(request, users);
+    if (!me) return null;
+    const rows = await query<{ id: string; rating: number; username: string }>(
+      "SELECT id, rating, username FROM users WHERE username = $1 LIMIT 1",
+      [me.username],
+    );
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return { pgId: String(r.id), rating: Number(r.rating) || 1200, username: String(r.username) };
+  } catch {
+    return null;
+  }
+}
+
+export type PuzzleDto = {
+  id: string;
+  title: string;
+  fen: string;
+  rating: number;
+  themes: string[];
+  moveCount: number;
+};
+
+export function toDto(row: Record<string, unknown>): PuzzleDto {
+  const moves = row.solution_moves as unknown;
+  return {
+    id: String(row.id),
+    title: String(row.title ?? ""),
+    fen: String(row.fen),
+    rating: Number(row.rating ?? 1200),
+    themes: Array.isArray(row.themes) ? (row.themes as string[]) : [],
+    // Panjang solusi dibocorkan sebagai jumlah langkah (standar chess.com), bukan langkahnya.
+    moveCount: Array.isArray(moves) ? moves.length : 0,
+  };
+}
+
+/** Streak berjalan user: panjang run attempt benar terakhir (per attempted_at). */
+export async function currentStreak(pgId: string): Promise<number> {
+  const rows = await query<{ correct: boolean }>(
+    `SELECT correct FROM puzzle_attempts WHERE user_id = $1 ORDER BY attempted_at DESC LIMIT 100`,
+    [pgId],
+  );
+  let streak = 0;
+  for (const r of rows) {
+    if (r.correct) streak++;
+    else break;
+  }
+  return streak;
+}
+
+/** Streak harian (S3-T2): hari UTC berurutan dengan >=1 attempt benar. */
+export async function dailyStreak(pgId: string): Promise<number> {
+  const rows = await query<{ d: string; correct: boolean }>(
+    `SELECT DISTINCT (attempted_at AT TIME ZONE 'UTC')::date::text AS d, bool_or(correct) AS correct
+     FROM puzzle_attempts
+     WHERE user_id = $1 AND attempted_at > NOW() - interval '400 days'
+     GROUP BY 1 ORDER BY 1 DESC`,
+    [pgId],
+  );
+  const map = new Map(rows.map((r) => [r.d, r.correct]));
+  // Mulai hari ini (UTC); hari ini belum main tidak memutus streak — mulai dari kemarin.
+  const cursor = new Date();
+  const key = (dt: Date) => dt.toISOString().slice(0, 10);
+  let streak = 0;
+  let start = map.has(key(cursor)) ? 0 : 1;
+  for (let i = start; i < 400; i++) {
+    const dt = new Date(cursor);
+    dt.setUTCDate(dt.getUTCDate() - i);
+    const k = key(dt);
+    if (map.get(k) === true) streak++;
+    else break;
+  }
+  return streak;
+}
+
+/** Validasi solution_moves jsonb: array string UCI. */
+export function isValidSolutionMoves(v: unknown): v is string[] {
+  return Array.isArray(v) && v.length > 0 && v.every((m) => typeof m === "string" && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(m));
+}
