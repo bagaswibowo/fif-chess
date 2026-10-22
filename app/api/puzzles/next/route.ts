@@ -31,7 +31,7 @@ export async function GET(request: Request) {
   const sql = (lo2: number, hi2: number) => `
     SELECT p.id, p.title, p.fen, p.solution_moves, p.rating, p.themes
     FROM puzzles p
-    WHERE p.rating BETWEEN ${lo2} AND ${hi2} ${themeFilter}
+    WHERE p.rating BETWEEN $2 AND $3 ${themeFilter}
       AND p.id NOT IN (
         SELECT a.puzzle_id FROM puzzle_attempts a
         WHERE a.user_id = $1 AND a.correct = true AND a.attempted_at > NOW() - interval '7 days'
