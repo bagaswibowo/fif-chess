@@ -26,6 +26,7 @@ import type { Puzzle } from "@/lib/puzzle-data";
 import { buildLivePuzzle, loadSaved, persistSaved } from "@/lib/puzzle-store";
 import { ScanView } from "@/components/scan-view";
 import { CommunityView } from "@/components/community-view";
+import { PuzzleHub } from "@/components/views/puzzle-hub";
 import { GameReview } from "@/components/game-review";
 import { AuthPanel } from "@/components/auth-panel";
 import { AdminPanel } from "@/components/admin-panel";
@@ -100,7 +101,7 @@ const AI_LABEL: Record<string, string> = {
 };
 
 type PendingPromotion = { from: string; to: string };
-type NavTab = "play" | "bots" | "vision" | "scan" | "community" | "review" | "coach" | "admin";
+type NavTab = "play" | "bots" | "puzzles" | "vision" | "scan" | "community" | "review" | "coach" | "admin";
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
 type CoachSubTab = "coach" | "spectator";
@@ -1130,9 +1131,9 @@ export function Game() {
               <span>{lang === "id" ? "Lawan Bot" : "Play Bots"}</span>
             </button>
 
-            {/* 3. Teka-Teki (Puzzles & Rush) */}
+            {/* 3. Teka-Teki (Puzzles & Rush) — S3: PuzzleHub */}
             <button
-              onClick={() => handleNavClick("vision")}
+              onClick={() => handleNavClick("puzzles")}
               className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm md:text-base font-bold transition-all text-left ${
                 navTab === "vision"
                   ? "bg-[var(--primary-strong)] text-white border-2 border-[var(--primary)] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] translate-y-[1px]"
@@ -1340,6 +1341,11 @@ export function Game() {
                 }
               />
             </div>
+          </div>
+        )}
+        {navTab === "puzzles" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <PuzzleHub lang={lang} onBack={() => setNavTab("play")} />
           </div>
         )}
         {navTab === "vision" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><LearningHub lang={lang} /></div>}
@@ -2070,7 +2076,7 @@ export function Game() {
           {[
             { id: "play", icon: IconPlay3D, labelId: "Main", labelEn: "Play" },
             { id: "bots", icon: IconBot3D, labelId: "Bot", labelEn: "Bots" },
-            { id: "vision", icon: IconPuzzle3D, labelId: "Teka-teki", labelEn: "Puzzles" },
+            { id: "puzzles", icon: IconPuzzle3D, labelId: "Teka-teki", labelEn: "Puzzles" },
             { id: "coach", icon: IconCoach3D, labelId: "Belajar", labelEn: "Learn" },
             { id: "review", icon: IconMedal3D, labelId: "Review", labelEn: "Review" },
             { id: "more", icon: IconTarget3D, labelId: "Lainnya", labelEn: "More" },
