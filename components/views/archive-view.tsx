@@ -1,12 +1,14 @@
 "use client";
 
 /**
- * components/views/archive-view.tsx (S4-fix — TL review b003cffa #1)
+ * components/views/archive-view.tsx (S4-fix + T5 WS-2.5)
  * View arsip partai: reuse GET /api/games/archive (S2-T2) + unduh PGN
  * via /api/games/archive/pgn?ids=... Navigasi ke tab review via onGoReview.
+ * T5: badge W/L/D ikon+teks, opening, durasi, delta rating dgn panah,
+ * aksi Analisis/Share/Rematch/Favorit per row, pagination dgn fokus management.
  */
 import { authErrorText } from "@/lib/use-session";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 type ArchiveGame = {
@@ -19,6 +21,8 @@ type ArchiveGame = {
   favorited: boolean;
   ended_at: string | null;
   rating_delta: number | null;
+  opening_name: string | null;
+  duration_sec: number | null;
 };
 
 type Counts = Record<string, number>;
@@ -33,11 +37,29 @@ const FILTERS: { id: string; labelId: string }[] = [
   { id: "coach", labelId: "Coach" },
 ];
 
-function resultLabel(result: string, mine: "white" | "black"): string {
-  if (result === "draw") return "Remis";
-  if (result === mine) return "Menang";
-  if (result === "white" || result === "black") return "Kalah";
-  return result || "*";
+function resultLabel(result: string, mine: "white" | "black"): { text: string; icon: string } {
+  if (result === "draw") return { text: "Remis", icon: "½" };
+  if (result === mine) return { text: "Menang", icon: "✓" };
+  if (result === "white" || result === "black") return { text: "Kalah", icon: "✕" };
+  return { text: result || "*", icon: "•" };
+}
+
+function formatDuration(sec: number | null): string {
+  if (sec === null || !Number.isFinite(sec)) return "-";
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function relativeDate(iso: string | null): string {
+  if (!iso) return "-";
+  const d = new Date(iso).getTime();
+  if (!Number.isFinite(d)) return "-";
+  const diffDays = Math.floor((Date.now() - d) / 86_400_000);
+  if (diffDays <= 0) return "hari ini";
+  if (diffDays === 1) return "kemarin";
+  if (diffDays < 30) return `${diffDays} hari lalu`;
+  return new Date(iso).toLocaleDateString("id-ID");
 }
 
 export function ArchiveView({ onGoReview }: Props) {
@@ -49,6 +71,11 @@ export function ArchiveView({ onGoReview }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [liveMessage, setLiveMessage] = useState("");
+  // Rematch: gameId → "Menunggu…" | pesan error inline.
+  const [rematchState, setRematchState] = useState<Record<string, string>>({});
+  const listTopRef = useRef<HTMLDivElement | null>(null);
+  const prevPageRef = useRef(page);
 
   const load = useCallback(async (f: string, p: number) => {
     setLoading(true);
@@ -75,6 +102,14 @@ export function ArchiveView({ onGoReview }: Props) {
     void load(filter, page);
   }, [filter, page, load]);
 
+  // Fokus management pagination: fokus pindah ke atas list saat ganti halaman.
+  useEffect(() => {
+    if (prevPageRef.current !== page) {
+      prevPageRef.current = page;
+      listTopRef.current?.focus();
+    }
+  }, [page, loading]);
+
   const downloadPgn = useCallback(async (ids: string[]) => {
     if (ids.length === 0) return;
     setDownloading(true);
@@ -90,6 +125,81 @@ export function ArchiveView({ onGoReview }: Props) {
       URL.revokeObjectURL(url);
     } finally {
       setDownloading(false);
+    }
+  }, []);
+
+  const toggleFavorite = useCallback(async (g: ArchiveGame) => {
+    try {
+      const res = await fetch(`/api/games/${g.id}/favorite`, { method: "PATCH" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLiveMessage(authErrorText(res.status, data, "favorit"));
+        return;
+      }
+      setGames((gs) => gs.map((x) => (x.id === g.id ? { ...x, favorited: Boolean(data.favorited) } : x)));
+      setLiveMessage(data.favorited ? "Ditambahkan ke favorit." : "Dihapus dari favorit.");
+    } catch {
+      setLiveMessage("Gagal mengubah favorit.");
+    }
+  }, []);
+
+  const shareGame = useCallback(async (g: ArchiveGame) => {
+    const url = `${window.location.origin}/review/${g.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLiveMessage("Tautan analisis disalin ke clipboard.");
+    } catch {
+      // Clipboard gagal (mis. tanpa HTTPS): unduh PGN satu game sebagai fallback.
+      try {
+        const res = await fetch(`/api/games/${g.id}/pgn`);
+        if (res.ok) {
+          const blob = await res.blob();
+          const u = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = u;
+          a.download = `jev-chess-${g.id}.pgn`;
+          a.click();
+          URL.revokeObjectURL(u);
+          setLiveMessage("PGN satu game diunduh.");
+        } else {
+          setLiveMessage("Gagal membagikan partai.");
+        }
+      } catch {
+        setLiveMessage("Gagal membagikan partai.");
+      }
+    }
+  }, []);
+
+  const sendRematch = useCallback(async (g: ArchiveGame) => {
+    // Game vs bot/coach tanpa lawan manusia — tidak bisa rematch.
+    if (!g.opponent?.username || g.opponent.username === "?") return;
+    setRematchState((s) => ({ ...s, [g.id]: "Menunggu…" }));
+    try {
+      // Cari store id lawan via /api/auth/lookupByUsername (id publik, S4-fix).
+      const lookRes = await fetch(`/api/auth/lookupByUsername?username=${encodeURIComponent(g.opponent.username)}`, { cache: "no-store" });
+      if (!lookRes.ok) {
+        setRematchState((s) => ({ ...s, [g.id]: "Lawan tidak ditemukan." }));
+        return;
+      }
+      const look = await lookRes.json().catch(() => ({}));
+      const toUserId = look?.id as string | undefined;
+      if (!toUserId) {
+        setRematchState((s) => ({ ...s, [g.id]: "Lawan tidak ditemukan." }));
+        return;
+      }
+      const chRes = await fetch("/api/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toUserId, timeControl: g.time_control ?? "3+2", rated: true }),
+      });
+      const chData = await chRes.json().catch(() => ({}));
+      if (!chRes.ok) {
+        setRematchState((s) => ({ ...s, [g.id]: chData?.error ?? "Gagal mengirim challenge." }));
+        return;
+      }
+      setLiveMessage("Challenge rematch terkirim.");
+    } catch {
+      setRematchState((s) => ({ ...s, [g.id]: "Gagal mengirim challenge." }));
     }
   }, []);
 
@@ -135,45 +245,112 @@ export function ArchiveView({ onGoReview }: Props) {
         ))}
       </div>
 
+      {/* aria-live: pesan aksi (share/favorit/rematch) */}
+      <p role="status" aria-live="polite" className="sr-only">{liveMessage}</p>
+
       {loading ? (
         <div className="py-12 text-center text-sm text-neutral-400" role="status" aria-live="polite">Memuat…</div>
       ) : error ? (
-        <div className="py-12 text-center text-sm text-neutral-300" role="status">{error}</div>
+        <div className="py-12 text-center flex flex-col items-center gap-3" role="status">
+          <p className="text-sm text-neutral-300">{error}</p>
+          <Button variant="outline" size="sm" onClick={() => void load(filter, page)}>Coba lagi</Button>
+        </div>
       ) : games.length === 0 ? (
-        <div className="py-12 text-center text-sm text-neutral-400" role="status">
-          Belum ada partai selesai pada filter ini.
+        <div className="py-12 text-center text-sm text-neutral-400 flex flex-col items-center gap-3" role="status">
+          <p>Belum ada partai</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => (window.location.hash = "#/bots")}>Main vs Bot</Button>
+            <Button size="sm" onClick={() => (window.location.hash = "#/play")}>Main Online</Button>
+          </div>
         </div>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {games.map((g) => (
-            <li
-              key={g.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2.5"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-semibold truncate">
-                  vs @{g.opponent.username} <span className="text-neutral-400 font-normal">({g.opponent.rating})</span>
-                </p>
-                <p className="text-xs text-neutral-400">
-                  {g.color === "white" ? "Putih" : "Hitam"} · {g.game_type ?? "-"} · {g.time_control ?? "-"}
-                  {g.ended_at ? ` · ${new Date(g.ended_at).toLocaleDateString("id-ID")}` : ""}
-                  {typeof g.rating_delta === "number" ? ` · ${g.rating_delta >= 0 ? "+" : ""}${g.rating_delta}` : ""}
-                </p>
-              </div>
-              <span
-                className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-md ${
-                  g.result === "draw"
-                    ? "bg-neutral-700 text-neutral-200"
-                    : g.result === g.color
-                      ? "bg-emerald-600/20 text-emerald-400"
-                      : "bg-red-600/20 text-red-400"
-                }`}
-              >
-                {resultLabel(g.result, g.color)}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div ref={listTopRef} tabIndex={-1} className="outline-none">
+          <ul className="flex flex-col gap-2">
+            {games.map((g) => {
+              const rl = resultLabel(g.result, g.color);
+              const hasOpponent = Boolean(g.opponent?.username) && g.opponent.username !== "?";
+              const rmState = rematchState[g.id];
+              return (
+                <li
+                  key={g.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate flex items-center gap-2">
+                      <span
+                        className={`shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md ${
+                          g.result === "draw"
+                            ? "bg-neutral-700 text-neutral-200"
+                            : g.result === g.color
+                              ? "bg-emerald-600/20 text-emerald-400"
+                              : "bg-red-600/20 text-red-400"
+                        }`}
+                      >
+                        <span aria-hidden="true">{rl.icon}</span>
+                        {rl.text}
+                      </span>
+                      vs @{g.opponent.username} <span className="text-neutral-400 font-normal">({g.opponent.rating})</span>
+                    </p>
+                    <p className="text-xs text-neutral-400">
+                      {g.color === "white" ? "Putih" : "Hitam"} · {g.opening_name ?? "Opening tidak tercatat"} · {g.game_type ?? "-"} · {g.time_control ?? "-"} · {formatDuration(g.duration_sec)} · {relativeDate(g.ended_at)}
+                    </p>
+                    <p className="text-xs">
+                      {typeof g.rating_delta === "number" ? (
+                        <span className={g.rating_delta >= 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
+                          <span aria-hidden="true">{g.rating_delta >= 0 ? "▲" : "▼"} </span>
+                          {g.rating_delta >= 0 ? "+" : ""}{g.rating_delta} rating
+                        </span>
+                      ) : (
+                        <span className="text-neutral-500">tanpa perubahan rating</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-1">
+                    {onGoReview && (
+                      <button
+                        onClick={() => { window.location.hash = `#/review/${g.id}`; onGoReview(); }}
+                        aria-label={`Analisis partai vs ${g.opponent.username}`}
+                        title="Analisis"
+                        className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-[var(--surface-hover)]"
+                      >
+                        <span aria-hidden="true">🔍</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => void shareGame(g)}
+                      aria-label={`Bagikan partai vs ${g.opponent.username}`}
+                      title="Share"
+                      className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-[var(--surface-hover)]"
+                    >
+                      <span aria-hidden="true">🔗</span>
+                    </button>
+                    <button
+                      onClick={() => void sendRematch(g)}
+                      disabled={!hasOpponent || rmState === "Menunggu…"}
+                      aria-label={hasOpponent ? `Tanding ulang vs ${g.opponent.username} ${g.time_control ?? ""}` : "Rematch tidak tersedia untuk partai vs bot"}
+                      title={hasOpponent ? "Rematch" : "Rematch tidak tersedia (vs bot)"}
+                      className={`p-1.5 rounded-lg ${hasOpponent && rmState !== "Menunggu…" ? "text-neutral-300 hover:text-white hover:bg-[var(--surface-hover)]" : "text-neutral-600 cursor-not-allowed"}`}
+                    >
+                      <span aria-hidden="true">⚔️</span>
+                    </button>
+                    <button
+                      onClick={() => void toggleFavorite(g)}
+                      aria-label={`${g.favorited ? "Hapus dari" : "Tambahkan ke"} favorit: partai vs ${g.opponent.username}`}
+                      title="Favorit"
+                      aria-pressed={g.favorited}
+                      className={`p-1.5 rounded-lg hover:bg-[var(--surface-hover)] ${g.favorited ? "text-yellow-400" : "text-neutral-300 hover:text-white"}`}
+                    >
+                      <span aria-hidden="true">{g.favorited ? "★" : "☆"}</span>
+                    </button>
+                    {rmState && (
+                      <span className="text-xs text-neutral-300">{rmState}</span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
 
       {totalPages > 1 && !loading && !error && (
@@ -181,7 +358,7 @@ export function ArchiveView({ onGoReview }: Props) {
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             Sebelumnya
           </Button>
-          <span className="text-xs text-neutral-400">Halaman {page}/{totalPages}</span>
+          <span className="text-xs text-neutral-400" aria-live="polite">Halaman {page} dari {totalPages}</span>
           <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
             Berikutnya
           </Button>

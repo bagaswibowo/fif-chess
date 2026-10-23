@@ -45,19 +45,45 @@ export function RushView({ lang = "id", onBack }: Props) {
   const [loadingBoard, setLoadingBoard] = useState(false);
   const mainCtaRef = useRef<HTMLButtonElement | null>(null);
   const announceRef = useRef<string | null>(null);
+  // T6: pause saat tab blur (document.visibilitychange hidden) — timer berhenti.
+  const [paused, setPaused] = useState(false);
+  // T6: breakdown end-screen (benar/salah/best-streak) dari attempt log lokal.
+  const [breakdown, setBreakdown] = useState({ correct: 0, wrong: 0, bestStreak: 0 });
+  const breakStreakRef = useRef({ cur: 0, best: 0 });
+
+  const applyPause = useCallback(() => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") setPaused(true);
+  }, []);
+  const applyResume = useCallback(() => {
+    if (typeof document !== "undefined" && document.visibilityState === "visible") setPaused(false);
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") applyPause();
+      else applyResume();
+    });
+    window.addEventListener("blur", applyPause);
+    window.addEventListener("focus", applyResume);
+    return () => {
+      window.removeEventListener("blur", applyPause);
+      window.removeEventListener("focus", applyResume);
+    };
+  }, [applyPause, applyResume]);
 
   // Timer client hanya mirror — server tetap sumber kebenaran (guardrail S3-T3).
+  // T6: berhenti berjalan saat paused (tab blur).
   useEffect(() => {
-    if (stage !== "playing" || mode === "endless") return;
+    if (stage !== "playing" || mode === "endless" || paused) return;
     const id = setInterval(() => setRemaining((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(id);
-  }, [stage, mode]);
+  }, [stage, mode, paused]);
 
   useEffect(() => {
-    if (stage !== "playing" || mode !== "endless") return;
+    if (stage !== "playing" || mode !== "endless" || paused) return;
     const id = setInterval(() => setElapsed((s) => s + 1), 1000);
     return () => clearInterval(id);
-  }, [stage, mode]);
+  }, [stage, mode, paused]);
 
   // Timer habis → game over (strike dicek dulu server-side; end tunggal §3.5).
   useEffect(() => {
@@ -71,6 +97,9 @@ export function RushView({ lang = "id", onBack }: Props) {
 
   const startSession = useCallback(async () => {
     setLoadingBoard(true);
+    setBreakdown({ correct: 0, wrong: 0, bestStreak: 0 });
+    breakStreakRef.current = { cur: 0, best: 0 };
+    setPaused(false);
     try {
       const res = await fetch("/api/puzzles/rush/start", {
         method: "POST",
@@ -153,6 +182,17 @@ export function RushView({ lang = "id", onBack }: Props) {
         const data = await res.json();
         setScore(typeof data.score === "number" ? data.score : score);
         setStrikes(typeof data.strikes === "number" ? data.strikes : strikes);
+        // T6: breakdown log lokal utk end-screen.
+        setBreakdown((b) => {
+          const st = breakStreakRef.current;
+          if (p.correct) {
+            st.cur += 1;
+            st.best = Math.max(st.best, st.cur);
+            return { ...b, correct: b.correct + 1, bestStreak: st.best };
+          }
+          st.cur = 0;
+          return { ...b, wrong: b.wrong + 1 };
+        });
         if (data.gameOver === true) {
           void endSession();
           return null;
@@ -256,6 +296,22 @@ export function RushView({ lang = "id", onBack }: Props) {
           <p className="text-sm text-neutral-400 mt-1">Rekor pribadi: {best}</p>
         ) : null}
 
+        {/* T6: breakdown rinci — benar/salah/best-streak (teks berlabel, bukan warna saja) */}
+        <div className="flex justify-center gap-6 mt-4" role="status" aria-label="Rincian sesi">
+          <span className="flex flex-col leading-tight">
+            <span className="text-xl font-black text-emerald-400 tabular-nums">✓ {breakdown.correct}</span>
+            <span className="text-[10px] text-neutral-400">Benar</span>
+          </span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-xl font-black text-red-400 tabular-nums">✕ {breakdown.wrong}</span>
+            <span className="text-[10px] text-neutral-400">Salah</span>
+          </span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-xl font-black text-white tabular-nums">🔥 {breakdown.bestStreak}</span>
+            <span className="text-[10px] text-neutral-400">Best streak</span>
+          </span>
+        </div>
+
         <h3 className="text-sm font-bold text-neutral-300 mt-5 mb-2">Papan Peringkat</h3>
         <ol className="text-sm text-neutral-300 space-y-1 max-h-56 overflow-y-auto custom-scrollbar text-left px-4">
           {leaderboard.slice(0, 20).map((e, i) => (
@@ -286,6 +342,21 @@ export function RushView({ lang = "id", onBack }: Props) {
   // PLAYING — HUD strip di atas papan (design §3.3)
   const lowTime = mode !== "endless" && remaining <= 30;
   const heartsLeft = 3 - strikes;
+  if (paused) {
+    // T6: overlay pause saat tab blur — waktu tidak berkurang; resume via klik.
+    return (
+      <div className="max-w-3xl mx-auto w-full flex flex-col gap-2">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-10 text-center" role="status" aria-live="polite">
+          <IconClock3D size={40} className="mx-auto" aria-hidden="true" />
+          <h2 className="text-lg font-black text-white mt-2">Sesi dijeda</h2>
+          <p className="text-sm text-neutral-400 mt-1">Tab tidak aktif — waktu dihentikan sementara.</p>
+          <div className="flex justify-center mt-5">
+            <Button onClick={applyResume}>Lanjutkan</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="max-w-3xl mx-auto w-full flex flex-col gap-2">
       <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 flex items-center justify-between gap-3">

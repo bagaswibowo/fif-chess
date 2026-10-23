@@ -1,10 +1,13 @@
 "use client";
 
 /**
- * components/views/puzzle-hub.tsx (S3-T1..T4 frontend, S5-T3 update)
+ * components/views/puzzle-hub.tsx (S3-T1..T4, S5-T3, T6 WS-2.5)
  * Hub Teka-Teki: tab Tantangan Harian / Gegas / Latihan Tema / Tanpa Batas
  * di atas solve mode. Sub-navigasi ringan — navTab game.tsx hanya "puzzles".
  * S5-T3: terima initialTab dari deep-link lama (#/daily|#/rush|#/themes).
+ * T6: stats strip personal di atas (rating/streak/solved/failed hari ini dari
+ * /api/home/dashboard) — angka sebagai teks berlabel; guest melihat strip
+ * kosong + CTA masuk, tanpa memblokir mencoba 1 puzzle.
  */
 
 import { useEffect, useState } from "react";
@@ -23,8 +26,17 @@ const TABS: { id: PuzzleTab; labelId: string; labelEn: string }[] = [
   { id: "themes", labelId: "Latihan Tema", labelEn: "Theme Training" },
 ];
 
+type PuzzleStats = {
+  puzzleRating: number | null;
+  streak: number;
+  solvedToday: number;
+  failedToday: number;
+};
+
 export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Props) {
   const [tab, setTab] = useState<PuzzleTab>(initialTab);
+  const [stats, setStats] = useState<PuzzleStats | null>(null);
+  const [guest, setGuest] = useState(false);
 
   // BUG-2 (QA S5): initialTab bisa berubah setelah mount (hashchange ke
   // #/daily|#/rush|#/themes saat PuzzleHub sudah terpasang, atau fresh load
@@ -32,6 +44,36 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
   useEffect(() => {
     if (initialTab && initialTab !== "unlimited") setTab(initialTab);
   }, [initialTab]);
+
+  // T6: stats strip dari /api/home/dashboard (T1 fields). 401 → guest strip
+  // (bukan blokir); 403 pending → strip kosong; 503 → strip kosong.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/home/dashboard", { cache: "no-store" });
+        if (res.status === 401) {
+          if (!cancelled) setGuest(true);
+          return;
+        }
+        if (!res.ok) return;
+        const d = await res.json();
+        if (cancelled) return;
+        setGuest(false);
+        setStats({
+          puzzleRating: typeof d.rating === "number" ? d.rating : null,
+          streak: typeof d.streakHarian === "number" ? d.streakHarian : 0,
+          solvedToday: typeof d.solvedToday === "number" ? d.solvedToday : 0,
+          failedToday: typeof d.failedToday === "number" ? d.failedToday : 0,
+        });
+      } catch {
+        /* strip tetap kosong */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab]);
 
   return (
     <div className="w-full h-full flex flex-col min-h-0">
@@ -50,6 +92,45 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
           </button>
         ))}
       </div>
+
+      {/* T6: stats strip personal — angka sebagai teks berlabel */}
+      <div
+        className="max-w-xl mx-auto w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 flex items-center justify-between gap-3 text-sm shrink-0 mb-2"
+        role="status"
+        aria-label="Statistik teka-teki pribadi"
+      >
+        {guest ? (
+          <>
+            <span className="text-xs text-neutral-400">Statistik tersimpan setelah masuk.</span>
+            <button
+              onClick={() => (window.location.hash = "#/auth")}
+              className="text-xs font-bold text-[var(--primary)] underline"
+            >
+              Masuk untuk menyimpan rating
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="flex flex-col leading-tight">
+              <span className="text-base font-black text-white tabular-nums">{stats?.puzzleRating ?? "—"}</span>
+              <span className="text-[10px] text-neutral-400">Rating puzzle</span>
+            </span>
+            <span className="flex flex-col leading-tight">
+              <span className="text-base font-black text-white tabular-nums">{stats?.streak ?? "—"}</span>
+              <span className="text-[10px] text-neutral-400">Beruntun harian</span>
+            </span>
+            <span className="flex flex-col leading-tight">
+              <span className="text-base font-black text-emerald-400 tabular-nums">{stats?.solvedToday ?? "—"}</span>
+              <span className="text-[10px] text-neutral-400">Benar hari ini</span>
+            </span>
+            <span className="flex flex-col leading-tight">
+              <span className="text-base font-black text-red-400 tabular-nums">{stats?.failedToday ?? "—"}</span>
+              <span className="text-[10px] text-neutral-400">Gagal hari ini</span>
+            </span>
+          </>
+        )}
+      </div>
+
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
         {tab === "unlimited" && <PuzzleView lang={lang} onGoRush={() => setTab("rush")} />}
         {tab === "daily" && <DailyPuzzleView lang={lang} onGoPuzzles={() => setTab("unlimited")} />}
