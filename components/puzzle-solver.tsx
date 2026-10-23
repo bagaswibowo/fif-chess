@@ -1,18 +1,30 @@
 "use client";
 
 /**
- * components/puzzle-solver.tsx (S3-T1..T4 frontend)
+ * components/puzzle-solver.tsx (S3-T1..T4 frontend, W1 interaksi papan)
  * Solve mode papan+kpanel: validasi langkah real-time vs solution_moves
  * (chess.js), streak, hint 2-level, feedback benar/salah (shake 180ms,
  * auto-reply lawan), upsell Rush idle 20s. Design: docs/design/sprint3.md §1.
  *
+ * W1 (pm-board-training-plan.md): papan kini interaktif — canDragPiece (hanya
+ * bidak sisi giliran saat phase solving), onPieceDrop (drag), onSquareClick
+ * (click-to-move: klik asal → klik tujuan). Validasi via
+ * validateSolutionStep (lib/puzzle-solve.ts) vs solution_moves yang diambil
+ * dari GET /api/puzzles/[id]/solution. Benar → maju FEN + auto-reply lawan
+ * (applyUci) / selesai → finishPuzzle (submitAttempt + streak); salah (legal
+ * tapi bukan solusi) → shake + failCount + status aria-live teks eksplisit
+ * (bukan warna saja — DHH a11y); ilegal → papan menolak senyap (design §1.6).
+ *
  * Dipakai ulang: PuzzleView (unlimited), DailyPuzzleView (single),
- * RushView (beruntun + HUD props), ThemesMasteryView (per tema).
+ * RushView (beruntun + HUD props), ThemesMasteryView (per tema),
+ * EndgameDrillsView (S4-T4) — semua view sembuh otomatis dari perbaikan ini.
  * TIDAK menyentuh bank statis lib/puzzle-data.ts (quest BPCaturPedia).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
+import type { PieceDropHandlerArgs, PieceHandlerArgs, SquareHandlerArgs } from "react-chessboard";
+import { Chess } from "chess.js";
 import { Button } from "@/components/ui/button";
 import { useChessTheme } from "@/lib/chess-themes";
 import {
@@ -75,15 +87,20 @@ export function PuzzleSolver({
   const [hintCaption, setHintCaption] = useState<string | null>(null);
   const [failCount, setFailCount] = useState(0);
   const [upsellVisible, setUpsellVisible] = useState(false);
+  // W1: solution moves (UCI) + progress index; selected square utk click-move.
+  const [solution, setSolution] = useState<string[]>([]);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
   const upsellCountRef = useRef(0);
   const upsellTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startRef = useRef<number>(Date.now());
+  const finishRef = useRef(false);
   const reducedMotion = useMemo(() => {
     if (typeof window === "undefined" || !window.matchMedia) return false;
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  // Muat puzzle baru: reset state posisi & interaksi.
+  // Muat puzzle baru: reset state posisi & interaksi + ambil solusi.
   useEffect(() => {
     if (!puzzle) return;
     setFen(puzzle.fen);
@@ -95,8 +112,29 @@ export function PuzzleSolver({
     setHintCaption(null);
     setFailCount(0);
     setUpsellVisible(false);
+    setSolution([]);
+    setStepIndex(0);
+    setSelected(null);
+    finishRef.current = false;
+    upsellCountRef.current = 0;
     startRef.current = Date.now();
     if (upsellTimerRef.current) clearTimeout(upsellTimerRef.current);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/puzzles/${puzzle.id}/solution`, { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as { solutionMoves?: unknown };
+        if (!cancelled && Array.isArray(data.solutionMoves)) {
+          setSolution(data.solutionMoves.filter((m): m is string => typeof m === "string"));
+        }
+      } catch {
+        /* solusi kosong → langkah tak tervalidasi; hint tetap jalan */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [puzzle?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const scheduleUpsell = useCallback(() => {
@@ -126,6 +164,8 @@ export function PuzzleSolver({
   );
 
   const finishPuzzle = useCallback(async () => {
+    if (finishRef.current) return;
+    finishRef.current = true;
     setPhase("solved");
     setStatus("Puzzle selesai!");
     setStreak((s) => s + 1);
@@ -135,24 +175,111 @@ export function PuzzleSolver({
     scheduleUpsell();
   }, [onSolved, submitAttempt, scheduleUpsell]);
 
+  // W1: inti validasi — dipakai onPieceDrop (drag) & onSquareClick (click-move).
   const handleMove = useCallback(
-    (uci: string): boolean => {
+    (from: string, to: string, promotion?: string): boolean => {
       if (!puzzle || phase !== "solving") return false;
-      // Langkah lawan (solusi index ganjil) tidak bisa diklik user — papan
-      // menolak senyap via turn check di bawah (chess.js validateSolutionStep).
-      const step = validateSolutionStep(fen, uci, undefined);
-      if (!step.ok && step.reason === "illegal") {
-        return false; // drag ilegal: tolak senyap (design §1.6)
+      const uci = `${from}${to}${promotion ?? ""}`;
+      const expected = solution[stepIndex];
+      const step = validateSolutionStep(fen, uci, expected);
+      if (!step.ok) {
+        if (step.reason === "illegal") {
+          return false; // drag/klik ilegal: papan menolak senyap (design §1.6)
+        }
+        // Legal tapi bukan langkah solusi → shake + counter + teks (bukan warna saja).
+        setShake(true);
+        window.setTimeout(() => setShake(false), reducedMotion ? 0 : 200);
+        setFailCount((c) => c + 1);
+        setSelected(null);
+        setStatus(`Langkah salah (${step.san ?? uci}) — coba lagi.`);
+        onFailed?.();
+        return true; // konsumsi drop supaya bidak tidak menghilang; posisi tak berubah
       }
-      // Validasi eksak vs langkah solusi berikutnya dilakukan parent via
-      // solutionUci — di sini parent menyediakannya lewat prop fetchHint tidak
-      // cukup, jadi kontraknya: parent memvalidasi. Untuk menjaga solver
-      // self-contained, langkah diverifikasi server-side on-demand.
+      // Benar: maju FEN; bila masih ada langkah → auto-reply lawan (applyUci).
+      const nextIndex = stepIndex + 1;
+      setStepIndex(nextIndex);
+      setSelected(null);
+      setHintFrom(null);
+      setHintArrow(false);
+      setHintCaption(null);
+      if (nextIndex >= solution.length) {
+        void finishPuzzle();
+        return true;
+      }
+      setPhase("opponent");
+      setStatus("Lawan menjawab…");
+      const reply = solution[nextIndex];
+      window.setTimeout(() => {
+        const nextFen = applyUci(step.nextFen, reply);
+        if (nextFen) {
+          setFen(nextFen);
+          setStepIndex(nextIndex + 1);
+        }
+        setPhase("solving");
+        setStatus("Giliranmu — cari langkah terbaik.");
+      }, reducedMotion ? 60 : 550);
       return true;
     },
-    [puzzle, phase, fen],
+    [puzzle, phase, fen, solution, stepIndex, reducedMotion, finishPuzzle, onFailed],
   );
-  void handleMove; // (drag handler didelegasikan ke wrapper BoardPuzzle di bawah)
+
+  // W1: hanya bidak sisi giliran (sideToMove FEN aktif) yang bisa didrag,
+  // dan hanya saat phase "solving".
+  const isOwnPiece = useCallback(
+    (pieceType: string): boolean => {
+      let turn: "w" | "b";
+      try {
+        turn = new Chess(fen).turn();
+      } catch {
+        return false;
+      }
+      return turn === "w" ? pieceType.startsWith("w") : pieceType.startsWith("b");
+    },
+    [fen],
+  );
+
+  const canDragPiece = useCallback(
+    ({ piece }: PieceHandlerArgs): boolean => phase === "solving" && isOwnPiece(piece.pieceType),
+    [phase, isOwnPiece],
+  );
+
+  const onPieceDrop = useCallback(
+    ({ sourceSquare, targetSquare }: PieceDropHandlerArgs): boolean => {
+      if (!targetSquare || phase !== "solving") return false;
+      return handleMove(sourceSquare.toLowerCase(), targetSquare.toLowerCase());
+    },
+    [phase, handleMove],
+  );
+
+  // W1: click-to-move — klik bidak sendiri (asal), lalu klik kotak tujuan.
+  const onSquareClick = useCallback(
+    ({ square, piece }: SquareHandlerArgs): void => {
+      if (phase !== "solving") return;
+      const sq = square.toLowerCase();
+      // Kotak asal: hanya bidak sisi giliran yang bisa dipilih.
+      if (!selected) {
+        if (piece && isOwnPiece(piece.pieceType)) setSelected(sq);
+        return;
+      }
+      if (sq === selected) {
+        setSelected(null);
+        return;
+      }
+      let targetPieceType: string | null = null;
+      try {
+        const p = new Chess(fen).get(sq as never);
+        targetPieceType = p ? `${p.color === "w" ? "w" : "b"}${p.type.toUpperCase()}` : null;
+      } catch {
+        targetPieceType = null;
+      }
+      if (targetPieceType && isOwnPiece(targetPieceType)) {
+        setSelected(sq); // ganti kotak asal
+        return;
+      }
+      handleMove(selected, sq);
+    },
+    [phase, selected, fen, isOwnPiece, handleMove],
+  );
 
   if (loading || !puzzle) {
     return (
@@ -170,6 +297,12 @@ export function PuzzleSolver({
     squareStyles[hintFrom] = {
       boxShadow: "inset 0 0 0 4px var(--board-mark, #81b64c)",
       backgroundColor: "rgba(129,182,76,0.3)",
+    };
+  }
+  if (selected) {
+    squareStyles[selected] = {
+      boxShadow: "inset 0 0 0 4px rgba(129,182,76,0.9)",
+      backgroundColor: "rgba(129,182,76,0.25)",
     };
   }
 
@@ -190,6 +323,9 @@ export function PuzzleSolver({
               position: fen,
               boardOrientation: orientation,
               allowDragging: phase === "solving",
+              canDragPiece,
+              onPieceDrop,
+              onSquareClick,
               squareStyles,
               arrows: hintArrow && hintFrom ? [] : [],
               boardStyle: {
@@ -237,6 +373,14 @@ export function PuzzleSolver({
         >
           {status}
         </p>
+
+        {/* Counter kegagalan — teks eksplisit, bukan warna saja (DHH a11y) */}
+        {failCount > 0 && phase === "solving" ? (
+          <p className="rounded-lg border border-[var(--error)] px-3 py-1.5 text-xs font-bold text-neutral-200 flex items-center gap-1.5">
+            <IconAlert3D size={14} aria-hidden="true" />
+            Percobaan gagal: {failCount}× — langkah legal tapi belum tepat.
+          </p>
+        ) : null}
 
         {/* Info puzzle */}
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 text-xs text-neutral-400">
