@@ -50,3 +50,32 @@ login (AuthPanel input) → Tab ke skip-link "Lewati ke konten utama" → main `
 
 - Leaderboard username → halaman profil publik terpisah belum ada (deep-link hook disiapkan, `onOpenProfile`).
 - Presence dot friends hanya live saat teman konek WS (kontrak S1-T3) — offline count bukan bug.
+
+---
+
+## 7. Pasca-Konsolidasi Sprint 5 (S5-T6 audit ulang)
+
+Referensi: docs/planning/sprint5-menu-consolidation.md. Audit PM menemukan 8 redundansi; berikut status setiap jalur setelah konsolidasi.
+
+### Struktur menu final
+
+- Sidebar 4 grup: Bermain (Main Online, Lawan Bot, Pelatih), Teka-Teki (Teka-Teki), Berlatih (Analisis, Scan Papan, Materi Belajar, Permainan Akhir), Komunitas (Komunitas, Papan Peringkat, Teman, Arsip) + Lainnya (Admin, isAdmin only).
+- Bottom nav 5: Home | Bermain | Teka-Teki | Analisis (label diperbaiki dari "Berlatih") | Komunitas.
+- More-sheet mobile: hanya item di luar 4 grup + Home (Lawan Bot, Pelatih, Scan Papan, Materi Belajar, Permainan Akhir, Papan Peringkat, Teman, Arsip, Admin) — tidak lagi duplikasi sidebar.
+
+### Resolusi redundansi (8 temuan)
+
+1. **Spectator 2 entry point** — navTab `spectator` di-retire; satu-satunya jalur = sub-tab "Jev vs Stockfish" dalam Pelatih. Deep-link `#/spectator` dialihkan ke `#/coach` + sub-tab spectator.
+2. **Harian/Gegas/Tema 3 entry point** — item sidebar & baris more-sheet dihapus; satu jalur = tab dalam PuzzleHub. Deep-link `#/daily|#/rush|#/themes` dialihkan ke `#/puzzles` + initialTab sesuai.
+3. **"Visi" mislabel** — rename ke "Materi Belajar" (sidebar + more-sheet); isi LearningHub tidak berubah.
+4. **Bottom-nav "Berlatih"** — label diganti "Analisis", sesuai isi (navTab `review`).
+5. **GuidedPlayView dead** — 2 salinan (components/ + components/views/) dihapus; export di views/index.ts dibersihkan.
+6. **File duplikat spectator-view** — salinan views/ dihapus; components/spectator-view.tsx dipindah ke components/views/spectator-view.tsx (git mv); import game.tsx diperbarui.
+7. **Review ↔ Arsip shortcut** — dibiarkan (bukan redundansi; jalur lintas-fitur yang berbeda).
+8. **PasteBar setNavTab("play")** — onLoadFen/onLoadPgn tidak lagi redirect; PGN/FEN dimuat langsung ke board analisis/review yang sedang aktif.
+
+### Verifikasi
+
+- `npm run build` PASS (Next.js production build).
+- `npx vitest run lib/puzzle-solve.test.ts lib/pgn-parse.test.ts` — 27/27 lulus.
+- grep: tidak ada referensi `guided-play-view` tersisa di components/lib/app; NavTab union tanpa `spectator|daily|rush|themes`; setiap item menu punya render case.
