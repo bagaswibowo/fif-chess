@@ -16,6 +16,7 @@ import { DailyPuzzleView } from "./daily-puzzle-view";
 import { RushView } from "./rush-view";
 import { ThemesMasteryView } from "./themes-mastery-view";
 import { MissedPuzzlesView } from "./missed-puzzles-view";
+import type { TierRow } from "./puzzle-tier-strip";
 
 type Props = { lang?: "id" | "en"; onBack?: () => void; initialTab?: PuzzleTab };
 type PuzzleTab = "unlimited" | "daily" | "rush" | "themes" | "missed";
@@ -29,6 +30,7 @@ const TABS: { id: PuzzleTab; labelId: string; labelEn: string }[] = [
 ];
 
 type PuzzleStats = {
+  tierProgress?: TierRow | null;
   puzzleRating: number | null;
   streak: number;
   solvedToday: number;
@@ -49,6 +51,28 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
 
   // T6: stats strip dari /api/home/dashboard (T1 fields). 401 → guest strip
   // (bukan blokir); 403 pending → strip kosong; 503 → strip kosong.
+  // W3: progress tier aktif utk stats strip (ringkas: tier & akurasi).
+  useEffect(() => {
+    if (guest) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/puzzles/tiers", { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+        const d = await res.json();
+        if (cancelled || !Array.isArray(d.tiers)) return;
+        const open = (d.tiers as TierRow[]).filter((t) => t.unlocked);
+        const activeTier = open[open.length - 1] ?? null;
+        if (!cancelled) setStats((s) => (s ? { ...s, tierProgress: activeTier } : s));
+      } catch {
+        /* strip tanpa tier */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [guest, tab]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -120,6 +144,17 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
             <span className="flex flex-col leading-tight">
               <span className="text-base font-black text-white tabular-nums">{stats?.streak ?? "—"}</span>
               <span className="text-[10px] text-neutral-400">Beruntun harian</span>
+            </span>
+            {/* W3: progress tier aktif (teks berlabel, bukan warna saja) */}
+            <span className="flex flex-col leading-tight">
+              <span className="text-base font-black text-white tabular-nums">
+                {stats?.tierProgress ? stats.tierProgress.tier : "—"}
+              </span>
+              <span className="text-[10px] text-neutral-400">
+                {stats?.tierProgress
+                  ? `Tier ${stats.tierProgress.tier}–${stats.tierProgress.tier + 199} · akurasi ${stats.tierProgress.accuracy}% (${stats.tierProgress.solved}/${stats.tierProgress.attempted} teka-teki)`
+                  : "Tier rating"}
+              </span>
             </span>
             <span className="flex flex-col leading-tight">
               <span className="text-base font-black text-emerald-400 tabular-nums">{stats?.solvedToday ?? "—"}</span>

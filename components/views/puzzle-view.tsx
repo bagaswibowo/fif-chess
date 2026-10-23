@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PuzzleSolver } from "@/components/puzzle-solver";
 import { Button } from "@/components/ui/button";
 import type { PuzzleDto } from "@/lib/puzzle-solve";
+import { TierLadder } from "@/components/views/tier-ladder";
 
 type Props = { lang?: "id" | "en"; onGoRush?: () => void };
 
@@ -41,6 +42,8 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
   const [theme, setTheme] = useState("");
   const [preset, setPreset] = useState("any");
   const [applied, setApplied] = useState<{ theme: string; min: number | null; max: number | null }>({ theme: "", min: null, max: null });
+  // W3: tier terpilih (progression rating 800..2200) — null = tanpa filter tier.
+  const [tier, setTier] = useState<number | null>(null);
   // T6: banner hasil inline (aria-live) + tombol Lanjut
   const [lastResult, setLastResult] = useState<"correct" | "wrong" | null>(null);
   const [bestStep, setBestStep] = useState<string | null>(null);
@@ -109,6 +112,17 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // W3: pilih tier → muat puzzle di rentang rating tier tersebut.
+  const pickTier = useCallback(
+    (t: number) => {
+      setTier(t);
+      const f = { theme, min: t, max: t + 199 };
+      setApplied(f);
+      void loadNext(f);
+    },
+    [theme, loadNext],
+  );
+
   const applyFilters = useCallback(() => {
     const p = RATING_PRESETS.find((x) => x.id === preset) ?? RATING_PRESETS[0];
     const f = { theme, min: p.min, max: p.max };
@@ -175,6 +189,11 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* W3: progression tier rating — unlock via akurasi tier sebelumnya */}
+      <div className="max-w-3xl mx-auto w-full">
+        <TierLadder lang={lang} onPickTier={pickTier} selectedTier={tier} />
+      </div>
+
       {/* T6: bar filter tema + preset rating */}
       <div className="max-w-3xl mx-auto w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 flex flex-wrap items-center gap-2">
         <label className="text-xs text-neutral-400 flex items-center gap-1">
