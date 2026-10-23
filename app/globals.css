@@ -82,6 +82,14 @@
   --board-dark: #b58863;
   --board-mark: #81b64c;
 
+  /* V6: aksen warna per grup navigasi (token, bukan aset) */
+  --nav-accent-play: #81b64c;
+  --nav-accent-puzzle: #f59e0b;
+  --nav-accent-drill: #3893e8;
+  --nav-accent-learn: #a78bfa;
+  --nav-accent-social: #f472b6;
+  --nav-accent-watch: #2dd4bf;
+
   /* Sizing tokens */
   --gap-1: 0.5rem;
   --gap-2: 1rem;
@@ -555,6 +563,58 @@ select.field { padding-right: 2rem; }
   .board-card {
     border-radius: 1rem;
     padding: 0.625rem;
+  }
+}
+
+/* V1: koordinat papan dirender BoardChrome — teks kecil abu, tidak menggeser square */
+.board-coord-text {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* V4: shake board langkah salah — 300ms, dimatikan prefers-reduced-motion */
+@keyframes puzzle-shake-x {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.puzzle-shake {
+  animation: puzzle-shake-x 300ms ease-in-out;
+}
+
+/* V8: banner offline — pasangan visual tidak adanya data live */
+.offline-banner {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  z-index: 90;
+  border-radius: 0.75rem;
+  border: 1px solid var(--warning);
+  background: var(--card);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+@media (min-width: 768px) {
+  .offline-banner {
+    bottom: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .puzzle-shake {
+    animation: none;
+  }
+  .animate-pulse {
+    animation: none !important;
   }
 }
 

@@ -1,0 +1,24 @@
+{
+  "name": "Jev Chess",
+  "short_name": "JevChess",
+  "description": "Main catur melawan TypeSafe Jev — puzzle, bot, dan latihan.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1c1a18",
+  "theme_color": "#1c1a18",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "/icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/app-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

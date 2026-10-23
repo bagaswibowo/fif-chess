@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Icon original jev-chess: knight bentuk sederhana di kotak hijau -->
+  <rect width="512" height="512" rx="96" fill="#1c1a18"/>
+  <rect x="24" y="24" width="464" height="464" rx="72" fill="#273815"/>
+  <path fill="#81b64c" d="M256 96c-14 0-26 8-32 20l-58 118c-6 12-2 26 9 34l37 27-52 61c-8 10-8 24 0 33 5 5 12 8 19 8h178c13 0 24-11 24-24v-58c0-92-56-176-125-219z"/>
+  <circle cx="298" cy="188" r="18" fill="#1c1a18"/>
+</svg>
