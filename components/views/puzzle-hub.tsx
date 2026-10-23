@@ -16,10 +16,11 @@ import { DailyPuzzleView } from "./daily-puzzle-view";
 import { RushView } from "./rush-view";
 import { ThemesMasteryView } from "./themes-mastery-view";
 import { MissedPuzzlesView } from "./missed-puzzles-view";
+import { PuzzleStatsView } from "./puzzle-stats-view";
 import type { TierRow } from "./puzzle-tier-strip";
 
 type Props = { lang?: "id" | "en"; onBack?: () => void; initialTab?: PuzzleTab };
-type PuzzleTab = "unlimited" | "daily" | "rush" | "themes" | "missed";
+type PuzzleTab = "unlimited" | "daily" | "rush" | "themes" | "missed" | "stats";
 
 const TABS: { id: PuzzleTab; labelId: string; labelEn: string }[] = [
   { id: "unlimited", labelId: "Teka-Teki", labelEn: "Puzzles" },
@@ -27,6 +28,7 @@ const TABS: { id: PuzzleTab; labelId: string; labelEn: string }[] = [
   { id: "rush", labelId: "Gegas", labelEn: "Rush" },
   { id: "themes", labelId: "Latihan Tema", labelEn: "Theme Training" },
   { id: "missed", labelId: "Koreksi", labelEn: "Corrections" },
+  { id: "stats", labelId: "Statistik", labelEn: "Stats" },
 ];
 
 type PuzzleStats = {
@@ -174,6 +176,7 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
         {tab === "rush" && <RushView lang={lang} onBack={onBack} />}
         {tab === "themes" && <ThemesMasteryView lang={lang} onBack={onBack} />}
         {tab === "missed" && <MissedPuzzlesView lang={lang} />}
+        {tab === "stats" && <PuzzleStatsView lang={lang} />}
       </div>
     </div>
   );
