@@ -7,15 +7,14 @@
  */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentPgUser, dailyStreak } from "@/lib/puzzle-api";
+import { resolvePgUser, dailyStreak } from "@/lib/puzzle-api";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const me = await currentPgUser(request);
-  if (!me) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const me = auth.user;
 
   const [solvedRows, activeRows, lastFinished] = await Promise.all([
     query<{ n: string }>(

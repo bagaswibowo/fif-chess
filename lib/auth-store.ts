@@ -187,13 +187,20 @@ export function endSession(token: string) {
   writeJson(SESSIONS_FILE, sessions);
 }
 
-export function userForToken(token: string | undefined, users: UserProfile[]) {
+/** Resolusi session -> user APA PUN statusnya (pending/rejected/approved).
+ *  Dipakai lapisan yang perlu membedakan belum-login (401) dari login-tapi-
+ *  belum-approved (403); jangan dipakai langsung sebagai gate akses fitur. */
+export function sessionUserForToken(token: string | undefined, users: UserProfile[]) {
   if (!token) return null;
   const session = loadSessions()[sign(token)];
   if (!session || session.exp < Date.now()) return null;
+  return users.find((u) => u.id === session.userId) ?? null;
+}
+
+export function userForToken(token: string | undefined, users: UserProfile[]) {
+  const user = sessionUserForToken(token, users);
   // Hanya status approved yang punya akses. Tanpa cek ini, user yang ditolak
   // admin masih bebas 30 hari memakai session lamanya.
-  const user = users.find((u) => u.id === session.userId);
   return user && user.status === "approved" ? user : null;
 }
 

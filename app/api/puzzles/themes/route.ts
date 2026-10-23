@@ -6,7 +6,7 @@
  */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentPgUser } from "@/lib/puzzle-api";
+import { resolvePgUser } from "@/lib/puzzle-api";
 import { THEME_LIST, themeLabel } from "@/lib/puzzle-themes";
 
 export const runtime = "nodejs";
@@ -14,7 +14,9 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const themeFilter = url.searchParams.get("theme")?.trim() || null;
-  const me = await currentPgUser(request);
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const me = auth.user;
 
   const params: unknown[] = [];
   const where = themeFilter ? "WHERE t.theme = $1" : "";

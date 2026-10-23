@@ -6,17 +6,16 @@
  */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentPgUser } from "@/lib/puzzle-api";
+import { resolvePgUser } from "@/lib/puzzle-api";
 
 export const runtime = "nodejs";
 
 const FILES = "abcdefgh";
 
 export async function GET(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  const me = await currentPgUser(request);
-  if (!me) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const me = auth.user;
   const { id } = await ctx.params;
   const stage = Math.min(2, Math.max(1, Number(new URL(request.url).searchParams.get("stage")) || 1));
 

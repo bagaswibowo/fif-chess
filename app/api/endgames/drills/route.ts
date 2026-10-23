@@ -7,16 +7,15 @@
  */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentPgUser } from "@/lib/puzzle-api";
+import { resolvePgUser } from "@/lib/puzzle-api";
 import { DRILL_SETS } from "@/lib/endgame-drills";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const me = await currentPgUser(request);
-  if (!me) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const me = auth.user;
 
   // Verifikasi SQL-side: hitung puzzle set yang benar-benar ada di DB dan
   // solved-unique per set dalam satu query (GIN index pada themes).

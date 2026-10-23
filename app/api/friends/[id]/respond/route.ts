@@ -6,15 +6,14 @@
  */
 import { NextResponse } from "next/server";
 import { query, transaction } from "@/lib/db";
-import { currentPgUser } from "@/lib/puzzle-api";
+import { resolvePgUser } from "@/lib/puzzle-api";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  const me = await currentPgUser(request);
-  if (!me) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const me = auth.user;
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
     return NextResponse.json({ error: "id tidak valid.", retryable: false }, { status: 400 });

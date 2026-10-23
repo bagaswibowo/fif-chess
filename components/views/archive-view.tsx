@@ -5,6 +5,7 @@
  * View arsip partai: reuse GET /api/games/archive (S2-T2) + unduh PGN
  * via /api/games/archive/pgn?ids=... Navigasi ke tab review via onGoReview.
  */
+import { authErrorText } from "@/lib/use-session";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -56,7 +57,7 @@ export function ArchiveView({ onGoReview }: Props) {
       const res = await fetch(`/api/games/archive?filter=${encodeURIComponent(f)}&page=${p}`, { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(res.status === 401 ? "Masuk untuk melihat arsip partai." : (data?.error ?? "Gagal memuat arsip."));
+        setError(authErrorText(res.status, data, "arsip partai"));
         setGames([]);
         return;
       }

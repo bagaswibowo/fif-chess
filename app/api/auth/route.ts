@@ -11,7 +11,7 @@
 
 import { NextResponse } from "next/server";
 import { query, transaction } from "@/lib/db";
-import { currentUser, loadUsers, mutateUsers, publicUser, startSession } from "@/lib/auth-store";
+import { currentUser, loadUsers, mutateUsers, publicUser, sessionUserForToken, startSession, tokenFromRequest } from "@/lib/auth-store";
 import { sessionCookie as sessionCookie2 } from "@/lib/auth-store";
 import { passwordMatches, signSession, sessionCookie, readCookie, GATE_COOKIE } from "@/lib/gate";
 import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
@@ -27,6 +27,19 @@ function hmacSha256Hex(key: string, message: string): string {
 function hashPassword(password: string): string {
   const key = process.env.SITE_HMAC_KEY ?? "dev-insecure-key-change-me";
   return hmacSha256Hex(key, `password:${password}`);
+}
+
+/** FIX-1.4: session refresh path (useSession.refresh memanggil GET).
+ *  Mengembalikan user APA PUN statusnya agar client tahu status pending —
+ *  memetakan pending ke null membuat user tampil logged-out padahal cookie
+ *  valid (akar BUG CTA login palsu). */
+export async function GET(request: Request) {
+  const users = await loadUsers();
+  const me = sessionUserForToken(tokenFromRequest(request), users);
+  return NextResponse.json(
+    { user: me ? publicUser(me) : null },
+    { headers: { "cache-control": "no-store" } },
+  );
 }
 
 export async function POST(request: Request) {

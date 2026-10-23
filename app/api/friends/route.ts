@@ -9,7 +9,7 @@
  */
 import { NextResponse } from "next/server";
 import { query, transaction } from "@/lib/db";
-import { currentPgUser } from "@/lib/puzzle-api";
+import { resolvePgUser } from "@/lib/puzzle-api";
 import { playingRedis } from "@/lib/realtime/playing-count.ts";
 
 export const runtime = "nodejs";
@@ -24,10 +24,9 @@ type FriendRow = {
 };
 
 export async function GET(request: Request) {
-  const me = await currentPgUser(request);
-  if (!me) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const me = auth.user;
 
   // Teman: dua arah accepted (row bisa dibuat satu arah saat request; list join kedua arah).
   const friends = await query<FriendRow>(
@@ -91,10 +90,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const me = await currentPgUser(request);
-  if (!me) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const me = auth.user;
   let body: Record<string, unknown> = {};
   try {
     body = (await request.json()) as Record<string, unknown>;
@@ -139,10 +137,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const me = await currentPgUser(request);
-  if (!me) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const me = auth.user;
   const url = new URL(request.url);
   const id = url.searchParams.get("id") ?? "";
   if (!/^[0-9a-f-]{36}$/i.test(id)) {

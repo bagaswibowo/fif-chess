@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { authErrorPayload, authErrorText } from "@/lib/use-session";
 import { Button } from "@/components/ui/button";
 import { IconFriends3D, IconClose3D } from "@/components/icons3d";
 
@@ -40,7 +41,7 @@ export function FriendsView({ onChallenge, onOpenProfile }: Props) {
     try {
       const res = await fetch("/api/friends", { cache: "no-store" });
       if (!res.ok) {
-        setError(res.status === 401 ? "Masuk untuk melihat daftar teman." : "Gagal memuat daftar teman.");
+        setError(authErrorText(res.status, await authErrorPayload(res), "daftar teman"));
         return;
       }
       setData((await res.json()) as FriendsPayload);

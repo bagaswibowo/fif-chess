@@ -105,3 +105,30 @@ export function useSession() {
 
   return { user, loading, login, register, logout, saveProfile, refresh };
 }
+
+
+/** FIX-1.2: pemetaan status HTTP -> pesan UI yang jujur.
+ *  401 = benar-benar belum login (CTA login sah); 403 = login tapi status
+ *  akun pending/rejected — BUKAN CTA login; 503 = gangguan layanan. */
+export function authErrorText(status: number, data?: { code?: string; error?: string }, ctx?: string): string {
+  const what = ctx ? ` ${ctx}` : "";
+  if (status === 401) return `Masuk untuk melihat${what}.`;
+  if (status === 403) {
+    if (data?.code === "account_pending") return "Akun menunggu persetujuan admin.";
+    if (data?.code === "account_rejected") return "Akun Anda ditolak admin.";
+    if (data?.code === "account_missing") return "Akun belum tersinkron dengan database. Coba lagi nanti.";
+    return data?.error ?? "Akses ditolak.";
+  }
+  if (status === 503) return "Layanan sedang gangguan. Coba lagi nanti.";
+  return data?.error ?? "Gagal memuat data. Coba lagi nanti.";
+}
+
+/** Ambil { code, error } dari response fetch untuk authErrorText. */
+export async function authErrorPayload(res: Response): Promise<{ code?: string; error?: string }> {
+  try {
+    const d = await res.json();
+    return { code: d?.code, error: d?.error };
+  } catch {
+    return {};
+  }
+}

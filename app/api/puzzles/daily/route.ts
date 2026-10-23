@@ -8,7 +8,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentPgUser, dailyStreak } from "@/lib/puzzle-api";
+import { resolvePgUser, dailyStreak } from "@/lib/puzzle-api";
 
 export const runtime = "nodejs";
 
@@ -45,7 +45,10 @@ export async function GET(request: Request) {
   const moves = row.solution_moves as unknown;
 
   // Solved hari X + streak harian (butuh login; anonim tetap dapat puzzle).
-  const me = await currentPgUser(request);
+  // FIX-1.3: DB error jangan telan jadi anonim — 503 eksplisit.
+  const auth = await resolvePgUser(request);
+  if (!auth.ok && auth.response.status !== 401) return auth.response;
+  const me = auth.ok ? auth.user : null;
   let solvedToday = false;
   let streakHarian = 0;
   if (me) {

@@ -77,6 +77,12 @@ export function PvpPanel({ user, room, yourSide, token, onRoom, onLeave }: Props
   if (!user) {
     return <p className="prose-note">Masuk dulu untuk bermain PvP: kamu perlu username agar lawan bisa mengundanganmu.</p>;
   }
+  if (user.status === "pending") {
+    return <p className="prose-note" role="status">Akun menunggu persetujuan admin — fitur PvP belum tersedia.</p>;
+  }
+  if (user.status === "rejected") {
+    return <p className="prose-note" role="status">Akun Anda ditolak admin.</p>;
+  }
 
   async function create() {
     setBusy(true);

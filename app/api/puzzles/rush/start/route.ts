@@ -3,7 +3,7 @@
  * POST { mode: "3min"|"5min"|"endless" } -> { sessionId, timeLeftSec }.
  */
 import { NextResponse } from "next/server";
-import { currentPgUser } from "@/lib/puzzle-api";
+import { resolvePgUser } from "@/lib/puzzle-api";
 import { createSession, getSession, timeLeftSec, type RushMode } from "@/lib/puzzle-rush";
 
 export const runtime = "nodejs";
@@ -11,7 +11,9 @@ export const runtime = "nodejs";
 const MODES: RushMode[] = ["3min", "5min", "endless"];
 
 export async function POST(request: Request) {
-  const me = await currentPgUser(request);
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const me = auth.user;
   if (!me) {
     return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
   }

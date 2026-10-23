@@ -6,12 +6,14 @@
  */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentPgUser } from "@/lib/puzzle-api";
+import { resolvePgUser } from "@/lib/puzzle-api";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const me = await currentPgUser(request);
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const me = auth.user;
   if (!me) {
     return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
   }

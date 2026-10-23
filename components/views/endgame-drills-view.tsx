@@ -7,6 +7,7 @@
  * /api/endgames/drills/[setId]/next. Attempt tetap via puzzles/[id]/attempt.
  */
 
+import { authErrorPayload, authErrorText } from "@/lib/use-session";
 import { useCallback, useEffect, useState } from "react";
 import { PuzzleSolver } from "@/components/puzzle-solver";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export function EndgameDrillsView({ onExit }: { onExit?: () => void }) {
     try {
       const res = await fetch("/api/endgames/drills", { cache: "no-store" });
       if (!res.ok) {
-        setError(res.status === 401 ? "Masuk untuk melihat latihan permainan akhir." : "Gagal memuat set permainan akhir.");
+        setError(authErrorText(res.status, await authErrorPayload(res), "latihan permainan akhir"));
         return [];
       }
       const data = await res.json();

@@ -2,23 +2,49 @@
  * lib/puzzle-api.ts (Sprint 3 — helper bersama API puzzle DB baru)
  * Tabel `puzzles`/`puzzle_attempts` DB — BUKAN bank statis lib/puzzle-data.ts.
  */
+import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentUser, loadUsers, type UserProfile } from "@/lib/auth-store";
+import { loadUsers, sessionUserForToken, tokenFromRequest, type UserProfile } from "@/lib/auth-store";
 
-export async function currentPgUser(request: Request): Promise<{ pgId: string; rating: number; username: string } | null> {
+export type PgUser = { pgId: string; rating: number; username: string };
+export type PgUserResolution =
+  | { ok: true; user: PgUser }
+  | { ok: false; response: Response };
+
+/**
+ * FIX-1.1/1.3: semantics auth yang jelas untuk route handler.
+ *  - tanpa session valid            -> 401 (belum login)
+ *  - session valid, status pending  -> 403 code=account_pending
+ *  - session valid, status rejected -> 403 code=account_rejected
+ *  - error DB                       -> 503 code=service_unavailable (di-LOG, bukan ditelan)
+ *  - username tak ada di PG         -> 403 code=account_missing + warning (deteksi drift R4)
+ */
+export async function resolvePgUser(request: Request): Promise<PgUserResolution> {
+  const users: UserProfile[] = await loadUsers();
+  const me = sessionUserForToken(tokenFromRequest(request), users);
+  if (!me) {
+    return { ok: false, response: NextResponse.json({ error: "Authentication required.", code: "unauthenticated", retryable: false }, { status: 401 }) };
+  }
+  if (me.status === "pending") {
+    return { ok: false, response: NextResponse.json({ error: "Akun menunggu persetujuan admin.", code: "account_pending", retryable: false }, { status: 403 }) };
+  }
+  if (me.status === "rejected") {
+    return { ok: false, response: NextResponse.json({ error: "Akun ditolak admin.", code: "account_rejected", retryable: false }, { status: 403 }) };
+  }
   try {
-    const users: UserProfile[] = await Promise.resolve(loadUsers());
-    const me = currentUser(request, users);
-    if (!me) return null;
     const rows = await query<{ id: string; rating: number; username: string }>(
       "SELECT id, rating, username FROM users WHERE username = $1 LIMIT 1",
       [me.username],
     );
-    if (rows.length === 0) return null;
+    if (rows.length === 0) {
+      console.warn(`[puzzle-api] R4 drift: user ${JSON.stringify(me.username)} ada di users.json tapi tidak di PG`);
+      return { ok: false, response: NextResponse.json({ error: "Akun belum tersinkron dengan database.", code: "account_missing", retryable: true }, { status: 403 }) };
+    }
     const r = rows[0];
-    return { pgId: String(r.id), rating: Number(r.rating) || 1200, username: String(r.username) };
-  } catch {
-    return null;
+    return { ok: true, user: { pgId: String(r.id), rating: Number(r.rating) || 1200, username: String(r.username) } };
+  } catch (err) {
+    console.error("[puzzle-api] DB gagal saat resolve user:", err);
+    return { ok: false, response: NextResponse.json({ error: "Layanan database sedang gangguan. Coba lagi nanti.", code: "service_unavailable", retryable: true }, { status: 503 }) };
   }
 }
 

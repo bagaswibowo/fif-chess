@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { authErrorPayload, authErrorText } from "@/lib/use-session";
 import { IconTrophy3D } from "@/components/icons3d";
 
 type Entry = { rank: number; username: string; rating: number; games: number; isMe: boolean };
@@ -30,7 +31,7 @@ export function LeaderboardView({ onOpenProfile, onPlayOnline }: Props) {
     try {
       const res = await fetch(`/api/leaderboard?scope=${s}`, { cache: "no-store" });
       if (!res.ok) {
-        setError(res.status === 401 ? "Masuk untuk melihat papan peringkat." : "Gagal memuat papan peringkat.");
+        setError(authErrorText(res.status, await authErrorPayload(res), "papan peringkat"));
         return;
       }
       setData((await res.json()) as Payload);
