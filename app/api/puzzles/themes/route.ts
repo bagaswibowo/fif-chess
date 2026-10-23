@@ -18,10 +18,10 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
   const me = auth.user;
 
-  const params: unknown[] = [];
-  const where = themeFilter ? "WHERE t.theme = $1" : "";
-  if (themeFilter) params.push(themeFilter);
-
+  // FIX (sprint6 QA): parameter kondisional (WHERE t.theme = $1 hanya saat
+  // filter) bikin PG 42P18 "could not determine data type of parameter $1"
+  // saat nilai null / posisi param bergeser. Restrukturisasi: SEMUA placeholder
+  // selalu ada di SQL dengan tipe eksplisit, nilai null = tanpa filter.
   const rows = await query<{ theme: string; total: string; attempted: string; correct: string }>(
     `SELECT t.theme,
             count(DISTINCT p.id)::text AS total,
@@ -30,10 +30,10 @@ export async function GET(request: Request) {
      FROM puzzles p
      CROSS JOIN LATERAL unnest(p.themes) AS t(theme)
      LEFT JOIN puzzle_attempts a
-       ON a.puzzle_id = p.id ${me ? "AND a.user_id = $2::uuid" : ""}
-     ${where}
+       ON a.puzzle_id = p.id AND a.user_id = $2::uuid
+     WHERE ($1::text IS NULL OR t.theme = $1::text)
      GROUP BY t.theme`,
-    me ? (themeFilter ? [themeFilter, me.pgId] : [me.pgId]) : (themeFilter ? [themeFilter] : []),
+    [themeFilter, me?.pgId ?? null],
   );
 
   const byKey = new Map(rows.map((r) => [r.theme, r]));
