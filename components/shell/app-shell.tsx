@@ -18,8 +18,8 @@ import {
 } from "@/components/icons3d";
 
 export type NavTab =
-  | "home" | "play" | "bots" | "coach" | "spectator"
-  | "puzzles" | "daily" | "rush" | "themes"
+  | "home" | "play" | "bots" | "coach"
+  | "puzzles"
   | "review" | "scan" | "vision" | "drills"
   | "community" | "leaderboard" | "friends" | "archive"
   | "admin";
@@ -54,9 +54,6 @@ const GROUPS: Group[] = [
     title: "Teka-Teki",
     items: [
       { id: "puzzles", label: "Teka-Teki", icon: IconPuzzle3D },
-      { id: "daily", label: "Harian", icon: IconMedal3D },
-      { id: "rush", label: "Gegas", icon: IconLightning3D },
-      { id: "themes", label: "Tema", icon: IconTarget3D },
     ],
   },
   {
@@ -64,7 +61,7 @@ const GROUPS: Group[] = [
     items: [
       { id: "review", label: "Analisis", icon: IconMedal3D },
       { id: "scan", label: "Scan Papan", icon: IconScan3D },
-      { id: "vision", label: "Visi", icon: IconVision3D },
+      { id: "vision", label: "Materi Belajar", icon: IconVision3D },
       { id: "drills", label: "Permainan Akhir", icon: IconShield3D },
     ],
   },
@@ -80,7 +77,6 @@ const GROUPS: Group[] = [
 ];
 
 const OTHER_ITEMS: Item[] = [
-  { id: "spectator", label: "Spectator", icon: IconVision3D },
   { id: "admin", label: "Admin", icon: IconShield3D },
 ];
 
@@ -88,7 +84,7 @@ const BOTTOM_ITEMS: { id: NavTab; label: string; icon: React.ComponentType<{ siz
   { id: "home", label: "Home", icon: IconPlay3D },
   { id: "play", label: "Bermain", icon: IconPlay3D, badge: true },
   { id: "puzzles", label: "Teka-Teki", icon: IconPuzzle3D },
-  { id: "review", label: "Berlatih", icon: IconMedal3D },
+  { id: "review", label: "Analisis", icon: IconMedal3D },
   { id: "community", label: "Komunitas", icon: IconCommunity3D },
 ];
 
@@ -208,11 +204,8 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
   const otherActive = visibleOthers.some((i) => i.id === navTab);
 
   const moreSheetItems: { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean }[] = [
-    { id: "daily", label: "Harian", icon: IconMedal3D },
-    { id: "rush", label: "Gegas", icon: IconLightning3D },
-    { id: "themes", label: "Tema", icon: IconTarget3D },
     { id: "scan", label: "Scan Papan", icon: IconScan3D },
-    { id: "vision", label: "Visi", icon: IconVision3D },
+    { id: "vision", label: "Materi Belajar", icon: IconVision3D },
     { id: "drills", label: "Permainan Akhir", icon: IconShield3D },
     { id: "bots", label: "Lawan Bot", icon: IconBot3D },
     { id: "coach", label: "Pelatih", icon: IconCoach3D },
