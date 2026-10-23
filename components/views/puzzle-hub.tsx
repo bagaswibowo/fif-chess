@@ -7,7 +7,7 @@
  * S5-T3: terima initialTab dari deep-link lama (#/daily|#/rush|#/themes).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PuzzleView } from "./puzzle-view";
 import { DailyPuzzleView } from "./daily-puzzle-view";
 import { RushView } from "./rush-view";
@@ -26,6 +26,13 @@ const TABS: { id: PuzzleTab; labelId: string; labelEn: string }[] = [
 export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Props) {
   const [tab, setTab] = useState<PuzzleTab>(initialTab);
 
+  // BUG-2 (QA S5): initialTab bisa berubah setelah mount (hashchange ke
+  // #/daily|#/rush|#/themes saat PuzzleHub sudah terpasang, atau fresh load
+  // di mana ref terisi belakangan). Re-sync tab setiap kali prop berubah.
+  useEffect(() => {
+    if (initialTab && initialTab !== "unlimited") setTab(initialTab);
+  }, [initialTab]);
+
   return (
     <div className="w-full h-full flex flex-col min-h-0">
       <div className="flex bg-[var(--card)] p-1 rounded-xl border border-[var(--border)] w-full max-w-xl mx-auto shadow-md shrink-0 mb-2">
@@ -34,7 +41,7 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            aria-current={tab === t.id}
+            aria-current={tab === t.id ? "page" : undefined}
             className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
               tab === t.id ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"
             }`}

@@ -124,6 +124,24 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
   const [searchOpen, setSearchOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const [moreOpen, setMoreOpen] = useState(false);
+  // BUG-3 (QA S5): bottom-nav mobile disembunyikan via CSS (md:hidden) di desktop,
+  // tapi tetap ada di DOM dan membawa aria-current="page". Lacak breakpoint
+  // sehingga aria-current hanya diterapkan saat elemen benar-benar visible.
+  const [isDesktop, setIsDesktop] = useState(false);
+  // BUG-3 (QA S5): SSR merender navTab "home" sementara hydration client memakai
+  // hash asli — perbedaan aria-current ini tidak pernah dikoreksi React pasca
+  // hydration sehingga atribut stale tertinggal di DOM. Render aria-current hanya
+  // setelah mount (render pertama client identik dengan SSR), lalu atribut benar
+  // di-set oleh re-render normal.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const on = () => setIsDesktop(mq.matches);
+    on();
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
   const moreTriggerRef = useRef<HTMLButtonElement | null>(null);
   const moreSheetRef = useRef<HTMLDivElement | null>(null);
   const searchBoxRef = useRef<HTMLDivElement | null>(null);
@@ -184,11 +202,15 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
         : "text-neutral-300 hover:bg-[var(--surface)] hover:text-white"
     } focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)]`;
 
+  // BUG-3 (QA S5): elemen nav yang disembunyikan (accordion "Lainnya" collapsed)
+  // tidak boleh membawa aria-current="page" — DOM selector QA menghitung semua
+  // [aria-current='page'], dan elemen hidden harus dikecualikan.
+  const otherIds = useMemo(() => new Set(OTHER_ITEMS.map((i) => i.id)), []);
   const renderIconBtn = (item: { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean }, active: boolean) => (
     <button
       key={item.id}
       onClick={() => onNavigate(item.id)}
-      aria-current={active ? "page" : undefined}
+      aria-current={mounted && active && isDesktop && !(otherIds.has(item.id) && !othersOpen) ? "page" : undefined}
       aria-label={`${item.label}${active ? " (halaman saat ini)" : ""}`}
       title={item.label}
       className={itemCls(active)}
@@ -440,7 +462,7 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
             <button
               key={tab.id}
               onClick={() => onNavigate(tab.id)}
-              aria-current={navTab === tab.id ? "page" : undefined}
+              aria-current={mounted && navTab === tab.id && !isDesktop ? "page" : undefined}
               aria-label={`${tab.label}${tab.badge && playingCount > 0 ? `, ${playingCount} permainan aktif` : ""}`}
               className={`relative flex flex-col items-center gap-0.5 px-1 py-1 rounded-lg transition-all min-w-0 flex-1 ${
                 navTab === tab.id ? "text-white font-bold" : "text-neutral-400 font-medium hover:text-white"
@@ -509,7 +531,7 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
                     moreTriggerRef.current?.focus();
                     onNavigate(it.id);
                   }}
-                  aria-current={navTab === it.id ? "page" : undefined}
+                  aria-current={mounted && navTab === it.id && !isDesktop ? "page" : undefined}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-bold text-left transition-all ${
                     navTab === it.id ? "bg-[var(--primary-strong)]/30 text-[var(--primary)]" : "text-neutral-300 hover:bg-[var(--surface)] hover:text-white"
                   }`}

@@ -94,6 +94,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
   }
 
+  // BUG-4 (QA S5): dua akar masalah — (1) ORDER BY g.updated_at tidak ada di
+  // skema games; (2) currentUserId mengembalikan store id ("u-...") bukan pg
+  // uuid, jadi $1 gagal 22P02. Pola kanonis (sama dgn api/seek): map store id
+  // -> pg uuid via username, lalu ORDER BY kolom yang ada.
+  const me = (await loadUsers()).find((u) => u.id === userId);
+  const meRows = me
+    ? await query("SELECT id FROM users WHERE username = $1 LIMIT 1", [me.username])
+    : [];
+  if (meRows.length === 0) {
+    return NextResponse.json({ games: [] });
+  }
+  const pgUserId = String((meRows[0] as { id: string }).id);
+
   const rows = await query(
     `SELECT g.id, g.white_user_id, g.black_user_id, g.status, g.result,
               g.started_at, g.ended_at, g.created_at,
@@ -103,9 +116,9 @@ export async function GET(request: Request) {
        LEFT JOIN users w ON w.id = g.white_user_id
        LEFT JOIN users b ON b.id = g.black_user_id
        WHERE (g.white_user_id = $1 OR g.black_user_id = $1)
-       ORDER BY g.updated_at DESC
+       ORDER BY COALESCE(g.ended_at, g.started_at, g.created_at) DESC
        LIMIT 50`,
-      [userId]
+      [pgUserId]
     );
   return NextResponse.json({ games: rows });
 }

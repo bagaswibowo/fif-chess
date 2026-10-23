@@ -28,6 +28,7 @@ import { ScanView } from "@/components/scan-view";
 import { CommunityView } from "@/components/community-view";
 import { PuzzleHub } from "@/components/views/puzzle-hub";
 import { GameReview } from "@/components/game-review";
+import { ReviewAnalysisBoard } from "@/components/review-analysis-board";
 import { AuthPanel } from "@/components/auth-panel";
 import { AdminPanel } from "@/components/admin-panel";
 import { PvpPanel, type PvpRoom } from "@/components/pvp-panel";
@@ -179,6 +180,10 @@ export function Game() {
   const [error, setError] = useState<JevError | null>(null);
   const [thinking, setThinking] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  // BUG-1 (QA S5): hasil paste PGN/FEN di review dirender ke papan analisis
+  // inline — state game review terpisah dari papan play.
+  const [reviewGame, setReviewGame] = useState<{ startFen: string; moves: { san: string; uci: string }[] } | null>(null);
+  const [reviewPly, setReviewPly] = useState(0);
   const [moveBadges, setMoveBadges] = useState<Record<string, MoveBadge>>({});
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
   // S4-T1: navTab diangkat ke shell-level; di sini tetap satu sumber state yang
@@ -203,14 +208,27 @@ const navTabFromHash = (): NavTab => {
 const initialPuzzleTabRef: { current: string | null } = { current: null };
 const initialCoachSubTabRef: { current: CoachSubTab | null } = { current: null };
 const [navTab, setNavTab] = useState<NavTab>(navTabFromHash);
+// BUG-2 (QA S5): ref tidak memicu re-render — deep-link #/daily|#/rush|#/themes
+// saat view puzzles sudah aktif (atau fresh load) harus tetap mengganti tab.
+// State mirror dari initialPuzzleTabRef, terbaca PuzzleHub via prop initialTab.
+const [puzzleDeepLinkTab, setPuzzleDeepLinkTab] = useState<string | null>(() => initialPuzzleTabRef.current);
 // Hash <-> state sinkron (deep-link & back button, design doc S4 §1.5).
 useEffect(() => {
-  const onHash = () => setNavTab(navTabFromHash());
+  const onHash = () => {
+    setNavTab(navTabFromHash());
+    setPuzzleDeepLinkTab(initialPuzzleTabRef.current);
+  };
   window.addEventListener("hashchange", onHash);
   return () => window.removeEventListener("hashchange", onHash);
 }, []);
 const navigate = useCallback((tab: NavTab) => {
   setNavTab(tab);
+  // Navigasi internal bukan deep-link puzzle: reset agar tab PuzzleHub tidak
+  // "nyangkut" ke deep-link terakhir (BUG-2 follow-up, QA S5).
+  if (tab !== "puzzles" && initialPuzzleTabRef.current) {
+    initialPuzzleTabRef.current = null;
+    setPuzzleDeepLinkTab(null);
+  }
   const h = `#/${tab}`;
   if (window.location.hash !== h) window.history.pushState(null, "", h);
 }, []);
@@ -1200,7 +1218,7 @@ const navigate = useCallback((tab: NavTab) => {
         )}
         {navTab === "puzzles" && (
           <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
-            <PuzzleHub lang={lang} initialTab={(initialPuzzleTabRef.current ?? "unlimited") as "unlimited" | "daily" | "rush" | "themes"} onBack={() => setNavTab("play")} />
+            <PuzzleHub lang={lang} initialTab={(puzzleDeepLinkTab ?? initialPuzzleTabRef.current ?? "unlimited") as "unlimited" | "daily" | "rush" | "themes"} onBack={() => setNavTab("play")} />
           </div>
         )}
         {currentUser && navTab === "archive" && (
@@ -1222,6 +1240,9 @@ const navigate = useCallback((tab: NavTab) => {
                   setFen(f);
                   setMoves([]);
                   setCustomOutcome(null);
+                  // BUG-1 (QA S5): paste FEN harus merender papan analisis di review.
+                  setReviewGame({ startFen: f, moves: [] });
+                  setReviewPly(0);
                 }}
                 onLoadPgn={(sans, startFen) => {
                   const replayed = replaySanList(startFen, sans);
@@ -1244,6 +1265,12 @@ const navigate = useCallback((tab: NavTab) => {
                     })),
                   );
                   setCustomOutcome(null);
+                  // BUG-1 (QA S5): hasil paste PGN dirender ke papan analisis review.
+                  setReviewGame({
+                    startFen,
+                    moves: replayed.map((m) => ({ san: m.san, uci: m.uci })),
+                  });
+                  setReviewPly(replayed.length);
                   // S5-T3: tetap di review — movelist terisi di panel analisis.
                 }}
                 onOpenGame={(gameId) => {
@@ -1252,6 +1279,15 @@ const navigate = useCallback((tab: NavTab) => {
                 }}
               />
             </div>
+            {/* BUG-1 (QA S5): papan analisis inline — merender hasil paste PGN/FEN
+                langsung di view review, tanpa redirect ke play. */}
+            {reviewGame && (
+              <ReviewAnalysisBoard
+                game={reviewGame}
+                ply={reviewPly}
+                onPly={setReviewPly}
+              />
+            )}
             <GameReview
               history={gameHistory}
               onBackToPlay={() => setNavTab("play")}

@@ -290,15 +290,14 @@ async function handleLogin(request: Request) {
       user: profile
         ? { ...publicUser(profile) }
         : { id: user.id, username: user.username, rating: user.rating, fullName: user.username, role: "", status: "approved", isAdmin: false, elo: user.rating, wins: 0, losses: 0, draws: 0, createdAt: new Date().toISOString() },
-    }, {
-      status: 200,
-      headers: {
-        "Set-Cookie": [
-          sessionCookie(session),
-          sessionCookie2(token, maxAge, request),
-        ].join("; "),
-      },
     });
+    // Dua cookie HARUS dua header Set-Cookie terpisah — Headers.append
+    // menambahkan header Set-Cookie baru per cookie. Digabung dengan "; "
+    // dalam satu header, browser hanya menyimpan yang pertama sehingga
+    // jev_session tidak pernah tersimpan (QA Sprint 5). HeadersInit tidak
+    // menerima string[] — set via res.headers.append, bukan init object.
+    res.headers.append("Set-Cookie", sessionCookie(session));
+    res.headers.append("Set-Cookie", sessionCookie2(token, maxAge, request));
     return res;
   } catch (err) {
     // eslint-disable-next-line no-console
