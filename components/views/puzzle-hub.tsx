@@ -15,15 +15,17 @@ import { PuzzleView } from "./puzzle-view";
 import { DailyPuzzleView } from "./daily-puzzle-view";
 import { RushView } from "./rush-view";
 import { ThemesMasteryView } from "./themes-mastery-view";
+import { MissedPuzzlesView } from "./missed-puzzles-view";
 
 type Props = { lang?: "id" | "en"; onBack?: () => void; initialTab?: PuzzleTab };
-type PuzzleTab = "unlimited" | "daily" | "rush" | "themes";
+type PuzzleTab = "unlimited" | "daily" | "rush" | "themes" | "missed";
 
 const TABS: { id: PuzzleTab; labelId: string; labelEn: string }[] = [
   { id: "unlimited", labelId: "Teka-Teki", labelEn: "Puzzles" },
   { id: "daily", labelId: "Harian", labelEn: "Daily" },
   { id: "rush", labelId: "Gegas", labelEn: "Rush" },
   { id: "themes", labelId: "Latihan Tema", labelEn: "Theme Training" },
+  { id: "missed", labelId: "Koreksi", labelEn: "Corrections" },
 ];
 
 type PuzzleStats = {
@@ -136,6 +138,7 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
         {tab === "daily" && <DailyPuzzleView lang={lang} onGoPuzzles={() => setTab("unlimited")} />}
         {tab === "rush" && <RushView lang={lang} onBack={onBack} />}
         {tab === "themes" && <ThemesMasteryView lang={lang} onBack={onBack} />}
+        {tab === "missed" && <MissedPuzzlesView lang={lang} />}
       </div>
     </div>
   );
