@@ -23,7 +23,7 @@ type DrillSet = {
   progressPct: number;
 };
 
-type HintPayload = { from: string; direction?: { files: number; ranks: number } } | null;
+type HintPayload = { from: string; to?: string; direction?: { files: number; ranks: number } } | null;
 
 export function EndgameDrillsView({ onExit }: { onExit?: () => void }) {
   const [sets, setSets] = useState<DrillSet[] | null>(null);
@@ -91,10 +91,10 @@ export function EndgameDrillsView({ onExit }: { onExit?: () => void }) {
     [loadNext],
   );
 
-  const fetchHint = useCallback(async (stage: 1 | 2): Promise<HintPayload> => {
+  const fetchHint = useCallback(async (level: 1 | 2 | 3, moveIndex: number): Promise<HintPayload> => {
     if (!puzzle) return null;
     try {
-      const res = await fetch(`/api/puzzles/${puzzle.id}/hint?stage=${stage}`, { cache: "no-store" });
+      const res = await fetch(`/api/puzzles/${puzzle.id}/hint?level=${level}&moveIndex=${moveIndex}`, { cache: "no-store" });
       if (!res.ok) return null;
       const data = await res.json();
       return (data.hint as HintPayload) ?? null;
@@ -155,7 +155,6 @@ export function EndgameDrillsView({ onExit }: { onExit?: () => void }) {
             fetchHint={fetchHint}
             submitAttempt={submitAttempt}
             onSolved={() => void refresh()}
-            onFailed={() => void loadNext(activeSet)}
           />
         )}
       </div>

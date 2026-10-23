@@ -17,7 +17,7 @@ type Props = { lang?: "id" | "en"; onBack?: () => void };
 
 type Mode = "3" | "5" | "endless";
 
-type HintPayload = { from: string; direction?: { files: number; ranks: number } } | null;
+type HintPayload = { from: string; to?: string; direction?: { files: number; ranks: number } } | null;
 
 const RULES = [
   "1. Selesaikan teka-teki sebanyak mungkin.",
@@ -147,10 +147,10 @@ export function RushView({ lang = "id", onBack }: Props) {
   }, [score]);
 
   const fetchHint = useCallback(
-    async (stageHint: 1 | 2): Promise<HintPayload> => {
+    async (level: 1 | 2 | 3, moveIndex: number): Promise<HintPayload> => {
       if (!puzzle) return null;
       try {
-        const res = await fetch(`/api/puzzles/${puzzle.id}/hint?stage=${stageHint}`, { cache: "no-store" });
+        const res = await fetch(`/api/puzzles/${puzzle.id}/hint?level=${level}&moveIndex=${moveIndex}`, { cache: "no-store" });
         if (!res.ok) return null;
         const data = await res.json();
         return (data.hint as HintPayload) ?? null;

@@ -15,7 +15,7 @@ import type { PuzzleDto } from "@/lib/puzzle-solve";
 
 type MissedItem = PuzzleDto & { lastFailedAt?: string | null };
 
-type HintPayload = { from: string; direction?: { files: number; ranks: number } } | null;
+type HintPayload = { from: string; to?: string; direction?: { files: number; ranks: number } } | null;
 
 export function MissedPuzzlesView({ lang = "id" }: { lang?: "id" | "en" }) {
   const [items, setItems] = useState<MissedItem[] | null>(null);
@@ -62,10 +62,10 @@ export function MissedPuzzlesView({ lang = "id" }: { lang?: "id" | "en" }) {
   }, []);
 
   const fetchHint = useCallback(
-    async (stage: 1 | 2): Promise<HintPayload> => {
+    async (level: 1 | 2 | 3, moveIndex: number): Promise<HintPayload> => {
       if (!active) return null;
       try {
-        const res = await fetch(`/api/puzzles/${active.id}/hint?stage=${stage}`, { cache: "no-store" });
+        const res = await fetch(`/api/puzzles/${active.id}/hint?level=${level}&moveIndex=${moveIndex}`, { cache: "no-store" });
         if (!res.ok) return null;
         const data = await res.json();
         return (data.hint as HintPayload) ?? null;

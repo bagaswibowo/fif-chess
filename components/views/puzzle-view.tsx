@@ -19,7 +19,7 @@ import { TierLadder } from "@/components/views/tier-ladder";
 
 type Props = { lang?: "id" | "en"; onGoRush?: () => void };
 
-type HintPayload = { from: string; direction?: { files: number; ranks: number } } | null;
+type HintPayload = { from: string; to?: string; direction?: { files: number; ranks: number } } | null;
 
 type RatingPreset = { id: string; label: string; min: number | null; max: number | null };
 
@@ -138,10 +138,10 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
     void loadNext(f);
   }, [loadNext]);
 
-  const fetchHint = useCallback(async (stage: 1 | 2): Promise<HintPayload> => {
+  const fetchHint = useCallback(async (level: 1 | 2 | 3, moveIndex: number): Promise<HintPayload> => {
     if (!puzzle) return null;
     try {
-      const res = await fetch(`/api/puzzles/${puzzle.id}/hint?stage=${stage}`, { cache: "no-store" });
+      const res = await fetch(`/api/puzzles/${puzzle.id}/hint?level=${level}&moveIndex=${moveIndex}`, { cache: "no-store" });
       if (!res.ok) return null;
       const data = await res.json();
       return (data.hint as HintPayload) ?? null;

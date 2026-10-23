@@ -17,7 +17,7 @@ import { PuzzleSolver } from "@/components/puzzle-solver";
 type Props = { lang?: "id" | "en"; onBack?: () => void };
 
 type ThemeProgress = { theme: string; attempted: number; correct: number; masteryPct: number };
-type HintPayload = { from: string; direction?: { files: number; ranks: number } } | null;
+type HintPayload = { from: string; to?: string; direction?: { files: number; ranks: number } } | null;
 
 export function ThemesMasteryView({ lang = "id", onBack }: Props) {
   const [progress, setProgress] = useState<ThemeProgress[]>([]);
@@ -87,9 +87,9 @@ export function ThemesMasteryView({ lang = "id", onBack }: Props) {
   );
 
   const fetchHint = useCallback(
-    async (stage: 1 | 2): Promise<HintPayload> => {
+    async (level: 1 | 2 | 3, moveIndex: number): Promise<HintPayload> => {
       if (!puzzle) return null;
-      const res = await fetch(`/api/puzzles/${puzzle.id}/hint?stage=${stage}`, { cache: "no-store" });
+      const res = await fetch(`/api/puzzles/${puzzle.id}/hint?level=${level}&moveIndex=${moveIndex}`, { cache: "no-store" });
       if (!res.ok) return null;
       const data = await res.json();
       return (data.hint as HintPayload) ?? null;

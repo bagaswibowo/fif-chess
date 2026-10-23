@@ -14,7 +14,7 @@ import { dailyShareText, formatDailyDate, utcDateKey, type PuzzleDto } from "@/l
 
 type Props = { lang?: "id" | "en"; onGoPuzzles?: () => void };
 
-type HintPayload = { from: string; direction?: { files: number; ranks: number } } | null;
+type HintPayload = { from: string; to?: string; direction?: { files: number; ranks: number } } | null;
 
 function shiftDateKey(dateKey: string, days: number): string {
   const [y, m, d] = dateKey.split("-").map(Number);
@@ -76,10 +76,10 @@ export function DailyPuzzleView({ lang = "id", onGoPuzzles }: Props) {
   const pastDisabled = dateKey <= "2000-01-01"; // batas bawah sejarah dump
 
   const fetchHint = useCallback(
-    async (stage: 1 | 2): Promise<HintPayload> => {
+    async (level: 1 | 2 | 3, moveIndex: number): Promise<HintPayload> => {
       if (!puzzle) return null;
       try {
-        const res = await fetch(`/api/puzzles/${puzzle.id}/hint?stage=${stage}`, { cache: "no-store" });
+        const res = await fetch(`/api/puzzles/${puzzle.id}/hint?level=${level}&moveIndex=${moveIndex}`, { cache: "no-store" });
         if (!res.ok) return null;
         const data = await res.json();
         return (data.hint as HintPayload) ?? null;
