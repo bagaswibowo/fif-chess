@@ -46,8 +46,12 @@ import { playCue } from "@/lib/sound";
 type Props = {
   lang?: "id" | "en";
   puzzle: PuzzleDto | null;
-  /** UCI solution moves; TIDAK dikirim ke client oleh API (server-validated). */
-  fetchHint: (stage: 1 | 2) => Promise<{ from: string; direction?: { files: number; ranks: number } } | null>;
+  /** Hint berjenjang: level 1 kotak asal, 2 panah arah, 3 panah penuh dari solution[moveIndex]. */
+  fetchHint: (level: 1 | 2 | 3, moveIndex: number) => Promise<{
+    from: string;
+    to?: string;
+    direction?: { files: number; ranks: number };
+  } | null>;
   /** POST attempt; return streak terbaru dari server. */
   submitAttempt: (p: { correct: boolean; timeSpentSec: number }) => Promise<number | null>;
   /** Streak awal dari server (refresh di tengah puzzle — design §1.6). */
@@ -65,7 +69,8 @@ type Props = {
   playedMoves?: string[];
 };
 
-type Phase = "solving" | "opponent" | "solved" | "error";
+type Phase = "solving" | "opponent" | "solved" | "revealed" | "error";
+type Arrow = { startSquare: string; endSquare: string; color: string };
 
 export function PuzzleSolver({
   lang = "id",
@@ -91,14 +96,18 @@ export function PuzzleSolver({
   const [shake, setShake] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
   const [hintFrom, setHintFrom] = useState<string | null>(null);
-  const [hintArrow, setHintArrow] = useState(false);
-  const [hintCaption, setHintCaption] = useState<string | null>(null);
+  const [hintTo, setHintTo] = useState<string | null>(null);
+  const [hintDirection, setHintDirection] = useState<{ files: number; ranks: number } | null>(null);
   const [failCount, setFailCount] = useState(0);
   const [upsellVisible, setUpsellVisible] = useState(false);
+  const [solutionArrows, setSolutionArrows] = useState<Arrow[]>([]);
+  const [solutionSquares, setSolutionSquares] = useState<string[]>([]);
   // W1: solution moves (UCI) + progress index; selected square utk click-move.
   const [solution, setSolution] = useState<string[]>([]);
+  const [solutionLoaded, setSolutionLoaded] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [promotion, setPromotion] = useState<{ from: string; to: string } | null>(null);
   // V4: feedback overlay — hijau benar (~200ms fade), merah salah; last-move amber.
   const [flash, setFlash] = useState<{ squares: string[]; kind: "correct" | "wrong"; key: number } | null>(null);
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
@@ -120,13 +129,17 @@ export function PuzzleSolver({
     setStatus("Giliranmu — cari langkah terbaik.");
     setHintLevel(0);
     setHintFrom(null);
-    setHintArrow(false);
-    setHintCaption(null);
+    setHintTo(null);
+    setHintDirection(null);
     setFailCount(0);
     setUpsellVisible(false);
+    setSolutionArrows([]);
+    setSolutionSquares([]);
     setSolution([]);
+    setSolutionLoaded(false);
     setStepIndex(0);
     setSelected(null);
+    setPromotion(null);
     setFlash(null);
     setLastMove(null);
     setMoveList([]);
@@ -141,7 +154,12 @@ export function PuzzleSolver({
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as { solutionMoves?: unknown };
         if (!cancelled && Array.isArray(data.solutionMoves)) {
-          setSolution(data.solutionMoves.filter((m): m is string => typeof m === "string"));
+          const moves = data.solutionMoves.filter((m): m is string => typeof m === "string");
+          setSolution(moves);
+          setSolutionLoaded(moves.length > 0);
+          if (moves.length === 0) {
+            setStatus("Solusi tidak tersedia — puzzle dilewati.");
+          }
         }
       } catch {
         /* solusi kosong → langkah tak tervalidasi; hint tetap jalan */
@@ -162,20 +180,23 @@ export function PuzzleSolver({
   }, [variant]);
 
   const armHint = useCallback(
-    async (stage: 1 | 2) => {
+    async (stage: 1 | 2 | 3) => {
       if (!puzzle) return;
-      const hint = await fetchHint(stage);
+      const hint = await fetchHint(stage, stepIndex);
       if (!hint) return;
       setHintFrom(hint.from);
+      setHintTo(hint.to ?? null);
+      setHintDirection(hint.direction ?? null);
       setHintLevel(stage);
-      if (stage >= 2 && hint.direction) {
-        setHintArrow(true);
-        setHintCaption("Arah langkah terlihat — targetnya tetap rahasia.");
+      if (stage >= 2 && hint.to) {
+        setStatus(`Petunjuk: langkah dari ${hint.from} ke ${hint.to}.`);
+      } else if (stage >= 2 && hint.direction) {
+        setStatus("Arah langkah terlihat — targetnya tetap rahasia.");
       } else {
-        setHintCaption(null);
+        setStatus(`Petunjuk: perhatikan kotak ${hint.from}.`);
       }
     },
-    [puzzle, fetchHint],
+    [puzzle, fetchHint, stepIndex],
   );
 
   const finishPuzzle = useCallback(async () => {
@@ -192,12 +213,78 @@ export function PuzzleSolver({
     scheduleUpsell();
   }, [onSolved, submitAttempt, scheduleUpsell]);
 
+  // P2: reveal solusi — animasikan seluruh solution[] di papan (applyUci bertahap),
+  // tandai gagal (correct:false, streak tidak naik), lalu tawarkan Coba lagi/Berikutnya.
+  const revealSolution = useCallback(async () => {
+    if (!puzzle || solution.length === 0) return;
+    setHintFrom(null);
+    setHintTo(null);
+    setHintDirection(null);
+    setHintLevel(0);
+    setSelected(null);
+    setPromotion(null);
+    setPhase("revealed");
+    setStatus("Memutar solusi…");
+    if (!finishRef.current) {
+      finishRef.current = true;
+      onFailed?.();
+      const spent = Math.round((Date.now() - startRef.current) / 1000);
+      await submitAttempt({ correct: false, timeSpentSec: spent });
+    }
+    let curFen = puzzle.fen;
+    for (let i = 0; i < solution.length; i++) {
+      const uci = solution[i];
+      await new Promise<void>((resolve) => window.setTimeout(resolve, reducedMotion ? 60 : 700));
+      const nextFen = applyUci(curFen, uci);
+      if (!nextFen) break;
+      curFen = nextFen;
+      const from = uci.slice(0, 2);
+      const to = uci.slice(2, 4);
+      setFen(curFen);
+      setLastMove({ from, to });
+      setSolutionSquares([from, to]);
+      setSolutionArrows([{ startSquare: from, endSquare: to, color: "#f0b429" }]);
+      playCue(uci.length > 4 ? "capture" : "move", { visual: true });
+    }
+    setStatus("Ini solusinya — pelajari langkahnya, lalu coba lagi atau lanjut.");
+    if (variant !== "rush") {
+      scheduleUpsell();
+    }
+  }, [puzzle, solution, reducedMotion, onFailed, submitAttempt, variant, scheduleUpsell]);
+
+  // P2: "Coba lagi" setelah solusi dilihat — reset papan ke FEN awal tanpa ganti puzzle.
+  const retryPuzzle = useCallback(() => {
+    if (!puzzle) return;
+    setFen(puzzle.fen);
+    setPhase("solving");
+    setStatus("Giliranmu — cari langkah terbaik.");
+    setSolutionArrows([]);
+    setSolutionSquares([]);
+    setLastMove(null);
+    setMoveList([]);
+    setStepIndex(0);
+    setSelected(null);
+    setHintFrom(null);
+    setHintTo(null);
+    setHintDirection(null);
+    setHintLevel(0);
+    setFlash(null);
+    finishRef.current = false;
+    startRef.current = Date.now();
+  }, [puzzle]);
+
   // W1: inti validasi — dipakai onPieceDrop (drag) & onSquareClick (click-move).
   const handleMove = useCallback(
     (from: string, to: string, promotion?: string): boolean => {
       if (!puzzle || phase !== "solving") return false;
+      // P1 (RC1.3): solusi belum termuat — jangan nilai "illegal"; tunggu fetch selesai.
+      if (!solutionLoaded) {
+        setStatus("Memuat solusi…");
+        return false;
+      }
       const uci = `${from}${to}${promotion ?? ""}`;
-      const expected = solution[stepIndex];
+      // P1 (RC1.1): parity — langkah user = solution index GENAP; lawan = GANJIL.
+      const expected = solution[stepIndex * 2];
       const step = validateSolutionStep(fen, uci, expected);
       if (!step.ok) {
         if (step.reason === "illegal") {
@@ -218,13 +305,14 @@ export function PuzzleSolver({
         onFailed?.();
         return true; // konsumsi drop supaya bidak tidak menghilang; posisi tak berubah
       }
-      // Benar: maju FEN; bila masih ada langkah → auto-reply lawan (applyUci).
-      const nextIndex = stepIndex + 1;
-      setStepIndex(nextIndex);
+      // Benar: maju ke langkah user berikutnya; reply lawan = solution[stepIndex*2+1].
+      const nextStep = stepIndex + 1;
+      setStepIndex(nextStep);
       setSelected(null);
       setHintFrom(null);
-      setHintArrow(false);
-      setHintCaption(null);
+      setHintTo(null);
+      setHintDirection(null);
+      setHintLevel(0);
       // V4: highlight hijau square asal+tujuan (~200ms fade) + last-move amber.
       setLastMove({ from, to });
       if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
@@ -232,42 +320,62 @@ export function PuzzleSolver({
       flashTimerRef.current = window.setTimeout(() => setFlash(null), reducedMotion ? 0 : 200);
       // V7: cue move/capture hanya bersama highlight hijau (pasangan visual, DHH).
       playCue(step.san?.includes("x") ? "capture" : "move", { visual: true });
+      const lastStep = nextStep * 2 >= solution.length;
       // V3: update move list tiap langkah benar (SAN + auto-reply).
       if (step.san) {
         const nextMoves = [...moveList, step.san];
-        if (nextIndex < solution.length) {
-          // auto-reply SAN dihitung ringan dari fen hasil reply — tampilkan uci ringkas bila gagal.
-          const replyUci = solution[nextIndex];
+        if (!lastStep) {
           nextMoves.push("…");
-          void replyUci;
         }
         setMoveList(nextMoves);
       }
-      if (nextIndex >= solution.length) {
+      if (lastStep) {
         void finishPuzzle();
         return true;
       }
       setPhase("opponent");
       setStatus("Lawan menjawab…");
-      const reply = solution[nextIndex];
+      const reply = solution[stepIndex * 2 + 1];
       window.setTimeout(() => {
         const nextFen = applyUci(step.nextFen, reply);
         if (nextFen) {
           setFen(nextFen);
-          setStepIndex(nextIndex + 1);
           // V4/V7: auto-reply lawan — highlight amber pasangan + cue bersama.
           setLastMove({ from: reply.slice(0, 2), to: reply.slice(2, 4) });
           playCue(reply.length > 4 ? "capture" : "move", { visual: true });
           // V3: catat auto-reply di move list.
           setMoveList((m) => (m.length > 0 && m[m.length - 1] === "…" ? [...m.slice(0, -1), reply.slice(0, 2) + "-" + reply.slice(2, 4)] : m));
+        } else {
+          // P1: reply lawan gagal diterapkan → jangan biarkan index loncat; selesai apa adanya.
+          void finishPuzzle();
+          return;
         }
         setPhase("solving");
         setStatus("Giliranmu — cari langkah terbaik.");
       }, reducedMotion ? 60 : 550);
       return true;
     },
-    [puzzle, phase, fen, solution, stepIndex, moveList, reducedMotion, finishPuzzle, onFailed],
+    [puzzle, phase, fen, solution, solutionLoaded, stepIndex, moveList, reducedMotion, finishPuzzle, onFailed],
   );
+
+  // P3: panah hint — level 2 panah pendek searah vektor, level 3 panah penuh from→to.
+  const boardArrows: Arrow[] = useMemo(() => {
+    const arrows: Arrow[] = [];
+    if (solutionArrows.length > 0) return solutionArrows;
+    if (hintFrom && hintTo) {
+      arrows.push({ startSquare: hintFrom, endSquare: hintTo, color: hintLevel >= 3 ? "#38bdf8" : "rgba(129,182,76,0.85)" });
+    } else if (hintFrom && hintDirection && hintLevel >= 2) {
+      const FILES = "abcdefgh";
+      const fi = FILES.indexOf(hintFrom[0]);
+      const ri = Number(hintFrom[1]);
+      const nf = FILES[Math.min(7, Math.max(0, fi + Math.sign(hintDirection.files)))];
+      const nr = Math.min(8, Math.max(1, ri + Math.sign(hintDirection.ranks)));
+      if (nf !== hintFrom[0] || String(nr) !== hintFrom[1]) {
+        arrows.push({ startSquare: hintFrom, endSquare: `${nf}${nr}`, color: "rgba(129,182,76,0.85)" });
+      }
+    }
+    return arrows;
+  }, [solutionArrows, hintFrom, hintTo, hintDirection, hintLevel]);
 
   // W1: hanya bidak sisi giliran (sideToMove FEN aktif) yang bisa didrag,
   // dan hanya saat phase "solving".
@@ -298,6 +406,7 @@ export function PuzzleSolver({
   );
 
   // W1: click-to-move — klik bidak sendiri (asal), lalu klik kotak tujuan.
+  // P1 (RC1.4): bila langkah butuh promosi, tampilkan pilihan bidak dulu.
   const onSquareClick = useCallback(
     ({ square, piece }: SquareHandlerArgs): void => {
       if (phase !== "solving") return;
@@ -322,9 +431,33 @@ export function PuzzleSolver({
         setSelected(sq); // ganti kotak asal
         return;
       }
+      let needsPromotion = false;
+      try {
+        const chess = new Chess(fen);
+        const pieceObj = chess.get(selected as never);
+        const rank = selected[1];
+        const lastRank = pieceObj?.color === "w" ? "8" : "1";
+        needsPromotion = pieceObj?.type === "p" && sq[1] === lastRank && rank === (pieceObj?.color === "w" ? "7" : "2");
+      } catch {
+        needsPromotion = false;
+      }
+      if (needsPromotion) {
+        setPromotion({ from: selected, to: sq });
+        return;
+      }
       handleMove(selected, sq);
     },
     [phase, selected, fen, isOwnPiece, handleMove],
+  );
+
+  const onPromotionPick = useCallback(
+    (piece: "q" | "r" | "b" | "n") => {
+      if (!promotion) return;
+      const { from, to } = promotion;
+      setPromotion(null);
+      handleMove(from, to, piece);
+    },
+    [promotion, handleMove],
   );
 
   if (loading || !puzzle) {
@@ -339,6 +472,15 @@ export function PuzzleSolver({
 
   const orientation = sideToMove(puzzle.fen);
   const squareStyles: Record<string, React.CSSProperties> = {};
+  // P2: highlight amber langkah solusi yang sedang dianimasikan (pasangan panah).
+  if (solutionSquares.length > 0) {
+    for (const sq of solutionSquares) {
+      squareStyles[sq] = {
+        backgroundColor: "rgba(240,180,41,0.45)",
+        boxShadow: "inset 0 0 0 4px rgba(240,180,41,0.9)",
+      };
+    }
+  }
   if (hintFrom) {
     squareStyles[hintFrom] = {
       boxShadow: "inset 0 0 0 4px var(--board-mark, #81b64c)",
@@ -386,7 +528,7 @@ export function PuzzleSolver({
           <div
             className={`aspect-square w-full max-w-[min(100%,calc(100dvh-260px))] mx-auto relative ${
               shake ? "puzzle-shake" : ""
-            } ${phase === "solved" ? "ring-2 ring-[var(--success)]" : ""}`}
+            } ${phase === "solved" ? "ring-2 ring-[var(--success)]" : ""} ${phase === "revealed" ? "ring-2 ring-[#f0b429]" : ""}`}
             id="board-primary"
           >
           <Chessboard
@@ -400,7 +542,7 @@ export function PuzzleSolver({
               onPieceDrop,
               onSquareClick,
               squareStyles,
-              arrows: hintArrow && hintFrom ? [] : [],
+              arrows: boardArrows,
               boardStyle: {
                 backgroundColor: boardTheme.dark,
                 width: "100%",
@@ -447,13 +589,32 @@ export function PuzzleSolver({
           className={`rounded-xl border px-4 py-2.5 text-sm font-semibold ${
             phase === "solved"
               ? "border-[var(--success)] text-white bg-[var(--card)]"
-              : phase === "error"
-                ? "border-[var(--error)] text-white bg-[var(--card)]"
-                : "border-[var(--border)] text-neutral-200 bg-[var(--card)]"
+              : phase === "revealed"
+                ? "border-[#f0b429] text-white bg-[var(--card)]"
+                : phase === "error"
+                  ? "border-[var(--error)] text-white bg-[var(--card)]"
+                  : "border-[var(--border)] text-neutral-200 bg-[var(--card)]"
           }`}
         >
           {status}
         </p>
+
+        {/* P1 (RC1.4): dialog pilihan promosi untuk click-to-move. */}
+        {promotion ? (
+          <div className="rounded-xl border border-[var(--primary)]/60 bg-[var(--card)] px-4 py-3" role="dialog" aria-label="Pilih bidak promosi">
+            <p className="text-sm font-bold text-white mb-2">{lang === "id" ? "Promosi pion — pilih bidak:" : "Pawn promotion — pick a piece:"}</p>
+            <div className="flex gap-2">
+              {(["q", "r", "b", "n"] as const).map((p) => (
+                <Button key={p} variant="outline" size="sm" onClick={() => onPromotionPick(p)} aria-label={`Promosi ke ${p.toUpperCase()}`}>
+                  {p === "q" ? "Ratu (Q)" : p === "r" ? "Benteng (R)" : p === "b" ? "Gajah (B)" : "Kuda (N)"}
+                </Button>
+              ))}
+              <Button variant="ghost" size="sm" onClick={() => setPromotion(null)}>
+                {lang === "id" ? "Batal" : "Cancel"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         {/* Counter kegagalan — teks eksplisit, bukan warna saja (DHH a11y) */}
         {failCount > 0 && phase === "solving" ? (
@@ -492,7 +653,7 @@ export function PuzzleSolver({
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => void armHint((hintLevel >= 2 ? 2 : hintLevel + 1) as 1 | 2)}
+            onClick={() => void armHint((hintLevel >= 3 ? 3 : hintLevel + 1) as 1 | 2 | 3)}
             disabled={phase !== "solving"}
             className="flex-1"
           >
@@ -501,20 +662,37 @@ export function PuzzleSolver({
           </Button>
           <Button
             variant="outline"
-            disabled={phase === "solved"}
-            onClick={() => void armHint(2)}
+            disabled={phase === "solved" || phase === "revealed" || solution.length === 0}
+            onClick={() => void revealSolution()}
             className="flex-1"
           >
             {lang === "id" ? "Solution" : "Solution"}
           </Button>
         </div>
-        {hintCaption ? (
-          <p className="text-xs text-neutral-400 -mt-1">{hintCaption}</p>
+
+        {/* P2: setelah solusi diputar — Coba lagi / Berikutnya. */}
+        {phase === "revealed" ? (
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={retryPuzzle}>
+              {lang === "id" ? "Coba lagi" : "Try again"}
+            </Button>
+            {variant === "solo" ? (
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  if (onNextPuzzle) onNextPuzzle(null);
+                }}
+              >
+                {lang === "id" ? "Puzzle berikutnya" : "Next puzzle"}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
 
-        {failCount >= 3 ? (
-          <Button variant="ghost" className="w-full">
-            {lang === "id" ? "Lewati teka-teki ini?" : "Skip this puzzle?"}
+        {/* P2: auto-reveal tersedia setelah 3x gagal — menggantikan Skip mati. */}
+        {failCount >= 3 && phase === "solving" && solution.length > 0 ? (
+          <Button variant="outline" className="w-full" onClick={() => void revealSolution()}>
+            {lang === "id" ? "Lihat solusi" : "See solution"}
           </Button>
         ) : null}
 
@@ -532,20 +710,20 @@ export function PuzzleSolver({
           </div>
         ) : null}
 
-        {/* V3: tombol besar hijau Next Puzzle — aktif hanya setelah solved, tanpa reload */}
+        {/* V3: tombol besar hijau Next Puzzle — aktif setelah solved ATAU solusi dilihat */}
         {variant === "solo" ? (
           <button
             type="button"
             data-testid="puzzle-next-button"
-            disabled={phase !== "solved"}
+            disabled={!(phase === "solved" || phase === "revealed")}
             onClick={() => {
-              if (phase !== "solved") return;
+              if (!(phase === "solved" || phase === "revealed")) return;
               // Muat puzzle baru tanpa reload — parent mengontrol fetch.
               if (onNextPuzzle) onNextPuzzle(null);
             }}
-            aria-disabled={phase !== "solved"}
+            aria-disabled={!(phase === "solved" || phase === "revealed")}
             className={`w-full rounded-xl px-4 py-3 text-sm font-black uppercase tracking-wide transition-all ${
-              phase === "solved"
+              phase === "solved" || phase === "revealed"
                 ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white shadow-lg cursor-pointer"
                 : "bg-[var(--muted)] text-neutral-500 cursor-not-allowed"
             }`}
