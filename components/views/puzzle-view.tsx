@@ -241,6 +241,8 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
         fetchHint={fetchHint}
         submitAttempt={submitAttempt}
         onGoRush={onGoRush}
+        // V3: Next Puzzle — muat puzzle baru via API eksisting tanpa reload.
+        onNextPuzzle={() => void loadNext()}
       />
 
       {/* T6: banner hasil inline aria-live — selalu teks + ikon, bukan warna saja */}

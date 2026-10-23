@@ -40,6 +40,8 @@ import {
   validateSolutionStep,
   type PuzzleDto,
 } from "@/lib/puzzle-solve";
+import { BoardChrome } from "@/components/board-chrome";
+import { playCue } from "@/lib/sound";
 
 type Props = {
   lang?: "id" | "en";
@@ -59,6 +61,8 @@ type Props = {
   onNextPuzzle?: (puzzle: PuzzleDto | null) => void;
   onGoRush?: () => void;
   loading?: boolean;
+  /** V3: langkah yang sudah dimainkan (SAN) utk move list di side panel. */
+  playedMoves?: string[];
 };
 
 type Phase = "solving" | "opponent" | "solved" | "error";
@@ -73,9 +77,13 @@ export function PuzzleSolver({
   onSolved,
   onFailed,
   onGoRush,
+  onNextPuzzle,
   loading = false,
+  playedMoves,
 }: Props) {
   const { customPieces, notationStyles, boardTheme } = useChessTheme();
+  // V3: move list lokal — dari langkah tervalidasi (SAN dari validateSolutionStep).
+  const [moveList, setMoveList] = useState<string[]>([]);
   const [fen, setFen] = useState<string>(puzzle?.fen ?? "");
   const [phase, setPhase] = useState<Phase>("solving");
   const [streak, setStreak] = useState(initialStreak);
@@ -91,6 +99,10 @@ export function PuzzleSolver({
   const [solution, setSolution] = useState<string[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  // V4: feedback overlay — hijau benar (~200ms fade), merah salah; last-move amber.
+  const [flash, setFlash] = useState<{ squares: string[]; kind: "correct" | "wrong"; key: number } | null>(null);
+  const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
+  const flashTimerRef = useRef<number | null>(null);
   const upsellCountRef = useRef(0);
   const upsellTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startRef = useRef<number>(Date.now());
@@ -115,6 +127,9 @@ export function PuzzleSolver({
     setSolution([]);
     setStepIndex(0);
     setSelected(null);
+    setFlash(null);
+    setLastMove(null);
+    setMoveList([]);
     finishRef.current = false;
     upsellCountRef.current = 0;
     startRef.current = Date.now();
@@ -168,6 +183,8 @@ export function PuzzleSolver({
     finishRef.current = true;
     setPhase("solved");
     setStatus("Puzzle selesai!");
+    // V7: cue game-end bersama ring hijau solved (pasangan visual).
+    playCue("game-end", { visual: true });
     setStreak((s) => s + 1);
     onSolved?.();
     const spent = Math.round((Date.now() - startRef.current) / 1000);
@@ -186,9 +203,15 @@ export function PuzzleSolver({
         if (step.reason === "illegal") {
           return false; // drag/klik ilegal: papan menolak senyap (design §1.6)
         }
-        // Legal tapi bukan langkah solusi → shake + counter + teks (bukan warna saja).
+        // Legal tapi bukan langkah solusi → merah + shake + counter + teks (bukan warna saja).
         setShake(true);
-        window.setTimeout(() => setShake(false), reducedMotion ? 0 : 200);
+        window.setTimeout(() => setShake(false), reducedMotion ? 0 : 300);
+        // V4: overlay merah pada square asal+tujuan (pasangan visual shake — DHH).
+        if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+        setFlash({ squares: [from, to], kind: "wrong", key: Date.now() });
+        flashTimerRef.current = window.setTimeout(() => setFlash(null), reducedMotion ? 0 : 500);
+        // V7: cue error hanya bersama highlight merah yang tampil di frame sama.
+        playCue("error", { visual: true });
         setFailCount((c) => c + 1);
         setSelected(null);
         setStatus(`Langkah salah (${step.san ?? uci}) — coba lagi.`);
@@ -202,6 +225,24 @@ export function PuzzleSolver({
       setHintFrom(null);
       setHintArrow(false);
       setHintCaption(null);
+      // V4: highlight hijau square asal+tujuan (~200ms fade) + last-move amber.
+      setLastMove({ from, to });
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+      setFlash({ squares: [from, to], kind: "correct", key: Date.now() });
+      flashTimerRef.current = window.setTimeout(() => setFlash(null), reducedMotion ? 0 : 200);
+      // V7: cue move/capture hanya bersama highlight hijau (pasangan visual, DHH).
+      playCue(step.san?.includes("x") ? "capture" : "move", { visual: true });
+      // V3: update move list tiap langkah benar (SAN + auto-reply).
+      if (step.san) {
+        const nextMoves = [...moveList, step.san];
+        if (nextIndex < solution.length) {
+          // auto-reply SAN dihitung ringan dari fen hasil reply — tampilkan uci ringkas bila gagal.
+          const replyUci = solution[nextIndex];
+          nextMoves.push("…");
+          void replyUci;
+        }
+        setMoveList(nextMoves);
+      }
       if (nextIndex >= solution.length) {
         void finishPuzzle();
         return true;
@@ -214,13 +255,18 @@ export function PuzzleSolver({
         if (nextFen) {
           setFen(nextFen);
           setStepIndex(nextIndex + 1);
+          // V4/V7: auto-reply lawan — highlight amber pasangan + cue bersama.
+          setLastMove({ from: reply.slice(0, 2), to: reply.slice(2, 4) });
+          playCue(reply.length > 4 ? "capture" : "move", { visual: true });
+          // V3: catat auto-reply di move list.
+          setMoveList((m) => (m.length > 0 && m[m.length - 1] === "…" ? [...m.slice(0, -1), reply.slice(0, 2) + "-" + reply.slice(2, 4)] : m));
         }
         setPhase("solving");
         setStatus("Giliranmu — cari langkah terbaik.");
       }, reducedMotion ? 60 : 550);
       return true;
     },
-    [puzzle, phase, fen, solution, stepIndex, reducedMotion, finishPuzzle, onFailed],
+    [puzzle, phase, fen, solution, stepIndex, moveList, reducedMotion, finishPuzzle, onFailed],
   );
 
   // W1: hanya bidak sisi giliran (sideToMove FEN aktif) yang bisa didrag,
@@ -305,17 +351,44 @@ export function PuzzleSolver({
       backgroundColor: "rgba(129,182,76,0.25)",
     };
   }
+  // V4: last-move amber tetap menyala setelah flash hilang.
+  if (lastMove) {
+    for (const sq of [lastMove.from, lastMove.to]) {
+      squareStyles[sq] = {
+        ...squareStyles[sq],
+        backgroundColor: "rgba(250,173,20,0.35)",
+        boxShadow: squareStyles[sq]?.boxShadow ?? "inset 0 0 0 3px rgba(250,173,20,0.8)",
+      };
+    }
+  }
+  // V4: flash benar (hijau) / salah (merah) — animasi CSS murni via kelas.
+  if (flash) {
+    for (const sq of flash.squares) {
+      squareStyles[sq] = {
+        ...squareStyles[sq],
+        backgroundColor: flash.kind === "correct" ? "rgba(82,196,26,0.45)" : "rgba(245,34,45,0.45)",
+        transition: "background-color 200ms ease-out",
+      };
+    }
+  }
 
   return (
     <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-4 items-start w-full">
-      {/* PAPAN (board-first — design §1.1) */}
-      <div
-        className={`board-card rounded-2xl p-3 bg-[var(--card)] border border-[var(--border)] shadow-xl relative ${
-          shake ? "puzzle-shake" : ""
-        } ${phase === "solved" ? "ring-2 ring-[var(--success)]" : ""}`}
-        id="board-primary"
-      >
-        <div className="aspect-square w-full max-w-[min(100%,calc(100dvh-260px))] mx-auto">
+      {/* PAPAN (board-first — design §1.1) — V1: chrome wrapper, papan tidak pernah telanjang */}
+      <div className="flex flex-col gap-1">
+        <BoardChrome
+          topLabel={lang === "id" ? "Lawan" : "Opponent"}
+          bottomLabel={lang === "id" ? "Kamu" : "You"}
+          topRating={puzzle.rating}
+          flipped={orientation === "black"}
+          className="board-card rounded-2xl p-3 bg-[var(--card)] border border-[var(--border)] shadow-xl relative"
+        >
+          <div
+            className={`aspect-square w-full max-w-[min(100%,calc(100dvh-260px))] mx-auto relative ${
+              shake ? "puzzle-shake" : ""
+            } ${phase === "solved" ? "ring-2 ring-[var(--success)]" : ""}`}
+            id="board-primary"
+          >
           <Chessboard
             key={`puzzle-${puzzle.id}`}
             options={{
@@ -340,14 +413,22 @@ export function PuzzleSolver({
               ...notationStyles,
             }}
           />
-        </div>
-        {reducedMotion && shake ? (
-          <div className="absolute inset-0 rounded-2xl border-2 border-[var(--error)] pointer-events-none" />
-        ) : null}
+          </div>
+        </BoardChrome>
       </div>
 
       {/* PANEL SOLVE */}
       <div className="flex flex-col gap-3 w-full">
+        {/* V3: banner header panel */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 flex items-center gap-2" data-testid="puzzle-banner-header">
+          {/* icon puzzle orange — SVG original */}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#f59e0b" aria-hidden="true">
+            <path d="M20.5 11h-2a1.5 1.5 0 0 1-1.5-1.5V8a1 1 0 0 0-1-1h-1.5A1.5 1.5 0 0 1 13 5.5v-2a2.5 2.5 0 0 0-5 0v2A1.5 1.5 0 0 1 6.5 7H5a1 1 0 0 0-1 1v2.5A1.5 1.5 0 0 1 2.5 12h-2a.5.5 0 0 0 0 1h2A1.5 1.5 0 0 1 4 14.5V17a1 1 0 0 0 1 1h1.5a1.5 1.5 0 0 1 1.5 1.5v2a2.5 2.5 0 0 0 5 0v-2a1.5 1.5 0 0 1 1.5-1.5H16a1 1 0 0 0 1-1v-2.5a1.5 1.5 0 0 1 1.5-1.5h2a2.5 2.5 0 0 0 0-5z" />
+          </svg>
+          <h2 className="text-sm font-black uppercase tracking-wider text-white">Puzzle</h2>
+          <span className="ml-auto text-xs font-bold text-neutral-400">{lang === "id" ? "Beruntun" : "Streak"}: <span className="text-[var(--primary)]">{streak}</span></span>
+        </div>
+
         {/* Streak — selalu terlihat di panel, tidak pernah di atas papan */}
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 flex items-center gap-3">
           <IconFire3D size={24} aria-hidden="true" />
@@ -382,12 +463,32 @@ export function PuzzleSolver({
           </p>
         ) : null}
 
-        {/* Info puzzle */}
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 text-xs text-neutral-400">
-          Rating puzzle {puzzle.rating} · {puzzle.themes[0] ? puzzle.themes[0] : "Teka-teki"}
+        {/* V3: kartu rating puzzle */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 flex items-center justify-between" data-testid="puzzle-rating-card">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Rating Puzzle</div>
+            <div className="text-xl font-black text-white tabular-nums">{puzzle.rating}</div>
+          </div>
+          {puzzle.themes[0] ? <span className="text-xs font-bold text-[var(--primary)] truncate max-w-32">{puzzle.themes[0]}</span> : null}
         </div>
 
-        {/* Aksi */}
+        {/* V3: move list — update tiap langkah, scrollable */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2" data-testid="puzzle-move-list">
+          <div className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Langkah</div>
+          <ol className="max-h-28 overflow-y-auto text-xs font-mono text-neutral-200 grid grid-cols-2 gap-x-2" aria-label="Daftar langkah yang sudah dimainkan">
+            {moveList.length === 0 ? (
+              <li className="text-neutral-500 col-span-2">Belum ada langkah.</li>
+            ) : (
+              moveList.map((m, i) => (
+                <li key={`${i}-${m}`} className={i % 2 === 0 ? "text-white" : "text-neutral-400"}>
+                  {Math.floor(i / 2) + 1}. {m}
+                </li>
+              ))
+            )}
+          </ol>
+        </div>
+
+        {/* V3: aksi Hint / Solution (secondary) */}
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -396,7 +497,15 @@ export function PuzzleSolver({
             className="flex-1"
           >
             <IconLightbulb3D size={16} aria-hidden="true" />
-            {lang === "id" ? "Petunjuk" : "Hint"}
+            {lang === "id" ? "Hint" : "Hint"}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={phase === "solved"}
+            onClick={() => void armHint(2)}
+            className="flex-1"
+          >
+            {lang === "id" ? "Solution" : "Solution"}
           </Button>
         </div>
         {hintCaption ? (
@@ -421,6 +530,28 @@ export function PuzzleSolver({
             </p>
             <Button size="sm" onClick={onGoRush}>{lang === "id" ? "Coba Teka-Teki Gegas" : "Try Puzzle Rush"}</Button>
           </div>
+        ) : null}
+
+        {/* V3: tombol besar hijau Next Puzzle — aktif hanya setelah solved, tanpa reload */}
+        {variant === "solo" ? (
+          <button
+            type="button"
+            data-testid="puzzle-next-button"
+            disabled={phase !== "solved"}
+            onClick={() => {
+              if (phase !== "solved") return;
+              // Muat puzzle baru tanpa reload — parent mengontrol fetch.
+              if (onNextPuzzle) onNextPuzzle(null);
+            }}
+            aria-disabled={phase !== "solved"}
+            className={`w-full rounded-xl px-4 py-3 text-sm font-black uppercase tracking-wide transition-all ${
+              phase === "solved"
+                ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white shadow-lg cursor-pointer"
+                : "bg-[var(--muted)] text-neutral-500 cursor-not-allowed"
+            }`}
+          >
+            {lang === "id" ? "Teka-Teki Berikutnya" : "Next Puzzle"}
+          </button>
         ) : null}
 
         {phase === "error" ? (
