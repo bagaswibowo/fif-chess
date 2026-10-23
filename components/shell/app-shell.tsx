@@ -3,13 +3,19 @@
 /**
  * components/shell/app-shell.tsx (ticket S4-T1 — Sprint 4)
  * App Shell ala chess.com: skip-link, topbar (search combobox + akun),
- * sidebar fixed 4 grup live + Lainnya (accordion), mobile bottom nav 5 item
- * + more-sheet. Token existing app/globals.css; ikon icons3d; tanpa emoji.
+ * sidebar fixed 6 grup beraksen warna (V6 — ui-parity-v2) + Lainnya
+ * (accordion), mobile bottom nav 5 item + more-sheet. Aksen per grup via
+ * token CSS; icon lucide-react; aria-current tetap TEPAT 1 (regression
+ * BUG-3 — dijaga via mounted/isDesktop/accordion gating).
  * navTab dikontrol parent (Game) via props — deep-link hash ditangani parent.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlayingBadge } from "@/components/playing-badge";
+import {
+  Home, Swords, Bot, GraduationCap, Puzzle, Dumbbell, Eye, Trophy,
+  Users, User, Archive, Shield, LayoutGrid,
+} from "lucide-react";
 import {
   IconPlay3D, IconBot3D, IconCoach3D, IconPuzzle3D, IconLightning3D,
   IconMedal3D, IconScan3D, IconVision3D, IconCommunity3D, IconTrophy3D,
@@ -38,40 +44,63 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
-type Item = { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean };
-type Group = { title: string; items: Item[] };
+type Item = { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean; accent?: string };
+type Group = { title: string; accent: string; items: Item[] };
+
+/**
+ * V6: 6 grup ala pola chess.com, label jev-chess sendiri. Aksen per grup
+ * via token CSS vars (didefinisikan di app/globals.css section V6) —
+ * bukan aset eksternal. Icon lucide-react.
+ */
 
 const GROUPS: Group[] = [
   {
-    title: "Bermain",
+    title: "Main",
+    accent: "var(--nav-accent-play)",
     items: [
-      { id: "play", label: "Main Online", icon: IconPlay3D, badge: true },
-      { id: "bots", label: "Lawan Bot", icon: IconBot3D },
-      { id: "coach", label: "Pelatih", icon: IconCoach3D },
+      { id: "home", label: "Beranda", icon: Home, accent: "var(--nav-accent-play)" },
+      { id: "play", label: "Main Online", icon: Swords, badge: true, accent: "var(--nav-accent-play)" },
+      { id: "bots", label: "Lawan Bot", icon: Bot, accent: "var(--nav-accent-play)" },
     ],
   },
   {
     title: "Teka-Teki",
+    accent: "var(--nav-accent-puzzle)",
     items: [
-      { id: "puzzles", label: "Teka-Teki", icon: IconPuzzle3D },
+      { id: "puzzles", label: "Teka-Teki", icon: Puzzle, accent: "var(--nav-accent-puzzle)" },
     ],
   },
   {
-    title: "Berlatih",
+    title: "Latihan",
+    accent: "var(--nav-accent-drill)",
     items: [
-      { id: "review", label: "Analisis", icon: IconMedal3D },
-      { id: "scan", label: "Scan Papan", icon: IconScan3D },
-      { id: "vision", label: "Materi Belajar", icon: IconVision3D },
-      { id: "drills", label: "Permainan Akhir", icon: IconShield3D },
+      { id: "drills", label: "Permainan Akhir", icon: Dumbbell, accent: "var(--nav-accent-drill)" },
+      { id: "vision", label: "Latihan Penglihatan", icon: Eye, accent: "var(--nav-accent-drill)" },
     ],
   },
   {
-    title: "Komunitas",
+    title: "Belajar",
+    accent: "var(--nav-accent-learn)",
     items: [
-      { id: "community", label: "Komunitas", icon: IconCommunity3D },
-      { id: "leaderboard", label: "Papan Peringkat", icon: IconTrophy3D },
-      { id: "friends", label: "Teman", icon: IconFriends3D },
-      { id: "archive", label: "Arsip", icon: IconHistory3D },
+      { id: "coach", label: "Pelatih", icon: GraduationCap, accent: "var(--nav-accent-learn)" },
+      { id: "review", label: "Analisis", icon: IconMedal3D, accent: "var(--nav-accent-learn)" },
+      { id: "scan", label: "Scan Papan", icon: IconScan3D, accent: "var(--nav-accent-learn)" },
+    ],
+  },
+  {
+    title: "Sosial",
+    accent: "var(--nav-accent-social)",
+    items: [
+      { id: "community", label: "Komunitas", icon: Users, accent: "var(--nav-accent-social)" },
+      { id: "leaderboard", label: "Papan Peringkat", icon: Trophy, accent: "var(--nav-accent-social)" },
+      { id: "friends", label: "Teman", icon: User, accent: "var(--nav-accent-social)" },
+    ],
+  },
+  {
+    title: "Tonton",
+    accent: "var(--nav-accent-watch)",
+    items: [
+      { id: "archive", label: "Arsip Partai", icon: Archive, accent: "var(--nav-accent-watch)" },
     ],
   },
 ];
@@ -80,12 +109,12 @@ const OTHER_ITEMS: Item[] = [
   { id: "admin", label: "Admin", icon: IconShield3D },
 ];
 
-const BOTTOM_ITEMS: { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean }[] = [
-  { id: "home", label: "Home", icon: IconPlay3D },
-  { id: "play", label: "Bermain", icon: IconPlay3D, badge: true },
-  { id: "puzzles", label: "Teka-Teki", icon: IconPuzzle3D },
-  { id: "review", label: "Analisis", icon: IconMedal3D },
-  { id: "community", label: "Komunitas", icon: IconCommunity3D },
+const BOTTOM_ITEMS: { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean; accent?: string }[] = [
+  { id: "home", label: "Home", icon: Home, accent: "var(--nav-accent-play)" },
+  { id: "play", label: "Main", icon: Swords, badge: true, accent: "var(--nav-accent-play)" },
+  { id: "puzzles", label: "Teka-Teki", icon: Puzzle, accent: "var(--nav-accent-puzzle)" },
+  { id: "review", label: "Analisis", icon: IconMedal3D, accent: "var(--nav-accent-learn)" },
+  { id: "community", label: "Komunitas", icon: Users, accent: "var(--nav-accent-social)" },
 ];
 
 const PLAYER_RESULT = { username: "", rating: 0 };
@@ -206,7 +235,7 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
   // tidak boleh membawa aria-current="page" — DOM selector QA menghitung semua
   // [aria-current='page'], dan elemen hidden harus dikecualikan.
   const otherIds = useMemo(() => new Set(OTHER_ITEMS.map((i) => i.id)), []);
-  const renderIconBtn = (item: { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean }, active: boolean) => (
+  const renderIconBtn = (item: Item, active: boolean) => (
     <button
       key={item.id}
       onClick={() => onNavigate(item.id)}
@@ -215,7 +244,9 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
       title={item.label}
       className={itemCls(active)}
     >
-      <item.icon size={22} aria-hidden="true" />
+      <span style={item.accent ? { color: item.accent } : undefined} className="flex shrink-0" aria-hidden="true">
+        <item.icon size={22} />
+      </span>
       <span className="flex-1 truncate">{item.label}</span>
       {item.badge && <PlayingBadge count={playingCount} />}
       {item.badge && playingCount > 0 && <span className="sr-only">{`${playingCount} permainan aktif`}</span>}
@@ -292,8 +323,11 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
 
         <nav className="space-y-1 flex-1" aria-label="Navigasi utama">
           {GROUPS.map((g) => (
-            <div key={g.title} className="mb-2">
-              <div className="px-3 pb-1 pt-2 text-[10px] font-black uppercase tracking-widest text-neutral-500">{g.title}</div>
+            <div key={g.title} className="mb-2" data-nav-group={g.title}>
+              <div className="px-3 pb-1 pt-2 text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: g.accent }} aria-hidden="true" />
+                {g.title}
+              </div>
               <div className="space-y-0.5">{g.items.map((it) => renderIconBtn(it, navTab === it.id))}</div>
             </div>
           ))}
@@ -469,7 +503,9 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
               }`}
             >
               <div className={`p-1 rounded-lg relative ${navTab === tab.id ? "bg-[var(--muted)] text-white" : ""}`}>
-                <tab.icon size={20} />
+                <span style={tab.accent ? { color: tab.accent } : undefined} className="flex" aria-hidden="true">
+                  <tab.icon size={20} />
+                </span>
                 {tab.badge && <span className="absolute -top-0.5 -right-1"><PlayingBadge count={playingCount} /></span>}
               </div>
               <span className="text-[10px] leading-none">{tab.label}</span>
