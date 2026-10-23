@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
   const me = auth.user;
 
-  const [solvedRows, activeRows, lastFinished] = await Promise.all([
+  const [solvedRows, activeRows, recentRows, lastFinished] = await Promise.all([
     query<{ n: string }>(
       `SELECT count(DISTINCT puzzle_id)::text AS n FROM puzzle_attempts
        WHERE user_id = $1::uuid AND correct AND attempted_at::date = (NOW() AT TIME ZONE 'UTC')::date`,
@@ -34,6 +34,18 @@ export async function GET(request: Request) {
        WHERE (g.white_user_id = $1::uuid OR g.black_user_id = $1::uuid) AND g.status = 'active'
        ORDER BY g.started_at DESC
        LIMIT 20`,
+      [me.pgId],
+    ),
+    // T1 (WS-2.5): recentGames — 5 game selesai terakhir dari perspektif user.
+    query(
+      `SELECT g.id, g.result, g.white_user_id, g.black_user_id, g.time_control, g.game_type,
+              g.white_rating_before, g.black_rating_before, g.ended_at,
+              ur.username AS opponent_username, ur.rating AS opponent_rating
+       FROM games g
+       JOIN users ur ON ur.id = CASE WHEN g.white_user_id = $1::uuid THEN g.black_user_id ELSE g.white_user_id END
+       WHERE (g.white_user_id = $1::uuid OR g.black_user_id = $1::uuid) AND g.status <> 'active'
+       ORDER BY COALESCE(g.ended_at, g.created_at) DESC
+       LIMIT 5`,
       [me.pgId],
     ),
     query(
@@ -67,12 +79,31 @@ export async function GET(request: Request) {
   const streakHarian = await dailyStreak(me.pgId);
   const lastGame = lastFinished[0] as { id: string; ended_at: string; opponent: string } | undefined;
 
+  // T1: hasil dihitung dari perspektif user (result = warna pemenang).
+  const recentGames = recentRows.map((r) => {
+    const g = r as Record<string, unknown>;
+    const result = String(g.result ?? "*");
+    const myResult = result === "draw" ? "draw" : result === (g.white_user_id === me.pgId ? "white" : "black") ? "win" : "loss";
+    return {
+      id: String(g.id),
+      myResult,
+      opponent: {
+        username: String(g.opponent_username ?? "?"),
+        rating: Number(g.opponent_rating ?? 0),
+      },
+      timeControl: (g.time_control as string) ?? null,
+      gameType: (g.game_type as string) ?? null,
+      endedAt: g.ended_at,
+    };
+  });
+
   return NextResponse.json({
     username: me.username,
     rating: me.rating,
     solvedToday,
     streakHarian,
     gamesAktif,
+    recentGames,
     tasksState: {
       puzzleDone: solvedToday > 0,
       dailyPuzzleDone: solvedToday > 0,

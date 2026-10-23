@@ -12,6 +12,7 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { currentUser, loadUsers } from "@/lib/auth-store";
+import { matchOpening } from "@/lib/opening-book";
 
 export const runtime = "nodejs";
 
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
 
   const rows = await query(
     `SELECT g.id, g.white_user_id, g.black_user_id, g.result, g.time_control, g.game_type,
-            g.favorited, g.ended_at,
+            g.favorited, g.ended_at, g.created_at,
             g.white_rating_before, g.white_rating_after,
             g.black_rating_before, g.black_rating_after,
             w.username AS white_username, w.rating AS white_rating,
@@ -68,6 +69,7 @@ export async function GET(request: Request) {
     params,
   );
 
+
   // Counter per tab dalam SATU query (FILTER aggregates) — untuk tab UI.
   const countRows = await query(
     `SELECT COUNT(*)::int AS all,
@@ -80,6 +82,27 @@ export async function GET(request: Request) {
      WHERE (g.white_user_id = $1 OR g.black_user_id = $1) AND g.status = 'finished'`,
     [userId],
   );
+
+  // T2 (WS-2.5): opening_name + duration_sec — batch satu query untuk semua
+  // game halaman ini (tanpa N+1): moves per game dihitung di Node via matchOpening.
+  const gameIds = rows.map((r) => String((r as Record<string, unknown>).id));
+  const openingByName = new Map<string, string | null>();
+  if (gameIds.length > 0) {
+    const moveRows = await query<{ game_id: string; san: string }>(
+      `SELECT game_id, san FROM game_moves WHERE game_id = ANY($1::uuid[]) ORDER BY game_id, move_number ASC`,
+      [gameIds],
+    );
+    const sansByGame = new Map<string, string[]>();
+    for (const m of moveRows) {
+      const list = sansByGame.get(String(m.game_id)) ?? [];
+      list.push(String(m.san));
+      sansByGame.set(String(m.game_id), list);
+    }
+    for (const [gid, sans] of sansByGame) {
+      const info = sans.length >= 4 ? matchOpening(sans) : null;
+      openingByName.set(gid, info ? info.name : null);
+    }
+  }
 
   const games = rows.map((r) => {
     const g = r as Record<string, unknown>;
@@ -102,6 +125,12 @@ export async function GET(request: Request) {
       rating_before: Number.isFinite(myBefore) ? myBefore : null,
       rating_after: Number.isFinite(myAfter) ? myAfter : null,
       rating_delta: Number.isFinite(myBefore) && Number.isFinite(myAfter) ? myAfter - myBefore : null,
+      // T2: nama opening dari matchOpening (null bila <4 ply / tak cocok) + durasi.
+      opening_name: openingByName.get(String(g.id)) ?? null,
+      duration_sec:
+        g.ended_at && g.created_at
+          ? Math.max(0, Math.round((new Date(String(g.ended_at)).getTime() - new Date(String(g.created_at)).getTime()) / 1000))
+          : null,
     };
   });
 

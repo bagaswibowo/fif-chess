@@ -51,7 +51,7 @@ const OPENING_BOOK: Record<string, { name: string; moves: string[] }> = {
   "B30": { name: "Sicilian Defense", moves: ["e4", "c5", "Nf3"] },
 };
 
-function matchOpening(sanMoves: string[]): OpeningInfo | null {
+export function matchOpening(sanMoves: string[]): OpeningInfo | null {
   let best: { eco: string; info: typeof OPENING_BOOK[string]; matched: number } | null = null;
   for (const [eco, info] of Object.entries(OPENING_BOOK)) {
     let matched = 0;
