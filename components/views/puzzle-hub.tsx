@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * components/views/puzzle-hub.tsx (S3-T1..T4 frontend)
+ * components/views/puzzle-hub.tsx (S3-T1..T4 frontend, S5-T3 update)
  * Hub Teka-Teki: tab Tantangan Harian / Gegas / Latihan Tema / Tanpa Batas
  * di atas solve mode. Sub-navigasi ringan — navTab game.tsx hanya "puzzles".
+ * S5-T3: terima initialTab dari deep-link lama (#/daily|#/rush|#/themes).
  */
 
 import { useState } from "react";
@@ -12,7 +13,7 @@ import { DailyPuzzleView } from "./daily-puzzle-view";
 import { RushView } from "./rush-view";
 import { ThemesMasteryView } from "./themes-mastery-view";
 
-type Props = { lang?: "id" | "en"; onBack?: () => void };
+type Props = { lang?: "id" | "en"; onBack?: () => void; initialTab?: PuzzleTab };
 type PuzzleTab = "unlimited" | "daily" | "rush" | "themes";
 
 const TABS: { id: PuzzleTab; labelId: string; labelEn: string }[] = [
@@ -22,8 +23,8 @@ const TABS: { id: PuzzleTab; labelId: string; labelEn: string }[] = [
   { id: "themes", labelId: "Latihan Tema", labelEn: "Theme Training" },
 ];
 
-export function PuzzleHub({ lang = "id", onBack }: Props) {
-  const [tab, setTab] = useState<PuzzleTab>("unlimited");
+export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Props) {
+  const [tab, setTab] = useState<PuzzleTab>(initialTab);
 
   return (
     <div className="w-full h-full flex flex-col min-h-0">

@@ -45,11 +45,8 @@ import { useSession } from "@/lib/use-session";
 import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import { CoachModeView } from "@/components/coach-mode-view";
 import { VersusBotsView } from "@/components/views/versus-bots-view";
-import { DailyPuzzleView } from "@/components/views/daily-puzzle-view";
-import { RushView } from "@/components/views/rush-view";
-import { ThemesMasteryView } from "@/components/views/themes-mastery-view";
 import { ArchiveView } from "@/components/views/archive-view";
-import { SpectatorView } from "@/components/spectator-view";
+import { SpectatorView } from "@/components/views/spectator-view";
 import { PasteBar } from "@/components/paste-bar";
 import { GameOverModal } from "@/components/game-over-modal";
 import { useChessTheme } from "@/lib/chess-themes";
@@ -96,8 +93,8 @@ const AI_LABEL: Record<string, string> = {
 
 type PendingPromotion = { from: string; to: string };
 type NavTab =
-  | "home" | "play" | "bots" | "coach" | "spectator"
-  | "puzzles" | "daily" | "rush" | "themes"
+  | "home" | "play" | "bots" | "coach"
+  | "puzzles"
   | "review" | "scan" | "vision" | "drills"
   | "community" | "leaderboard" | "friends" | "archive"
   | "admin";
@@ -189,9 +186,22 @@ export function Game() {
 const navTabFromHash = (): NavTab => {
   if (typeof window === "undefined") return "home";
   const h = window.location.hash.replace(/^#\//, "");
-  const all: NavTab[] = ["home", "play", "bots", "coach", "spectator", "puzzles", "daily", "rush", "themes", "review", "scan", "vision", "drills", "community", "leaderboard", "friends", "archive", "admin"];
+  // S5-T2: deep-link lama dialihkan ke parent view (bookmark tidak mati).
+  // #/daily|#/rush|#/themes -> #/puzzles + initial tab; #/spectator -> #/coach sub-tab spectator.
+  if (h === "daily" || h === "rush" || h === "themes") {
+    initialPuzzleTabRef.current = h;
+    return "puzzles";
+  }
+  if (h === "spectator") {
+    initialCoachSubTabRef.current = "spectator";
+    return "coach";
+  }
+  const all: NavTab[] = ["home", "play", "bots", "coach", "puzzles", "review", "scan", "vision", "drills", "community", "leaderboard", "friends", "archive", "admin"];
   return (all.includes(h as NavTab) ? (h as NavTab) : "home") as NavTab;
 };
+// S5-T3: initial tab untuk PuzzleHub / Coach dari deep-link lama.
+const initialPuzzleTabRef: { current: string | null } = { current: null };
+const initialCoachSubTabRef: { current: CoachSubTab | null } = { current: null };
 const [navTab, setNavTab] = useState<NavTab>(navTabFromHash);
 // Hash <-> state sinkron (deep-link & back button, design doc S4 §1.5).
 useEffect(() => {
@@ -204,11 +214,7 @@ const navigate = useCallback((tab: NavTab) => {
   const h = `#/${tab}`;
   if (window.location.hash !== h) window.history.pushState(null, "", h);
 }, []);
-// S4-T1: Spectator item sidebar terpisah (grup Lainnya) → sub-tab coach.
-useEffect(() => {
-  if (navTab === "spectator") setCoachSubTab("spectator");
-}, [navTab]);
-  const [coachSubTab, setCoachSubTab] = useState<CoachSubTab>("coach");
+  const [coachSubTab, setCoachSubTab] = useState<CoachSubTab>(initialCoachSubTabRef.current ?? "coach");
   const [aiDepth, setAiDepth] = useState(14);
   const [gameActive, setGameActive] = useState(false);
   const [selectedAiOpponent, setSelectedAiOpponent] = useState<"stockfish" | "jev-fly" | "jev" | "fly">("stockfish");
@@ -1194,22 +1200,7 @@ useEffect(() => {
         )}
         {navTab === "puzzles" && (
           <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
-            <PuzzleHub lang={lang} onBack={() => setNavTab("play")} />
-          </div>
-        )}
-        {navTab === "daily" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
-            <DailyPuzzleView lang={lang} onGoPuzzles={() => setNavTab("puzzles")} />
-          </div>
-        )}
-        {navTab === "rush" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
-            <RushView lang={lang} onBack={() => setNavTab("puzzles")} />
-          </div>
-        )}
-        {navTab === "themes" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
-            <ThemesMasteryView lang={lang} onBack={() => setNavTab("puzzles")} />
+            <PuzzleHub lang={lang} initialTab={(initialPuzzleTabRef.current ?? "unlimited") as "unlimited" | "daily" | "rush" | "themes"} onBack={() => setNavTab("play")} />
           </div>
         )}
         {currentUser && navTab === "archive" && (
@@ -1226,11 +1217,11 @@ useEffect(() => {
               <PasteBar
                 lang={lang}
                 onLoadFen={(f) => {
+                  // S5-T3: fast-path tetap di board analisis — tanpa redirect ke play.
                   setGameStartFen(f);
                   setFen(f);
                   setMoves([]);
                   setCustomOutcome(null);
-                  setNavTab("play");
                 }}
                 onLoadPgn={(sans, startFen) => {
                   const replayed = replaySanList(startFen, sans);
@@ -1253,7 +1244,7 @@ useEffect(() => {
                     })),
                   );
                   setCustomOutcome(null);
-                  setNavTab("play");
+                  // S5-T3: tetap di review — movelist terisi di panel analisis.
                 }}
                 onOpenGame={(gameId) => {
                   // Tautan game internal → panel review game tersebut.
