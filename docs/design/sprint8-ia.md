@@ -34,12 +34,20 @@ Lainnya      → admin  (admin-only, accordion, default collapsed)
 - Rantai: `main > view-root(h-full) > …` semua flex-child pakai `min-h-0`.
 
 ## 3. Pola Layout per Tipe View
+**Helper class (ditambahkan shell agent ke `app/globals.css`; nama ini KONTRAK bagi semua view — jangan bikin class sendiri):**
+- `.view-root` — `h-full w-full min-h-0 flex flex-col` (wrapper paling dalam tiap view, menggantikan `mobile-feature-page`)
+- `.view-head` — baris header/filter 44px `shrink-0` (sticky di dalam view, bukan halaman)
+- `.view-body` — `flex-1 min-h-0 overflow-y-auto` (satu-satunya region scroll internal)
+- `.view-grid-board` — `h-full grid grid-cols-[minmax(0,1fr)_320px] gap-3` (Pola A)
+- `.view-cols` — `h-full grid grid-cols-[minmax(0,1fr)_300px] gap-3` (Pola C)
+- `.view-cards` — grid kartu rapat, `auto-rows-min` (Pola D)
+
 | Pola | Deskripsi | View |
 |---|---|---|
-| **A** papan+panel | grid `[1fr 320px]`, papan square ≤540px, panel `overflow-y-auto` internal | play, bots, review, scan, classroom, drills |
-| **B** list+header pin | header filter/pill 44px sticky + body `overflow-y-auto` tinggi-sisa | leaderboard, archive, explorer, tournaments, courses, learn |
-| **C** detail 2-kolom | konten detail + sidebar meta, dua-duanya scroll internal | course/lesson detail, insight profil, friends detail |
-| **D** dashboard | grid kartu padat tinggi-terpas (total ≤ area konten), tanpa scroll | home, practice, vision |
+| **A** papan+panel | `.view-grid-board`: papan ≤540px di kiri, panel `.view-body` di kanan | play, bots, review, scan, classroom, drills |
+| **B** list+header pin | `.view-head` (filter/pill) + `.view-body` list baris ≤44px | leaderboard, archive, explorer, tournaments, courses, learn |
+| **C** detail 2-kolom | `.view-cols`: konten detail `.view-body` + sidebar meta `.view-body` | course/lesson detail, insight profil, friends detail |
+| **D** dashboard | `.view-cards` tinggi-terpas total ≤ area konten, tanpa scroll | home, practice, vision |
 
 Ketinggian baris data: ≤44px. Gap kartu: 12px. Tidak ada view yang boleh menghasilkan tinggi konten > area konten di 1360×768 tanpa memotong ke pola B/C (internal scroll).
 
