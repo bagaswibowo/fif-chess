@@ -38,3 +38,27 @@ export function timeCategorySql(tcCol: string, gameTypeCol: string, gameType: "b
   if (gameType === "blitz") return `(${gameTypeCol} = 'live' AND ${min} >= 3 AND ${min} < 10)`;
   return `(${gameTypeCol} = 'live' AND ${min} >= 10)`;
 }
+
+/** S6-T2 (spec §2.1): pilihan preset waktu terakhir per user — default
+ *  undangan/challenge ketika pairing tidak menyuplai TC. Validasi ketat
+ *  (format \d{1,3}+\d{1,3}); nilai korup/absen → default "3+2".
+ *  KUNCI localStorage tunggal: "jev_tc_last". */
+export const TC_STORAGE_KEY = "jev_tc_last";
+export const TC_DEFAULT = "3+2";
+
+export function loadStoredTimeControl(): string {
+  try {
+    const v = localStorage.getItem(TC_STORAGE_KEY);
+    return v && TC_CUSTOM_REGEX.test(v) ? v : TC_DEFAULT;
+  } catch {
+    return TC_DEFAULT; // SSR / storage blocked
+  }
+}
+
+export function saveStoredTimeControl(tc: string): void {
+  try {
+    if (TC_CUSTOM_REGEX.test(tc)) localStorage.setItem(TC_STORAGE_KEY, tc);
+  } catch {
+    /* storage blocked — pilihan tidak persist, tidak fatal */
+  }
+}

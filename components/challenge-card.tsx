@@ -20,11 +20,17 @@ type Props = {
   state: ChallengeState;
   /** Label control waktu, mis. "Cepat · 10 menit". */
   controlLabel: string;
+  /** S6-T2 (§2.3): TC undangan masuk WAJIB terbaca sebelum terima.
+   *  Opsional — ditampilkan hanya bila sumber (event/store) menyuplai;
+   *  tanpa data = tidak ditampilkan (no-mock, tidak mengarang angka). */
+  timeControl?: string;
+  /** S6-T2: mode undangan — "Terbuka (rating)" bila rated, selain itu "Casual". */
+  rated?: boolean;
   onAccept: () => void;
   onDecline: () => void;
 };
 
-function CardBody({ challenge, state, controlLabel, onAccept, onDecline, ariaHidden }: Props & { ariaHidden?: boolean }) {
+function CardBody({ challenge, state, controlLabel, timeControl, rated, onAccept, onDecline, ariaHidden }: Props & { ariaHidden?: boolean }) {
   if (!challenge) return null;
   const settled = state !== "incoming";
   return (
@@ -42,7 +48,15 @@ function CardBody({ challenge, state, controlLabel, onAccept, onDecline, ariaHid
         </span>
       </div>
       <h3 className="challenge-card-title">{challenge.fromUsername} menantang Anda</h3>
-      <p className="challenge-card-control">{controlLabel}</p>
+      {/* S6-T2: baris TC + mode (riil dari payload; tanpa payload → tidak
+          ditampilkan — copy "mengundangnya" hanya muncul bila data ada). */}
+      {timeControl ? (
+        <p className="challenge-card-control">
+          {challenge.fromUsername} mengundangnya: {timeControl} · {rated ? "Terbuka (rating)" : "Casual"}
+        </p>
+      ) : (
+        <p className="challenge-card-control">{controlLabel}</p>
+      )}
       {state === "accepted" && (
         <p className="challenge-card-status">Mempersiapkan papan…</p>
       )}

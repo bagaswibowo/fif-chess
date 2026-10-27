@@ -1,0 +1,446 @@
+"use client";
+
+/**
+ * components/views/explorer-view.tsx (S6-T1 — docs/design/sprint6-flows.md §1)
+ * Penjelajah Pembukaan di hash #/explorer.
+ *
+ * Kontrak (docs/contracts/sprint6.md §1.1, ADR-009 D1):
+ * - Move tree dibangun di KLIEN: kandidat reply per posisi dari buku statis
+ *   (lib/engines/opening-book.ts) + POST /api/opening { fen } per node
+ *   (FenLookupResponse: opening?.name/eco + flag hasLessons bila server tandai).
+ * - Win-rate per posisi = NEW GET /api/opening/win-rate?fen= — angka RIIL dari
+ *   arsip games (no-mock). samples < 10 → kalimat sampel kecil, bukan %.
+ * - Tab "Buah" = placeholder jujur (D1.4: tidak ada data buah di S6 — tidak
+ *   memanggil endpoint mana pun, tanpa angka palsu).
+ * - CTA "Materi" hanya tampil bila server menandai hasLessons (anti-slop:
+ *   tidak ada tombol ke halaman kosong — link internal S7).
+ * - A11y floor: status region sr-only + aria-live, node = button
+ *   aria-expanded, papan read-only ber-aria-label konteks, stat selalu
+ *   teks-angka berlabel (cue ganda, bukan warna saja).
+ */
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Chess } from "chess.js";
+import { Chessboard } from "react-chessboard";
+import { Compass, BookOpen, ChevronRight, FlaskConical, Target } from "lucide-react";
+import { OPENING_BOOK } from "@/lib/engines/opening-book";
+
+const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+/** Kandidat reply untuk FEN dari buku statis (semua kandidat, tidak acak). */
+function allCandidatesFor(fen: string): string[] {
+  const key = fen.trim().split(/\s+/).slice(0, 4).join(" ");
+  const entry = OPENING_BOOK[key];
+  if (!entry) return [];
+  return Array.isArray(entry) ? entry : [entry];
+}
+
+function applyUci(fen: string, uci: string): string {
+  try {
+    const c = new Chess(fen);
+    const m = c.move(uci);
+    return m ? c.fen() : fen;
+  } catch {
+    return fen;
+  }
+}
+
+function uciToSan(uci: string, fen: string): string {
+  try {
+    const c = new Chess(fen);
+    const m = c.move(uci);
+    return m ? m.san : uci;
+  } catch {
+    return uci;
+  }
+}
+
+/** "1. e4 e5 2. Kf3 Nc6" dari list SAN (nomor baris tiap langkah Putih). */
+function formatSanPath(sans: string[]): string {
+  let out = "";
+  for (let i = 0; i < sans.length; i++) {
+    if (i % 2 === 0) out += `${i / 2 + 1}.`;
+    out += ` ${sans[i]}`;
+  }
+  return out.trim();
+}
+
+type WinRate = {
+  fen: string;
+  samples: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRate: number | null;
+};
+
+type Node = {
+  fen: string;
+  /** Langkah UCI dari parent (null = root). */
+  uci: string | null;
+  /** Path SAN dari root (mis. ["e4","e5"]) — sumber nomor baris. */
+  sans: string[];
+  eco: string | null;
+  name: string | null;
+  hasLessons: boolean;
+  children: Node[];
+  /** true = anak sudah dimuat dari /api/opening. */
+  loaded: boolean;
+};
+
+function makeNode(fen: string, uci: string | null, sans: string[]): Node {
+  return { fen, uci, sans, eco: null, name: null, hasLessons: false, children: [], loaded: false };
+}
+
+type TabId = "garis" | "buah";
+
+export function ExplorerView({ initialEco, onLoadFen }: {
+  initialEco?: string | null;
+  /** S6-T1 (spec §1.2–1.3): "Hasilkan di papan" — muat FEN node ke papan
+   *  analisis/review (jalur keluar bermakna, pola S4-T5). */
+  onLoadFen?: (fen: string) => void;
+}) {
+  const [root, setRoot] = useState<Node>(() => makeNode(START_FEN, null, []));
+  const [selected, setSelected] = useState<Node>(root);
+  const [tab, setTab] = useState<TabId>("garis");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [ecoFilter, setEcoFilter] = useState("");
+  const [ecoInput, setEcoInput] = useState(initialEco ?? "");
+  const [winRate, setWinRate] = useState<WinRate | null>(null);
+  const [wrLoading, setWrLoading] = useState(false);
+
+  /** Muat anak + label opening satu node (POST /api/opening untuk fen node
+   *  saat ini — label ECO/nama baris RIIL, bukan placeholder). Idempoten:
+   *  node sudah-loaded tidak diulang. Kegagalan fetch tidak memblokir —
+   *  label ECO kosong, pohon tetap jalan. */
+  const loadNode = useCallback(async (node: Node): Promise<Node> => {
+    if (node.loaded) return node;
+    const cand = allCandidatesFor(node.fen);
+    let eco: string | null = null;
+    let name: string | null = null;
+    let hasLessons = false;
+    try {
+      const res = await fetch("/api/opening", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fen: node.fen }),
+      });
+      if (res.ok) {
+        const d = (await res.json().catch(() => ({}))) as {
+          opening?: { name?: string; eco?: string };
+          hasLessons?: boolean;
+        };
+        eco = d.opening?.eco ?? null;
+        name = d.opening?.name ?? null;
+        hasLessons = Boolean(d.hasLessons);
+      }
+    } catch {
+      // Buku statis tetap dipakai; label ECO/CTA Materi kosong — tidak memblokir.
+    }
+    const kids = cand.map((uci) => makeNode(applyUci(node.fen, uci), uci, [...node.sans, uciToSan(uci, node.fen)]));
+    return { ...node, eco, name, hasLessons, children: kids, loaded: true };
+  }, []);
+
+  // Muat root saat mount.
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      setLoading(true);
+      const r = await loadNode(root);
+      if (!alive) return;
+      setRoot(r);
+      setSelected(r);
+      setLoading(false);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Win-rate posisi terpilih (riil dari endpoint).
+  useEffect(() => {
+    let alive = true;
+    setWinRate(null);
+    setWrLoading(true);
+    setError(null);
+    fetch(`/api/opening/win-rate?fen=${encodeURIComponent(selected.fen)}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          if (res.status === 401) {
+            // Guest (tanpa session) — statistik tetap publik di data, tapi
+            // endpoint guard FIX-1; copy spesifik tamu (spec §1.4, state-matrix).
+            setError("Statistik per garis tidak tersedia untuk tamu.");
+            return null;
+          }
+          if (res.status === 403) {
+            setError("Statistik per garis tidak tersedia untuk akun yang belum disetujui admin.");
+            return null;
+          }
+          if (res.status === 503) {
+            setError("Server sedang sibuk. Coba beberapa saat lagi.");
+            return null;
+          }
+          throw new Error("Gagal memuat penjelajah. Coba lagi.");
+        }
+        return (await res.json()) as WinRate;
+      })
+      .then((wr) => {
+        if (!alive || !wr) return;
+        setWinRate(wr);
+      })
+      .catch((e) => {
+        if (!alive) return;
+        setError(e instanceof Error ? e.message : "Gagal memuat penjelajah. Coba lagi.");
+      })
+      .finally(() => {
+        if (alive) setWrLoading(false);
+      });
+    return () => { alive = false; };
+  }, [selected.fen]);
+
+  /** Expand/muat anak satu node + seleksi ke situ. */
+  const selectNode = useCallback(
+    (node: Node) => {
+      setSelected(node);
+      void (async () => {
+        const loaded = await loadNode(node);
+        // Terapkan ke semua level yang mengandung node tsb.
+        setRoot((r) => mergeLoaded(r, loaded));
+        setSelected(loaded);
+      })();
+    },
+    [loadNode],
+  );
+
+  // Filter ECO: string matching terhadap node-node yang sudah termuat.
+  const matchesEco = useCallback(
+    (n: Node): boolean => {
+      const q = ecoFilter.trim().toUpperCase();
+      if (!q) return true;
+      if ((n.eco ?? "").toUpperCase().includes(q)) return true;
+      return n.children.some((c) => matchesEco(c));
+    },
+    [ecoFilter],
+  );
+
+  const kids = ecoFilter.trim() ? filterKids(selected.children, ecoFilter.trim().toUpperCase()) : selected.children;
+
+  const wrPct = (n: number, total: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+
+  const turnLabel = useMemo(() => {
+    try {
+      const c = new Chess(START_FEN);
+      c.load(selected.fen);
+      return c.turn() === "w" ? "Putih" : "Hitam";
+    } catch {
+      return "Putih";
+    }
+  }, [selected.fen]);
+
+  const sanPath = formatSanPath(selected.sans);
+
+  return (
+    <div className="w-full max-w-5xl mx-auto flex flex-col gap-3 min-h-0 py-1">
+      <div className="flex items-center gap-2.5">
+        <Compass size={22} className="text-[var(--primary)] shrink-0" aria-hidden="true" />
+        <div>
+          <h1 className="text-lg font-black text-white leading-tight">Penjelajah Pembukaan</h1>
+          <p className="text-xs text-neutral-400">Garis dan hasil dari arsip partai jev-chess.</p>
+        </div>
+      </div>
+
+      {/* Tab Tampilan: "Daftar garis" + "Buah" (placeholder jujur S6) */}
+      <div className="flex bg-[var(--card)] p-1 rounded-xl border border-[var(--border)] w-full max-w-xs shadow-md shrink-0" role="tablist" aria-label="Tampilan penjelajah">
+        {tabBtn("garis", tab, setTab, "Daftar garis")}
+        {tabBtn("buah", tab, setTab, "Buah")}
+      </div>
+
+      {tab === "buah" ? (
+        <div className="panel p-4 rounded-2xl border border-[var(--border)] bg-[var(--card)]">
+          <div className="flex items-center gap-2 text-sm font-bold text-neutral-300">
+            <FlaskConical size={16} aria-hidden="true" />
+            Buah
+          </div>
+          <p className="mt-1.5 text-xs text-neutral-400">
+            Data buah belum tersedia di sprint ini. Panel analisis pembukaan akan hadir menyusul — tanpa data, panel ini sengaja dibiarkan kosong.
+          </p>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-[minmax(0,1fr)_22rem] gap-3 items-start w-full min-h-0">
+          {/* PAPAN — read-only, posisi node terpilih */}
+          <div className="panel p-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-md w-full">
+            <div
+              className="aspect-square w-full rounded-xl overflow-hidden border border-[var(--border-strong)] bg-[var(--board-dark)]"
+              aria-label={`Papan catur, ${selected.sans.length} langkah, giliran ${turnLabel}`}
+            >
+              <Chessboard
+                options={{
+                  id: "explorer-board",
+                  position: selected.fen,
+                  boardOrientation: "white",
+                  allowDragging: false,
+                  allowDrawingArrows: false,
+                  boardStyle: { width: "100%", height: "100%" },
+                  lightSquareStyle: { backgroundColor: "var(--board-light, #ebecd0)" },
+                  darkSquareStyle: { backgroundColor: "var(--board-dark, #739552)" },
+                }}
+              />
+            </div>
+            <p className="font-mono text-xs text-neutral-300 mt-2 break-words min-h-[1.25rem]">
+              {sanPath || "posisi awal — belum ada langkah"}
+            </p>
+            {onLoadFen && (
+              <button
+                onClick={() => onLoadFen(selected.fen)}
+                className="ctl ctl-sm mt-2 inline-flex items-center gap-1.5"
+                aria-label="Hasilkan posisi ini di papan analisis"
+              >
+                <Target size={14} aria-hidden="true" />
+                Hasilkan di papan
+              </button>
+            )}
+            {selected.hasLessons && (
+              <a
+                href={`#/courses?opening=${encodeURIComponent(selected.eco ?? "")}`}
+                className="ctl ctl-sm mt-2 inline-flex items-center gap-1.5"
+                aria-label={selected.name ? `Materi pembukaan ${selected.name}` : "Materi pembukaan"}
+              >
+                <BookOpen size={14} aria-hidden="true" />
+                Materi
+              </a>
+            )}
+          </div>
+
+          {/* PANEL — filter ECO + daftar garis + win-rate posisi terpilih */}
+          <div className="panel p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-md w-full min-h-0">
+            <span className="label">Kode ECO</span>
+            <div className="flex gap-2">
+              <input
+                className="field flex-1 min-w-0"
+                placeholder="mis. C33"
+                aria-label="Kode ECO"
+                value={ecoInput}
+                onChange={(e) => setEcoInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setEcoFilter(ecoInput.trim());
+                }}
+              />
+              <button className="ctl ctl-sm" onClick={() => setEcoFilter(ecoInput.trim())} aria-label="Terapkan filter ECO">
+                Terapkan
+              </button>
+            </div>
+            {ecoFilter && (
+              <button
+                className="mt-1.5 text-[11px] font-bold text-[var(--accent)]"
+                onClick={() => {
+                  setEcoFilter("");
+                  setEcoInput("");
+                }}
+                aria-label="Hapus filter ECO"
+              >
+                Hapus filter
+              </button>
+            )}
+
+            {error && (
+              <p className="mt-2 text-xs font-bold" style={{ color: "var(--destructive)" }} role="alert">
+                {error}
+              </p>
+            )}
+            {wrLoading && (
+              <p className="mt-2 text-xs text-neutral-400" role="status" aria-live="polite">
+                Mencari garis…
+              </p>
+            )}
+
+            <div className="mt-2.5 flex flex-col gap-1.5" role="list" aria-label="Daftar garis pembukaan">
+              {loading ? (
+                <p role="status" aria-live="polite" className="text-xs text-neutral-400 py-1">
+                  Mencari garis…
+                </p>
+              ) : kids.length === 0 ? (
+                <p className="text-xs text-neutral-400 py-1" role="status">
+                  {ecoFilter ? "Tidak ada garis dengan filter ECO ini di tingkat saat ini." : "Belum ada partai dengan garis ini di arsip."}
+                </p>
+              ) : (
+                kids.map((k) => (
+                  <button
+                    key={k.fen}
+                    onClick={() => selectNode(k)}
+                    aria-expanded={false}
+                    className="text-left rounded-lg px-2.5 py-2 border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ring)]"
+                  >
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-white">
+                      <ChevronRight size={13} aria-hidden="true" />
+                      {k.eco ?? "?"} {k.name ?? ""}
+                    </span>
+                    <span className="font-mono text-[11px] text-neutral-400 block mt-0.5">
+                      {formatSanPath([...k.sans])}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {/* Win-rate — angka RIIL dari endpoint (teks, bukan bar warna) */}
+            {!wrLoading && !error && winRate && winRate.samples > 0 && (
+              <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2.5">
+                <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wide">Hasil di posisi ini</p>
+                {winRate.samples < 10 ? (
+                  <p className="text-xs text-neutral-300 mt-1" role="status">
+                    {winRate.samples} partai — sampel terlalu kecil untuk persentase.
+                  </p>
+                ) : (
+                  <p className="text-xs text-neutral-300 mt-1" role="status">
+                    Putih {wrPct(winRate.wins, winRate.samples)}% · Remis {wrPct(winRate.draws, winRate.samples)}% · Hitam{" "}
+                    {wrPct(winRate.losses, winRate.samples)}% · {winRate.samples} partai
+                  </p>
+                )}
+              </div>
+            )}
+            {!wrLoading && !error && winRate && winRate.samples === 0 && (
+              <p className="mt-3 text-xs text-neutral-500" role="status">
+                Belum ada partai dengan garis ini di arsip.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── helper lokal ─────────────────────────────────────────────────────── */
+
+function tabBtn(id: TabId, current: TabId, set: (t: TabId) => void, label: string) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={current === id}
+      onClick={() => set(id)}
+      className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
+        current === id ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"
+      }`}
+    >
+      <span className="inline-flex items-center gap-1">
+        {id === "buah" && <FlaskConical size={12} aria-hidden="true" />}
+        {label}
+      </span>
+    </button>
+  );
+}
+
+/** Saring anak node oleh prefix SAN/ECO — level-1 YAGNI (pola spec §1.2). */
+function filterKids(kids: Node[], q: string): Node[] {
+  return kids.filter((k) => {
+    const eco = (k.eco ?? "").toUpperCase();
+    return eco.includes(q);
+  });
+}
+
+/** Ganti sub-node hasil load di tree root (rekursif, tanpa menimpa cabang lain). */
+function mergeLoaded(root: Node, loaded: Node): Node {
+  if (root.fen === loaded.fen) return loaded;
+  return { ...root, children: root.children.map((c) => mergeLoaded(c, loaded)) };
+}

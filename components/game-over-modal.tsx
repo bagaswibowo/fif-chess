@@ -7,6 +7,7 @@ import { IconTrophy3D, IconSkull3D, IconBalance3D, IconFlag3D, IconClock3D } fro
 import { Confetti } from "@/components/confetti";
 import type { GameOutcome, Side } from "@/lib/chess";
 import type { PlayerGameSummary } from "@/lib/caps-evaluator";
+import { sendRematchRequest } from "@/lib/rematch";
 
 type Props = {
   outcome: GameOutcome;
@@ -20,6 +21,19 @@ type Props = {
   history?: string[];
   /** S2-T1: jeda auto-redirect ke review (detik). 0 = tanpa timer. */
   autoReviewSeconds?: number;
+  /** S6-T3: lawan manusia + metadata partai untuk baris aksi Rematch.
+   *  Lawan bot (username kosong) → tombol Rematch disembunyikan. */
+  opponentUsername?: string | null;
+  gameId?: string | null;
+  timeControl?: string | null;
+  /** S6-T3: lawan mengirim RematchRequested ke matcher kita — status
+   *  "Menunggu rematch dari @{user}…" ditampilkan di modal. */
+  rematchRequest?: { fromUser: string } | null;
+  /** S6-T3: akun pending → Rematch/Remis disabled + subteks (state matrix §3.4). */
+  pendingAccount?: boolean;
+  /** S6-T3 (dev_note #2): delta rating RIIL dari respons /api/match-result.
+   *  null / undefined → badge "Rating diperbarui" tanpa angka (no-mock). */
+  ratingDelta?: number | null;
 };
 
 export function GameOverModal({
@@ -33,6 +47,12 @@ export function GameOverModal({
   onReview,
   history = [],
   autoReviewSeconds = 2.5,
+  opponentUsername = null,
+  gameId = null,
+  timeControl = null,
+  rematchRequest = null,
+  pendingAccount = false,
+  ratingDelta = null,
 }: Props) {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [autoReviewCountdown, setAutoReviewCountdown] = useState(false);
@@ -109,6 +129,28 @@ export function GameOverModal({
 
   const playerSummary = humanSide === "white" ? whiteCaps : blackCaps;
   const opponentSummary = humanSide === "white" ? blackCaps : whiteCaps;
+
+  // S6-T3: rematch satu-klik (lib/rematch.ts — D3.2) + status rematch masuk.
+  const [rematchState, setRematchState] = useState<"idle" | "sent" | "error">("idle");
+  const [rematchErr, setRematchErr] = useState<string | null>(null);
+  const canRematch = Boolean(opponentUsername && gameId);
+
+  const requestRematch = async () => {
+    if (!canRematch) return;
+    setRematchState("idle");
+    setRematchErr(null);
+    const res = await sendRematchRequest({
+      gameId: gameId!,
+      opponent: opponentUsername!,
+      timeControl,
+    });
+    if (res.ok) {
+      setRematchState("sent");
+    } else {
+      setRematchState("error");
+      setRematchErr(res.error ?? "Gagal mengirim rematch.");
+    }
+  };
 
   return (
     <>
@@ -217,27 +259,78 @@ export function GameOverModal({
             )}
           </div>
 
-          {/* ELO Rating Adjustment Card */}
+          {/* Rating adjustment — S6-T3: angka RIIL dari /api/match-result
+              (field ratingDelta). Tanpa field → "Rating diperbarui" tanpa
+              angka (jangan angka palsu — bug fix, dev_note #2). */}
           <div className="bg-neutral-950/80 border border-neutral-800 rounded-xl p-2.5 flex items-center justify-between text-xs">
             <span className="text-neutral-400 font-semibold">
               {lang === "id" ? "Penyesuaian Rating ELO:" : "Rating Adjustment:"}
             </span>
-            {isWin && (
-              <Badge className="bg-emerald-600 text-white font-mono font-bold text-xs px-2.5 py-0.5">
-                +16 ELO
+            {ratingDelta != null ? (
+              <Badge
+                className={`font-mono font-bold text-xs px-2.5 py-0.5 ${
+                  ratingDelta > 0
+                    ? "bg-emerald-600 text-white"
+                    : ratingDelta < 0
+                      ? "bg-rose-600 text-white"
+                      : "border border-neutral-600 text-neutral-300 bg-transparent"
+                }`}
+              >
+                {ratingDelta > 0 ? "+" : ""}
+                {ratingDelta}
               </Badge>
-            )}
-            {isLoss && (
-              <Badge className="bg-rose-600 text-white font-mono font-bold text-xs px-2.5 py-0.5">
-                -10 ELO
-              </Badge>
-            )}
-            {isDraw && (
+            ) : (
               <Badge variant="outline" className="border-neutral-600 text-neutral-300 font-mono text-xs px-2.5 py-0.5">
-                +0 ELO
+                {lang === "id" ? "Rating diperbarui" : "Rating updated"}
               </Badge>
             )}
           </div>
+
+          {/* S6-T3: baris aksi Rematch + status rematch masuk (spec §3.2–3.3) */}
+          {(canRematch || rematchRequest) && (
+            <div className="flex flex-col gap-2">
+              {canRematch && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => void requestRematch()}
+                    disabled={rematchState === "sent" || pendingAccount}
+                    className="flex-1 text-xs sm:text-sm font-semibold"
+                  >
+                    {rematchState === "sent"
+                      ? "Menunggu rematch…"
+                      : lang === "id"
+                        ? "Rematch"
+                        : "Rematch"}
+                  </Button>
+                  {pendingAccount && (
+                    <span className="text-[10px] text-neutral-500" role="status">
+                      Akun menunggu persetujuan admin.
+                    </span>
+                  )}
+                </div>
+              )}
+              <div aria-live="polite" className="sr-only">
+                {rematchState === "sent" && "Rematch terkirim. Menunggu lawan."}
+                {rematchState === "error" && (rematchErr ?? "Rematch gagal.")}
+                {rematchRequest && `Menunggu rematch dari @${rematchRequest.fromUser}…`}
+              </div>
+              {rematchState === "sent" && (
+                <p className="text-[11px] text-neutral-400" role="status">
+                  Menunggu rematch dari {lang === "id" ? "lawan" : "opponent"}…
+                </p>
+              )}
+              {rematchState === "error" && (
+                <p className="text-[11px] text-rose-400" role="alert">
+                  {rematchErr}
+                </p>
+              )}
+              {rematchRequest && (
+                <p className="text-[11px] text-neutral-300" role="status">
+                  @{rematchRequest.fromUser} mengirim rematch — dimulai saat diterima.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons — S2-T1: CTA utama "Review Permainan", sekunder "Kembali ke Lobby" */}
           <div className="flex flex-col sm:flex-row gap-2 pt-1">

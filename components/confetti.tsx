@@ -8,6 +8,9 @@ export function Confetti() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    // S6-T3 (spec §3.5): prefers-reduced-motion → konfetti dimatikan
+    // (canvas RAF, bukan CSS — media query tidak jangkau requestAnimationFrame).
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 

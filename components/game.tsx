@@ -39,7 +39,7 @@ import { LeaderboardView } from "@/components/views/leaderboard-view";
 import { FriendsView } from "@/components/views/friends-view";
 import { EndgameDrillsView } from "@/components/views/endgame-drills-view";
 import { useRealtime } from "@/lib/use-realtime";
-import { matcherTopic, presenceTopic, type ChallengeReceived, type GameAdded, type PlayingCountChanged } from "@/lib/realtime/events";
+import { matcherTopic, presenceTopic, type ChallengeReceived, type GameAdded, type PlayingCountChanged, type RematchRequested } from "@/lib/realtime/events";
 import { ClockMovesFullscreen } from "@/components/clock-moves-fullscreen";
 import { TacticalCommentaryCard } from "@/components/tactical-commentary-card";
 import { useSession } from "@/lib/use-session";
@@ -47,12 +47,16 @@ import { useGameHistory, type GameRecord } from "@/lib/game-history";
 import { CoachModeView } from "@/components/coach-mode-view";
 import { VersusBotsView } from "@/components/views/versus-bots-view";
 import { ArchiveView } from "@/components/views/archive-view";
+import { ExplorerView } from "@/components/views/explorer-view";
+import { InsightsView } from "@/components/views/insights-view";
+import { TournamentsView } from "@/components/views/tournaments-view";
 import { SpectatorView } from "@/components/views/spectator-view";
 import { PasteBar } from "@/components/paste-bar";
 import { GameOverModal } from "@/components/game-over-modal";
 import { useChessTheme } from "@/lib/chess-themes";
 import { EvalBar } from "@/components/eval-bar";
 import { useChessClock } from "@/lib/use-chess-clock";
+import { loadStoredTimeControl } from "@/lib/time-control";
 import { IconKingWhite3D, IconKingBlack3D, IconDice3D, IconPlay3D, IconSwap3D } from "@/components/icons3d";
 import {
   applyUci,
@@ -98,6 +102,7 @@ type NavTab =
   | "puzzles"
   | "review" | "scan" | "vision" | "drills"
   | "community" | "leaderboard" | "friends" | "archive"
+  | "explorer" | "insights" | "tournaments"
   | "admin";
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
@@ -201,22 +206,39 @@ const navTabFromHash = (): NavTab => {
     initialCoachSubTabRef.current = "spectator";
     return "coach";
   }
-  const all: NavTab[] = ["home", "play", "bots", "coach", "puzzles", "review", "scan", "vision", "drills", "community", "leaderboard", "friends", "archive", "admin"];
+  // S6-T4: deep-link publik #/insights/{username} — tanpa login.
+  if (h === "insights" || h.startsWith("insights/")) {
+    insightsDeepLinkRef.current = h === "insights" ? null : h.slice("insights/".length);
+    return "insights";
+  }
+  if (h === "explorer" || h.startsWith("explorer?")) {
+    explorerDeepLinkRef.current = h.startsWith("explorer?") ? h : null;
+    return "explorer";
+  }
+  const all: NavTab[] = ["home", "play", "bots", "coach", "puzzles", "review", "scan", "vision", "drills", "community", "leaderboard", "friends", "archive", "explorer", "insights", "tournaments", "admin"];
   return (all.includes(h as NavTab) ? (h as NavTab) : "home") as NavTab;
 };
 // S5-T3: initial tab untuk PuzzleHub / Coach dari deep-link lama.
 const initialPuzzleTabRef: { current: string | null } = { current: null };
 const initialCoachSubTabRef: { current: CoachSubTab | null } = { current: null };
+// S6: deep-link insight (username publik, null = sesi sendiri) + explorer (query ?eco=).
+const insightsDeepLinkRef: { current: string | null } = { current: null };
+const explorerDeepLinkRef: { current: string | null } = { current: null };
 const [navTab, setNavTab] = useState<NavTab>(navTabFromHash);
 // BUG-2 (QA S5): ref tidak memicu re-render — deep-link #/daily|#/rush|#/themes
 // saat view puzzles sudah aktif (atau fresh load) harus tetap mengganti tab.
 // State mirror dari initialPuzzleTabRef, terbaca PuzzleHub via prop initialTab.
 const [puzzleDeepLinkTab, setPuzzleDeepLinkTab] = useState<string | null>(() => initialPuzzleTabRef.current);
+// S6: mirror state untuk deep-link insight + explorer (pola BUG-2 QA S5).
+const [insightsDeepLinkUser, setInsightsDeepLinkUser] = useState<string | null>(() => insightsDeepLinkRef.current);
+const [explorerDeepLinkEco, setExplorerDeepLinkEco] = useState<string | null>(() => explorerDeepLinkRef.current ? (explorerDeepLinkRef.current!.match(/eco=([^&]+)/)?.[1] ?? null) : null);
 // Hash <-> state sinkron (deep-link & back button, design doc S4 §1.5).
 useEffect(() => {
   const onHash = () => {
     setNavTab(navTabFromHash());
     setPuzzleDeepLinkTab(initialPuzzleTabRef.current);
+    setInsightsDeepLinkUser(insightsDeepLinkRef.current);
+    setExplorerDeepLinkEco(explorerDeepLinkRef.current ? (explorerDeepLinkRef.current!.match(/eco=([^&]+)/)?.[1] ?? null) : null);
   };
   window.addEventListener("hashchange", onHash);
   return () => window.removeEventListener("hashchange", onHash);
@@ -228,6 +250,14 @@ const navigate = useCallback((tab: NavTab) => {
   if (tab !== "puzzles" && initialPuzzleTabRef.current) {
     initialPuzzleTabRef.current = null;
     setPuzzleDeepLinkTab(null);
+  }
+  if (tab !== "insights") {
+    insightsDeepLinkRef.current = null;
+    setInsightsDeepLinkUser(null);
+  }
+  if (tab !== "explorer") {
+    explorerDeepLinkRef.current = null;
+    setExplorerDeepLinkEco(null);
   }
   const h = `#/${tab}`;
   if (window.location.hash !== h) window.history.pushState(null, "", h);
@@ -256,6 +286,9 @@ const navigate = useCallback((tab: NavTab) => {
   const [challengeState, setChallengeState] = useState<ChallengeState>("incoming");
   const [playingCount, setPlayingCount] = useState(0);
   const userId = currentUser?.id;
+  // S6-T3: RematchRequested (kontrak §2.2) — lawan kirim rematch dari
+  // modal game-over mereka; kita tampilkan status "Menunggu rematch dari …".
+  const [rematchRequest, setRematchRequest] = useState<{ fromUser: string } | null>(null);
   useRealtime({
     topics: userId ? [matcherTopic(userId), presenceTopic(userId)] : [],
     enabled: Boolean(userId),
@@ -264,6 +297,11 @@ const navigate = useCallback((tab: NavTab) => {
         const c = ev as ChallengeReceived;
         setChallenge({ challengeId: c.challengeId, fromUsername: c.fromUsername });
         setChallengeState("incoming");
+      } else if (ev.type === "rematch_requested") {
+        // S6-T3 (D3.2): konteks "rematch dari partai X" di atas
+        // ChallengeReceived existing — modal game-over menampilkan status.
+        const r = ev as RematchRequested;
+        setRematchRequest({ fromUser: r.fromUser });
       } else if (ev.type === "playing_count_changed") {
         setPlayingCount((ev as PlayingCountChanged).count);
       } else if (ev.type === "game_added") {
@@ -366,6 +404,10 @@ const navigate = useCallback((tab: NavTab) => {
 
   const [customOutcome, setCustomOutcome] = useState<GameOutcome | null>(null);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
+  // S6-T3 (dev_note #2): delta rating RIIL dari /api/match-result — null
+  // sampai respons tiba, sehingga modal menampilkan "Rating diperbarui"
+  // tanpa angka (no-mock).
+  const [ratingDelta, setRatingDelta] = useState<number | null>(null);
   const requestGen = useRef(0);
 
   const chess = useMemo(() => new Chess(fen), [fen]);
@@ -479,14 +521,26 @@ const navigate = useCallback((tab: NavTab) => {
     });
 
     if (effectiveOutcome.winner === "white" || effectiveOutcome.winner === "black") {
-      fetch("/api/match-result", {
+      // S6-T3: ambil ratingDelta RIIL bila endpoint mengirimnya (dev_note #2).
+      // Field opsional — tanpa respons = null → modal "Rating diperbarui".
+      setRatingDelta(null);
+      void fetch("/api/match-result", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           history: moves.map((m: any) => m.san),
           winner: effectiveOutcome.winner,
         }),
-      }).catch((e) => console.warn("Match learning sync failed:", e));
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((d) => {
+          if (d && typeof d.ratingDelta === "number") setRatingDelta(d.ratingDelta);
+        })
+        .catch((e) => console.warn("Match learning sync failed:", e));
+    } else {
+      // Remis: delta rating dihitung server — tanpa angka riil di respons,
+      // modal menampilkan "Rating diperbarui" (no-mock; dev_note #2).
+      setRatingDelta(null);
     }
   }, [effectiveOutcome.over, moves, playMode, humanSide, effectiveOutcome.kind, effectiveOutcome.winner, pvpOpponentName, selectedAiOpponent, timeMode, recordGameResult]);
 
@@ -614,6 +668,8 @@ const navigate = useCallback((tab: NavTab) => {
       setThinking(false);
       setCustomOutcome(null);
       setShowGameOverModal(false);
+      setRatingDelta(null);
+      setRematchRequest(null);
       setOpponentTacticSaved(false);
       resetClocks(timeMode);
       setGameActive(true);
@@ -734,10 +790,12 @@ const navigate = useCallback((tab: NavTab) => {
 
   const leavePvpRoom = useCallback(() => {
     if (pvpRoomCode) {
+      // S6-T3 (D3.1): op "leave" = abort — server menutup room
+      // (0 langkah → outcomeKind "aborted" + publish GameAborted).
       void fetch("/api/pvp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "leave", code: pvpRoomCode, token: pvpToken }),
+        body: JSON.stringify({ action: "leave", code: pvpRoomCode, token: pvpToken, playerToken: pvpToken }),
       });
     }
     setPvpRoom(null);
@@ -1149,7 +1207,9 @@ const navigate = useCallback((tab: NavTab) => {
                   const res = await fetch("/api/challenge", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ toUserId, timeControl: "5+0", rated: false }),
+                    // S6-T2 (§2.1): preset waktu terakhir per user jadi default
+                    // undangan — tanpa data = "3+2" (loadStoredTimeControl).
+                    body: JSON.stringify({ toUserId, timeControl: loadStoredTimeControl(), rated: false }),
                   });
                   if (!res.ok) return false;
                   setPlayMode("pvp");
@@ -1224,6 +1284,43 @@ const navigate = useCallback((tab: NavTab) => {
         {currentUser && navTab === "archive" && (
           <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
             <ArchiveView onGoReview={() => setNavTab("review")} />
+          </div>
+        )}
+        {/* S6-T1: Penjelajah Pembukaan (guest boleh lihat data publik).
+            "Hasilkan di papan" → muat FEN node ke board analisis (S4-T5). */}
+        {navTab === "explorer" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <ExplorerView
+              initialEco={explorerDeepLinkEco ?? undefined}
+              onLoadFen={(fen) => {
+                // Pola S4-T5 fast-path: FEN node langsung ke papan analisis
+                // review — tanpa redirect ke play (konsisten PasteBar S5-T3).
+                setGameStartFen(fen);
+                setFen(fen);
+                setMoves([]);
+                setCustomOutcome(null);
+                setReviewGame({ startFen: fen, moves: [] });
+                setReviewPly(0);
+                setNavTab("review");
+              }}
+            />
+          </div>
+        )}
+        {/* S6-T4: Insight (publik saat deep-link username, sesi sendiri saat kosong) */}
+        {navTab === "insights" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <InsightsView
+              username={insightsDeepLinkUser ?? ""}
+              isSelf={!insightsDeepLinkUser}
+              onOpenLeaderboard={() => setNavTab("leaderboard")}
+              onOpenArchive={() => setNavTab("archive")}
+            />
+          </div>
+        )}
+        {/* S6-T5: Turnamen (daftar arena publik; CTA daftar login-wall) */}
+        {navTab === "tournaments" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <TournamentsView username={currentUser?.username ?? ""} />
           </div>
         )}
         {navTab === "vision" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><LearningHub lang={lang} /></div>}
@@ -1565,37 +1662,43 @@ const navigate = useCallback((tab: NavTab) => {
                             </div>
                           </div>
 
-                          {/* In-Game Actions */}
-                          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--border)]">
-                            <button
-                              onClick={() => {
-                                setCustomOutcome({
-                                  over: true,
-                                  winner: null,
-                                  kind: "draw",
-                                  label: "Remis — Kesepakatan Bersama",
-                                });
-                                setShowGameOverModal(true);
-                              }}
-                              className="ctl ctl-sm ctl-quiet"
-                            >
-                              Tawarkan Remis
-                            </button>
-                            <button
-                              onClick={() => {
-                                setCustomOutcome({
-                                  over: true,
-                                  winner: humanSide === "white" ? "black" : "white",
-                                  kind: "resigned",
-                                  label: "Kekalahan — Anda Menyerah",
-                                });
-                                setShowGameOverModal(true);
-                              }}
-                              className="ctl ctl-sm ctl-danger"
-                            >
-                              Menyerah
-                            </button>
-                          </div>
+                          {/* In-Game Actions — AI mode: action instan lokal
+                              (tanpa lawan manusia). S6-T3 (PvP): kontrol
+                              Remis/Menyerah/Tinggalkan + konfirmasi + status
+                              WS hidup di PvpPanel (panel samping) — TIDAK
+                              diduplikat di sini (anti-duplikat, house style). */}
+                          {playMode !== "pvp" && (
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--border)]">
+                              <button
+                                onClick={() => {
+                                  setCustomOutcome({
+                                    over: true,
+                                    winner: null,
+                                    kind: "draw",
+                                    label: "Remis — Kesepakatan Bersama",
+                                  });
+                                  setShowGameOverModal(true);
+                                }}
+                                className="ctl ctl-sm ctl-quiet"
+                              >
+                                Remis
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setCustomOutcome({
+                                    over: true,
+                                    winner: humanSide === "white" ? "black" : "white",
+                                    kind: "resigned",
+                                    label: "Kekalahan — Anda Menyerah",
+                                  });
+                                  setShowGameOverModal(true);
+                                }}
+                                className="ctl ctl-sm ctl-danger"
+                              >
+                                Menyerah
+                              </button>
+                            </div>
+                          )}
 
                           <button
                             onClick={resetGame}
@@ -2012,6 +2115,12 @@ const navigate = useCallback((tab: NavTab) => {
           setNavTab("review");
         }}
         history={moves.map((m) => m.san)}
+        ratingDelta={ratingDelta}
+        opponentUsername={playMode === "pvp" ? pvpOpponentName : null}
+        gameId={playMode === "pvp" ? pvpRoomCode : null}
+        timeControl={pvpRoom?.timeControl ?? null}
+        rematchRequest={rematchRequest}
+        pendingAccount={currentUser?.status === "pending"}
       />
 
       <PromotionDialog

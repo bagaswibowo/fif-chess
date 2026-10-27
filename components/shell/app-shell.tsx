@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlayingBadge } from "@/components/playing-badge";
 import {
   Home, Swords, Bot, GraduationCap, Puzzle, Dumbbell, Eye, Trophy,
-  Users, User, Archive, Shield, LayoutGrid,
+  Users, User, Archive, Shield, LayoutGrid, Compass, LineChart,
 } from "lucide-react";
 import {
   IconPlay3D, IconBot3D, IconCoach3D, IconPuzzle3D, IconLightning3D,
@@ -28,6 +28,7 @@ export type NavTab =
   | "puzzles"
   | "review" | "scan" | "vision" | "drills"
   | "community" | "leaderboard" | "friends" | "archive"
+  | "explorer" | "insights" | "tournaments"
   | "admin";
 
 export type ShellUser = { id: string; username: string; isAdmin: boolean; elo: number | null } | null;
@@ -61,6 +62,8 @@ const GROUPS: Group[] = [
       { id: "home", label: "Beranda", icon: Home, accent: "var(--nav-accent-play)" },
       { id: "play", label: "Main Online", icon: Swords, badge: true, accent: "var(--nav-accent-play)" },
       { id: "bots", label: "Lawan Bot", icon: Bot, accent: "var(--nav-accent-play)" },
+      // S6-T5 (spec §0.5): Turnamen di grup "Bermain" (Main).
+      { id: "tournaments", label: "Turnamen", icon: Trophy, accent: "var(--nav-accent-play)" },
     ],
   },
   {
@@ -76,6 +79,9 @@ const GROUPS: Group[] = [
     items: [
       { id: "drills", label: "Permainan Akhir", icon: Dumbbell, accent: "var(--nav-accent-drill)" },
       { id: "vision", label: "Latihan Penglihatan", icon: Eye, accent: "var(--nav-accent-drill)" },
+      // S6-T1/T4 (spec §0.5): "Berlatih" = grup Latihan di shell ini.
+      { id: "explorer", label: "Penjelajah", icon: Compass, accent: "var(--nav-accent-drill)" },
+      { id: "insights", label: "Insight", icon: LineChart, accent: "var(--nav-accent-drill)" },
     ],
   },
   {
