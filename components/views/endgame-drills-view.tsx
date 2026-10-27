@@ -222,6 +222,20 @@ export function EndgameDrillsView({
     [puzzle],
   );
 
+  // S8 (audit F1/P0): SEMUA hook WAJIB di atas setiap early return. useMemo ini
+  // tadinya berada DI BAWAH `if (error)`/`if (activeSet)` → saat fetch 401/403
+  // setError memicu cabang `error` yang return sebelum useMemo ter-execute
+  // → jumlah hook render ≠ render sebelumnya → React #300 (crash total).
+  // S7-T5: tema filter = 6 drill theme riil (DrillSet.theme, sumber taksonomi
+  // tunggal lib/endgame-drills.ts — design §5.2, jangan bikin taksonomi baru).
+  const themeChips = useMemo(
+    () => [
+      { key: "", label: "Semua" },
+      ...DRILL_SETS.map((s) => ({ key: s.theme, label: s.title })),
+    ],
+    [],
+  );
+
   // ===== Solve mode =====
   if (activeSet) {
     const refresh = async () => {
@@ -262,40 +276,42 @@ export function EndgameDrillsView({
   }
 
   // ===== Daftar set =====
+  // S8 Pola B (spec §3): .view-head 44px + .view-body scroll internal.
+  // P0/F1: cabang error/loading ini in-render — SEMUA hook sudah di atas
+  // (useMemo themeChips dipindah) → hook konsisten, tidak crash.
   if (error) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16" role="status">
-        <p className="text-sm text-neutral-300">{error}</p>
+      <div className="view-root w-full max-w-4xl mx-auto">
+        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-drill)" }}>
+          <IconShield3D size={20} aria-hidden="true" />
+          <h1 className="text-sm font-black text-white">Permainan Akhir</h1>
+        </div>
+        <div className="view-body flex flex-col items-center gap-3 py-10" role="status">
+          <p className="text-sm text-neutral-300">{error}</p>
+        </div>
       </div>
     );
   }
-
-  // S7-T5: tema filter = 6 drill theme riil (DrillSet.theme, sumber taksonomi
-  // tunggal lib/endgame-drills.ts — design §5.2, jangan bikin taksonomi baru).
-  const themeChips = useMemo(
-    () => [
-      { key: "", label: "Semua" },
-      ...DRILL_SETS.map((s) => ({ key: s.theme, label: s.title })),
-    ],
-    [],
-  );
 
   const filterActive = theme !== "" || minProgress > 0;
   const setCountLabel = `Tampil ${sets?.length ?? 0} set${filterActive ? ` untuk tema ${theme ? themeChips.find((c) => c.key === theme)?.label ?? theme : "Semua"}, progress ≥ ${minProgress}%` : ""}.`;
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 pb-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
+    <div className="view-root w-full max-w-4xl mx-auto">
+      {/* S8 Pola B (spec §3): .view-head 44px (judul section, aksen --nav-accent-drill)
+          + .view-body satu-satunya region scroll internal (filter + grid set + peringkat). */}
+      <div className="view-head flex items-center justify-between gap-2 shrink-0 flex-wrap" style={{ borderLeft: "3px solid var(--nav-accent-drill)" }}>
         <div className="flex items-center gap-3">
-          <IconShield3D size={28} aria-hidden="true" />
-          <h1 className="text-xl font-black text-white">Permainan Akhir</h1>
+          <IconShield3D size={22} aria-hidden="true" />
+          <h1 className="text-sm font-black text-white">Permainan Akhir</h1>
         </div>
         <p className="text-xs font-bold text-neutral-400">Kurasi teka-teki akhir per tema</p>
       </div>
 
-      {/* S7-T5 FILTER ROW (design §5.2): tema chip + progress min slider.
-          Param ?theme=&minProgress= dihitung SQL-SIDE (guardrail D6.2). */}
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3.5 space-y-3">
+      <div className="view-body flex flex-col gap-4 pb-4" style={{ scrollbarWidth: "thin" }}>
+        {/* S7-T5 FILTER ROW (design §5.2): tema chip + progress min slider.
+            Param ?theme=&minProgress= dihitung SQL-SIDE (guardrail D6.2). */}
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3.5 space-y-3">
         <div className="flex items-center gap-2">
           <SlidersHorizontal size={15} className="text-[var(--primary)]" aria-hidden="true" />
           <span className="text-xs font-black text-white">Filter set</span>
@@ -509,6 +525,7 @@ export function EndgameDrillsView({
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );

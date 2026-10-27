@@ -337,9 +337,11 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
   );
 
   return (
-    <div className="h-full max-h-full flex flex-col gap-2 min-h-0 overflow-hidden w-full max-w-7xl mx-auto">
-      <div className="row-between flex-wrap gap-2 shrink-0">
-        <h2 className="section-title m-0 text-lg md:text-xl">{lang === "id" ? "Riwayat & Review Blunder" : "History & Blunder Review"}</h2>
+    <div className="view-root w-full max-w-7xl mx-auto">
+      {/* S8 Pola A (spec §3): .view-head 44px (judul + audio + arsip + back)
+          pinned; aksen section Analisis via --nav-accent-learn. */}
+      <div className="view-head flex items-center gap-2 flex-wrap shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+        <h2 className="section-title m-0 text-base md:text-lg shrink-0">{lang === "id" ? "Riwayat & Review Blunder" : "History & Blunder Review"}</h2>
         {/* S2-T1: Coach audio toggle (design doc §1.3) — mute persist localStorage */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-neutral-400 font-semibold">
@@ -361,22 +363,24 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
             {coachMuted ? <VolumeX size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
           </button>
         </div>
-        <button className="ctl ctl-sm font-bold" onClick={onBackToPlay}>
-          <ArrowLeft size={16} className="shrink-0" /><span>{lang === "id" ? "Kembali Bermain" : "Back to Play"}</span>
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          {/* S4-T5: jalur keluar ke arsip server (S2-T2) — unduh PGN gabungan */}
+          <a
+            href="/api/games/archive/pgn"
+            className="px-3 py-1.5 rounded-full text-xs font-bold text-neutral-300 border border-[var(--border)] bg-[var(--surface)] hover:text-white hover:border-[var(--primary)] transition-all"
+            aria-label="Unduh arsip partai (PGN)"
+          >
+            {lang === "id" ? "Arsip (PGN)" : "Archive (PGN)"}
+          </a>
+          <button className="ctl ctl-sm font-bold" onClick={onBackToPlay}>
+            <ArrowLeft size={16} className="shrink-0" /><span>{lang === "id" ? "Kembali Bermain" : "Back to Play"}</span>
+          </button>
+        </div>
       </div>
 
-      {/* S4-T5: jalur keluar ke arsip server (S2-T2) — unduh PGN gabungan */}
-      <a
-        href="/api/games/archive/pgn"
-        className="px-3 py-1.5 rounded-full text-xs font-bold text-neutral-300 border border-[var(--border)] bg-[var(--surface)] hover:text-white hover:border-[var(--primary)] transition-all"
-        aria-label="Unduh arsip partai (PGN)"
-      >
-        {lang === "id" ? "Arsip (PGN)" : "Archive (PGN)"}
-      </a>
-
-      {/* STANDARDIZED PILL TAB BAR (Consistent with Header) */}
-      <div className="inline-flex p-1 rounded-full bg-[var(--surface)] border border-[var(--border)] self-start gap-1 shrink-0" role="tablist">
+      {/* STANDARDIZED PILL TAB BAR (Consistent with Header) — S8: subtab pin,
+          tetap shrink-0 di atas konten (di dalam .view-root, bukan halaman). */}
+      <div className="flex p-1 rounded-full bg-[var(--surface)] border border-[var(--border)] self-start gap-1 shrink-0" role="tablist" aria-label="Tab review">
         <button
           role="tab"
           aria-selected={tab === "list"}
@@ -405,7 +409,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
 
       {tab === "list" ? (
         <div className="panel p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-sm flex-1 min-h-0 flex flex-col">
-          <div className="table-wrap flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-body table-wrap custom-scrollbar">
             <table className="data-table">
               <thead>
                 <tr>
@@ -472,21 +476,25 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
             className={
               fullscreenReview
                 ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-                : "h-full min-h-0 flex flex-col gap-2 overflow-hidden"
+                : "flex-1 min-h-0 flex flex-col gap-2 overflow-hidden"
             }
           >
-            {/* REVIEW BOARD + BLUNDER & THREAT ANALYSIS PANEL: Seragam dengan Arena & Trik */}
+            {/* REVIEW BOARD + BLUNDER & THREAT ANALYSIS PANEL — S8 Pola A:
+                .view-grid-board (papan kiri + panel .view-body kanan).
+                Papan height-driven (row flex-1 min-h-0 + aspect-ratio) muat
+                utuh 1360×768; panel = satu-satunya region scroll internal. */}
             <div
               className={
                 fullscreenReview
                   ? "flex-1 grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-3 items-stretch min-h-0 overflow-hidden w-full pt-1"
-                  : "flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-3 items-start w-full overflow-y-auto"
+                  : "view-grid-board flex-1 min-h-0"
               }
             >
               
-              {/* LEFT: BOARD WITH DUAL ARROWS & FLOATING BADGES (Unified Golden Layout) */}
+              {/* LEFT: BOARD WITH DUAL ARROWS & FLOATING BADGES (Unified Golden Layout)
+                  — S8 Pola A: papan ≤540px height-driven, muat utuh 1360×768. */}
               <div
-                className="rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-start items-center"
+                className="rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-start items-center min-h-0"
               >
                 {/* 1. Toolbar Kontrol Papan (Putar Papan, Fokus Layar, Shortcuts) */}
                 <BoardControls
@@ -500,7 +508,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 />
 
                 {/* 2. Header Rekaman Pertandingan (Dropdown Ringkas & Bersih) */}
-                <div className="w-full flex items-center justify-between px-2.5 py-1.5 bg-[var(--surface)] rounded-xl border border-[var(--border)] mb-1.5 shrink-0 max-w-[min(100%,calc(100dvh-260px))] gap-2">
+                <div className="w-full flex items-center justify-between px-2.5 py-1.5 bg-[var(--surface)] rounded-xl border border-[var(--border)] mb-1.5 shrink-0 max-w-[540px] gap-2">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
                     <select
@@ -523,7 +531,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 </div>
 
                 {/* 3. Baris Navigasi Langkah (Awal, Mundur, Putar/Jeda, 21/24, Maju, Akhir) DI ATAS PAPAN */}
-                <div className="flex items-center justify-between gap-1.5 w-full max-w-[min(100%,calc(100dvh-260px))] mb-1.5 px-1 py-1 rounded-xl bg-[var(--surface)] border border-[var(--border)] shrink-0">
+                <div className="flex items-center justify-between gap-1.5 w-full max-w-[min(100%,540px)] mb-1.5 px-1 py-1 rounded-xl bg-[var(--surface)] border border-[var(--border)] shrink-0">
                   <div className="flex items-center gap-1">
                     <button
                       className="px-2 py-1 rounded-lg bg-[var(--card)] text-neutral-300 hover:text-white border border-[var(--border)] text-xs font-bold cursor-pointer transition-colors disabled:opacity-40"
@@ -583,16 +591,18 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
                 </div>
 
                 {/* 4. Legenda Badge ala Chess.com di Atas Papan */}
-                <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))] mb-2" />
+                <ChessBadgeLegend className="w-full max-w-[540px] mb-2 shrink-0" />
 
-                {/* 3. Papan Catur + EvalBar Vertikal (Aspect Square Sempurna) */}
-                <div className="flex items-center justify-center gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] min-h-0">
+                {/* 3. Papan Catur + EvalBar Vertikal (Aspect Square Sempurna)
+                    — S8 Pola A/F8: row flex-1 min-h-0 height-driven, papan ≤540px,
+                    muat utuh 1360×768 tanpa scroll internal. */}
+                <div className="flex items-center justify-center gap-2 w-full max-w-[540px] flex-1 min-h-0">
                   <EvalBar
                     fen={currentFen}
                     scoreCp={evalResult?.scoreCp}
                     orientation={flipOrientation ? (active?.humanSide === "white" ? "black" : "white") : active?.humanSide}
                   />
-                  <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative">
+                  <div className="h-full min-h-0 w-auto max-w-full aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative">
                     <Chessboard
                       key={`review-board-${active?.id}-${moveIndex}-${currentFen.split(" ")[0]}`}
                       options={{
@@ -628,12 +638,13 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
 
               </div>
 
-                            {/* RIGHT: BLUNDER & THREAT CARD + RUNNING MOVE LIST */}
+                            {/* RIGHT: BLUNDER & THREAT CARD + RUNNING MOVE LIST
+                                — S8 Pola A: panel .view-body = region scroll internal. */}
               <div
                 className={
                   fullscreenReview
                     ? "h-full overflow-y-auto pr-1 space-y-2.5 custom-scrollbar min-h-0 stack gap-2.5"
-                    : "h-full min-h-0 overflow-y-auto pr-0.5 custom-scrollbar stack gap-2"
+                    : "view-body pr-0.5 custom-scrollbar stack gap-2 min-h-0"
                 }
               >
                 

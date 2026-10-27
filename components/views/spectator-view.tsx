@@ -642,13 +642,13 @@ export function SpectatorView({
       className={
         fullscreenSpectator
           ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-          : "flex flex-col gap-2 w-full max-w-7xl mx-auto"
+          : "view-root w-full max-w-7xl mx-auto min-h-0"
       }
     >
       {showConfetti && <Confetti />}
 
-      {/* TOP HEADER BAR - AI vs Engine Catur */}
-      <div className="panel px-3.5 py-2.5 rounded-xl border border-[var(--border)] flex items-center justify-between gap-3" style={{ background: "var(--card)" }}>
+      {/* S8 Pola A (spec §3): .view-head pinned (44px min) — label + kontrol laga. */}
+      <div className="view-head panel px-3.5 py-2 rounded-xl border border-[var(--border)] flex items-center justify-between gap-3 shrink-0" style={{ background: "var(--card)", borderLeft: "3px solid var(--nav-accent-learn)" }}>
         <div className="flex items-center gap-2.5 min-w-0">
           <IconLightning3D size={22} className="shrink-0" />
           <div className="min-w-0">
@@ -713,11 +713,12 @@ export function SpectatorView({
         </div>
       </div>
 
-      {/* MAIN TWO-COLUMN ARENA LAYOUT */}
-      <div className={`grid grid-cols-1 lg:grid-cols-12 gap-3 items-start ${fullscreenSpectator ? "flex-1 min-h-0" : ""}`}>
+      {/* S8 Pola A: .view-grid-board (papan kiri + panel .view-body kanan);
+          flex-1 min-h-0 override height:100% di dalam kolom flex (§2 spec). */}
+      <div className="view-grid-board flex-1 min-h-0 mt-2">
         
-        {/* LEFT COLUMN (7 Cols): Chess Arena (Controls & Legend on TOP -> Top Player -> Board + Eval -> Bottom Player) */}
-        <div className="lg:col-span-7 flex flex-col gap-1.5">
+        {/* LEFT: Chess Arena (Board + Eval) — F8: papan cap 540px. */}
+        <div className="flex flex-col gap-1.5 min-h-0 w-full max-w-[540px] overflow-hidden">
           
           {/* 1. Unified Board Action Controls (ON TOP) */}
           <BoardControls
@@ -764,13 +765,16 @@ export function SpectatorView({
             <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-215px))]" />
           </div>
 
-          {/* 4. Board Container with Sleek Vertical Dual-Bar Eval */}
+          {/* 4. Board Container with Sleek Vertical Dual-Bar Eval — F8: papan
+              width-driven (aspect-square + flex-1, cap 540px) agar muat utuh
+              di area 1360×768 tanpa scroll internal. (height-driven h-full
+              collapse di rantai BoardShell auto-height — lihat Pola A spec.) */}
           <div className="flex justify-center w-full">
             <div
               className={`flex gap-2 md:gap-3 items-stretch w-full ${
                 fullscreenSpectator
                   ? "lg:w-auto lg:h-full max-h-full"
-                  : "max-w-[min(100%,calc(100dvh-215px))]"
+                  : "max-w-[540px]"
               }`}
             >
               {/* Slim Vertical Dual Eval Bar: Black at top, White at bottom (responsive to orientation) */}
@@ -837,8 +841,9 @@ export function SpectatorView({
           </div>
         </div>
 
-        {/* RIGHT COLUMN (5 Cols): Live AI Commentary & 2-Column Move History */}
-        <div className="lg:col-span-5 flex flex-col gap-2 min-h-0 lg:max-h-[calc(100dvh-11rem)] lg:overflow-y-auto lg:pr-1 custom-scrollbar">
+        {/* RIGHT: Live AI Commentary & 2-Column Move History — S8 Pola A:
+            panel .view-body 320px (satu-satunya region scroll internal). */}
+        <div className="view-body flex flex-col gap-2 min-h-0 pr-1">
           
           {/* LIVE AI COMMENTATOR & TACTICS CARD - Typography 12px with bold & italic */}
           <Card className="panel border-[var(--border)] text-white shadow-xl overflow-hidden shrink-0 max-h-[42%] flex flex-col" style={{ background: "var(--card)" }}>

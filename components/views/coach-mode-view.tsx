@@ -428,13 +428,14 @@ export function CoachModeView({ lang = "id" }: Props) {
       className={
         fullscreenCoach
           ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-          : "min-h-0 flex flex-col gap-2 w-full max-w-7xl mx-auto"
+          : "view-root w-full max-w-7xl mx-auto min-h-0"
       }
     >
       {showConfetti && <Confetti />}
 
-      {/* Header Info Matchup with Standardized BoardControls */}
-      <div className="bg-[var(--card)] px-3 py-2 rounded-xl border border-[var(--border)] shadow-md flex items-center justify-between gap-2 shrink-0 sm:min-h-14 overflow-visible">
+      {/* S8 Pola A (spec §3): .view-head pinned (judul + info) — aksen --nav-accent-learn
+          (section Belajar, app-shell SECTIONS); var ini satu-satunya yang valid utk coach. */}
+      <div className="view-head bg-[var(--card)] px-3 py-1.5 rounded-xl border border-[var(--border)] shadow-md flex items-center justify-between gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
         <div className="flex items-center gap-2 min-w-0">
           <IconBot3D size={22} className="shrink-0" />
           <div className="min-w-0">
@@ -448,7 +449,6 @@ export function CoachModeView({ lang = "id" }: Props) {
             </div>
           </div>
         </div>
-
         <BoardControls
           variant="toolbar"
           orientation={boardOrientation}
@@ -460,10 +460,16 @@ export function CoachModeView({ lang = "id" }: Props) {
         />
       </div>
 
-      {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
-      <div className="flex-1 grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-3 items-stretch min-h-0 overflow-y-auto lg:overflow-hidden pt-1">
-        {/* LEFT COLUMN: Chessboard strictly anchored */}
-        <div className="flex flex-col justify-between items-center h-full min-h-0 w-full max-w-[calc(100vh-190px)] mx-auto py-0.5 space-y-1">
+      {/* F8: papan muat utuh di 1360×768 — papan cap 540px kiri,
+          panel .view-body scroll internal kanan (Pola A, spec §3/§4).
+          flex-1 min-h-0 override height:100% grid di dalam kolom flex
+          agar grid = sisa tinggi setelah .view-head (rantai §2 spec). */}
+      <div className="view-grid-board flex-1 min-h-0">
+        {/* LEFT COLUMN: Chessboard strictly anchored — papan ≤540px (Pola A §3).
+            F8: kolom h-full min-h-0 (rantai min-h-0 §2 spec) → papan row
+            flex-1 height-driven: muat UTUH area konten 1360×768 tanpa scroll
+            internal (tinggi row deterministik = area konten shell). */}
+        <div className="flex flex-col justify-between items-center w-full max-w-[540px] mx-auto space-y-1.5 h-full min-h-0">
           {/* Integrated Opponent Bar with Inline Engine Selector, Eval Badge & Captured Pieces */}
           <div className="w-full flex items-center justify-between px-3 py-1 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
             <div className="flex items-center gap-2 min-w-0">
@@ -494,9 +500,12 @@ export function CoachModeView({ lang = "id" }: Props) {
             <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))]" />
           </div>
 
-          {/* Chessboard Row with Vertical Eval Bar */}
-          <div className="flex justify-center w-full flex-1 min-h-0">
-            <div className="flex gap-2.5 items-center w-full max-w-[min(100%,calc(100dvh-260px))]">
+          {/* Chessboard Row with Vertical Eval Bar — F8: papan width-driven
+              (aspect-square + flex-1, cap kolom 540px) agar tingginya terbatas
+              (≤540) → muat utuh di area 1360×768 tanpa scroll internal.
+              (height-driven h-full akan collapse di rantai BoardShell auto-height.) */}
+          <div className="flex justify-center w-full">
+            <div className="flex gap-2.5 items-stretch w-full max-w-[min(100%,540px)]">
               <EvalBar fen={fen} scoreCp={evalCp} orientation={boardOrientation} />
               <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
                 <Chessboard
@@ -550,8 +559,9 @@ export function CoachModeView({ lang = "id" }: Props) {
 
         </div>
 
-        {/* RIGHT COLUMN: Real-Time Coach Guidance, Threats & Move Review */}
-        <div className="h-full overflow-y-auto pr-1 space-y-2.5 custom-scrollbar min-h-0">
+        {/* RIGHT COLUMN: Real-Time Coach Guidance — S8 Pola A: panel .view-body
+            (320px) = satu-satunya region scroll internal; papan kiri muat utuh. */}
+        <div className="view-body pr-1 space-y-2.5 custom-scrollbar min-h-0">
           {/* Sisi Bidak (3-Card Visual Selector: Putih / Acak / Hitam) */}
           <div className="bg-[var(--card)] p-2.5 rounded-xl border border-[var(--border)] shadow-sm space-y-1.5 shrink-0">
             <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center justify-between">
@@ -754,6 +764,6 @@ export function CoachModeView({ lang = "id" }: Props) {
         </div>
       </div>
 
-          </div>
+    </div>
   );
 }
