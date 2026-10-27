@@ -455,6 +455,16 @@ const navigateHash = useCallback((hash: string) => {
     navigate(tab);
   };
 
+  // F3 (P2, audit bed0bb5): deep-link lama #/admin utk user non-admin →
+  // redirect ke section home. Menunggu sesi ter-resolve dulu (currentUser
+  // terisi) supaya user admin tidak ter-egsek sebelum identitas diketahui;
+  // guest (selalu null) tetap di #/admin — main content menampilkan
+  // empty-state "Khusus admin" (bukan blank), sesuai kontrak spec §4.
+  useEffect(() => {
+    if (navTab !== "admin" || !currentUser || currentUser.isAdmin) return;
+    navigate("home");
+  }, [navTab, currentUser, navigate]);
+
 
   // Sisi yang dipilih pemain. "random" di-resolve sekali di sini lalu dipakai
   // ke AI maupun PvP supaya tidak ada ketidaksamaan antar menu.
@@ -1508,7 +1518,28 @@ const navigateHash = useCallback((hash: string) => {
         )}
         {navTab === "scan" && <div className="view-root"><ScanView onLoadFen={(f) => { setGameStartFen(f); setFen(f); setMoves([]); setNavTab("play"); }} lang={lang} /></div>}
         {navTab === "community" && <div className="view-root"><CommunityView user={currentUser} lang={lang} /></div>}
-        {navTab === "admin" && <div className="view-root"><AdminPanel user={currentUser} /></div>}
+        {/* F3 (P2, audit bed0bb5): deep-link lama #/admin utk non-admin dulu
+            blank (AdminPanel return null). Guard render: panel tidak di-mount
+            utk non-admin; empty-state sopan + CTA — kontrak spec §4 "empty-state,
+            bukan blank/crash". */}
+        {navTab === "admin" && (
+          <div className="view-root">
+            {currentUser?.isAdmin ? (
+              <AdminPanel user={currentUser} />
+            ) : (
+              <>
+                <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-drill)" }}>
+                  <h1 className="text-sm font-black text-white">Admin</h1>
+                </div>
+                <div className="view-body flex flex-col items-center justify-center gap-2 py-10 text-center" role="status">
+                  <p className="text-sm font-bold text-neutral-300">Khusus admin</p>
+                  <p className="text-xs text-neutral-400">Panel administrasi hanya dapat diakses oleh akun admin.</p>
+                  <Button variant="outline" onClick={() => navigate("home")}>Ke Beranda</Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
         {navTab === "bots" && (
           <div className="view-root">
             <VersusBotsView

@@ -5,8 +5,11 @@
  * App Shell ala chess.com: skip-link, topbar (search combobox + akun),
  * sidebar fixed 6 grup beraksen warna (V6 — ui-parity-v2) + Lainnya
  * (accordion), mobile bottom nav 5 item + more-sheet. Aksen per grup via
- * token CSS; icon lucide-react; aria-current tetap TEPAT 1 (regression
- * BUG-3 — dijaga via mounted/isDesktop/accordion gating).
+ * token CSS; icon lucide-react; invariant BUG-3 (QA S5):
+ * `aria-current="page"` TEPAT 1 — hanya di section button (sidebar) / item
+ * bottom-nav / more-sheet, di-gate mounted/isDesktop/accordion. Strip subtab
+ * S8 (spec §4) adalah role="tablist" + item role="tab"/aria-selected
+ * TANPA aria-current, sehingga tidak menduplikasi indikasi halaman aktif.
  * navTab dikontrol parent (Game) via props — deep-link hash ditangani parent.
  */
 
