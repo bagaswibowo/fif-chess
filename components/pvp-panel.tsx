@@ -12,7 +12,7 @@ import type { SessionUser } from "@/lib/use-session";
 import type { Side } from "@/lib/chess";
 import { isValidTimeControl, loadStoredTimeControl, saveStoredTimeControl } from "@/lib/time-control";
 import { useRealtime } from "@/lib/use-realtime";
-import { gameTopic, type DrawOffered, type DrawDeclined, type GameAborted } from "@/lib/realtime/events";
+import { gameTopic, type DrawOffered, type DrawDeclined, type GameAborted, type RoomNote } from "@/lib/realtime/events";
 
 /**
  * S6-T2 (docs/design/sprint6-flows.md §2, ADR-009 D2): preset clock 6 chip +
@@ -46,6 +46,10 @@ export type PvpRoom = {
    *  room lama tidak punya. */
   timeControl?: string;
   rated?: boolean;
+  // S7-T4 (kontrak sprint7 §1.5, additive): flag classroom + catatan
+  // in-memory (cap 50 newest). respons S6 tanpa field tsb tetap valid.
+  classroom?: boolean;
+  notes?: RoomNote[];
 };
 
 type Invite = { code: string; creatorUser: string; creatorSide: "white" | "black"; targeted: boolean; createdAt: number };

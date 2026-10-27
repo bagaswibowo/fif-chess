@@ -38,6 +38,11 @@ import { HomeView } from "@/components/views/home-view";
 import { LeaderboardView } from "@/components/views/leaderboard-view";
 import { FriendsView } from "@/components/views/friends-view";
 import { EndgameDrillsView } from "@/components/views/endgame-drills-view";
+import { CoursesView, type CoursesAuthStatus } from "@/components/views/courses-view";
+import { LessonsView } from "@/components/views/lessons-view";
+import { PracticeView } from "@/components/views/practice-view";
+import { ClassroomView } from "@/components/views/classroom-view";
+import { courseFromHash, learnDetailFromHash, drillsSetIdFromHash } from "@/components/views/learn-shared";
 import { useRealtime } from "@/lib/use-realtime";
 import { matcherTopic, presenceTopic, type ChallengeReceived, type GameAdded, type PlayingCountChanged, type RematchRequested } from "@/lib/realtime/events";
 import { ClockMovesFullscreen } from "@/components/clock-moves-fullscreen";
@@ -103,6 +108,8 @@ type NavTab =
   | "review" | "scan" | "vision" | "drills"
   | "community" | "leaderboard" | "friends" | "archive"
   | "explorer" | "insights" | "tournaments"
+  // S7 (design §0.2): layer belajar — navTab baru + deep-link sub-path.
+  | "courses" | "learn" | "practice" | "classroom"
   | "admin";
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
@@ -215,7 +222,35 @@ const navTabFromHash = (): NavTab => {
     explorerDeepLinkRef.current = h.startsWith("explorer?") ? h : null;
     return "explorer";
   }
-  const all: NavTab[] = ["home", "play", "bots", "coach", "puzzles", "review", "scan", "vision", "drills", "community", "leaderboard", "friends", "archive", "explorer", "insights", "tournaments", "admin"];
+  // S7 (design §0.2): deep-link layer belajar. Konten statis publik — tanpa
+  // login; sub-path menentukan detail (course/{id}, learn/{lesson},
+  // learn/openings/{eco}, drills/{setId}) + query ?tab= utk puzzles themes.
+  if (h === "courses" || h.startsWith("courses/")) {
+    courseDeepLinkIdRef.current =
+      h === "courses" ? null : decodeURIComponent(h.slice("courses/".length).split("?")[0]) || null;
+    return "courses";
+  }
+  if (h === "learn" || h.startsWith("learn/") || h.startsWith("learn?")) {
+    learnDetailRef.current = learnDetailFromHash(`#/${h}`);
+    // ?cat=<modul> → filter katalog lesson ke modul tsb (praktik hub §3.2).
+    const qIdx = h.indexOf("?");
+    learnModuleRef.current =
+      qIdx >= 0 ? (new URLSearchParams(h.slice(qIdx + 1)).get("cat") || null) : null;
+    return "learn";
+  }
+  if (h === "drills" || h.startsWith("drills/")) {
+    drillSetIdRef.current = drillsSetIdFromHash(`#/${h}`);
+    return "drills";
+  }
+  if (h === "puzzles" || h.startsWith("puzzles?")) {
+    // #/puzzles?tab=themes&theme=X → tab themes (S5-T3 pola) — theme utk step
+    // course routing (ADR D1); tema pool dibaca ThemesMasteryView sendiri.
+    const q = h.startsWith("puzzles?") ? h.slice("puzzles?".length) : "";
+    const t = new URLSearchParams(q).get("tab");
+    initialPuzzleTabRef.current = t ?? "unlimited";
+    return "puzzles";
+  }
+  const all: NavTab[] = ["home", "play", "bots", "coach", "puzzles", "review", "scan", "vision", "drills", "community", "leaderboard", "friends", "archive", "explorer", "insights", "tournaments", "courses", "learn", "practice", "classroom", "admin"];
   return (all.includes(h as NavTab) ? (h as NavTab) : "home") as NavTab;
 };
 // S5-T3: initial tab untuk PuzzleHub / Coach dari deep-link lama.
@@ -224,6 +259,12 @@ const initialCoachSubTabRef: { current: CoachSubTab | null } = { current: null }
 // S6: deep-link insight (username publik, null = sesi sendiri) + explorer (query ?eco=).
 const insightsDeepLinkRef: { current: string | null } = { current: null };
 const explorerDeepLinkRef: { current: string | null } = { current: null };
+// S7: deep-link layer belajar (design §0.2) — detail course/lesson + modul learn
+// + set drill (pola mirror state S5-T3/S6 BUG-2 QA: ref → state agar re-render).
+const courseDeepLinkIdRef: { current: string | null } = { current: null };
+const learnDetailRef: { current: string | null } = { current: null };
+const learnModuleRef: { current: string | null } = { current: null };
+const drillSetIdRef: { current: string | null } = { current: null };
 const [navTab, setNavTab] = useState<NavTab>(navTabFromHash);
 // BUG-2 (QA S5): ref tidak memicu re-render — deep-link #/daily|#/rush|#/themes
 // saat view puzzles sudah aktif (atau fresh load) harus tetap mengganti tab.
@@ -232,6 +273,11 @@ const [puzzleDeepLinkTab, setPuzzleDeepLinkTab] = useState<string | null>(() => 
 // S6: mirror state untuk deep-link insight + explorer (pola BUG-2 QA S5).
 const [insightsDeepLinkUser, setInsightsDeepLinkUser] = useState<string | null>(() => insightsDeepLinkRef.current);
 const [explorerDeepLinkEco, setExplorerDeepLinkEco] = useState<string | null>(() => explorerDeepLinkRef.current ? (explorerDeepLinkRef.current!.match(/eco=([^&]+)/)?.[1] ?? null) : null);
+// S7: mirror state layer belajar (course detail / learn detail+modul / drill set).
+const [courseDeepLinkId, setCourseDeepLinkId] = useState<string | null>(() => courseDeepLinkIdRef.current);
+const [learnDetail, setLearnDetail] = useState<string | null>(() => learnDetailRef.current);
+const [learnModule, setLearnModule] = useState<string | null>(() => learnModuleRef.current);
+const [drillSetId, setDrillSetId] = useState<string | null>(() => drillSetIdRef.current);
 // Hash <-> state sinkron (deep-link & back button, design doc S4 §1.5).
 useEffect(() => {
   const onHash = () => {
@@ -239,6 +285,11 @@ useEffect(() => {
     setPuzzleDeepLinkTab(initialPuzzleTabRef.current);
     setInsightsDeepLinkUser(insightsDeepLinkRef.current);
     setExplorerDeepLinkEco(explorerDeepLinkRef.current ? (explorerDeepLinkRef.current!.match(/eco=([^&]+)/)?.[1] ?? null) : null);
+    // S7: mirror layer belajar (navTabFromHash sudah set ref sebagai side-effect).
+    setCourseDeepLinkId(courseDeepLinkIdRef.current);
+    setLearnDetail(learnDetailRef.current);
+    setLearnModule(learnModuleRef.current);
+    setDrillSetId(drillSetIdRef.current);
   };
   window.addEventListener("hashchange", onHash);
   return () => window.removeEventListener("hashchange", onHash);
@@ -259,8 +310,26 @@ const navigate = useCallback((tab: NavTab) => {
     explorerDeepLinkRef.current = null;
     setExplorerDeepLinkEco(null);
   }
+  // S7: klik shell = tab polos (tanpa sub-path) → reset semua detail mirror
+  // agar tidak "nyangkut" ke deep-link layer belajar sebelumnya.
+  courseDeepLinkIdRef.current = null;
+  learnDetailRef.current = null;
+  learnModuleRef.current = null;
+  drillSetIdRef.current = null;
+  setCourseDeepLinkId(null);
+  setLearnDetail(null);
+  setLearnModule(null);
+  setDrillSetId(null);
   const h = `#/${tab}`;
   if (window.location.hash !== h) window.history.pushState(null, "", h);
+}, []);
+// S7: navigasi via hash penuh (sub-path layer belajar: #/courses/{id},
+// #/learn/{lesson}, #/learn/openings/{eco}, #/drills/{setId},
+// #/puzzles?tab=themes&theme=X). Set window.location.hash → hashchange →
+// onHash → navTabFromHash parse sub-path + sync mirror (pola deep-link S5/S6).
+const navigateHash = useCallback((hash: string) => {
+  const h = hash.startsWith("#") ? hash : `#${hash}`;
+  if (window.location.hash !== h) window.location.hash = h;
 }, []);
   const [coachSubTab, setCoachSubTab] = useState<CoachSubTab>(initialCoachSubTabRef.current ?? "coach");
   const [aiDepth, setAiDepth] = useState(14);
@@ -279,6 +348,17 @@ const navigate = useCallback((tab: NavTab) => {
   // Identitas: satu session server-side (cookie httpOnly). Tidak ada lagi
   // identitas client-side yang bisa dipalsukan.
   const { user: currentUser, login, register, logout } = useSession();
+  // S7 (design §0.3): status auth utk view layer belajar — konten statis
+  // terbuka utk guest; aksi tulis (progres, bookmark, attempt) = login +
+  // akun approved; pending → pesan + badge. "rejected" = tidak bisa tulis
+  // → diperlakukan seperti guest (angka "—", bukan 0 riil palsu).
+  const authStatus: CoursesAuthStatus = !currentUser
+    ? "guest"
+    : currentUser.status === "approved"
+      ? "approved"
+      : currentUser.status === "pending"
+        ? "pending"
+        : "guest";
 
   // Realtime inline challenge + badge "Bermain" (S1-T4). Kontrak event dari
   // lib/realtime/events.ts — tidak diubah. Aksi lewat /api/challenge (S1-T2).
@@ -1223,9 +1303,40 @@ const navigate = useCallback((tab: NavTab) => {
           </div>
         )}
         {/* S4-T4: Endgame Drills */}
-        {currentUser && navTab === "drills" && (
+        {navTab === "drills" && (
           <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
-            <EndgameDrillsView />
+            <EndgameDrillsView
+              authStatus={authStatus}
+              username={currentUser?.username}
+              initialSetId={drillSetId}
+              onOpenPlayer={(u) => {
+                window.location.hash = `#/insights/${encodeURIComponent(u)}`;
+              }}
+            />
+          </div>
+        )}
+        {/* S7-T1: Kursus (konten statis publik; detail deep-link #/courses/{id}). */}
+        {navTab === "courses" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <CoursesView authStatus={authStatus} onNavigate={navigateHash} courseDeepLinkId={courseDeepLinkId} />
+          </div>
+        )}
+        {/* S7-T2: Pelajaran + Pelajaran Pembukaan (3-mode ADR D3, materi tertulis D2). */}
+        {navTab === "learn" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <LessonsView authStatus={authStatus} onNavigate={navigateHash} detail={learnDetail} initialModule={learnModule} />
+          </div>
+        )}
+        {/* S7-T3: Pusat Latihan (thin router + kartu target mingguan riil). */}
+        {navTab === "practice" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <PracticeView authStatus={authStatus} onNavigate={navigateHash} />
+          </div>
+        )}
+        {/* S7-T4: Ruang Kelas (collab 2 pemain, in-memory, notice ADR D5). */}
+        {navTab === "classroom" && (
+          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+            <ClassroomView authStatus={authStatus} />
           </div>
         )}
         {!currentUser ? (

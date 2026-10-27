@@ -15,6 +15,7 @@ import { PlayingBadge } from "@/components/playing-badge";
 import {
   Home, Swords, Bot, GraduationCap, Puzzle, Dumbbell, Eye, Trophy,
   Users, User, Archive, Shield, LayoutGrid, Compass, LineChart,
+  Library, NotebookText, Target, Presentation,
 } from "lucide-react";
 import {
   IconPlay3D, IconBot3D, IconCoach3D, IconPuzzle3D, IconLightning3D,
@@ -29,6 +30,8 @@ export type NavTab =
   | "review" | "scan" | "vision" | "drills"
   | "community" | "leaderboard" | "friends" | "archive"
   | "explorer" | "insights" | "tournaments"
+  // S7 (design §0.2): layer belajar — Kursus/Pelajaran/Ruang Kelas + Pusat Latihan.
+  | "courses" | "learn" | "practice" | "classroom"
   | "admin";
 
 export type ShellUser = { id: string; username: string; isAdmin: boolean; elo: number | null } | null;
@@ -82,6 +85,9 @@ const GROUPS: Group[] = [
       // S6-T1/T4 (spec §0.5): "Berlatih" = grup Latihan di shell ini.
       { id: "explorer", label: "Penjelajah", icon: Compass, accent: "var(--nav-accent-drill)" },
       { id: "insights", label: "Insight", icon: LineChart, accent: "var(--nav-accent-drill)" },
+      // S7-T3 (design §0.2): Pusat Latihan di grup Latihan (label ≠ nama grup
+      // agar item tidak tumpang dengan judul grup).
+      { id: "practice", label: "Pusat Latihan", icon: Target, accent: "var(--nav-accent-drill)" },
     ],
   },
   {
@@ -91,6 +97,11 @@ const GROUPS: Group[] = [
       { id: "coach", label: "Pelatih", icon: GraduationCap, accent: "var(--nav-accent-learn)" },
       { id: "review", label: "Analisis", icon: IconMedal3D, accent: "var(--nav-accent-learn)" },
       { id: "scan", label: "Scan Papan", icon: IconScan3D, accent: "var(--nav-accent-learn)" },
+      // S7-T1/T2/T4 (design §0.2): layer belajar S7 — Kursus, Pelajaran, Ruang Kelas.
+      // Kursus pakai Library (ikon `Books` tidak ada di lucide-react).
+      { id: "courses", label: "Kursus", icon: Library, accent: "var(--nav-accent-learn)" },
+      { id: "learn", label: "Pelajaran", icon: NotebookText, accent: "var(--nav-accent-learn)" },
+      { id: "classroom", label: "Ruang Kelas", icon: Presentation, accent: "var(--nav-accent-learn)" },
     ],
   },
   {
@@ -263,6 +274,12 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
   const otherActive = visibleOthers.some((i) => i.id === navTab);
 
   const moreSheetItems: { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean }[] = [
+    // S7-T1/T2/T3/T4 (design §0.2): item menu baru masuk sheet mobile
+    // (sidebar desktop sudah punya item via GROUPS).
+    { id: "courses", label: "Kursus", icon: Library },
+    { id: "learn", label: "Pelajaran", icon: NotebookText },
+    { id: "classroom", label: "Ruang Kelas", icon: Presentation },
+    { id: "practice", label: "Pusat Latihan", icon: Target },
     { id: "scan", label: "Scan Papan", icon: IconScan3D },
     { id: "vision", label: "Materi Belajar", icon: IconVision3D },
     { id: "drills", label: "Permainan Akhir", icon: IconShield3D },

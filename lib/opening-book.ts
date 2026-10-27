@@ -51,6 +51,15 @@ const OPENING_BOOK: Record<string, { name: string; moves: string[] }> = {
   "B30": { name: "Sicilian Defense", moves: ["e4", "c5", "Nf3"] },
 };
 
+/** (S7-T2, ADR-010 D3.1) Akses per-ECO ke data buku REUSE — nama + jalur
+ *  SAN riil dari OPENING_BOOK (sumber tunggal, bukan angka/mock). Dipakai
+ *  view pelajaran pembukaan (lib/lessons wrap). Tanpa data/engine baru. */
+export function openingByEco(eco: string): { name: string; eco: string; moves: string[] } | null {
+  const entry = OPENING_BOOK[eco.toUpperCase()];
+  if (!entry) return null;
+  return { name: entry.name, eco: eco.toUpperCase(), moves: entry.moves };
+}
+
 export function matchOpening(sanMoves: string[]): OpeningInfo | null {
   let best: { eco: string; info: typeof OPENING_BOOK[string]; matched: number } | null = null;
   for (const [eco, info] of Object.entries(OPENING_BOOK)) {
