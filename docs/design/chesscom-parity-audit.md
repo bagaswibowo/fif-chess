@@ -148,8 +148,34 @@ learning hub, spectator, coach tidak butuh login (lihat gap G1).
 | `/puzzles` | Hero "500k+ Problems" + filter theme/difficulty/seed + recommended + daily. | G3.1: puzzle filter (theme+difficulty) wajib; angka "500k" = data riil, jangan hardcode. |
 | `/play` | "Play Chess Online for Free with Friends & Family": quick-find game by rating + join-by-link. | Play vs Friend: CTA join-by-link + matching by rating band. |
 
-**Catatan member-only yang LEWAT (butuh login aktif untuk capture lanjutan):**
-Dashboard (riwayat game + streak), Analysis (upload PGN), Profile/Stats,
-Messages/Challenges, Settings, Leaderboard personal — pola-nya sudah
-tercover di audit §1 matriks; capture visual area ini ditunda sampai
-Pak export cookie fresh (opsi 2).
+> 1. **Guest pass** (cookie lama kadaluwarsa, tanpa bypass Turnstile): tabel di atas.
+> 2. **Member pass** (cookie fresh export Pak, 27 Okt 12:13 UTC — `ACCESS_TOKEN`
+>    JWT + `CHESSCOM_REMEMBERME`): area member-only ter-capture §5 di bawah.
+
+**Catatan tambahan member pass (2026-10-27):**
+- UI chess.com untuk akun ini render **bahasa Indonesia** ("Sembunyikan",
+  "Selengkapnya", "Teka-Teki", "Papan Peringkat") — sinyal kuat: jev-chess
+  boleh 100% copy Indonesia tanpa terjemahan ad-hoc.
+- `/account` memang 404 (chess.com pakai `#dashboard` + tab); pola navigasi
+  akun = hash-route, bukan path.
+- Screenshot + text dump: `member-capture.jsonl` di workspace browser harness.
+
+## 5. Lampiran — Member-only capture (login aktif, 2026-10-27)
+
+> Diambil saat akun `zenwisteriaclarines` LOG IN (cookie fresh). Riil, bukan mock.
+> Copy UI sumber berbahasa Indonesia → langsung jadi acuan copy jev-chess.
+
+| Halaman (URL final) | Pola utama (riil dari capture) | Relevansi jev-chess |
+|---|---|---|
+| `/home` (Dashboard) | Kustomisasi per user: greeting + **streak harian "59 Days"**, grid CTA cepat "Bermain Online 10m/5m/1m", "Lawan Bot / Lawan Pelatih / Lawan Teman", ringkasan stat (rating, games, streaks), "Jawab Teka-Teki", "Pelajaran Berikutnya", "Ulas Partai", "Partai Anda". | Dashboard jev: streak counter riil (dari `puzzle_attempts`/`game_logs`), CTA cepat per time-control, panel "riwayat partai" — bukan hero generik. |
+| `/puzzles` (logged) | Hero "Teka-Teki — Berlatih dengan teka-teki catur…" + personal progress + filter tema; angka personal (7) di header = streak/rating riil. | G3.1: header personal (rating taktik + streak) + filter — data dari endpoint, bukan angka hardcoded "500k". |
+| `/analysis` (logged) | Board + panel "Analisis / Muat / Atur Posisi / Analisis Baru / Koleksi Permainan"; metrik live (Hitam 0.3 / Putih) dari engine. | G4: panel analisis 3-mode (Muat PGN / Atur Posisi / Analisis Baru) + koleksi PGN personal — bukan satu tombol mati. |
+| `/leaderboard` (riil) | Tab "Semua Tipe Partai / Global / Kilat…" + peringkat GM (Hikaru 3470, MagnusCarlsen 3407, nihalsarin 3368…); filter tipe partai. | G5: leaderboard publik multi-tab (riil dari DB jev, bukan skrip GM); filter tipe partai (Blitz/Express/Rapid) + kolom rating riil. |
+| `/learn` (logged) | "Belajar" + CTA "Pelajaran Berikutnya / BAGIAN BERIKUTNYA" + nav Berlatih/Teka-Teki. | S7-T2: lesson hub personal (resume "pelajaran berikutnya" dari `learn-state.json`) — bukan daftar statis. |
+| `/tournaments` (logged) | "Turnamen Langsung Berikutnya" tabel Nama/Pemain/Mulai + CTA "Bergabung"; arena live (BomJ Champions #1 Arena, solo Arena, 3+2 Blitz Arena). | S6 Tournaments: tabel arena live + kolom CTA join-riil (401/403 gate) + status "Dimulai" — bukan card marketing. |
+
+**Pola lintas-halaman (member):**
+- **Header konsisten:** nav 7 grup (Bermain/Teka-Teki/Belajar/Berlatih/Tonton/Komunitas/Lainnya) + user chip (streak + rating) + CTA "Uji Coba Gratis". → jev shell perlu nav-group yang sama + user chip personal.
+- **Streak = elemen sentral retensi** (muncul di dashboard, puzzles, header). → prioritaskan streak-riil di jev (G6 retensi).
+- **Semua angka personal riil** (rating, games, streak) — tidak ada placeholder; jev wajib follow no-mock.
+- **`/account` 404**: navigasi akun via `#` hash + tab, bukan path → jev account/settings juga hash-route.
