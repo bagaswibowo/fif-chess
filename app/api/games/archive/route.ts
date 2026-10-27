@@ -7,11 +7,16 @@
  * Response juga menyertakan counter per tab agar UI chess.com-style tab
  * (docs/design/sprint2.md §2) tidak perlu query terpisah.
  *
+ * Auth FIX-1.2 (audit S8 F5): resolvePgUser memetakan sesi-pending →
+ * 403 account_pending, rejected → 403 account_rejected, belum-login → 401 —
+ * konsisten dengan endpoint S7 (courses/learn/practice), kontrak
+ * lib/use-session.ts: 401 = belum login, 403 = pending/rejected.
+ *
  * Guardrail: query selalu scoped ke session user — tidak ada leak game user lain.
  */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentUser, loadUsers } from "@/lib/auth-store";
+import { resolvePgUser } from "@/lib/puzzle-api";
 import { matchOpening } from "@/lib/opening-book";
 
 export const runtime = "nodejs";
@@ -19,26 +24,10 @@ export const runtime = "nodejs";
 const PAGE_SIZE = 20;
 const FILTERS = new Set(["all", "favorited", "live", "daily", "bot", "coach"]);
 
-async function currentUserId(request: Request): Promise<string | null> {
-  try {
-    const users = await loadUsers();
-    const me = currentUser(request, users);
-    if (!me) return null;
-    // users.json id (u-*) bukan Postgres uuid — petakan ke id pg via username
-    // (pola join docs/db/sprint1.md §Migration, dipakai juga respond/match-result).
-    const pgRows = await query(`SELECT id FROM users WHERE username = $1 LIMIT 1`, [me.username]);
-    if (pgRows.length === 0) return null;
-    return String((pgRows[0] as { id: string }).id);
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(request: Request) {
-  const userId = await currentUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  const auth = await resolvePgUser(request);
+  if (!auth.ok) return auth.response;
+  const userId = auth.user.pgId;
 
   const url = new URL(request.url);
   const filter = url.searchParams.get("filter") ?? "all";
