@@ -130,3 +130,26 @@ learning hub, spectator, coach tidak butuh login (lihat gap G1).
 5. G4.1 akurasi + daftar langkah kritis.
 6. G6 onboarding + standardisasi empty/loading/error.
 7. G7 aksesibilitas sweep.
+
+## 4. Lampiran — Guest capture halaman publik chess.com (2026-10-27)
+
+> Login sesi cookie kadaluwarsa (`psid`/`GCLB` expired) → capture full dilakukan
+> sebagai **guest** (tanpa Turnstile bypass). Area member-only (Dashboard,
+> Analysis, Leaderboard personal, Settings, Messages, Profile stats) **LEWAT**
+> dan ditandai di bawah. Pola di sini = referensi parity untuk G1/G5/G6.
+> Screenshot + text dump: `workspace/20261026_.../guest-pages.json`.
+
+| Halaman (URL final) | Pola utama yang terlihat (guest) | Relevansi jev-chess |
+|---|---|---|
+| `/tournaments` | Hero + CTA "Join tournaments starting every few minutes" (Fast/Arcade/Blitz/Rapid) + grid "Daily Tournaments" multi-game + "Win trophies to display on your Profile". Filter via Search; tanpa login hanya bisa lihat, join dibelokkan ke auth. | S6 Tournaments view: tambahkan tier Fast/Arcade/Blitz/Rapid + badge trophy + CTA join-gated (FIX-1 401/403). |
+| `/watch` | Tab: Live events, ChessTV, Streamers; event card "Titled Tuesday" (jadwal + peserta) + daftar streamer grid. | Watch view: 3 sumber konten (live/event/streamer), card event dengan slot waktu. |
+| `/play/online` (dari `/live`) | Redirect ke lobby Play: kartu "vs Computer / vs Friend / vs Stranger" + clock picker + daily/arena entry. Lobby, bukan live-game list, untuk guest. | Play lobby: 3 mode kartu + preset clock (G2.1) — guest bisa mulai vs Computer tanpa akun. |
+| `/daily` | "Daily Chess Puzzles — Your Daily Challenge": 1 puzzle fokus + streak + share. | Practice (S7-T3): daily-challenge card + streak counter (riil dari puzzle_attempts). |
+| `/puzzles` | Hero "500k+ Problems" + filter theme/difficulty/seed + recommended + daily. | G3.1: puzzle filter (theme+difficulty) wajib; angka "500k" = data riil, jangan hardcode. |
+| `/play` | "Play Chess Online for Free with Friends & Family": quick-find game by rating + join-by-link. | Play vs Friend: CTA join-by-link + matching by rating band. |
+
+**Catatan member-only yang LEWAT (butuh login aktif untuk capture lanjutan):**
+Dashboard (riwayat game + streak), Analysis (upload PGN), Profile/Stats,
+Messages/Challenges, Settings, Leaderboard personal — pola-nya sudah
+tercover di audit §1 matriks; capture visual area ini ditunda sampai
+Pak export cookie fresh (opsi 2).
