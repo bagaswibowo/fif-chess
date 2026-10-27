@@ -14,13 +14,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlayingBadge } from "@/components/playing-badge";
 import {
   Home, Swords, Bot, GraduationCap, Puzzle, Dumbbell, Eye, Trophy,
-  Users, User, Archive, Shield, LayoutGrid, Compass, LineChart,
+  Users, User, Archive, Shield, Compass, LineChart,
   Library, NotebookText, Target, Presentation,
 } from "lucide-react";
 import {
-  IconPlay3D, IconBot3D, IconCoach3D, IconPuzzle3D, IconLightning3D,
-  IconMedal3D, IconScan3D, IconVision3D, IconCommunity3D, IconTrophy3D,
-  IconFriends3D, IconSearch3D, IconTarget3D, IconHistory3D, IconShield3D,
+  IconPlay3D, IconMedal3D, IconScan3D,
+  IconFriends3D, IconSearch3D, IconTarget3D, IconShield3D,
   IconClose3D, IconGlobe3D, IconSettings3D, IconMessages3D, IconBell3D,
 } from "@/components/icons3d";
 
@@ -49,76 +48,97 @@ type AppShellProps = {
 };
 
 type Item = { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean; accent?: string };
-type Group = { title: string; accent: string; items: Item[] };
+type SubTab = { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }> };
+// S8 (docs/design/sprint8-ia.md §1): 21 tab flat → 8 section. Klik section →
+// subtab default; strip subtab 44px (role=tablist) HANYA saat section punya
+// ≥2 subtab (area konten, sticky di atas main). Section tunggal
+// (Beranda/Taktik/Tonton) tanpa strip. Hash lama (#play, #courses, dsb.)
+// tetap resolve di parent (game.tsx).
+type Section = { title: string; accent: string; icon: React.ComponentType<{ size?: number; className?: string }>; items: SubTab[]; default: NavTab; badge?: boolean };
 
 /**
- * V6: 6 grup ala pola chess.com, label jev-chess sendiri. Aksen per grup
- * via token CSS vars (didefinisikan di app/globals.css section V6) —
- * bukan aset eksternal. Icon lucide-react.
+ * S8: 8 section, label jev-chess (Indo). Aksen per section via token CSS
+ * vars V6 (app/globals.css) — bukan hex baru di TSX.
  */
-
-const GROUPS: Group[] = [
+const SECTIONS: Section[] = [
+  {
+    title: "Beranda",
+    icon: Home,
+    accent: "var(--nav-accent-play)",
+    items: [{ id: "home", label: "Beranda", icon: Home }],
+    default: "home",
+  },
   {
     title: "Main",
+    icon: Swords,
     accent: "var(--nav-accent-play)",
+    badge: true,
     items: [
-      { id: "home", label: "Beranda", icon: Home, accent: "var(--nav-accent-play)" },
-      { id: "play", label: "Main Online", icon: Swords, badge: true, accent: "var(--nav-accent-play)" },
-      { id: "bots", label: "Lawan Bot", icon: Bot, accent: "var(--nav-accent-play)" },
-      // S6-T5 (spec §0.5): Turnamen di grup "Bermain" (Main).
-      { id: "tournaments", label: "Turnamen", icon: Trophy, accent: "var(--nav-accent-play)" },
+      { id: "play", label: "Main Online", icon: Swords },
+      { id: "bots", label: "Lawan Bot", icon: Bot },
+      { id: "tournaments", label: "Turnamen", icon: Trophy },
     ],
+    default: "play",
   },
   {
-    title: "Teka-Teki",
+    title: "Taktik",
+    icon: Puzzle,
     accent: "var(--nav-accent-puzzle)",
-    items: [
-      { id: "puzzles", label: "Teka-Teki", icon: Puzzle, accent: "var(--nav-accent-puzzle)" },
-    ],
+    items: [{ id: "puzzles", label: "Teka-Teki", icon: Puzzle }],
+    default: "puzzles",
   },
   {
-    title: "Latihan",
+    title: "Analisis",
+    icon: IconMedal3D,
+    accent: "var(--nav-accent-learn)",
+    items: [
+      { id: "review", label: "Analisis", icon: IconMedal3D },
+      { id: "scan", label: "Scan Papan", icon: IconScan3D },
+    ],
+    default: "review",
+  },
+  {
+    title: "Latih",
+    icon: Dumbbell,
     accent: "var(--nav-accent-drill)",
     items: [
-      { id: "drills", label: "Permainan Akhir", icon: Dumbbell, accent: "var(--nav-accent-drill)" },
-      { id: "vision", label: "Latihan Penglihatan", icon: Eye, accent: "var(--nav-accent-drill)" },
-      // S6-T1/T4 (spec §0.5): "Berlatih" = grup Latihan di shell ini.
-      { id: "explorer", label: "Penjelajah", icon: Compass, accent: "var(--nav-accent-drill)" },
-      { id: "insights", label: "Insight", icon: LineChart, accent: "var(--nav-accent-drill)" },
-      // S7-T3 (design §0.2): Pusat Latihan di grup Latihan (label ≠ nama grup
-      // agar item tidak tumpang dengan judul grup).
-      { id: "practice", label: "Pusat Latihan", icon: Target, accent: "var(--nav-accent-drill)" },
+      { id: "explorer", label: "Penjelajah", icon: Compass },
+      { id: "insights", label: "Insight", icon: LineChart },
+      { id: "practice", label: "Pusat Latihan", icon: Target },
+      { id: "drills", label: "Permainan Akhir", icon: Dumbbell },
+      { id: "vision", label: "Latihan Penglihatan", icon: Eye },
     ],
+    default: "explorer",
   },
   {
     title: "Belajar",
+    icon: GraduationCap,
     accent: "var(--nav-accent-learn)",
     items: [
-      { id: "coach", label: "Pelatih", icon: GraduationCap, accent: "var(--nav-accent-learn)" },
-      { id: "review", label: "Analisis", icon: IconMedal3D, accent: "var(--nav-accent-learn)" },
-      { id: "scan", label: "Scan Papan", icon: IconScan3D, accent: "var(--nav-accent-learn)" },
-      // S7-T1/T2/T4 (design §0.2): layer belajar S7 — Kursus, Pelajaran, Ruang Kelas.
-      // Kursus pakai Library (ikon `Books` tidak ada di lucide-react).
-      { id: "courses", label: "Kursus", icon: Library, accent: "var(--nav-accent-learn)" },
-      { id: "learn", label: "Pelajaran", icon: NotebookText, accent: "var(--nav-accent-learn)" },
-      { id: "classroom", label: "Ruang Kelas", icon: Presentation, accent: "var(--nav-accent-learn)" },
+      { id: "courses", label: "Kursus", icon: Library },
+      { id: "learn", label: "Pelajaran", icon: NotebookText },
+      { id: "classroom", label: "Ruang Kelas", icon: Presentation },
+      { id: "coach", label: "Pelatih", icon: GraduationCap },
     ],
-  },
-  {
-    title: "Sosial",
-    accent: "var(--nav-accent-social)",
-    items: [
-      { id: "community", label: "Komunitas", icon: Users, accent: "var(--nav-accent-social)" },
-      { id: "leaderboard", label: "Papan Peringkat", icon: Trophy, accent: "var(--nav-accent-social)" },
-      { id: "friends", label: "Teman", icon: User, accent: "var(--nav-accent-social)" },
-    ],
+    default: "courses",
   },
   {
     title: "Tonton",
+    icon: Archive,
     accent: "var(--nav-accent-watch)",
+    items: [{ id: "archive", label: "Arsip Partai", icon: Archive }],
+    default: "archive",
+  },
+  {
+    title: "Komunitas",
+    icon: Users,
+    accent: "var(--nav-accent-social)",
     items: [
-      { id: "archive", label: "Arsip Partai", icon: Archive, accent: "var(--nav-accent-watch)" },
+      { id: "leaderboard", label: "Papan Peringkat", icon: Trophy },
+      { id: "friends", label: "Teman", icon: User },
+      { id: "community", label: "Komunitas", icon: Users },
     ],
+    default: "leaderboard",
   },
 ];
 
@@ -126,8 +146,12 @@ const OTHER_ITEMS: Item[] = [
   { id: "admin", label: "Admin", icon: IconShield3D },
 ];
 
+// S8: lookup tab→section (section aktif + strip subtab).
+const SECTION_OF_TAB = new Map<NavTab, Section>();
+for (const s of SECTIONS) for (const it of s.items) SECTION_OF_TAB.set(it.id, s);
+
 const BOTTOM_ITEMS: { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean; accent?: string }[] = [
-  { id: "home", label: "Home", icon: Home, accent: "var(--nav-accent-play)" },
+  { id: "home", label: "Beranda", icon: Home, accent: "var(--nav-accent-play)" },
   { id: "play", label: "Main", icon: Swords, badge: true, accent: "var(--nav-accent-play)" },
   { id: "puzzles", label: "Teka-Teki", icon: Puzzle, accent: "var(--nav-accent-puzzle)" },
   { id: "review", label: "Analisis", icon: IconMedal3D, accent: "var(--nav-accent-learn)" },
@@ -272,24 +296,21 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
 
   const visibleOthers = OTHER_ITEMS.filter((i) => i.id !== "admin" || user?.isAdmin);
   const otherActive = visibleOthers.some((i) => i.id === navTab);
+  // S8: section aktif dari navTab (single source = hash state parent).
+  const activeSection = SECTION_OF_TAB.get(navTab);
+  // Strip subtab (44px, role=tablist): hanya saat section punya ≥2 subtab
+  // (spec §1/§2). Section tunggal (Beranda/Taktik/Tonton) tanpa strip.
+  const subtabs = activeSection && activeSection.items.length >= 2 ? activeSection.items : null;
 
-  const moreSheetItems: { id: NavTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: boolean }[] = [
-    // S7-T1/T2/T3/T4 (design §0.2): item menu baru masuk sheet mobile
-    // (sidebar desktop sudah punya item via GROUPS).
-    { id: "courses", label: "Kursus", icon: Library },
-    { id: "learn", label: "Pelajaran", icon: NotebookText },
-    { id: "classroom", label: "Ruang Kelas", icon: Presentation },
-    { id: "practice", label: "Pusat Latihan", icon: Target },
-    { id: "scan", label: "Scan Papan", icon: IconScan3D },
-    { id: "vision", label: "Materi Belajar", icon: IconVision3D },
-    { id: "drills", label: "Permainan Akhir", icon: IconShield3D },
-    { id: "bots", label: "Lawan Bot", icon: IconBot3D },
-    { id: "coach", label: "Pelatih", icon: IconCoach3D },
-    { id: "leaderboard", label: "Papan Peringkat", icon: IconTrophy3D },
-    { id: "friends", label: "Teman", icon: IconFriends3D },
-    { id: "archive", label: "Arsip", icon: IconHistory3D },
-    ...visibleOthers,
-  ];
+  // S8: more-sheet mobile — item tak terjangkau bottom-nav (5 item + Lainnya),
+  // dikelompokkan per section (menu baru, ID tetap navTab lama).
+  const moreSheetSections = useMemo(() => {
+    const covered = new Set(BOTTOM_ITEMS.map((b) => b.id));
+    return SECTIONS.map((s) => ({
+      section: s,
+      items: s.items.filter((i) => !covered.has(i.id)),
+    })).filter((g) => g.items.length > 0);
+  }, []);
 
   return (
     <div className="app-shell flex flex-col md:flex-row h-screen max-h-screen overflow-hidden bg-[var(--background)] text-white select-none">
@@ -345,22 +366,38 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
         </button>
 
         <nav className="space-y-1 flex-1" aria-label="Navigasi utama">
-          {GROUPS.map((g) => (
-            <div key={g.title} className="mb-2" data-nav-group={g.title}>
-              <div className="px-3 pb-1 pt-2 text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: g.accent }} aria-hidden="true" />
-                {g.title}
-              </div>
-              <div className="space-y-0.5">{g.items.map((it) => renderIconBtn(it, navTab === it.id))}</div>
-            </div>
-          ))}
+          {/* S8: 8 section — klik section → subtab default + strip subtab. */}
+          {SECTIONS.map((s) => {
+            const active = activeSection?.title === s.title;
+            return (
+              <button
+                key={s.title}
+                onClick={() => onNavigate(s.default)}
+                aria-current={mounted && active && isDesktop ? "page" : undefined}
+                aria-label={`${s.title}${active ? " (bagian aktif)" : ""}`}
+                title={s.title}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left duration-150 ${
+                  active
+                    ? "bg-[var(--primary-strong)]/30 text-[var(--primary)]"
+                    : "text-neutral-300 hover:bg-[var(--surface)] hover:text-white"
+                } focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)]`}
+              >
+                <span style={{ color: s.accent }} className="flex shrink-0" aria-hidden="true">
+                  <s.icon size={22} />
+                </span>
+                <span className="flex-1 truncate">{s.title}</span>
+                {s.badge && active && <PlayingBadge count={playingCount} />}
+              </button>
+            );
+          })}
 
-          {/* Lainnya — accordion, default collapsed (design §1.1) */}
+          {/* Lainnya — accordion, default collapsed, admin-only (design §1.1) */}
           <div>
             <button
               onClick={() => setOthersOpen((v) => !v)}
               aria-expanded={othersOpen}
               aria-controls="shell-others"
+              aria-current={mounted && otherActive && isDesktop && !othersOpen ? "page" : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left duration-150 ${
                 otherActive ? "text-[var(--primary)]" : "text-neutral-300 hover:bg-[var(--surface)] hover:text-white"
               } focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)]`}
@@ -499,15 +536,44 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
           </button>
         </div>
 
+        {/* S8: strip subtab 44px (spec §2/§3) — sticky di atas konten, hanya
+            saat section aktif punya ≥2 subtab. Subtab default aktif = navTab
+            (dipilih shell via section click); strip ini memilih antar subtab. */}
+        {subtabs && (
+          <div
+            role="tablist"
+            aria-label={`Bagian ${activeSection!.title}`}
+            className="hidden md:flex items-center gap-1 h-11 shrink-0 px-2 sticky top-0 z-10 bg-[var(--card)]/95 backdrop-blur border-b border-[var(--border)]"
+          >
+            {subtabs.map((st) => (
+              <button
+                key={st.id}
+                role="tab"
+                aria-selected={navTab === st.id}
+                onClick={() => onNavigate(st.id)}
+                className={`flex items-center gap-1.5 px-2.5 h-9 rounded-lg text-xs font-bold transition-all ${
+                  navTab === st.id
+                    ? "bg-[var(--primary-strong)]/30 text-[var(--primary)]"
+                    : "text-neutral-400 hover:bg-[var(--surface)] hover:text-white"
+                } focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)]`}
+              >
+                <span style={{ color: activeSection!.accent }} aria-hidden="true">
+                  <st.icon size={15} />
+                </span>
+                {st.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* MAIN CONTENT */}
         <main
           id="main-content"
           tabIndex={-1}
-          className="app-main flex-1 flex flex-col p-2.5 md:p-5 xl:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0 focus:outline-none"
+          className="app-main flex-1 flex flex-col p-2.5 md:p-5 xl:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5 overflow-hidden h-full max-h-screen w-full min-h-0 focus:outline-none"
         >
           {children}
-        </main>
-      </div>
+        </main>      </div>
 
       {/* MOBILE BOTTOM NAV (5 item + Lainnya) */}
       <nav
@@ -581,25 +647,61 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
                 <IconClose3D size={18} />
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-1 p-3">
-              {moreSheetItems.map((it) => (
-                <button
-                  key={it.id}
-                  onClick={() => {
-                    setMoreOpen(false);
-                    moreTriggerRef.current?.focus();
-                    onNavigate(it.id);
-                  }}
-                  aria-current={mounted && navTab === it.id && !isDesktop ? "page" : undefined}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-bold text-left transition-all ${
-                    navTab === it.id ? "bg-[var(--primary-strong)]/30 text-[var(--primary)]" : "text-neutral-300 hover:bg-[var(--surface)] hover:text-white"
-                  }`}
-                >
-                  <it.icon size={20} aria-hidden="true" />
-                  <span className="truncate">{it.label}</span>
-                  {it.badge && <PlayingBadge count={playingCount} />}
-                </button>
+            <div className="p-3 space-y-3">
+              {moreSheetSections.map(({ section, items }) => (
+                <div key={section.title}>
+                  <div className="px-1 pb-1 text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: section.accent }} aria-hidden="true" />
+                    {section.title}
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {items.map((it) => (
+                      <button
+                        key={it.id}
+                        onClick={() => {
+                          setMoreOpen(false);
+                          moreTriggerRef.current?.focus();
+                          onNavigate(it.id);
+                        }}
+                        aria-current={mounted && navTab === it.id && !isDesktop ? "page" : undefined}
+                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-bold text-left transition-all ${
+                          navTab === it.id ? "bg-[var(--primary-strong)]/30 text-[var(--primary)]" : "text-neutral-300 hover:bg-[var(--surface)] hover:text-white"
+                        }`}
+                      >
+                        <it.icon size={20} aria-hidden="true" />
+                        <span className="truncate">{it.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
+              {visibleOthers.length > 0 && (
+                <div>
+                  <div className="px-1 pb-1 text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "var(--nav-accent-drill)" }} aria-hidden="true" />
+                    Lainnya
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {visibleOthers.map((it) => (
+                      <button
+                        key={it.id}
+                        onClick={() => {
+                          setMoreOpen(false);
+                          moreTriggerRef.current?.focus();
+                          onNavigate(it.id);
+                        }}
+                        aria-current={mounted && navTab === it.id && !isDesktop ? "page" : undefined}
+                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-bold text-left transition-all ${
+                          navTab === it.id ? "bg-[var(--primary-strong)]/30 text-[var(--primary)]" : "text-neutral-300 hover:bg-[var(--surface)] hover:text-white"
+                        }`}
+                      >
+                        <it.icon size={20} aria-hidden="true" />
+                        <span className="truncate">{it.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

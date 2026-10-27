@@ -471,6 +471,63 @@ select.field { padding-right: 2rem; }
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 18rem);
 }
 
+/* S8 (docs/design/sprint8-ia.md §3): kontrak helper layout view — nama kelas
+   ini KONTRAK bagi semua view (agent view memakai class ini, jangan bikin
+   class sendiri di TSX). Rantai no-scroll §2: main > .view-root > pola A/B/C/D. */
+.view-root {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.view-head {
+  height: 44px;
+  flex-shrink: 0;
+}
+.view-body {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* Pola A: papan+panel — papan ≤540px kiri, panel kanan. */
+.view-grid-board {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 0.75rem; /* 12px */
+}
+/* Pola C: detail 2 kolom — konten detail + sidebar meta. */
+.view-cols {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 0.75rem; /* 12px */
+}
+/* Pola D: dashboard — grid kartu rapat, tinggi-terpas total ≤ area konten. */
+.view-cards {
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 0.75rem; /* 12px */
+}
+/* Mobile <768px: tinggi view dipatok h-full agar .view-body/.view-cards
+   tetap jadi satu-satunya region scroll internal (main scroll-able shell
+   mobile, di atas bottom-nav). */
+@media (max-width: 767px) {
+  .view-root {
+    height: 100%;
+  }
+}
+@media (max-width: 767px) {
+  .view-grid-board,
+  .view-cols {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
 .play-layout {
   align-content: start;
 }
@@ -550,14 +607,6 @@ select.field { padding-right: 2rem; }
   .game-side-panel-content {
     min-height: 0;
     overscroll-behavior: contain;
-  }
-
-  .mobile-feature-page {
-    height: calc(100dvh - 4rem);
-    max-height: calc(100dvh - 4rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-bottom: 0.5rem;
   }
 
   .board-card {

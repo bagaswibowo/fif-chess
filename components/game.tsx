@@ -1249,8 +1249,10 @@ const navigateHash = useCallback((hash: string) => {
     >
 
 
-      {/* MAIN CONTENT AREA */}
-      <main className="app-main flex-1 flex flex-col p-2.5 md:p-5 xl:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5 overflow-y-auto md:overflow-hidden h-full max-h-screen w-full min-h-0">
+      {/* S8: AppShell merender <main id="main-content"> — konten child masuk
+          satu main (main-in-main tidak valid HTML). Kelas app-main
+          dipegang main shell; di sini hanya div pembungkus. */}
+      <div className="flex-1 flex flex-col min-h-0">
         {challenge && (
           <ChallengeLayer challenge={challenge} state={challengeState} controlLabel={CHALLENGE_CONTROL_LABEL} onAccept={() => void resolveChallenge(true)} onDecline={() => void resolveChallenge(false)} />
         )}
@@ -1264,12 +1266,12 @@ const navigateHash = useCallback((hash: string) => {
         )}
         {/* S4-T3: Leaderboard & Friends */}
         {currentUser && navTab === "leaderboard" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <LeaderboardView onPlayOnline={() => navigate("play")} />
           </div>
         )}
         {currentUser && navTab === "friends" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <FriendsView
               onChallenge={async (u) => {
                 try {
@@ -1302,9 +1304,9 @@ const navigateHash = useCallback((hash: string) => {
             />
           </div>
         )}
-        {/* S4-T4: Endgame Drills */}
+        {/* S4-T4: Endgame Drills — S8: wrapper .view-root; Pola A komposisi di dalam view (spec §3). */}
         {navTab === "drills" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <EndgameDrillsView
               authStatus={authStatus}
               username={currentUser?.username}
@@ -1317,25 +1319,25 @@ const navigateHash = useCallback((hash: string) => {
         )}
         {/* S7-T1: Kursus (konten statis publik; detail deep-link #/courses/{id}). */}
         {navTab === "courses" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <CoursesView authStatus={authStatus} onNavigate={navigateHash} courseDeepLinkId={courseDeepLinkId} />
           </div>
         )}
         {/* S7-T2: Pelajaran + Pelajaran Pembukaan (3-mode ADR D3, materi tertulis D2). */}
         {navTab === "learn" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <LessonsView authStatus={authStatus} onNavigate={navigateHash} detail={learnDetail} initialModule={learnModule} />
           </div>
         )}
         {/* S7-T3: Pusat Latihan (thin router + kartu target mingguan riil). */}
         {navTab === "practice" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <PracticeView authStatus={authStatus} onNavigate={navigateHash} />
           </div>
         )}
         {/* S7-T4: Ruang Kelas (collab 2 pemain, in-memory, notice ADR D5). */}
         {navTab === "classroom" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <ClassroomView authStatus={authStatus} />
           </div>
         )}
@@ -1388,19 +1390,20 @@ const navigateHash = useCallback((hash: string) => {
           </div>
         )}
         {navTab === "puzzles" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <PuzzleHub lang={lang} initialTab={(puzzleDeepLinkTab ?? initialPuzzleTabRef.current ?? "unlimited") as "unlimited" | "daily" | "rush" | "themes"} onBack={() => setNavTab("play")} />
           </div>
         )}
         {currentUser && navTab === "archive" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <ArchiveView onGoReview={() => setNavTab("review")} />
           </div>
         )}
         {/* S6-T1: Penjelajah Pembukaan (guest boleh lihat data publik).
-            "Hasilkan di papan" → muat FEN node ke board analisis (S4-T5). */}
+            "Hasilkan di papan" → muat FEN node ke board analisis (S4-T5).
+            S8 spec §3 Pola B: wrapper .view-root; list/filter pin di dalam view. */}
         {navTab === "explorer" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <ExplorerView
               initialEco={explorerDeepLinkEco ?? undefined}
               onLoadFen={(fen) => {
@@ -1419,7 +1422,7 @@ const navigateHash = useCallback((hash: string) => {
         )}
         {/* S6-T4: Insight (publik saat deep-link username, sesi sendiri saat kosong) */}
         {navTab === "insights" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <InsightsView
               username={insightsDeepLinkUser ?? ""}
               isSelf={!insightsDeepLinkUser}
@@ -1430,14 +1433,14 @@ const navigateHash = useCallback((hash: string) => {
         )}
         {/* S6-T5: Turnamen (daftar arena publik; CTA daftar login-wall) */}
         {navTab === "tournaments" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <TournamentsView username={currentUser?.username ?? ""} />
           </div>
         )}
-        {navTab === "vision" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><LearningHub lang={lang} /></div>}
+        {navTab === "vision" && <div className="view-root"><LearningHub lang={lang} /></div>}
 
         {navTab === "review" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             {/* S2-T4: paste bar fast-path di atas panel review (design doc §3.1) */}
             <div className="px-1 pt-1 pb-1 shrink-0">
               <PasteBar
@@ -1503,11 +1506,11 @@ const navigateHash = useCallback((hash: string) => {
             />
           </div>
         )}
-        {navTab === "scan" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><ScanView onLoadFen={(f) => { setGameStartFen(f); setFen(f); setMoves([]); setNavTab("play"); }} lang={lang} /></div>}
-        {navTab === "community" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><CommunityView user={currentUser} lang={lang} /></div>}
-        {navTab === "admin" && <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar"><AdminPanel user={currentUser} /></div>}
+        {navTab === "scan" && <div className="view-root"><ScanView onLoadFen={(f) => { setGameStartFen(f); setFen(f); setMoves([]); setNavTab("play"); }} lang={lang} /></div>}
+        {navTab === "community" && <div className="view-root"><CommunityView user={currentUser} lang={lang} /></div>}
+        {navTab === "admin" && <div className="view-root"><AdminPanel user={currentUser} /></div>}
         {navTab === "bots" && (
-          <div className="mobile-feature-page h-full max-h-full min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="view-root">
             <VersusBotsView
               lang={lang}
               onSelectBot={(bot) => {
@@ -2169,7 +2172,7 @@ const navigateHash = useCallback((hash: string) => {
         )}
       </>
         )}
-      </main>
+      </div>
 
       {authNotice && (
         <div
