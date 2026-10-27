@@ -379,6 +379,10 @@ type PvpRoom = {
   status: "waiting" | "active" | "finished";
   winner?: "white" | "black" | "draw" | null;
   outcomeKind?: string;
+  // S6-T2 (kontrak sprint6 §1.2): pilihan jam + mode pairing dicatat di room
+  // agar client kedua (join) & panel menampilkannya — TIDAK dibuang server.
+  timeControl?: string;
+  rated?: boolean;
 };
 const rooms = new Map<string, PvpRoom>();
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -393,6 +397,9 @@ function publicRoom(r: PvpRoom) {
     code: r.code, status: r.status, fen: r.fen, moves: r.moves, turn: r.turn,
     whiteUser: r.whiteUser, blackUser: r.blackUser, invitedUser: r.invitedUser,
     winner: r.winner ?? null, outcomeKind: r.outcomeKind ?? null,
+    // S6-T2 (TL F1): field opsional di-include eksplisit agar shape respons
+    // stabil & client kedua (join) melihat pilihan jam + mode pairing.
+    timeControl: r.timeControl ?? null, rated: r.rated ?? false,
   };
 }
 
@@ -431,6 +438,15 @@ async function roomCreate(request: Request, _userId: string) {
   let side: "white" | "black" = body.side === "black" ? "black" : "white";
   if (body.side === "random") side = Math.random() < 0.5 ? "white" : "black";
 
+  // S6-T2 (TL F1): catat pilihan jam + mode pairing dari request create.
+  // timeControl divalidasi \d{1,3}+\d{1,3} (aturan kontrak §1.2, pola
+  // handleCreate) + cap panjang 10 (games.time_control varchar(10)); nilai
+  // tak valid/absen → tidak disimpan (room lama tetap valid).
+  const rawTc = typeof body.timeControl === "string" ? body.timeControl.trim() : "";
+  const timeControl =
+    rawTc && /^\d{1,3}\+\d{1,3}$/.test(rawTc) ? rawTc.slice(0, 10) : undefined;
+  const rated = typeof body.rated === "boolean" ? body.rated : undefined;
+
   const token = randomUUID();
   const room: PvpRoom = {
     code: "FIF-" + randomBytes(3).toString("hex").toUpperCase(),
@@ -447,6 +463,8 @@ async function roomCreate(request: Request, _userId: string) {
     moves: [],
     turn: "w",
     status: "waiting",
+    timeControl,
+    rated,
   };
   rooms.set(room.code, room);
   return NextResponse.json({ success: true, room: publicRoom(room), yourSide: side, playerToken: token });

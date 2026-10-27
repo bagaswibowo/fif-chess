@@ -83,7 +83,17 @@ export async function tournamentSweepOnce(): Promise<void> {
      WHERE status = 'registration' AND start_at <= NOW()
      RETURNING id, time_control, rated`,
   );
-  for (const t of dueRows) emitUpdated(t.id, "live", 0);
+  // TL F3: sebelum emit flip live, hitung entrant 'joined' RIIL di arena
+  // tersebut — subscriber WS yang hanya merge `entrants` tidak lagi stuck di
+  // "Daftar: 0/{capacity}" setelah flip live (0 adalah angka placeholder lama).
+  for (const t of dueRows) {
+    const cRows = await query<{ n: number | null }>(
+      `SELECT COUNT(*)::int AS n FROM tournament_players WHERE tournament_id = $1 AND status = 'joined'`,
+      [t.id],
+    );
+    const entrants = Number(cRows[0]?.n ?? 0);
+    emitUpdated(t.id, "live", entrants);
+  }
 
   // 2) Arena live: pastikan tiap entrant joined punya seek ticket aktif
   //    (ronde 2 untuk yang belum ter-pair; ronde 1 tepat setelah flip).

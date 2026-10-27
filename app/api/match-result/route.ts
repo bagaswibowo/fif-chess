@@ -3,7 +3,7 @@ import { Chess } from "chess.js";
 import { reinforceMatchDopamine, recordMatchExperience } from "@/lib/experience";
 import { publishBusEvent } from "@/lib/realtime/bus.ts";
 import { query } from "@/lib/db";
-import { loadUsers } from "@/lib/auth-store";
+import { loadUsers, currentUser } from "@/lib/auth-store";
 import { eloUpdate } from "@/lib/rating";
 import { gameTopic, type GameEnded, type PlayingCountChanged } from "@/lib/realtime/events.ts";
 import { clearPlaying } from "@/lib/realtime/playing-count.ts";
@@ -32,54 +32,26 @@ export async function POST(req: Request) {
       const ended: GameEnded = { type: "game_ended", gameId: String(body.gameId ?? "local"), result: String(winner ?? "draw") };
       publishBusEvent(gameTopic(ended.gameId), ended);
 
+      // S2-T3 + TL F2: rating snapshot (K=20, lib/rating.ts) AKAN di-await —
+      // bukan fire-and-forget — agar ratingDelta session user (dev_note §3.6)
+      // masuk respons. Helper menjalankan persis SQL snapshot existing
+      // (UPDATE games finished + rating before/after, UPDATE users) dan
+      // mengembalikan delta sisi user (null bila snapshot gagal / side tak
+      // dikenal / game bukan row DB — modal degrades ke "Rating diperbarui").
+      const ratingDelta = await finishGameSnapshot(req, ended.gameId, winner);
+
       // TL review C5: jev:playing harus di-SREM saat game selesai — badge
-      // "Bermain N" tidak boleh monoton naik. Ambil kedua pemain dari row
-      // game, petakan pg uuid -> store userId (join key username — lihat
-      // docs/db/sprint1.md §Migration), lalu SREM + publish PlayingCountChanged
-      // ke topik presence (global) setelah count benar-benar turun.
+      // "Bermain N" tidak boleh monoton naik. SREM fire-and-forget (tidak
+      // memblokir respons); tanpa filter status='active' karena snapshot
+      // di-atas sudah mengubah status jadi 'finished'.
       void (async () => {
         try {
           const gameId = ended.gameId;
           const rows = await query(
-            `SELECT white_user_id, black_user_id FROM games WHERE id = $1 AND status = 'active'`,
+            `SELECT white_user_id, black_user_id FROM games WHERE id = $1`,
             [gameId],
           );
-          if (rows.length === 0) return; // bukan game DB (mis. vs bot) atau sudah di-update
-          // S2-T3 rating snapshot: sebelum UPDATE finished, hitung delta elo
-          // (K=20, lib/rating.ts) dari users.rating kedua pemain dan simpan
-          // before/after di games — sumber arsip delta + stats graph.
-          try {
-            const pgIdsSnap = [String((rows[0] as { white_user_id: string }).white_user_id), String((rows[0] as { black_user_id: string }).black_user_id)];
-            const ratingRows = await query(
-              `SELECT id, rating FROM users WHERE id = ANY($1::uuid[]) ORDER BY array_position($1::uuid[], id)`,
-              [pgIdsSnap],
-            );
-            if (ratingRows.length === 2) {
-              const [wR, bR] = ratingRows as { id: string; rating: number }[];
-              const whiteBefore = Number(wR.rating) || 1200;
-              const blackBefore = Number(bR.rating) || 1200;
-              const score = winner === "white" ? 1 : winner === "black" ? 0 : 0.5;
-              const { whiteAfter, blackAfter } = eloUpdate(whiteBefore, blackBefore, score);
-              await query(
-                `UPDATE games SET status = 'finished', ended_at = NOW(),
-                        white_rating_before = $2, white_rating_after = $3,
-                        black_rating_before = $4, black_rating_after = $5
-                 WHERE id = $1`,
-                [gameId, whiteBefore, whiteAfter, blackBefore, blackAfter],
-              );
-              await query(
-                `UPDATE users SET rating = v.new_rating, updated_at = NOW()
-                 FROM (VALUES ($1::uuid, $2::int), ($3::uuid, $4::int)) AS v(id, new_rating)
-                 WHERE users.id = v.id`,
-                [pgIdsSnap[0], whiteAfter, pgIdsSnap[1], blackAfter],
-              );
-            } else {
-              await query(`UPDATE games SET status = 'finished', ended_at = NOW() WHERE id = $1`, [gameId]);
-            }
-          } catch (snapErr) {
-            console.error("[match-result] rating snapshot gagal (game tetap finished):", snapErr);
-            await query(`UPDATE games SET status = 'finished', ended_at = NOW() WHERE id = $1`, [gameId]);
-          }
+          if (rows.length === 0) return; // bukan game DB (mis. vs bot)
           const pgIds = [String((rows[0] as { white_user_id: string }).white_user_id), String((rows[0] as { black_user_id: string }).black_user_id)];
           const pgRows = await query(`SELECT id, username FROM users WHERE id = ANY($1::uuid[])`, [pgIds]);
           const usernameByPg = new Map(pgRows.map((r) => [String((r as { id: string }).id), String((r as { username: string }).username)]));
@@ -97,10 +69,93 @@ export async function POST(req: Request) {
         }
       })();
 
-      return NextResponse.json({ ok: true, learned: true, plies: history.length });
+      return NextResponse.json({ ok: true, learned: true, plies: history.length, ratingDelta });
     }
     return NextResponse.json({ ok: true, learned: false });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message }, { status: 500 });
+  }
+}
+
+/**
+ * S2-T3 + TL F2 (dev_note §3.6): rating snapshot AKAN di-await (bukan
+ * fire-and-forget) agar delta sisi user masuk respons. Menjalankan persis
+ * SQL snapshot existing (UPDATE games finished + rating before/after, UPDATE
+ * users) dan mengembalikan `myAfter - myBefore` untuk user sesi ini.
+ *
+ * Return `number | null`:
+ *  - `number` = delta ELO (K=20) sisi user — user sesi terdeteksi sebagai
+ *    putih/hitam di row game DB;
+ *  - `null` bila snapshot gagal, game bukan row DB (mis. vs bot), atau sisi
+ *    user tak terdeteksi (user sesi tidak putih/hitam game). Modal game-over
+ *    otomatis degrades ke "Rating diperbarui" (no-mock, spec §3.3).
+ */
+async function finishGameSnapshot(
+  req: Request,
+  gameId: string,
+  winner: unknown,
+): Promise<number | null> {
+  try {
+    const rows = await query<{ white_user_id: string; black_user_id: string }>(
+      `SELECT white_user_id, black_user_id FROM games WHERE id = $1 AND status = 'active'`,
+      [gameId],
+    );
+    if (rows.length === 0) return null; // bukan game DB (vs bot) atau sudah di-update
+    const whitePgId = String((rows[0] as { white_user_id: string }).white_user_id);
+    const blackPgId = String((rows[0] as { black_user_id: string }).black_user_id);
+
+    // Sesi user → pg uuid (join key username, pola currentUserId api/pvp).
+    // Gagal resolusi → side tak dikenal → delta null (bukan crash).
+    let myPgId: string | null = null;
+    try {
+      const users = await loadUsers();
+      const me = currentUser(req, users);
+      if (me) {
+        const meRows = await query<{ id: string }>(
+          `SELECT id FROM users WHERE username = $1 LIMIT 1`,
+          [me.username],
+        );
+        if (meRows.length > 0) myPgId = String((meRows[0] as { id: string }).id);
+      }
+    } catch {
+      myPgId = null;
+    }
+
+    // S2-T3 rating snapshot: K=20 dari users.rating, simpan before/after.
+    const ratingRows = await query<{ id: string; rating: number }>(
+      `SELECT id, rating FROM users WHERE id = ANY($1::uuid[]) ORDER BY array_position($1::uuid[], id)`,
+      [[whitePgId, blackPgId]],
+    );
+    if (ratingRows.length === 2) {
+      const [wR, bR] = ratingRows as { id: string; rating: number }[];
+      const whiteBefore = Number(wR.rating) || 1200;
+      const blackBefore = Number(bR.rating) || 1200;
+      const score = winner === "white" ? 1 : winner === "black" ? 0 : 0.5;
+      const { whiteAfter, blackAfter } = eloUpdate(whiteBefore, blackBefore, score);
+      await query(
+        `UPDATE games SET status = 'finished', ended_at = NOW(),
+                white_rating_before = $2, white_rating_after = $3,
+                black_rating_before = $4, black_rating_after = $5
+         WHERE id = $1`,
+        [gameId, whiteBefore, whiteAfter, blackBefore, blackAfter],
+      );
+      await query(
+        `UPDATE users SET rating = v.new_rating, updated_at = NOW()
+         FROM (VALUES ($1::uuid, $2::int), ($3::uuid, $4::int)) AS v(id, new_rating)
+         WHERE users.id = v.id`,
+        [whitePgId, whiteAfter, blackPgId, blackAfter],
+      );
+      // TL F2: delta sisi user (myAfter - myBefore); null bila tak terdeteksi.
+      if (myPgId === whitePgId) return whiteAfter - whiteBefore;
+      if (myPgId === blackPgId) return blackAfter - blackBefore;
+      return null;
+    } else {
+      await query(`UPDATE games SET status = 'finished', ended_at = NOW() WHERE id = $1`, [gameId]);
+      return null; // snapshot rating gagal → null
+    }
+  } catch (snapErr) {
+    console.error("[match-result] rating snapshot gagal (game tetap finished):", snapErr);
+    await query(`UPDATE games SET status = 'finished', ended_at = NOW() WHERE id = $1`, [gameId]).catch(() => {});
+    return null;
   }
 }

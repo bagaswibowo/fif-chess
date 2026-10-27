@@ -64,12 +64,16 @@ function insightQuery(window: Window, gameType: TimeCategory | null, color: "w" 
   };
   if (window !== "all") where.push(`g.ended_at > NOW() - ${ph(`${window} days`)}::interval`);
   if (gameType) {
-    // Kategori diturunkan dari time_control (aturan api/leaderboard); seed
-    // 99,99% NULL → COALESCE ke 0 (bullet), filter tetap benar.
-    const min = `COALESCE(split_part(g.time_control, '+', 1)::int, 0)`;
-    if (gameType === "bullet") where.push(`${min} < 3`);
-    else if (gameType === "blitz") where.push(`${min} >= 3 AND ${min} < 10`);
-    else where.push(`${min} >= 10`);
+    // TL F4 (pin deliberat): baris time_control NULL TIDAK BOLEH masuk bucket
+    // kategori — seed live 99,99% NULL (docs/db/sprint6.md §1) harus tetap di
+    // bucket 'unknown' byType, bukan "bullet". Maka filter kategori mensyaratkan
+    // time_control tak-NULL + parseable; tanpa guard ini, filter 'bullet'
+    // (minut COALESCE→0 <3) akan mencocokkan seluruh baris NULL — filter &
+    // bucket byType sependapat sekarang.
+    const min = `split_part(g.time_control, '+', 1)::int`;
+    if (gameType === "bullet") where.push(`g.time_control IS NOT NULL AND ${min} < 3`);
+    else if (gameType === "blitz") where.push(`g.time_control IS NOT NULL AND ${min} >= 3 AND ${min} < 10`);
+    else where.push(`g.time_control IS NOT NULL AND ${min} >= 10`);
   }
   if (color === "w") where.push(`g.white_user_id = $1::uuid`);
   if (color === "b") where.push(`g.black_user_id = $1::uuid`);
