@@ -270,31 +270,66 @@ export function CommunityView({ user, lang = "id" }: Props) {
   }, [threads, filterCategory, searchQuery]);
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-2.5 pb-6">
-      {/* HEADER FORUM */}
-      <div className="panel px-3.5 py-2.5 row-between flex-wrap gap-2" style={{ background: "var(--card)" }}>
-        <div className="row items-center gap-2">
-          <IconCommunity3D size={22} />
-          <h2 className="text-base md:text-lg font-black text-white m-0">
+    <div className="view-root w-full max-w-6xl mx-auto">
+      {/* Head tunggal (S8 Pola B) — 44px: judul + filter/pill + aksi; tetap terpasang di semua mode agar tidak layout shift */}
+      <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-social)" }}>
+        <div className="flex items-center gap-2 min-w-0 shrink-0">
+          <IconCommunity3D size={18} />
+          <h2 className="text-sm font-black text-white m-0 truncate">
             Komunitas &amp; Forum Catur FIF Tel-U
           </h2>
         </div>
 
-        <div className="row gap-2">
-          {viewMode === "thread" && (
+        {viewMode === "index" && (
+          <>
+            <div className="relative flex-1 min-w-[150px] max-w-xs">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari topik diskusi atau username..."
+                aria-label="Cari topik diskusi"
+                className="w-full p-1.5 pl-7 rounded-lg bg-[var(--background)] border border-[var(--border)] text-sm text-white focus:outline-none focus:border-[var(--nav-accent-social)]"
+              />
+              <div className="absolute left-2 top-2 pointer-events-none opacity-60">
+                <IconSearch3D size={13} />
+              </div>
+            </div>
+            <div className="flex items-center gap-1 overflow-x-auto min-w-0 text-xs shrink-0" style={{ scrollbarWidth: "none" }}>
+              <button
+                onClick={() => setFilterCategory("all")}
+                className={`ctl ctl-xs shrink-0 ${filterCategory === "all" ? "ctl-active ring-1 ring-[var(--nav-accent-social)] font-bold" : "ctl-quiet"}`}
+              >
+                Semua
+              </button>
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setFilterCategory(c.id)}
+                  className={`ctl ctl-xs shrink-0 ${filterCategory === c.id ? "ctl-active ring-1 ring-[var(--nav-accent-social)] font-bold" : "ctl-quiet"}`}
+                >
+                  {c.name} ({c.threadsCount})
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          {viewMode === "thread" && activeThread && (
             <button
               onClick={() => setViewMode("index")}
-              className="ctl ctl-sm ctl-quiet flex items-center gap-1"
+              className="ctl ctl-xs ctl-quiet flex items-center gap-1"
             >
-              <span className="flex items-center gap-1.5"><ArrowLeft size={16} className="shrink-0" /><span>Kembali</span></span>
+              <span className="flex items-center gap-1.5"><ArrowLeft size={14} className="shrink-0" /><span>Kembali</span></span>
             </button>
           )}
 
           <button
             onClick={() => setShowNewTopicModal(true)}
-            className="ctl ctl-sm ctl-primary font-bold flex items-center gap-1.5"
+            className="ctl ctl-xs ctl-primary font-bold flex items-center gap-1.5"
           >
-            <IconPencil3D size={14} />
+            <IconPencil3D size={13} />
             <span>Buat Topik Baru</span>
           </button>
         </div>
@@ -425,273 +460,290 @@ export function CommunityView({ user, lang = "id" }: Props) {
         </div>
       )}
 
-      {/* VIEW 1: INDEX TOPIK FORUM */}
+      {/* VIEW 1: INDEX TOPIK FORUM (S8 Pola B — filter di head global, list scroll internal) */}
       {viewMode === "index" && (
-        <div className="stack-tight">
-          {/* SEARCH & CATEGORY FILTER */}
-          <div className="panel p-2.5 stack-tight" style={{ background: "var(--surface)" }}>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari topik diskusi atau username..."
-                className="w-full p-1.5 pl-7 rounded-lg bg-[var(--background)] border border-[var(--border)] text-sm text-white focus:outline-none focus:border-[var(--primary)]"
-              />
-              <div className="absolute left-2 top-2 pointer-events-none opacity-60">
-                <IconSearch3D size={13} />
-              </div>
-            </div>
-
-            <div className="row items-center gap-1 overflow-x-auto pt-0.5 text-sm">
-              <button
-                onClick={() => setFilterCategory("all")}
-                className={`ctl ctl-sm shrink-0 ${filterCategory === "all" ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"}`}
-              >
-                Semua Kategori
-              </button>
-              {categories.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setFilterCategory(c.id)}
-                  className={`ctl ctl-sm shrink-0 ${filterCategory === c.id ? "ctl-active ring-1 ring-[var(--primary)] font-bold" : "ctl-quiet"}`}
-                >
-                  {c.name} ({c.threadsCount})
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* THREADS LIST */}
-          <div className="stack-tight">
-            {filteredThreads.map((th) => (
-              <div
-                key={th.id}
-                onClick={() => {
-                  setActiveThreadId(th.id);
-                  setViewMode("thread");
-                }}
-                className="panel p-3 hover:border-[var(--primary)] transition-all cursor-pointer stack-tight"
-                style={{ background: "var(--card)" }}
-              >
-                <div className="row-between flex-wrap gap-1.5">
-                  <div className="row items-center gap-1.5 min-w-0">
-                    {th.isPinned && <IconPin3D size={14} />}
-                    {th.isHot && <IconFire3D size={14} />}
-                    <h3 className="font-bold text-base md:text-lg text-white hover:text-[var(--primary)] truncate m-0">
-                      {th.title}
-                    </h3>
-                  </div>
-                  <span className="ctl ctl-sm" style={{ background: "var(--surface)" }}>
-                    {th.categoryName}
-                  </span>
-                </div>
-
-                <p className="prose-note text-sm text-neutral-300 line-clamp-2 m-0">
-                  {th.posts[0]?.content}
-                </p>
-
-                <div className="row-between pt-1 text-sm text-[var(--muted-foreground)]" style={{ borderTop: "1px solid var(--border)" }}>
-                  <div className="row items-center gap-1.5">
-                    <span className="font-bold text-white">@{th.authorUsername}</span>
-                    <span>·</span>
-                    <span>{th.lastActivity}</span>
-                    {th.attachedGameSummary && (
-                      <span className="text-[var(--primary)] font-bold">
-                        · [Partai vs {th.attachedGameSummary.opponent}]
+        <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+          {filteredThreads.length === 0 ? (
+              <p className="text-sm text-neutral-400 py-6 text-center" role="status">
+                {isLoading ? "Memuat topik…" : "Tidak ada topik untuk filter ini."}
+              </p>
+            ) : (
+              <div className="stack-tight">
+                {filteredThreads.map((th) => (
+                  <div
+                    key={th.id}
+                    onClick={() => {
+                      setActiveThreadId(th.id);
+                      setViewMode("thread");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setActiveThreadId(th.id);
+                        setViewMode("thread");
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Buka diskusi ${th.title}`}
+                    className="panel p-2.5 rounded-xl hover:border-[var(--nav-accent-social)] transition-all cursor-pointer stack-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ring)]"
+                    style={{ background: "var(--card)" }}
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {th.isPinned && <IconPin3D size={13} />}
+                        {th.isHot && <IconFire3D size={13} />}
+                        <h3 className="font-bold text-sm text-white hover:text-[var(--nav-accent-social)] truncate m-0">
+                          {th.title}
+                        </h3>
+                      </div>
+                      <span className="ctl ctl-xs shrink-0" style={{ background: "var(--surface)" }}>
+                        {th.categoryName}
                       </span>
-                    )}
+                    </div>
+
+                    <p className="prose-note text-xs text-neutral-300 line-clamp-1 m-0">
+                      {th.posts[0]?.content}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-1 text-xs text-[var(--muted-foreground)]" style={{ borderTop: "1px solid var(--border)" }}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-bold text-white">@{th.authorUsername}</span>
+                        <span>·</span>
+                        <span>{th.lastActivity}</span>
+                        {th.attachedGameSummary && (
+                          <span className="text-[var(--nav-accent-social)] font-bold truncate">
+                            · [Partai vs {th.attachedGameSummary.opponent}]
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 font-bold text-white shrink-0">
+                        <IconMessages3D size={12} />
+                        <span>{th.repliesCount} Balasan</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 font-bold text-white">
-                    <IconMessages3D size={12} />
-                    <span>{th.repliesCount} Balasan</span>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
         </div>
       )}
 
-      {/* VIEW 2: THREAD DETAIL & REPLIES */}
-      {viewMode === "thread" && (
-        <div className="stack-tight">
-          <div className="panel p-3 stack-tight" style={{ background: "var(--card)" }}>
-            <div className="row-between flex-wrap gap-1">
-              <span className="ctl ctl-sm font-bold" style={{ borderColor: "var(--primary)", color: "var(--primary)" }}>
-                {activeThread.categoryName}
-              </span>
-              <span className="text-sm text-[var(--muted-foreground)]">
-                Aktivitas: {activeThread.lastActivity}
-              </span>
+      {/* VIEW 2: THREAD DETAIL & REPLIES (S8 Pola C — konten .view-body + sidebar meta) */}
+      {viewMode === "thread" && activeThread && (
+        <div className="view-cols flex-1 min-h-0">
+          {/* Kolom utama: judul + posts + form balasan (scroll internal) */}
+          <div className="view-body flex flex-col gap-2 min-h-0" style={{ scrollbarWidth: "thin" }}>
+            <div className="panel p-3 rounded-xl shrink-0" style={{ background: "var(--card)" }}>
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <span className="ctl ctl-xs font-bold" style={{ borderColor: "var(--nav-accent-social)", color: "var(--nav-accent-social)" }}>
+                  {activeThread.categoryName}
+                </span>
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  Aktivitas: {activeThread.lastActivity}
+                </span>
+              </div>
+              <h1 className="text-sm font-black text-white m-0 mt-1">
+                {activeThread.title}
+              </h1>
             </div>
-            <h1 className="text-sm md:text-base font-black text-white m-0">
-              {activeThread.title}
-            </h1>
-          </div>
 
-          {/* Posts List */}
-          <div className="stack-tight">
-            {activeThread.posts.map((post) => (
-              <div key={post.id} className="panel p-3 stack-tight" style={{ background: "var(--card)" }}>
-                <div className="row-between pb-1.5" style={{ borderBottom: "1px solid var(--border)" }}>
-                  <div className="row items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)] text-[var(--primary)] font-bold flex items-center justify-center text-sm">
-                      {post.avatarInitials}
+            {/* Posts List */}
+            <div className="flex flex-col gap-2">
+              {activeThread.posts.map((post) => (
+                <div key={post.id} className="panel p-3 rounded-xl stack-tight" style={{ background: "var(--card)" }}>
+                  <div className="flex items-center justify-between pb-1.5" style={{ borderBottom: "1px solid var(--border)" }}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-[var(--nav-accent-social)]/20 border border-[var(--nav-accent-social)] text-[var(--nav-accent-social)] font-bold flex items-center justify-center text-sm">
+                        {post.avatarInitials}
+                      </div>
+                      <div>
+                        <span className="font-bold text-sm text-white">@{post.authorUsername}</span>
+                        <span className="text-sm text-[var(--muted-foreground)] ml-1.5">{post.createdAt}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-bold text-sm text-white">@{post.authorUsername}</span>
-                      <span className="text-sm text-[var(--muted-foreground)] ml-1.5">{post.createdAt}</span>
+                    <span className="text-sm font-mono text-[var(--muted-foreground)]">#{post.postNumber}</span>
+                  </div>
+
+                  <FormattedPostContent text={post.content} />
+
+                  {post.attachedGames && post.attachedGames.length > 0 ? (
+                    <div className="space-y-3 mt-2">
+                      {post.attachedGames.map((g, idx) => (
+                        <EmbeddedMatchPlayer key={g.id || idx} game={g} authorUsername={post.authorUsername} />
+                      ))}
                     </div>
-                  </div>
-                  <span className="text-sm font-mono text-[var(--muted-foreground)]">#{post.postNumber}</span>
-                </div>
+                  ) : post.attachedGame ? (
+                    <EmbeddedMatchPlayer game={post.attachedGame} authorUsername={post.authorUsername} />
+                  ) : null}
 
-                <FormattedPostContent text={post.content} />
-
-                {post.attachedGames && post.attachedGames.length > 0 ? (
-                  <div className="space-y-3 mt-2">
-                    {post.attachedGames.map((g, idx) => (
-                      <EmbeddedMatchPlayer key={g.id || idx} game={g} authorUsername={post.authorUsername} />
-                    ))}
-                  </div>
-                ) : post.attachedGame ? (
-                  <EmbeddedMatchPlayer game={post.attachedGame} authorUsername={post.authorUsername} />
-                ) : null}
-
-                <div className="row-between pt-1.5 text-sm" style={{ borderTop: "1px solid var(--border)" }}>
-                  <button
-                    onClick={async () => {
-                      const res = await fetch("/api/community", {
-                        method: "POST",
-                        body: JSON.stringify({ action: "like", threadId: activeThread.id, postId: post.id }),
-                      }).then(r => r.json());
-                      if (res.threads) setThreads(res.threads);
-                    }}
-                    className="ctl ctl-sm flex items-center gap-1 font-bold"
-                  >
-                    <IconThumbsUp3D size={16} />
-                    <span>{post.likes} Suka</span>
-                  </button>
-
-
-                  <button
-                    onClick={() => handleQuotePost(post)}
-                    className="ctl ctl-sm ctl-quiet flex items-center gap-1 font-bold"
-                  >
-                    <IconQuote3D size={16} />
-                    <span>Kutip Balas</span>
-                  </button>
-
-                  {user?.username === post.authorUsername && (
+                  <div className="flex items-center justify-between pt-1.5 text-sm" style={{ borderTop: "1px solid var(--border)" }}>
                     <button
                       onClick={async () => {
-                        if (confirm("Yakin ingin menghapus kiriman ini?")) {
-                          const res = await fetch("/api/community", {
-                            method: "POST",
-                            body: JSON.stringify({ action: "delete_post", threadId: activeThread.id, postId: post.id }),
-                          }).then(r => r.json());
-                          if (res.threads) {
-                             if (!res.threads.find((t: any) => t.id === activeThread.id)) {
-                               setViewMode("index");
-                             }
-                             setThreads(res.threads);
-                          } else {
-                             alert(res.error || "Gagal menghapus.");
-                          }
-                        }
+                        const res = await fetch("/api/community", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "like", threadId: activeThread.id, postId: post.id }),
+                        }).then(r => r.json());
+                        if (res.threads) setThreads(res.threads);
                       }}
-                      className="ctl ctl-sm flex items-center gap-1 font-bold text-[var(--destructive)] hover:bg-[var(--destructive)] hover:text-white"
+                      className="ctl ctl-xs flex items-center gap-1 font-bold"
                     >
-                      <IconTrash3D size={16} />
-                      <span>Hapus</span>
+                      <IconThumbsUp3D size={14} />
+                      <span>{post.likes} Suka</span>
                     </button>
-                  )}
 
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {/* REPLY FORM */}
-          <div className="panel p-3 stack-tight" style={{ background: "var(--surface)" }}>
-            <span className="label font-bold text-sm">Balas Diskusi:</span>
-
-            {/* Game Attachment Modal & Attached Games in Reply */}
-            <GameAttachmentModal
-              isOpen={showGameImportPicker}
-              onClose={() => setShowGameImportPicker(false)}
-              games={gameHistory}
-              selectedGames={selectedGamesForReply}
-              onConfirm={(chosen) => setSelectedGamesForReply(chosen)}
-            />
-
-            {selectedGamesForReply.length > 0 && (
-              <div className="p-2 rounded-xl bg-[var(--card)] border border-[var(--primary)] stack-tight text-sm">
-                <div className="row-between pb-1 border-b border-[var(--border)]">
-                  <span className="font-bold text-white flex items-center gap-1.5">
-                    <IconHistory3D size={14} /> Permainan Terlampir ({selectedGamesForReply.length}):
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowGameImportPicker(true)}
-                    className="text-sm text-[var(--primary)] font-bold hover:underline"
-                  >
-                    + Ubah / Tambah Permainan
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {selectedGamesForReply.map((g) => (
-                    <div
-                      key={g.id}
-                      className="px-2 py-0.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center gap-1.5 text-sm"
+                    <button
+                      onClick={() => handleQuotePost(post)}
+                      className="ctl ctl-xs ctl-quiet flex items-center gap-1 font-bold"
                     >
-                      <span className="font-bold text-white">vs {g.opponent}</span>
-                      <span className="text-sm text-[var(--muted-foreground)]">
-                        ({g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedGamesForReply((prev) => prev.filter((item) => item.id !== g.id))}
-                        className="text-[var(--destructive)] font-bold hover:scale-110 p-0.5"
-                        title="Hapus"
-                      >
-                        <IconClose3D size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                      <IconQuote3D size={14} />
+                      <span>Kutip Balas</span>
+                    </button>
 
-            {/* Rich Text Editor for Reply */}
-            <div className="rounded-xl border border-[var(--border)] overflow-hidden">
-              <RichTextToolbar
-                textareaRef={replyInputRef}
-                value={replyText}
-                onChange={setReplyText}
-                onAttachGame={() => setShowGameImportPicker(!showGameImportPicker)}
-                attachedGamesCount={selectedGamesForReply.length}
-              />
-              <textarea
-                ref={replyInputRef}
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                rows={4}
-                placeholder="Ketik balasan Anda..."
-                className="w-full p-2.5 bg-[var(--card)] text-sm text-white focus:outline-none resize-y"
-              />
+                    {user?.username === post.authorUsername && (
+                      <button
+                        onClick={async () => {
+                          if (confirm("Yakin ingin menghapus kiriman ini?")) {
+                            const res = await fetch("/api/community", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "delete_post", threadId: activeThread.id, postId: post.id }),
+                            }).then(r => r.json());
+                            if (res.threads) {
+                               if (!res.threads.find((t: any) => t.id === activeThread.id)) {
+                                 setViewMode("index");
+                               }
+                               setThreads(res.threads);
+                            } else if (res.error) {
+                               setThreads([]);
+                               alert(res.error);
+                            }
+                          }
+                        }}
+                        className="ctl ctl-xs flex items-center gap-1 font-bold text-[var(--destructive)] hover:bg-[var(--destructive)] hover:text-white"
+                      >
+                        <IconTrash3D size={14} />
+                        <span>Hapus</span>
+                      </button>
+                    )}
+
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div className="row justify-end pt-1">
-              <button
-                onClick={handleSubmitReply}
-                disabled={!replyText.trim() && selectedGamesForReply.length === 0}
-                className="ctl ctl-sm ctl-primary font-bold flex items-center gap-1 px-3"
-              >
-                <IconMessages3D size={13} />
-                <span>Kirim Balasan</span>
-              </button>
+            {/* REPLY FORM */}
+            <div className="panel p-3 rounded-xl shrink-0" style={{ background: "var(--surface)" }}>
+              <span className="label font-bold text-sm">Balas Diskusi:</span>
+
+              {/* Game Attachment Modal & Attached Games in Reply */}
+              <GameAttachmentModal
+                isOpen={showGameImportPicker}
+                onClose={() => setShowGameImportPicker(false)}
+                games={gameHistory}
+                selectedGames={selectedGamesForReply}
+                onConfirm={(chosen) => setSelectedGamesForReply(chosen)}
+              />
+
+              {selectedGamesForReply.length > 0 && (
+                <div className="p-2 rounded-xl bg-[var(--card)] border border-[var(--nav-accent-social)] stack-tight text-sm">
+                  <div className="row-between pb-1 border-b border-[var(--border)]">
+                    <span className="font-bold text-white flex items-center gap-1.5">
+                      <IconHistory3D size={14} /> Permainan Terlampir ({selectedGamesForReply.length}):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowGameImportPicker(true)}
+                      className="text-sm text-[var(--nav-accent-social)] font-bold hover:underline"
+                    >
+                      + Ubah / Tambah Permainan
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {selectedGamesForReply.map((g) => (
+                      <div
+                        key={g.id}
+                        className="px-2 py-0.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center gap-1.5 text-sm"
+                      >
+                        <span className="font-bold text-white">vs {g.opponent}</span>
+                        <span className="text-sm text-[var(--muted-foreground)]">
+                          ({g.humanSide === "white" ? "Putih" : "Hitam"} · {g.outcomeKind})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedGamesForReply((prev) => prev.filter((item) => item.id !== g.id))}
+                          className="text-[var(--destructive)] font-bold p-0.5"
+                          title="Hapus"
+                        >
+                          <IconClose3D size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Rich Text Editor for Reply */}
+              <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+                <RichTextToolbar
+                  textareaRef={replyInputRef}
+                  value={replyText}
+                  onChange={setReplyText}
+                  onAttachGame={() => setShowGameImportPicker(!showGameImportPicker)}
+                  attachedGamesCount={selectedGamesForReply.length}
+                />
+                <textarea
+                  ref={replyInputRef}
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  rows={3}
+                  placeholder="Ketik balasan Anda..."
+                  className="w-full p-2.5 bg-[var(--card)] text-sm text-white focus:outline-none resize-y"
+                />
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  onClick={handleSubmitReply}
+                  disabled={!replyText.trim() && selectedGamesForReply.length === 0}
+                  className="ctl ctl-xs ctl-primary font-bold flex items-center gap-1 px-3"
+                >
+                  <IconMessages3D size={13} />
+                  <span>Kirim Balasan</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Kolom meta: ringkasan thread + aktivitas */}
+          <div className="view-body min-h-0" style={{ scrollbarWidth: "thin" }}>
+            <div className="panel p-3 rounded-xl" style={{ background: "var(--card)" }}>
+              <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide">Ringkasan</p>
+              <dl className="mt-2 flex flex-col gap-1.5 text-xs">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-neutral-400">Kategori</dt>
+                  <dd className="font-bold text-white text-right">{activeThread.categoryName}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-neutral-400">Pembuat</dt>
+                  <dd className="font-bold text-white">@{activeThread.authorUsername}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-neutral-400">Balasan</dt>
+                  <dd className="font-bold text-white tabular-nums">{activeThread.repliesCount}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-neutral-400">Aktivitas</dt>
+                  <dd className="text-neutral-300">{activeThread.lastActivity}</dd>
+                </div>
+              </dl>
+              {activeThread.attachedGameSummary && (
+                <p className="mt-2 text-xs text-[var(--nav-accent-social)] font-bold">
+                  Partai vs {activeThread.attachedGameSummary.opponent} · {activeThread.attachedGameSummary.movesCount} langkah · {activeThread.attachedGameSummary.playedAs === "white" ? "Putih" : "Hitam"} menang
+                </p>
+              )}
             </div>
           </div>
         </div>

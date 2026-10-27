@@ -93,8 +93,6 @@ export function ArchiveView({ onGoReview }: Props) {
       setTotal(Number(data.total ?? 0));
     } catch {
       setError("Gagal memuat arsip.");
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -108,7 +106,7 @@ export function ArchiveView({ onGoReview }: Props) {
       prevPageRef.current = page;
       listTopRef.current?.focus();
     }
-  }, [page, loading]);
+  }, [page]);
 
   const downloadPgn = useCallback(async (ids: string[]) => {
     if (ids.length === 0) return;
@@ -207,163 +205,161 @@ export function ArchiveView({ onGoReview }: Props) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col gap-3 min-h-0">
-      <div className="flex items-center justify-between gap-2 shrink-0">
-        <h2 className="text-base font-bold">Arsip Partai</h2>
-        <div className="flex gap-2">
-          {onGoReview && (
-            <Button variant="outline" size="sm" onClick={onGoReview}>
-              Ulas Partai
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={downloading || games.length === 0}
-            onClick={() => void downloadPgn(games.map((g) => g.id))}
-          >
-            {downloading ? "Mengunduh…" : "Unduh PGN"}
-          </Button>
+    <div className="view-root w-full max-w-3xl mx-auto">
+      <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-watch)" }}>
+        <h2 className="text-sm font-black text-white shrink-0">Arsip Partai</h2>
+        <div className="flex-1" aria-hidden="true" />
+        <div className="flex flex-wrap gap-1 shrink-0" role="tablist" aria-label="Filter arsip">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              role="tab"
+              aria-selected={filter === f.id}
+              onClick={() => { setFilter(f.id); setPage(1); }}
+              className={`px-2 py-0.5 rounded-md text-xs font-semibold border transition-colors ${
+                filter === f.id
+                  ? "bg-[var(--nav-accent-watch)] text-black border-[var(--nav-accent-watch)]"
+                  : "bg-[var(--card)] text-neutral-300 border-[var(--border)] hover:text-white"
+              }`}
+            >
+              {f.labelId}{typeof counts[f.id] === "number" ? ` (${counts[f.id]})` : ""}
+            </button>
+          ))}
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filter arsip">
-        {FILTERS.map((f) => (
-          <button
-            key={f.id}
-            role="tab"
-            aria-selected={filter === f.id}
-            onClick={() => { setFilter(f.id); setPage(1); }}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
-              filter === f.id
-                ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                : "bg-[var(--card)] text-neutral-300 border-[var(--border)] hover:text-white"
-            }`}
-          >
-            {f.labelId}{typeof counts[f.id] === "number" ? ` (${counts[f.id]})` : ""}
-          </button>
-        ))}
+        {onGoReview && (
+          <Button variant="outline" size="sm" onClick={onGoReview} className="shrink-0">
+            Ulas Partai
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={downloading || games.length === 0}
+          onClick={() => void downloadPgn(games.map((g) => g.id))}
+          className="shrink-0"
+        >
+          {downloading ? "Mengunduh…" : "Unduh PGN"}
+        </Button>
       </div>
 
       {/* aria-live: pesan aksi (share/favorit/rematch) */}
       <p role="status" aria-live="polite" className="sr-only">{liveMessage}</p>
 
-      {loading ? (
-        <div className="py-12 text-center text-sm text-neutral-400" role="status" aria-live="polite">Memuat…</div>
-      ) : error ? (
-        <div className="py-12 text-center flex flex-col items-center gap-3" role="status">
-          <p className="text-sm text-neutral-300">{error}</p>
-          <Button variant="outline" size="sm" onClick={() => void load(filter, page)}>Coba lagi</Button>
-        </div>
-      ) : games.length === 0 ? (
-        <div className="py-12 text-center text-sm text-neutral-400 flex flex-col items-center gap-3" role="status">
-          <p>Belum ada partai</p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => (window.location.hash = "#/bots")}>Main vs Bot</Button>
-            <Button size="sm" onClick={() => (window.location.hash = "#/play")}>Main Online</Button>
+      <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+        {loading ? (
+          <div className="py-12 text-center text-sm text-neutral-400" role="status" aria-live="polite">Memuat…</div>
+        ) : error ? (
+          <div className="py-12 text-center flex flex-col items-center gap-3" role="status">
+            <p className="text-sm text-neutral-300">{error}</p>
+            <Button variant="outline" size="sm" onClick={() => void load(filter, page)}>Coba lagi</Button>
           </div>
-        </div>
-      ) : (
-        <div ref={listTopRef} tabIndex={-1} className="outline-none">
-          <ul className="flex flex-col gap-2">
-            {games.map((g) => {
-              const rl = resultLabel(g.result, g.color);
-              const hasOpponent = Boolean(g.opponent?.username) && g.opponent.username !== "?";
-              const rmState = rematchState[g.id];
-              return (
-                <li
-                  key={g.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2.5"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate flex items-center gap-2">
-                      <span
-                        className={`shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md ${
-                          g.result === "draw"
-                            ? "bg-neutral-700 text-neutral-200"
-                            : g.result === g.color
-                              ? "bg-emerald-600/20 text-emerald-400"
-                              : "bg-red-600/20 text-red-400"
-                        }`}
-                      >
-                        <span aria-hidden="true">{rl.icon}</span>
-                        {rl.text}
-                      </span>
-                      vs @{g.opponent.username} <span className="text-neutral-400 font-normal">({g.opponent.rating})</span>
-                    </p>
-                    <p className="text-xs text-neutral-400">
-                      {g.color === "white" ? "Putih" : "Hitam"} · {g.opening_name ?? "Opening tidak tercatat"} · {g.game_type ?? "-"} · {g.time_control ?? "-"} · {formatDuration(g.duration_sec)} · {relativeDate(g.ended_at)}
-                    </p>
-                    <p className="text-xs">
-                      {typeof g.rating_delta === "number" ? (
-                        <span className={g.rating_delta >= 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
-                          <span aria-hidden="true">{g.rating_delta >= 0 ? "▲" : "▼"} </span>
-                          {g.rating_delta >= 0 ? "+" : ""}{g.rating_delta} rating
+        ) : games.length === 0 ? (
+          <div className="py-12 text-center text-sm text-neutral-400 flex flex-col items-center gap-3" role="status">
+            <p>Belum ada partai</p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => (window.location.hash = "#/bots")}>Main vs Bot</Button>
+              <Button size="sm" onClick={() => (window.location.hash = "#/play")}>Main Online</Button>
+            </div>
+          </div>
+        ) : (
+          <div ref={listTopRef} tabIndex={-1} className="outline-none">
+            <ul className="flex flex-col gap-1.5">
+              {games.map((g) => {
+                const rl = resultLabel(g.result, g.color);
+                const hasOpponent = Boolean(g.opponent?.username) && g.opponent.username !== "?";
+                const rmState = rematchState[g.id];
+                return (
+                  <li
+                    key={g.id}
+                    className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 min-h-[44px]"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate flex items-center gap-2">
+                        <span
+                          className={`shrink-0 inline-flex items-center gap-1 text-xs font-bold px-1.5 py-0.5 rounded ${
+                            g.result === "draw"
+                              ? "bg-neutral-700 text-neutral-200"
+                              : g.result === g.color
+                                ? "bg-emerald-600/20 text-emerald-400"
+                                : "bg-red-600/20 text-red-400"
+                          }`}
+                        >
+                          <span aria-hidden="true">{rl.icon}</span>
+                          {rl.text}
                         </span>
-                      ) : (
-                        <span className="text-neutral-500">tanpa perubahan rating</span>
+                        vs @{g.opponent.username} <span className="text-neutral-400 font-normal">({g.opponent.rating})</span>
+                      </p>
+                      <p className="text-xs text-neutral-400 truncate">
+                        {g.color === "white" ? "Putih" : "Hitam"} · {g.opening_name ?? "Opening tidak tercatat"} · {g.time_control ?? "Casual"} · {formatDuration(g.duration_sec)} · {relativeDate(g.ended_at)}
+                        {typeof g.rating_delta === "number" ? (
+                          <span className={g.rating_delta >= 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
+                            {" "}<span aria-hidden="true">{g.rating_delta >= 0 ? "▲" : "▼"}</span> {g.rating_delta >= 0 ? "+" : ""}{g.rating_delta}
+                          </span>
+                        ) : (
+                          <span className="text-neutral-500"> · tanpa perubahan rating</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-1">
+                      {onGoReview && (
+                        <button
+                          onClick={() => { window.location.hash = `#/review/${g.id}`; onGoReview(); }}
+                          aria-label={`Analisis partai vs ${g.opponent.username}`}
+                          title="Analisis"
+                          className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-[var(--surface-hover)]"
+                        >
+                          <span aria-hidden="true">🔍</span>
+                        </button>
                       )}
-                    </p>
-                  </div>
-                  <div className="shrink-0 flex items-center gap-1">
-                    {onGoReview && (
                       <button
-                        onClick={() => { window.location.hash = `#/review/${g.id}`; onGoReview(); }}
-                        aria-label={`Analisis partai vs ${g.opponent.username}`}
-                        title="Analisis"
+                        onClick={() => void shareGame(g)}
+                        aria-label={`Bagikan partai vs ${g.opponent.username}`}
+                        title="Share"
                         className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-[var(--surface-hover)]"
                       >
-                        <span aria-hidden="true">🔍</span>
+                        <span aria-hidden="true">🔗</span>
                       </button>
-                    )}
-                    <button
-                      onClick={() => void shareGame(g)}
-                      aria-label={`Bagikan partai vs ${g.opponent.username}`}
-                      title="Share"
-                      className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-[var(--surface-hover)]"
-                    >
-                      <span aria-hidden="true">🔗</span>
-                    </button>
-                    <button
-                      onClick={() => void sendRematch(g)}
-                      disabled={!hasOpponent || rmState === "Menunggu…"}
-                      aria-label={hasOpponent ? `Tanding ulang vs ${g.opponent.username} ${g.time_control ?? ""}` : "Rematch tidak tersedia untuk partai vs bot"}
-                      title={hasOpponent ? "Rematch" : "Rematch tidak tersedia (vs bot)"}
-                      className={`p-1.5 rounded-lg ${hasOpponent && rmState !== "Menunggu…" ? "text-neutral-300 hover:text-white hover:bg-[var(--surface-hover)]" : "text-neutral-600 cursor-not-allowed"}`}
-                    >
-                      <span aria-hidden="true">⚔️</span>
-                    </button>
-                    <button
-                      onClick={() => void toggleFavorite(g)}
-                      aria-label={`${g.favorited ? "Hapus dari" : "Tambahkan ke"} favorit: partai vs ${g.opponent.username}`}
-                      title="Favorit"
-                      aria-pressed={g.favorited}
-                      className={`p-1.5 rounded-lg hover:bg-[var(--surface-hover)] ${g.favorited ? "text-yellow-400" : "text-neutral-300 hover:text-white"}`}
-                    >
-                      <span aria-hidden="true">{g.favorited ? "★" : "☆"}</span>
-                    </button>
-                    {rmState && (
-                      <span className="text-xs text-neutral-300">{rmState}</span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
+                      <button
+                        onClick={() => void sendRematch(g)}
+                        disabled={!hasOpponent || rmState === "Menunggu…"}
+                        aria-label={hasOpponent ? `Tanding ulang vs ${g.opponent.username} ${g.time_control ?? ""}` : "Rematch tidak tersedia untuk partai vs bot"}
+                        title={hasOpponent ? "Rematch" : "Rematch tidak tersedia (vs bot)"}
+                        className={`p-1.5 rounded-lg ${hasOpponent && rmState !== "Menunggu…" ? "text-neutral-300 hover:text-white hover:bg-[var(--surface-hover)]" : "text-neutral-600 cursor-not-allowed"}`}
+                      >
+                        <span aria-hidden="true">⚔️</span>
+                      </button>
+                      <button
+                        onClick={() => void toggleFavorite(g)}
+                        aria-label={`${g.favorited ? "Hapus dari" : "Tambahkan ke"} favorit: partai vs ${g.opponent.username}`}
+                        title="Favorit"
+                        aria-pressed={g.favorited}
+                        className={`p-1.5 rounded-lg hover:bg-[var(--surface-hover)] ${g.favorited ? "text-yellow-400" : "text-neutral-300 hover:text-white"}`}
+                      >
+                        <span aria-hidden="true">{g.favorited ? "★" : "☆"}</span>
+                      </button>
+                      {rmState && (
+                        <span className="text-xs text-neutral-300">{rmState}</span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
-      {totalPages > 1 && !loading && !error && (
-        <div className="flex items-center justify-center gap-3 shrink-0">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            Sebelumnya
-          </Button>
-          <span className="text-xs text-neutral-400" aria-live="polite">Halaman {page} dari {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-            Berikutnya
-          </Button>
-        </div>
-      )}
+        {totalPages > 1 && !loading && !error && (
+          <div className="flex items-center justify-center gap-3 py-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              Sebelumnya
+            </Button>
+            <span className="text-xs text-neutral-400" aria-live="polite">Halaman {page} dari {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              Berikutnya
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

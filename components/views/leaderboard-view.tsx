@@ -13,6 +13,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { authErrorPayload, authErrorText } from "@/lib/use-session";
 import { IconTrophy3D } from "@/components/icons3d";
 
+/** S8: header 44px (segmented + chips kategori) + body tabel scroll internal.
+ *  Aksen section Komunitas via --nav-accent-social (kontrak §0 spec S8). */
+
 type Entry = { rank: number; username: string; rating: number; games: number; winRate: number; isMe: boolean };
 type Payload = { scope: "global" | "friends"; gameType?: string | null; entries: Entry[]; me: Entry | null };
 
@@ -37,11 +40,9 @@ export function LeaderboardView({ lang = "id", onOpenProfile, onPlayOnline }: Pr
   const [gameType, setGameType] = useState<GameType>("all");
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const tablistRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async (s: "global" | "friends", gt: GameType) => {
-    setLoading(true);
     setError(null);
     try {
       const qs = new URLSearchParams({ scope: s });
@@ -56,8 +57,6 @@ export function LeaderboardView({ lang = "id", onOpenProfile, onPlayOnline }: Pr
       setData(payload as Payload);
     } catch {
       setError("Gagal memuat papan peringkat.");
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -75,166 +74,164 @@ export function LeaderboardView({ lang = "id", onOpenProfile, onPlayOnline }: Pr
     setGameType(GAME_TYPE_CHIPS[next].id);
   }, []);
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center gap-3 py-16" role="status">
-        <p className="text-sm text-neutral-300">{error}</p>
-        <button
-          onClick={() => void load(scope, gameType)}
-          className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-bold text-white hover:bg-[var(--surface-hover)]"
-        >
-          Coba lagi
-        </button>
-      </div>
-    );
-  }
-  if (!data || loading) {
-    return (
-      <div className="flex items-center justify-center py-16" role="status" aria-live="polite">
-        <span className="text-sm font-bold text-neutral-400 animate-pulse">Memuat papan peringkat…</span>
-      </div>
-    );
-  }
-
-  const entries = data.entries;
-  const meOutside = data.me && !entries.some((e) => e.isMe) ? data.me : null;
+  const entries = data?.entries ?? [];
+  const meOutside = data?.me && !entries.some((e) => e.isMe) ? data.me : null;
   const winRateText = (wr: number) => `${Math.round((wr ?? 0) * 100)}%`;
 
+  // S8: Pola B — head 44px (filter/pill) + body list scroll internal.
+  // Loading/error/empty tetap render di dalam .view-body; filter di head
+  // tetap hidup saat loading (tidak re-mount).
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 pb-4">
-      <div className="flex items-center gap-3">
-        <IconTrophy3D size={28} aria-hidden="true" />
-        <h1 className="text-xl font-black text-white">Papan Peringkat</h1>
-      </div>
+    <div className="view-root w-full max-w-2xl mx-auto">
+      <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-social)" }}>
+        <IconTrophy3D size={20} aria-hidden="true" />
+        <h1 className="text-sm font-black text-white shrink-0">Papan Peringkat</h1>
+        <div className="flex-1" aria-hidden="true" />
 
-      {/* Segmented control Pemain | Teman */}
-      <div className="flex bg-[var(--card)] p-1 rounded-xl border border-[var(--border)] w-full max-w-xs shadow-md" role="tablist" aria-label="Cakupan papan peringkat">
-        {([["global", "Pemain"], ["friends", "Teman"]] as const).map(([s, label]) => (
-          <button
-            key={s}
-            role="tab"
-            aria-selected={scope === s}
-            onClick={() => setScope(s)}
-            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all duration-150 ${
-              scope === s ? "bg-[var(--primary)] text-black shadow-sm" : "text-neutral-400 hover:text-white"
-            }`}
-          >
-            {label}
-            {scope === s && <span className="sr-only"> (tab aktif)</span>}
-          </button>
-        ))}
-      </div>
-
-      {/* Chips kategori waktu */}
-      <div ref={tablistRef} className="flex flex-wrap gap-1.5" role="tablist" aria-label="Kategori waktu">
-        {GAME_TYPE_CHIPS.map((c, i) => (
-          <button
-            key={c.id}
-            role="tab"
-            tabIndex={gameType === c.id ? 0 : -1}
-            aria-selected={gameType === c.id}
-            onKeyDown={(e) => onChipKey(e, i)}
-            onClick={() => setGameType(c.id)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
-              gameType === c.id
-                ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                : "bg-[var(--card)] text-neutral-300 border-[var(--border)] hover:text-white"
-            }`}
-          >
-            {lang === "id" ? c.labelId : c.labelEn}
-            {gameType === c.id && <span aria-hidden="true" className="ml-1">●</span>}
-            {gameType === c.id && <span className="sr-only"> (kategori aktif)</span>}
-          </button>
-        ))}
-      </div>
-
-      {entries.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center flex flex-col items-center gap-3">
-          <p className="text-sm font-bold text-neutral-300">Papan masih kosong — main rated untuk masuk papan</p>
-          {onPlayOnline && (
+        {/* Segmented control Pemain | Teman */}
+        <div className="flex bg-[var(--card)] p-0.5 rounded-lg border border-[var(--border)] shrink-0" role="tablist" aria-label="Cakupan papan peringkat">
+          {([["global", "Pemain"], ["friends", "Teman"]] as const).map(([s, label]) => (
             <button
-              onClick={onPlayOnline}
-              className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-black text-black shadow-[0_4px_0_#45753c] active:scale-[0.98]"
+              key={s}
+              role="tab"
+              aria-selected={scope === s}
+              onClick={() => setScope(s)}
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
+                scope === s ? "bg-[var(--nav-accent-social)] text-black" : "text-neutral-400 hover:text-white"
+              }`}
             >
-              Main sekarang
+              {label}
+              {scope === s && <span className="sr-only"> (tab aktif)</span>}
             </button>
-          )}
+          ))}
         </div>
-      ) : (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)] text-neutral-400">
-                <th scope="col" className="px-4 py-2.5 text-left w-14 font-bold">#</th>
-                <th scope="col" className="px-2 py-2.5 text-left font-bold">Pemain</th>
-                <th scope="col" className="px-2 py-2.5 text-right font-bold">Rating</th>
-                <th scope="col" className="px-2 py-2.5 text-right font-bold">Main</th>
-                <th scope="col" className="px-4 py-2.5 text-right font-bold">Win-rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((e) => (
-                <tr
-                  key={e.username}
-                  className={`relative border-b border-[var(--border)]/60 last:border-0 ${
-                    e.isMe ? "bg-[var(--primary)]/10 border-y border-[var(--primary)]/40" : ""
-                  }`}
-                >
-                  {/* Bar 3px kiri utk row sendiri — indikator non-warna (DHH). */}
-                  {e.isMe && <span aria-hidden="true" className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--primary)]" />}
-                  <td className="px-4 py-2.5 font-bold text-neutral-300">
-                    {e.rank <= 3 ? (
-                      <span className="inline-flex items-center gap-1">
-                        <span
-                          className={`inline-block w-2.5 h-2.5 rounded-full ${e.rank === 1 ? "bg-yellow-400" : e.rank === 2 ? "bg-neutral-300" : "bg-amber-600"}`}
-                          aria-hidden="true"
-                        />
-                        {e.rank}
-                      </span>
-                    ) : (
-                      e.rank
-                    )}
-                  </td>
-                  <td className="px-2 py-2.5">
-                    <button
-                      onClick={() => onOpenProfile?.(e.username)}
-                      className={`font-bold hover:text-[var(--primary)] transition-colors ${e.isMe ? "text-[var(--primary)]" : "text-white"}`}
-                      aria-label={`Profil @${e.username}${e.isMe ? " (Anda)" : ""}`}
-                    >
-                      @{e.username}
-                    </button>
-                    {e.isMe && <span className="sr-only"> (Anda) — Peringkat kamu: {e.rank}</span>}
-                  </td>
-                  <td className="px-2 py-2.5 text-right font-bold text-white">{e.rating}</td>
-                  <td className="px-2 py-2.5 text-right text-neutral-400">{e.games}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <span className="text-neutral-200 font-semibold">
-                      <span aria-hidden="true">📈 </span>
-                      {winRateText(e.winRate)}
-                    </span>
-                    <span className="sr-only">Tingkat kemenangan {winRateText(e.winRate)}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
 
-          {/* Sticky row user sendiri bila di luar 50 besar */}
-          {meOutside && (
-            <div
-              className="sticky bottom-0 border-t border-[var(--primary)]/40 bg-[var(--primary)]/10 backdrop-blur px-4 py-2.5 flex items-center text-sm relative"
-              aria-label={`Posisi Anda: peringkat ${meOutside.rank}`}
+        {/* Chips kategori waktu */}
+        <div ref={tablistRef} className="flex gap-1" role="tablist" aria-label="Kategori waktu">
+          {GAME_TYPE_CHIPS.map((c, i) => (
+            <button
+              key={c.id}
+              role="tab"
+              tabIndex={gameType === c.id ? 0 : -1}
+              aria-selected={gameType === c.id}
+              onKeyDown={(e) => onChipKey(e, i)}
+              onClick={() => setGameType(c.id)}
+              className={`px-2 py-1 rounded-md text-xs font-semibold border transition-colors ${
+                gameType === c.id
+                  ? "bg-[var(--nav-accent-social)] text-black border-[var(--nav-accent-social)]"
+                  : "bg-[var(--card)] text-neutral-300 border-[var(--border)] hover:text-white"
+              }`}
             >
-              <span aria-hidden="true" className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--primary)]" />
-              <span className="w-14 font-bold text-neutral-300">{meOutside.rank}</span>
-              <span className="flex-1 font-bold text-[var(--primary)]">@{meOutside.username}</span>
-              <span className="font-bold text-white">{meOutside.rating}</span>
-              <span className="w-16 text-right text-neutral-400">{meOutside.games}</span>
-              <span className="w-20 text-right text-neutral-200">{winRateText(meOutside.winRate)}</span>
-            </div>
-          )}
+              {lang === "id" ? c.labelId : c.labelEn}
+              {gameType === c.id && <span className="sr-only"> (kategori aktif)</span>}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
+
+      <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+        {error ? (
+          <div className="flex flex-col items-center gap-3 py-8" role="status">
+            <p className="text-sm text-neutral-300">{error}</p>
+            <button
+              onClick={() => void load(scope, gameType)}
+              className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-bold text-white hover:bg-[var(--surface-hover)]"
+            >
+              Coba lagi
+            </button>
+          </div>
+        ) : !data ? (
+          <div className="flex items-center justify-center py-8" role="status" aria-live="polite">
+            <span className="text-sm font-bold text-neutral-400 animate-pulse">Memuat papan peringkat…</span>
+          </div>
+        ) : entries.length === 0 ? (
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center flex flex-col items-center gap-3">
+            <p className="text-sm font-bold text-neutral-300">Papan masih kosong — main rated untuk masuk papan</p>
+            {onPlayOnline && (
+              <button
+                onClick={onPlayOnline}
+                className="rounded-lg bg-[var(--nav-accent-social)] px-4 py-2 text-sm font-black text-black shadow-[0_3px_0_rgba(244,114,182,0.4)] active:scale-[0.98]"
+              >
+                Main sekarang
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-neutral-400">
+                  <th scope="col" className="px-4 py-2 text-left w-14 font-bold">#</th>
+                  <th scope="col" className="px-2 py-2 text-left font-bold">Pemain</th>
+                  <th scope="col" className="px-2 py-2 text-right font-bold">Rating</th>
+                  <th scope="col" className="px-2 py-2 text-right font-bold">Main</th>
+                  <th scope="col" className="px-4 py-2 text-right font-bold">Win-rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((e) => (
+                  <tr
+                    key={e.username}
+                    className={`relative border-b border-[var(--border)]/60 last:border-0 ${
+                      e.isMe ? "bg-[var(--nav-accent-social)]/10 border-y border-[var(--nav-accent-social)]/40" : ""
+                    }`}
+                  >
+                    {/* Bar 3px kiri utk row sendiri — indikator non-warna (DHH). */}
+                    {e.isMe && <span aria-hidden="true" className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--nav-accent-social)]" />}
+                    <td className="px-4 py-2 font-bold text-neutral-300">
+                      {e.rank <= 3 ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span
+                            className={`inline-block w-2.5 h-2.5 rounded-full ${e.rank === 1 ? "bg-yellow-400" : e.rank === 2 ? "bg-neutral-300" : "bg-amber-600"}`}
+                            aria-hidden="true"
+                          />
+                          {e.rank}
+                        </span>
+                      ) : (
+                        e.rank
+                      )}
+                    </td>
+                    <td className="px-2 py-2">
+                      <button
+                        onClick={() => onOpenProfile?.(e.username)}
+                        className={`font-bold hover:text-[var(--nav-accent-social)] transition-colors ${e.isMe ? "text-[var(--nav-accent-social)]" : "text-white"}`}
+                        aria-label={`Profil @${e.username}${e.isMe ? " (Anda)" : ""}`}
+                      >
+                        @{e.username}
+                      </button>
+                      {e.isMe && <span className="sr-only"> (Anda) — Peringkat kamu: {e.rank}</span>}
+                    </td>
+                    <td className="px-2 py-2 text-right font-bold text-white">{e.rating}</td>
+                    <td className="px-2 py-2 text-right text-neutral-400">{e.games}</td>
+                    <td className="px-4 py-2 text-right">
+                      <span className="text-neutral-200 font-semibold">
+                        <span aria-hidden="true">📈 </span>
+                        {winRateText(e.winRate)}
+                      </span>
+                      <span className="sr-only">Tingkat kemenangan {winRateText(e.winRate)}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Sticky row user sendiri bila di luar 50 besar */}
+            {meOutside && (
+              <div
+                className="sticky bottom-0 border-t border-[var(--nav-accent-social)]/40 bg-[var(--card)]/90 backdrop-blur px-4 py-2 flex items-center text-sm relative"
+                aria-label={`Posisi Anda: peringkat ${meOutside.rank}`}
+              >
+                <span aria-hidden="true" className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--nav-accent-social)]" />
+                <span className="w-14 font-bold text-neutral-300">{meOutside.rank}</span>
+                <span className="flex-1 font-bold text-[var(--nav-accent-social)]">@{meOutside.username}</span>
+                <span className="font-bold text-white">{meOutside.rating}</span>
+                <span className="w-16 text-right text-neutral-400">{meOutside.games}</span>
+                <span className="w-20 text-right text-neutral-200">{winRateText(meOutside.winRate)}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

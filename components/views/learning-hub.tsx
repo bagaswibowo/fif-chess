@@ -891,30 +891,32 @@ export function LearningHub({ lang = "id" }: Props) {
       className={
         fullscreen
           ? "fixed inset-0 z-50 bg-[var(--background)] text-white flex flex-col p-2 sm:p-3 overflow-hidden animate-in fade-in duration-200"
-          : "stack"
+          : "view-root"
       }
-      style={fullscreen ? undefined : { maxWidth: "64rem", margin: "0 auto" }}
+      style={fullscreen ? undefined : undefined}
     >
       {/* HEADER */}
-      <div className="row-between items-center gap-2 shrink-0">
+      <div className={fullscreen ? "row-between items-center gap-2 shrink-0" : "view-head flex items-center justify-between gap-2 shrink-0"}>
         <div>
-          <h2 className="section-title text-xl sm:text-2xl font-black text-white tracking-wide">
+          <h2 className="section-title text-base sm:text-lg font-black text-white tracking-wide">
             {lang === "id" ? "Trik & Quest Taktik" : "Tricks & Tactical Quests"}
           </h2>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            Konten diperkaya dari Taktik Fabiano Caruana, Buku Pintar Catur-Pedia & CT-ART 4.0
-          </p>
+          {!fullscreen && (
+            <p className="text-[11px] text-neutral-400">
+              Konten diperkaya dari Taktik Fabiano Caruana, Buku Pintar Catur-Pedia & CT-ART 4.0
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="px-3 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5 shadow-sm">
-            <IconCheck3D size={16} />
+          <span className="px-2.5 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5 shadow-sm">
+            <IconCheck3D size={14} />
             {doneCount}/{list.length} selesai · {progress.xp} XP
           </span>
         </div>
       </div>
 
       {/* NAVIGASI + FILTER KATEGORI */}
-      <div className="panel px-3 py-2 flex items-center gap-2 flex-wrap bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm">
+      <div className="panel px-3 py-2 flex items-center gap-2 flex-wrap bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as PuzzleCategory | "all")}
@@ -968,11 +970,13 @@ export function LearningHub({ lang = "id" }: Props) {
         </button>
       </div>
 
+      {/* S8 Pola D — papan ≤ area konten, panel = satu-satunya region scroll
+          internal (view-body); total tinggi ≤ area konten, tanpa scroll halaman. */}
       <div
         className={
           fullscreen
             ? "flex-1 grid lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_430px] gap-3 items-stretch min-h-0 overflow-hidden pt-1"
-            : "grid lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-3 items-start w-full min-h-0"
+            : "flex-1 min-h-0 grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-3 items-stretch"
         }
       >
         {/* LEFT: BOARD */}
@@ -980,7 +984,7 @@ export function LearningHub({ lang = "id" }: Props) {
           className={
             fullscreen
               ? "flex flex-col items-center justify-center h-full min-h-0 w-full max-w-[min(96vw,calc(100dvh-140px))] mx-auto py-0.5"
-              : "rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-start items-center"
+              : "rounded-xl p-2 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-start items-center min-h-0 overflow-hidden"
           }
         >
           <BoardControls
@@ -994,7 +998,7 @@ export function LearningHub({ lang = "id" }: Props) {
           />
 
           {/* LEGENDA BADGE ALA CHESS.COM DI ATAS PAPAN */}
-          <div className="mb-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] shadow-sm shrink-0">
+          <div className="mb-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs text-neutral-300 flex-wrap gap-1.5 w-full max-w-[min(100%,400px)] shadow-sm shrink-0">
             <div className="flex items-center gap-1.5">
               <span className="w-4 h-4 rounded-full bg-[#06b6d4] text-white flex items-center justify-center font-black text-[9px] border border-white/50">!!</span>
               <span className="font-bold text-white text-[11px]">Brilian</span>
@@ -1013,7 +1017,7 @@ export function LearningHub({ lang = "id" }: Props) {
             </div>
           </div>
           <div
-            className="aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full max-w-[min(100%,calc(100dvh-260px))]"
+            className="aspect-square rounded-xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full max-w-[min(100%,400px)] flex-1"
           >
             <Chessboard
               key={`trikquest-${puzzle.id}-${boardSide}-${boardThemeId}-${pieceThemeId}`}
@@ -1049,12 +1053,16 @@ export function LearningHub({ lang = "id" }: Props) {
 
         </div>
 
-        {/* RIGHT: INFO PANEL (KOMPAK, PAS 1 LAYAR TANPA SCROLL BERLEBIHAN) */}
+        {/* RIGHT: INFO PANEL (KOMPAK — header sticky + konten scroll internal) */}
         <div
-          className="panel p-3.5 flex flex-col gap-2.5 flex-1 min-w-[18rem] max-h-[calc(100dvh-185px)] overflow-y-auto custom-scrollbar min-h-0 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl"
+          className={
+            fullscreen
+              ? "panel p-3.5 flex flex-col gap-2.5 flex-1 min-w-[18rem] overflow-hidden min-h-0 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl"
+              : "panel p-3 flex flex-col gap-2 min-w-[18rem] min-h-0 overflow-hidden bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-xl"
+          }
         >
-          {/* Header Metadata */}
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
+          {/* Header Metadata (sticky — tidak ikut scroll) */}
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2 shrink-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2 py-0.5 rounded-md text-xs font-mono font-bold uppercase tracking-wider bg-[var(--surface)] text-neutral-300 border border-[var(--border)]">
                 #{currentIndex + 1} · {puzzle.category}
@@ -1072,6 +1080,7 @@ export function LearningHub({ lang = "id" }: Props) {
           </div>
 
           {/* Theme Title */}
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 custom-scrollbar" style={{ scrollbarWidth: "thin" }}>
           <div>
             <h3 className="text-sm sm:text-base font-black text-white leading-snug tracking-tight">
               {puzzle.theme}
@@ -1185,9 +1194,10 @@ export function LearningHub({ lang = "id" }: Props) {
               <span className="text-[11px] text-rose-300">Coba analisa ulang atau buka petunjuk.</span>
             </div>
           )}
+          </div>
 
           {/* ACTIONS */}
-          <div className="flex items-center gap-2 pt-1 flex-wrap mt-auto">
+          <div className="flex items-center gap-2 pt-1 flex-wrap shrink-0">
             <button
               className="ctl ctl-sm px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--border)] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer"
               onClick={() => load(puzzle)}

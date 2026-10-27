@@ -153,113 +153,108 @@ function LessonCatalog({ authStatus, onNavigate, initialModule }: { authStatus: 
         : null;
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col gap-3 pb-4">
-      <div className="flex items-center gap-3">
-        <NotebookText size={22} className="text-[var(--primary)] shrink-0" aria-hidden="true" />
-        <div>
-          <h1 className="text-lg font-black text-white leading-tight">Pelajaran</h1>
-          <p className="text-xs text-neutral-400">
-            Materi orisinal jev-chess — tertulis + ilustrasi papan. Pelajaran pembukaan dari buku pembukaan lokal.
-          </p>
-        </div>
-      </div>
-
-      {(authNote || bkError) && (
-        <p role="status" className="text-xs font-bold text-neutral-400">
-          {bkError ?? authNote}
-        </p>
-      )}
-
-      {/* Chip filter modul (pola ctl ctl-choice learning-hub) */}
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter kategori pelajaran">
-        {MODULES.map((m) => {
-          const active = module === m.id;
-          const count = m.id === "all" ? LESSONS.length : LESSONS.filter((l) => l.module === m.id).length;
-          return (
-            <button
-              key={m.id}
-              type="button"
-              aria-pressed={active}
-              onClick={() => setModule(m.id)}
-              className={`ctl ctl-sm ctl-choice ${active ? "ctl-active" : ""}`}
-            >
-              {m.label}
-              <span className="ml-1 text-[10px] text-neutral-500 tabular-nums">({count})</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Cari materi (input) */}
-      <div className="relative">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" aria-hidden="true" />
-        <input
-          className="field pl-9"
-          placeholder="Cari materi…"
-          aria-label="Cari pelajaran"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
-
-      <p className="sr-only" role="status" aria-live="polite">
-        {list.length} pelajaran untuk {MODULES.find((m) => m.id === module)?.label ?? "semua"}
-      </p>
-
-      {/* List 1 kolom — lesson = bacaan, bukan grid scan (design §2.2) */}
-      {list.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center">
-          <p className="text-sm font-bold text-neutral-300">Belum ada materi di kategori ini.</p>
-          {module !== "all" && (
-            <button className="ctl ctl-sm mt-2" onClick={() => setModule("all")}>
-              Tampilkan semua
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2" role="list" aria-label="Daftar pelajaran">
-          {list.map((l) => {
-            const marked = isBookmarked(l.id);
-            const done = isCompleted(l.id);
-            const busy = toggleBusy === l.id;
+    <div className="view-root w-full max-w-4xl mx-auto">
+      <div className="view-head flex items-center gap-2 shrink-0 flex-wrap" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+        <NotebookText size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
+        <h1 className="text-sm font-black text-white leading-tight shrink-0">Pelajaran</h1>
+        <div className="flex-1" aria-hidden="true" />
+        <div className="flex flex-wrap gap-1 shrink-0" role="group" aria-label="Filter kategori pelajaran">
+          {MODULES.map((m) => {
+            const active = module === m.id;
+            const count = m.id === "all" ? LESSONS.length : LESSONS.filter((l) => l.module === m.id).length;
             return (
-              <div
-                key={l.id}
-                role="listitem"
-                className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3 flex items-center gap-3 hover:border-[var(--primary)] transition-all duration-[var(--move-animation-duration)]"
+              <button
+                key={m.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setModule(m.id)}
+                className={`ctl ctl-xs ctl-choice ${active ? "ctl-active" : ""}`}
               >
-                <button
-                  type="button"
-                  className="flex-1 min-w-0 text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ring)]"
-                  onClick={() => onNavigate(`#/learn/${l.id}`)}
-                  aria-label={`Buka pelajaran ${l.title}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-black text-white truncate">{l.title}</h2>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 border border-[var(--border)] rounded px-1.5 py-0.5 shrink-0">
-                      {l.module}
-                    </span>
-                    {done && (
-                      <span className="text-[10px] font-bold text-[var(--primary)] shrink-0">Selesai ✓</span>
-                    )}
-                  </div>
-                  <p className="mt-0.5 text-xs text-neutral-400 line-clamp-1">{l.openingEco ? `${l.openingEco} · ` : ""}Materi tertulis — tanpa video.</p>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={marked}
-                  aria-label={`Pelajaran ${l.title}, ${marked ? "tersimpan" : "belum disimpan"}`}
-                  onClick={() => void toggleBookmark(l.id, !marked)}
-                  disabled={busy}
-                  className="p-1.5 rounded-lg border border-[var(--border)] hover:border-[var(--primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ring)] shrink-0"
-                >
-                  <Star size={16} className={marked ? "text-[var(--primary)] fill-[var(--primary)]" : "text-neutral-400"} aria-hidden="true" />
-                </button>
-              </div>
+                {m.label}
+                <span className="ml-1 text-[10px] text-neutral-500 tabular-nums">({count})</span>
+              </button>
             );
           })}
         </div>
-      )}
+        <div className="relative shrink-0">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-500" aria-hidden="true" />
+          <input
+            className="field pl-8 py-1"
+            placeholder="Cari materi…"
+            aria-label="Cari pelajaran"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+        {(authNote || bkError) && (
+          <p role="status" className="text-xs font-bold text-neutral-400 py-1">
+            {bkError ?? authNote}
+          </p>
+        )}
+
+        <p className="sr-only" role="status" aria-live="polite">
+          {list.length} pelajaran untuk {MODULES.find((m) => m.id === module)?.label ?? "semua"}
+        </p>
+
+        {/* List 1 kolom — lesson = bacaan, bukan grid scan (design §2.2).
+            Baris ≤44px (S8 Pola B). */}
+        {list.length === 0 ? (
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center">
+            <p className="text-sm font-bold text-neutral-300">Belum ada materi di kategori ini.</p>
+            {module !== "all" && (
+              <button className="ctl ctl-sm mt-2" onClick={() => setModule("all")}>
+                Tampilkan semua
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5" role="list" aria-label="Daftar pelajaran">
+            {list.map((l) => {
+              const marked = isBookmarked(l.id);
+              const done = isCompleted(l.id);
+              const busy = toggleBusy === l.id;
+              return (
+                <div
+                  key={l.id}
+                  role="listitem"
+                  className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 flex items-center gap-3 hover:border-[var(--nav-accent-learn)] transition-all duration-[var(--move-animation-duration)] min-h-[44px]"
+                >
+                  <button
+                    type="button"
+                    className="flex-1 min-w-0 text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ring)]"
+                    onClick={() => onNavigate(`#/learn/${l.id}`)}
+                    aria-label={`Buka pelajaran ${l.title}`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h2 className="text-sm font-black text-white truncate">{l.title}</h2>
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 border border-[var(--border)] rounded px-1.5 py-0.5 shrink-0">
+                        {l.module}
+                      </span>
+                      {done && (
+                        <span className="text-[10px] font-bold text-[var(--nav-accent-learn)] shrink-0">Selesai ✓</span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-xs text-neutral-400 line-clamp-1">{l.openingEco ? `${l.openingEco} · ` : ""}Materi tertulis — tanpa video.</p>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={marked}
+                    aria-label={`Pelajaran ${l.title}, ${marked ? "tersimpan" : "belum disimpan"}`}
+                    onClick={() => void toggleBookmark(l.id, !marked)}
+                    disabled={busy}
+                    className="p-1.5 rounded-lg border border-[var(--border)] hover:border-[var(--nav-accent-learn)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ring)] shrink-0"
+                  >
+                    <Star size={16} className={marked ? "text-[var(--nav-accent-learn)] fill-[var(--nav-accent-learn)]" : "text-neutral-400"} aria-hidden="true" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

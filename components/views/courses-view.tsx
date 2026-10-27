@@ -14,7 +14,7 @@
  * role=progressbar, CTA Mulai/Lanjut/Ulangi) — tanpa fork komponen.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Library, ChevronLeft, ChevronRight, Check, ArrowRight, Loader2 } from "lucide-react";
 import { COURSES, courseById, type Course, type CourseStep } from "@/lib/courses";
 import type { CourseProgress } from "./learn-shared";
@@ -149,27 +149,39 @@ export function CoursesView({
   // ── DAFTAR MODE ──
   if (listError && !summaries) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16" role="alert">
-        <p className="text-sm font-bold text-neutral-300">{listError}</p>
-        <button
-          className="ctl ctl-sm"
-          onClick={() => {
-            setSummaries(null);
-            setListError(null);
-            setRetryKey((k) => k + 1);
-          }}
-        >
-          Coba lagi
-        </button>
+      <div className="view-root w-full max-w-5xl mx-auto">
+        <div className="view-head flex items-center gap-3 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+          <Library size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
+          <h1 className="text-sm font-black text-white">Kursus</h1>
+        </div>
+        <div className="view-body flex flex-col items-center gap-3 py-10" role="alert" style={{ scrollbarWidth: "thin" }}>
+          <p className="text-sm font-bold text-neutral-300">{listError}</p>
+          <button
+            className="ctl ctl-sm"
+            onClick={() => {
+              setSummaries(null);
+              setListError(null);
+              setRetryKey((k) => k + 1);
+            }}
+          >
+            Coba lagi
+          </button>
+        </div>
       </div>
     );
   }
   if (!summaries) {
     return (
-      <div className="flex items-center justify-center py-16" role="status" aria-live="polite">
-        <span className="flex items-center gap-2 text-sm font-bold text-neutral-400 animate-pulse">
-          <Loader2 size={16} className="animate-spin" /> Mengambil kursus…
-        </span>
+      <div className="view-root w-full max-w-5xl mx-auto">
+        <div className="view-head flex items-center gap-3 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+          <Library size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
+          <h1 className="text-sm font-black text-white">Kursus</h1>
+        </div>
+        <div className="view-body flex items-center justify-center py-10" role="status" aria-live="polite">
+          <span className="flex items-center gap-2 text-sm font-bold text-neutral-400 animate-pulse">
+            <Loader2 size={16} className="animate-spin" /> Mengambil kursus…
+          </span>
+        </div>
       </div>
     );
   }
@@ -187,86 +199,91 @@ export function CoursesView({
         : null;
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col gap-4 pb-4">
-      <div className="flex items-center gap-3">
-        <Library size={24} className="text-[var(--primary)]" aria-hidden="true" />
-        <div>
-          <h1 className="text-lg font-black text-white">Kursus</h1>
-          <p className="text-xs text-neutral-400">Jalur latihan terstruktur — tiap langkah mengarah ke materi dan drill yang sudah ada di jev-chess.</p>
+    <div className="view-root w-full max-w-5xl mx-auto">
+      <div className="view-head flex items-center gap-3 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+        <Library size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
+        <div className="min-w-0">
+          <h1 className="text-sm font-black text-white leading-tight">Kursus</h1>
+          <p className="text-[11px] text-neutral-400 truncate">Jalur latihan terstruktur — tiap langkah mengarah ke materi dan drill yang sudah ada di jev-chess.</p>
         </div>
+        <div className="flex-1" aria-hidden="true" />
+        {authNote && (
+          <p role="status" className="text-xs font-bold text-neutral-400 shrink-0">
+            {authNote}
+          </p>
+        )}
       </div>
 
-      {authNote && (
-        <p role="status" className="text-xs font-bold text-neutral-400">
-          {authNote}
-        </p>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {rows.map(({ course, pct }) => {
-          const done = pct !== null && pct >= 100;
-          const cta = done ? "Ulangi" : pct !== null && pct > 0 ? "Lanjut" : "Mulai";
-          const summary = summaries!.find((s) => s.id === course.id);
-          return (
-            <div
-              key={course.id}
-              className={`relative rounded-2xl border p-4 bg-[var(--card)] transition-all duration-150 ${
-                done ? "border-[var(--primary)]/60" : "border-[var(--border)] hover:border-[var(--primary)]"
-              }`}
-            >
-              <h2 className="text-sm font-black text-white flex items-center gap-2">
-                <Library size={16} aria-hidden="true" />
-                {course.title}
-              </h2>
-              <p className="mt-1 text-xs text-neutral-400 line-clamp-2 min-h-8">{course.description}</p>
-              {pct === null ? (
-                <div className="mt-3">
-                  <div className="h-2 rounded-full bg-[var(--muted)]" aria-hidden="true" />
-                  <p className="mt-1.5 text-xs font-bold text-neutral-400">
-                    <span aria-hidden="true">—</span> · progres {authStatus === "guest" ? "terkunci (masuk)" : "menunggu akun disetujui"}
-                  </p>
-                </div>
-              ) : (
-                <div className="mt-3">
-                  <div
-                    className="h-2 rounded-full bg-[var(--muted)] overflow-hidden"
-                    role="progressbar"
-                    aria-valuenow={pct}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`Progress ${course.title} ${pct} persen`}
-                  >
-                    <div
-                      className="h-full bg-[var(--primary)] transition-all duration-[var(--move-animation-duration)]"
-                      style={{ width: `${pct}%` }}
-                    />
+      <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+        {/* S8: Pola D — kartu rapat grid (gap 12px, baris min 44px) dalam body
+            scroll internal; data riil progressPct dari /api/courses (no-mock).
+            State error/loading ditangani early-return di atas. */}
+        <div className="view-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {rows.map(({ course, pct }) => {
+            const done = pct !== null && pct >= 100;
+            const cta = done ? "Ulangi" : pct !== null && pct > 0 ? "Lanjut" : "Mulai";
+            const summary = summaries!.find((s) => s.id === course.id);
+            return (
+              <div
+                key={course.id}
+                className={`rounded-xl border p-3 bg-[var(--card)] transition-all duration-150 ${
+                  done ? "border-[var(--nav-accent-learn)]/60" : "border-[var(--border)] hover:border-[var(--nav-accent-learn)]"
+                }`}
+              >
+                <h2 className="text-sm font-black text-white flex items-center gap-2 min-w-0">
+                  <Library size={14} aria-hidden="true" className="text-[var(--nav-accent-learn)] shrink-0" />
+                  <span className="truncate">{course.title}</span>
+                </h2>
+                <p className="mt-1 text-xs text-neutral-400 line-clamp-2 min-h-8">{course.description}</p>
+                {pct === null ? (
+                  <div className="mt-2">
+                    <div className="h-1.5 rounded-full bg-[var(--muted)]" aria-hidden="true" />
+                    <p className="mt-1.5 text-xs font-bold text-neutral-400">
+                      <span aria-hidden="true">—</span> · progres {authStatus === "guest" ? "terkunci (masuk)" : "menunggu akun disetujui"}
+                    </p>
                   </div>
-                  <p className="mt-1.5 text-xs font-bold text-neutral-400 tabular-nums">
-                    {typeof summary?.doneCount === "number" ? `${summary.doneCount} dari ${course.steps.length} selesai · ${pct}%` : `${pct}% selesai`}
-                  </p>
+                ) : (
+                  <div className="mt-2">
+                    <div
+                      className="h-1.5 rounded-full bg-[var(--muted)] overflow-hidden"
+                      role="progressbar"
+                      aria-valuenow={pct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`Progress ${course.title} ${pct} persen`}
+                    >
+                      <div
+                        className="h-full bg-[var(--nav-accent-learn)] transition-all duration-[var(--move-animation-duration)]"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-xs font-bold text-neutral-400 tabular-nums">
+                      {typeof summary?.doneCount === "number" ? `${summary.doneCount} dari ${course.steps.length} selesai · ${pct}%` : `${pct}% selesai`}
+                    </p>
+                  </div>
+                )}
+                <div className="mt-2 flex items-center justify-end">
+                  <button
+                    className={`ctl ctl-xs inline-flex items-center gap-1.5 ${
+                      done ? "" : "ctl-active"
+                    }`}
+                    aria-label={`${cta} kursus ${course.title}`}
+                    onClick={() => openDetail(course.id)}
+                  >
+                    {cta}
+                    <ArrowRight size={13} aria-hidden="true" />
+                  </button>
                 </div>
-              )}
-              <div className="mt-2 flex items-center justify-end">
-                <button
-                  className={`ctl ctl-sm inline-flex items-center gap-1.5 ${
-                    done ? "" : "ctl-active"
-                  }`}
-                  aria-label={`${cta} kursus ${course.title}`}
-                  onClick={() => openDetail(course.id)}
-                >
-                  {cta}
-                  <ArrowRight size={14} aria-hidden="true" />
-                </button>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Detail course (step pagination — reuse pola learning-hub: select + Prev/Next) ──
+// ── Detail course (S8: Pola C — panel langkah .view-body + sidebar step list .view-body) ──
 function CoursesDetail({
   state,
   stepIndex,
@@ -284,116 +301,133 @@ function CoursesDetail({
   const progress = state?.progress ?? null;
   const step = course.steps[stepIndex];
   const stepProgress = progress?.steps.find((s) => s.stepId === step?.id) ?? null;
-  const done = Boolean(stepProgress?.complete);
+  // A11y: fokus tab step via ref di dalam view (bukan document.querySelector
+  // global yang bisa match tablist view lain — bug lamanya).
+  const stepListRef = useRef<HTMLDivElement | null>(null);
+  const focusActiveStep = useCallback(() => {
+    stepListRef.current
+      ?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')
+      ?.focus();
+  }, []);
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col gap-3 pb-4">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <button className="ctl ctl-sm flex items-center gap-1.5" onClick={onBack} aria-label="Kembali ke daftar kursus">
-          <ChevronLeft size={15} aria-hidden="true" /> Kembali ke daftar
+    <div className="view-root w-full max-w-4xl mx-auto">
+      <div className="view-head flex items-center justify-between gap-2 shrink-0 flex-wrap" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+        <div className="flex items-center gap-2 min-w-0">
+          <Library size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
+          <h1 className="text-sm font-black text-white truncate">{course.title}</h1>
+          <span className="text-xs font-bold text-neutral-400 tabular-nums shrink-0">
+            {course.steps.length} langkah
+          </span>
+        </div>
+        <button className="ctl ctl-xs flex items-center gap-1.5" onClick={onBack} aria-label="Kembali ke daftar kursus">
+          <ChevronLeft size={13} aria-hidden="true" /> Kembali ke daftar
         </button>
-        <span className="text-xs font-bold text-neutral-400 tabular-nums">
-          {course.steps.length} langkah
-        </span>
       </div>
 
-      <h1 className="text-lg font-black text-white flex items-center gap-2">
-        <Library size={20} className="text-[var(--primary)]" aria-hidden="true" />
-        {course.title}
-      </h1>
-      <p className="text-xs text-neutral-400 -mt-2">{course.description}</p>
+      <div className="view-cols">
+        {/* Kolom utama: panel langkah aktif */}
+        <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+          {state?.error && (
+            <p role="alert" className="text-xs font-bold text-[var(--destructive)]">
+              {state.error}
+            </p>
+          )}
 
-      {state?.error && (
-        <p role="alert" className="text-xs font-bold text-[var(--destructive)]">
-          {state.error}
-        </p>
-      )}
-
-      {/* Tab-strip chip step (≤10 langkah — pola tab strip S6) */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1" role="tablist" aria-label="Langkah kursus">
-        {course.steps.map((s, i) => {
-          const sp = progress?.steps.find((x) => x.stepId === s.id);
-          const active = i === stepIndex;
-          return (
-            <button
-              key={s.id}
-              role="tab"
-              aria-selected={active}
-              tabIndex={active ? 0 : -1}
-              onClick={() => setStepIndex(i)}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowRight") {
-                  e.preventDefault();
-                  const next = Math.min(course.steps.length - 1, i + 1);
-                  setStepIndex(next);
-                  (document.querySelector(`[role="tablist"] [role="tab"][aria-selected="true"]`) as HTMLElement)?.focus();
-                } else if (e.key === "ArrowLeft") {
-                  e.preventDefault();
-                  const prev = Math.max(0, i - 1);
-                  setStepIndex(prev);
-                  (document.querySelector(`[role="tablist"] [role="tab"][aria-selected="true"]`) as HTMLElement)?.focus();
-                }
-              }}
-              className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all duration-[var(--move-animation-duration)] ${
-                active
-                  ? "border-[var(--primary)] bg-[var(--primary)]/15 text-white"
-                  : "border-[var(--border)] bg-[var(--card)] text-neutral-400 hover:text-white"
-              }`}
-            >
-              {sp?.complete ? (
-                <span className="inline-flex items-center gap-1">
-                  <Check size={13} aria-hidden="true" /> {i + 1}
+          {step ? (
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <h2 className="text-sm font-black text-white">
+                  STEP {stepIndex + 1} · {step.title}
+                </h2>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 border border-[var(--border)] rounded px-1.5 py-0.5">
+                  {step.kind}
                 </span>
-              ) : (
-                <span>{i + 1}</span>
+              </div>
+              <p className="text-xs text-neutral-300">
+                {step.kind === "lesson"
+                  ? "Materi tertulis — buka pelajaran dan tandai selesai."
+                  : step.kind === "puzzleTheme"
+                    ? "Kerjakan pool teka-teki bertema; progres tercatat otomatis."
+                    : step.kind === "drillSet"
+                      ? "Kerjakan set drill endgame; progres tercatat otomatis."
+                      : "Kerjakan latihan pembukaan riil; progres tercatat otomatis."}
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button className="ctl ctl-sm inline-flex items-center gap-1.5 ctl-active" onClick={() => onStepAction(step, stepIndex)} aria-label={`Buka langkah ${stepIndex + 1} ${step.title}`}>
+                  <ArrowRight size={14} aria-hidden="true" /> {stepKindActionLabel(step.kind)}
+                </button>
+                {stepIndex < course.steps.length - 1 && (
+                  <button className="ctl ctl-sm" onClick={() => setStepIndex(stepIndex + 1)}>
+                    Lanjut <ChevronRight size={14} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              {stepProgress && (
+                <p role="status" className="text-xs font-bold text-[var(--nav-accent-learn)] tabular-nums">
+                  Progres langkah: {stepProgress.solved}/{stepProgress.total} · {stepProgress.progressPct}%
+                </p>
               )}
-              {sp?.complete ? " Selesai ✓" : ""}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Panel langkah aktif */}
-      {step ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h2 className="text-sm font-black text-white">
-              STEP {stepIndex + 1} · {step.title}
-            </h2>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 border border-[var(--border)] rounded px-1.5 py-0.5">
-              {step.kind}
-            </span>
-          </div>
-          <p className="text-xs text-neutral-300">
-            {step.kind === "lesson"
-              ? "Materi tertulis — buka pelajaran dan tandai selesai."
-              : step.kind === "puzzleTheme"
-                ? "Kerjakan pool teka-teki bertema; progres tercatat otomatis."
-                : step.kind === "drillSet"
-                  ? "Kerjakan set drill endgame; progres tercatat otomatis."
-                  : "Kerjakan latihan pembukaan riil; progres tercatat otomatis."}
-          </p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button className="ctl ctl-sm inline-flex items-center gap-1.5 ctl-active" onClick={() => onStepAction(step, stepIndex)} aria-label={`Buka langkah ${stepIndex + 1} ${step.title}`}>
-              <ArrowRight size={14} aria-hidden="true" /> {stepKindActionLabel(step.kind)}
-            </button>
-            {stepIndex < course.steps.length - 1 && (
-              <button className="ctl ctl-sm" onClick={() => setStepIndex(stepIndex + 1)}>
-                Lanjut <ChevronRight size={14} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-          {stepProgress && (
-            <p role="status" className="text-xs font-bold text-[var(--primary)] tabular-nums">
-              Progres langkah: {stepProgress.solved}/{stepProgress.total} · {stepProgress.progressPct}%
+            </div>
+          ) : (
+            <p role="status" className="text-sm font-bold text-neutral-400">
+              Kursus ini sedang dirombak — belum ada langkah yang bisa dibuka.
             </p>
           )}
         </div>
-      ) : (
-        <p role="status" className="text-sm font-bold text-neutral-400">
-          Kursus ini sedang dirombak — belum ada langkah yang bisa dibuka.
-        </p>
-      )}
+
+        {/* Kolom meta: daftar langkah (chips step, pola tab strip S6) */}
+        <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3">
+            <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-2">Langkah</p>
+            <div ref={stepListRef} className="flex flex-col gap-1.5" role="tablist" aria-label="Langkah kursus">
+              {course.steps.map((s, i) => {
+                const sp = progress?.steps.find((x) => x.stepId === s.id);
+                const active = i === stepIndex;
+                return (
+                  <button
+                    key={s.id}
+                    role="tab"
+                    aria-selected={active}
+                    tabIndex={active ? 0 : -1}
+                    onClick={() => setStepIndex(i)}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowRight") {
+                        e.preventDefault();
+                        const next = Math.min(course.steps.length - 1, i + 1);
+                        setStepIndex(next);
+                        focusActiveStep();
+                      } else if (e.key === "ArrowLeft") {
+                        e.preventDefault();
+                        const prev = Math.max(0, i - 1);
+                        setStepIndex(prev);
+                        focusActiveStep();
+                      }
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold border transition-all duration-[var(--move-animation-duration)] ${
+                      active
+                        ? "border-[var(--nav-accent-learn)] bg-[var(--nav-accent-learn)]/15 text-white"
+                        : "border-[var(--border)] bg-[var(--surface)] text-neutral-400 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      {sp?.complete ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Check size={13} aria-hidden="true" /> {i + 1}
+                        </span>
+                      ) : (
+                        <span>{i + 1}</span>
+                      )}
+                      <span className="truncate">{s.title}</span>
+                    </span>
+                    {sp?.complete ? <span className="sr-only"> — Selesai</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

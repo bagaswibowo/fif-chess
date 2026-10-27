@@ -163,71 +163,69 @@ export function TournamentsView({ username = "" }: Props) {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col gap-3 min-h-0 py-1">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2.5">
-          <Trophy size={22} className="text-[var(--primary)] shrink-0" aria-hidden="true" />
-          <div>
-            <h1 className="text-lg font-black text-white leading-tight">Turnamen</h1>
-            <p className="text-xs text-neutral-400">Arena terjadwal — matching otomatis saat mulai.</p>
-          </div>
-        </div>
-        <div className="flex gap-1 bg-[var(--card)] p-1 rounded-xl border border-[var(--border)]" role="tablist" aria-label="Filter arena">
+    <div className="view-root w-full max-w-3xl mx-auto">
+      <div className="view-head flex items-center gap-2 shrink-0 flex-wrap" style={{ borderLeft: "3px solid var(--nav-accent-play)" }}>
+        <Trophy size={18} className="text-[var(--nav-accent-play)] shrink-0" aria-hidden="true" />
+        <h1 className="text-sm font-black text-white leading-tight shrink-0">Turnamen</h1>
+        <div className="flex-1" aria-hidden="true" />
+        <div className="flex gap-1 bg-[var(--card)] p-0.5 rounded-lg border border-[var(--border)] shrink-0" role="tablist" aria-label="Filter arena">
           <FilterChip active={filter === "semua"} onClick={() => setFilter("semua")} label="Semua" />
           <FilterChip active={filter === "tersedia"} onClick={() => setFilter("tersedia")} label="Tersedia" />
         </div>
       </div>
 
-      {toast && (
-        <p className="text-xs font-bold text-[var(--primary)]" role="status" aria-live="polite">
-          {toast}
-        </p>
-      )}
-      {authNote && (
-        <p className="text-xs font-bold" style={{ color: "var(--warning)" }} role="status" aria-live="polite">
-          {authNote}
-        </p>
-      )}
+      <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+        {toast && (
+          <p className="text-xs font-bold text-[var(--nav-accent-play)]" role="status" aria-live="polite">
+            {toast}
+          </p>
+        )}
+        {authNote && (
+          <p className="text-xs font-bold" style={{ color: "var(--warning)" }} role="status" aria-live="polite">
+            {authNote}
+          </p>
+        )}
 
-      {error && (
-        <div className="panel p-3 rounded-2xl border bg-[var(--card)]" role="alert" style={{ borderColor: "var(--destructive)" }}>
-          <p className="text-sm text-neutral-200">{error}</p>
-          <button className="ctl ctl-xs mt-2" onClick={() => void load()}>
-            Coba lagi
-          </button>
-        </div>
-      )}
+        {error && (
+          <div className="panel p-3 rounded-2xl border bg-[var(--card)]" role="alert" style={{ borderColor: "var(--destructive)" }}>
+            <p className="text-sm text-neutral-200">{error}</p>
+            <button className="ctl ctl-xs mt-2" onClick={() => void load()}>
+              Coba lagi
+            </button>
+          </div>
+        )}
 
-      {loading && !error && (
-        <div role="status" aria-live="polite" className="space-y-2">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="panel p-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] opacity-50">
-              <div className="h-3.5 w-24 rounded bg-[var(--surface)]" />
-              <div className="h-2.5 w-40 rounded bg-[var(--surface)] mt-2" />
-            </div>
+        {loading && !error && (
+          <div role="status" aria-live="polite" className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="panel p-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] opacity-50">
+                <div className="h-3.5 w-24 rounded bg-[var(--surface)]" />
+                <div className="h-2.5 w-40 rounded bg-[var(--surface)] mt-2" />
+              </div>
+            ))}
+            <p className="text-xs text-neutral-400">Mengambil arena…</p>
+          </div>
+        )}
+
+        {!loading && !error && visible.length === 0 && (
+          <p className="text-sm text-neutral-400 py-4 text-center" role="status">
+            {filter === "tersedia" ? "Tidak ada arena tersedia saat ini." : "Belum ada turnamen terjadwal."}
+          </p>
+        )}
+
+        <div className="flex flex-col gap-1.5">
+          {visible.map((a) => (
+            <ArenaCard
+              key={a.id}
+              arena={a}
+              isSelf={joined.has(a.id)}
+              joinBusy={joinBusy === a.id}
+              hasUser={Boolean(username)}
+              onOpen={() => openArena(a)}
+              onJoin={() => void join(a)}
+            />
           ))}
-          <p className="text-xs text-neutral-400">Mengambil arena…</p>
         </div>
-      )}
-
-      {!loading && !error && visible.length === 0 && (
-        <p className="text-sm text-neutral-400 py-4 text-center" role="status">
-          {filter === "tersedia" ? "Tidak ada arena tersedia saat ini." : "Belum ada turnamen terjadwal."}
-        </p>
-      )}
-
-      <div className="flex flex-col gap-2">
-        {visible.map((a) => (
-          <ArenaCard
-            key={a.id}
-            arena={a}
-            isSelf={joined.has(a.id)}
-            joinBusy={joinBusy === a.id}
-            hasUser={Boolean(username)}
-            onOpen={() => openArena(a)}
-            onJoin={() => void join(a)}
-          />
-        ))}
       </div>
     </div>
   );
@@ -253,54 +251,53 @@ function ArenaCard({
   const full = arena.entrants >= arena.capacity;
   const startLabel = formatStartAt(arena.startAt);
   const statusText = isSelf ? "Terdaftar" : full ? "Penuh" : arena.status === "registration" ? "Pendaftaran terbuka" : STATUS_LABEL[arena.status];
+  // Baris scannable ≤44px: info kritis 1 baris + subbaris, CTA terpisah.
   return (
-    <div className="panel rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3 flex flex-col gap-2">
-      <div className="flex items-start justify-between gap-2">
-        <button
-          onClick={onOpen}
-          className="text-left min-w-0 flex-1 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ring)]"
-          aria-label={`Buka detail arena ${arena.name}`}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <Timer size={15} className="text-[var(--accent)] shrink-0" aria-hidden="true" />
-            <span className="text-sm font-black text-white truncate">
-              {arena.timeControl} {arena.rated ? "(Terbuka)" : "(Casual)"}
-            </span>
-          </div>
-          <p className="text-xs text-neutral-300 mt-1 truncate">"{arena.name}"</p>
-          <p className="text-[11px] text-neutral-400 mt-1">
-            <span className="inline-flex items-center gap-1">
-              <Users size={11} aria-hidden="true" /> Daftar: {arena.entrants}/{arena.capacity}
-            </span>
-            {" · "}
-            <span className="inline-flex items-center gap-1">
-              <Clock size={11} aria-hidden="true" /> Mulai: {startLabel}
-            </span>
-          </p>
-        </button>
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <span className="text-[11px] font-bold text-neutral-400">{statusText}</span>
-          {(arena.status === "registration" && !full && !isSelf && (
-            <button
-              className="ctl ctl-xs ctl-primary"
-              onClick={onJoin}
-              disabled={joinBusy}
-              aria-label={hasUser ? `Daftar arena ${arena.name}` : "Masuk untuk daftar"}
-            >
-              {joinBusy ? "…" : hasUser ? "Daftar" : "Masuk untuk daftar"}
-            </button>
-          ))}
-          {full && !isSelf && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold" style={{ color: "var(--warning)" }}>
-              <CircleSlash size={12} aria-hidden="true" /> Penuh
-            </span>
-          )}
-          {isSelf && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold" style={{ color: "var(--success)" }}>
-              Terdaftar
-            </span>
-          )}
+    <div className="panel rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 flex items-center gap-3 min-h-[44px]">
+      <button
+        onClick={onOpen}
+        className="text-left min-w-0 flex-1 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ring)]"
+        aria-label={`Buka detail arena ${arena.name}`}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Timer size={14} className="text-[var(--nav-accent-play)] shrink-0" aria-hidden="true" />
+          <span className="text-sm font-black text-white truncate">
+            {arena.timeControl} {arena.rated ? "(Terbuka)" : "(Casual)"}
+          </span>
+          <span className="text-xs text-neutral-300 truncate shrink-0">"{arena.name}"</span>
         </div>
+        <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
+          <span className="inline-flex items-center gap-1">
+            <Users size={10} aria-hidden="true" /> Daftar: {arena.entrants}/{arena.capacity}
+          </span>
+          {" · "}
+          <span className="inline-flex items-center gap-1">
+            <Clock size={10} aria-hidden="true" /> Mulai: {startLabel}
+          </span>
+        </p>
+      </button>
+      <div className="shrink-0 flex items-center gap-1.5">
+        <span className="text-[11px] font-bold text-neutral-400">{statusText}</span>
+        {(arena.status === "registration" && !full && !isSelf && (
+          <button
+            className="ctl ctl-xs ctl-primary"
+            onClick={onJoin}
+            disabled={joinBusy}
+            aria-label={hasUser ? `Daftar arena ${arena.name}` : "Masuk untuk daftar"}
+          >
+            {joinBusy ? "…" : hasUser ? "Daftar" : "Masuk untuk daftar"}
+          </button>
+        ))}
+        {full && !isSelf && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold" style={{ color: "var(--warning)" }}>
+            <CircleSlash size={12} aria-hidden="true" /> Penuh
+          </span>
+        )}
+        {isSelf && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold" style={{ color: "var(--success)" }}>
+            Terdaftar
+          </span>
+        )}
       </div>
     </div>
   );
@@ -344,12 +341,13 @@ function ArenaDetail({
   }, [arena.status, startAt]);
 
   const startLabel = formatStartAt(startAt);
+  // S8: Pola C — detail 2-kolom: konten utama .view-body + sidebar meta .view-body.
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col gap-3 min-h-0 py-1">
-      <div className="flex items-center justify-between gap-2">
+    <div className="view-root w-full max-w-5xl mx-auto">
+      <div className="view-head flex items-center justify-between gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-play)" }}>
         <div className="flex items-center gap-2.5 min-w-0">
-          <Trophy size={20} className="text-[var(--primary)] shrink-0" aria-hidden="true" />
-          <h1 className="text-lg font-black text-white truncate">{arena.name}</h1>
+          <Trophy size={20} className="text-[var(--nav-accent-play)] shrink-0" aria-hidden="true" />
+          <h1 className="text-sm font-black text-white truncate">{arena.name}</h1>
           <span className="text-xs text-neutral-400 shrink-0">{arena.timeControl}</span>
         </div>
         <button className="ctl ctl-xs inline-flex items-center gap-1" onClick={onBack}>
@@ -358,56 +356,63 @@ function ArenaDetail({
         </button>
       </div>
 
-      {/* Status arena — teks eksplisit (bukan chip warna saja) */}
-      <div className="panel p-3 rounded-2xl border border-[var(--border)] bg-[var(--card)]">
-        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide">Status</p>
-        <p className="text-sm text-neutral-200 mt-1" role="status" aria-live="polite">
-          {STATUS_LABEL[arena.status]} · Daftar: {arena.entrants}/{arena.capacity} · Mulai: {startLabel}
-        </p>
-        {arena.status === "registration" && countdown && (
-          <p className="text-xs text-neutral-400 mt-1" role="status" aria-live="polite">
-            Menunggu mulai berikutnya: {countdown}
-          </p>
-        )}
-        {isSelf ? (
-          <p className="text-xs font-bold mt-2" style={{ color: "var(--success)" }}>
-            Kamu terdaftar di arena ini.
-          </p>
-        ) : arena.status === "registration" ? (
-          <p className="text-xs text-neutral-400 mt-2">
-            {arena.entrants >= arena.capacity ? "Arena penuh — coba yang lain." : "Matching otomatis saat start tiba."}
-          </p>
-        ) : null}
-      </div>
+      <div className="view-cols">
+        {/* Kolom utama: papan peserta + WS live */}
+        <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+          <div className="panel p-3 rounded-2xl border border-[var(--border)] bg-[var(--card)]">
+            <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide">Peserta</p>
+            {entrants === null ? (
+              <p className="text-xs text-neutral-400 mt-2" role="status">Memuat peserta…</p>
+            ) : entrants.length === 0 ? (
+              <p className="text-xs text-neutral-400 mt-2" role="status">
+                Belum ada peserta terdaftar.
+              </p>
+            ) : (
+              <table className="w-full mt-2 text-xs" role="table">
+                <caption className="sr-only">Peserta {arena.name}</caption>
+                <thead>
+                  <tr className="text-left text-neutral-400">
+                    <th scope="col" className="pb-1.5 font-bold">Pemain</th>
+                    <th scope="col" className="pb-1.5 font-bold text-right">Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entrants.map((p) => (
+                    <tr key={p.username} className="border-t border-[var(--border)]">
+                      <td className="py-1.5 text-neutral-200 font-bold">@{p.username}</td>
+                      <td className="py-1.5 text-right text-neutral-400 tabular-nums">{p.rating}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
 
-      {/* Papan hasil: tabel teks sederhana + caption sr-only (a11y §5.5) */}
-      <div className="panel p-3 rounded-2xl border border-[var(--border)] bg-[var(--card)]">
-        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide">Peserta</p>
-        {entrants === null ? (
-          <p className="text-xs text-neutral-400 mt-2" role="status">Memuat peserta…</p>
-        ) : entrants.length === 0 ? (
-          <p className="text-xs text-neutral-400 mt-2" role="status">
-            Belum ada peserta terdaftar.
-          </p>
-        ) : (
-          <table className="w-full mt-2 text-xs" role="table">
-            <caption className="sr-only">Peserta {arena.name}</caption>
-            <thead>
-              <tr className="text-left text-neutral-400">
-                <th scope="col" className="pb-1.5 font-bold">Pemain</th>
-                <th scope="col" className="pb-1.5 font-bold text-right">Rating</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entrants.map((p) => (
-                <tr key={p.username} className="border-t border-[var(--border)]">
-                  <td className="py-1.5 text-neutral-200 font-bold">@{p.username}</td>
-                  <td className="py-1.5 text-right text-neutral-400 tabular-nums">{p.rating}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        {/* Kolom meta: status arena (countdown live) */}
+        <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+          {/* Status arena — teks eksplisit (bukan chip warna saja) */}
+          <div className="panel p-3 rounded-2xl border border-[var(--border)] bg-[var(--card)]">
+            <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide">Status</p>
+            <p className="text-sm text-neutral-200 mt-1" role="status" aria-live="polite">
+              {STATUS_LABEL[arena.status]} · Daftar: {arena.entrants}/{arena.capacity} · Mulai: {startLabel}
+            </p>
+            {arena.status === "registration" && countdown && (
+              <p className="text-xs text-neutral-400 mt-1" role="status" aria-live="polite">
+                Menunggu mulai berikutnya: {countdown}
+              </p>
+            )}
+            {isSelf ? (
+              <p className="text-xs font-bold mt-2" style={{ color: "var(--success)" }}>
+                Kamu terdaftar di arena ini.
+              </p>
+            ) : arena.status === "registration" ? (
+              <p className="text-xs text-neutral-400 mt-2">
+                {arena.entrants >= arena.capacity ? "Arena penuh — coba yang lain." : "Matching otomatis saat start tiba."}
+              </p>
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -422,8 +427,8 @@ function FilterChip({ active, onClick, label }: { active: boolean; onClick: () =
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
-        active ? "bg-[var(--primary)] text-white" : "text-neutral-400 hover:text-white"
+      className={`px-2.5 py-0.5 rounded-md text-xs font-bold transition-colors ${
+        active ? "bg-[var(--nav-accent-play)] text-black" : "text-neutral-400 hover:text-white"
       }`}
       style={{ transitionDuration: "var(--move-animation-duration)" }}
     >
