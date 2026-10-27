@@ -52,3 +52,6 @@ models/
 *.pdf
 resource/*.pdf
 debug/
+
+# S6 scratch verification probes (env-driven, no secrets in tree)
+scripts/verify-s6*.ts
