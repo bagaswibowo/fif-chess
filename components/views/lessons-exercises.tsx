@@ -30,7 +30,9 @@ function bookMoveCandidates(fen: string): string[] {
   return Array.isArray(entry) ? entry : [entry];
 }
 
-/* ── Teka-teki riil satu soal (pool tema) — PuzzleSolver + /api/puzzles ── */
+/* ── Teka-teki riil satu soal (pool tema) — PuzzleSolver + /api/puzzles ──
+ *    S8: kartu di-embed di .view-body (Pola C lessons-detail) — .view-cards
+ *    pada wrapper agar kartu mematuhi kontrak layout .view-* (spec §3). */
 export function SinglePuzzleCard({ label, theme }: { label: string; theme: string }) {
   const [puzzle, setPuzzle] = useState<PuzzleDto | null>(null);
   const [streak, setStreak] = useState(0);
@@ -106,7 +108,7 @@ export function SinglePuzzleCard({ label, theme }: { label: string; theme: strin
     );
   }
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3">
+    <div className="view-cards rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-black text-white flex items-center gap-2">
           <Target size={13} className="text-[var(--primary)]" aria-hidden="true" /> {label}
@@ -223,7 +225,7 @@ export function ThemeDrillCard({ theme, count, authStatus }: { theme: string; co
     );
   }
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3">
+    <div className="view-cards rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-black text-white flex items-center gap-2">
           <Target size={13} className="text-[var(--primary)]" aria-hidden="true" />
@@ -324,7 +326,7 @@ export function BookMoveCard({ fen }: { fen: string }) {
       : [];
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3">
+    <div className="view-cards rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-black text-white flex items-center gap-2">
           <Check size={13} className="text-[var(--primary)]" aria-hidden="true" /> Cari book move

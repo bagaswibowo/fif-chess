@@ -121,83 +121,98 @@ export function ThemesMasteryView({ lang = "id", onBack }: Props) {
     else setRangeInvalid(false);
   };
 
+  // S8 Pola A (spec §3): .view-head 44px (judul + kembali, aksen
+  // --nav-accent-puzzle) + .view-grid-board (papan ≤540px kiri + panel
+  // .view-body scroll internal kanan: filter/solve error).
   if (activeTheme) {
     return (
-      <div className="w-full flex flex-col gap-3">
-        <div className="flex items-center gap-2">
+      <div className="view-root w-full min-h-0">
+        <div className="view-head flex items-center gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
           {onBack ? (
             <Button variant="outline" size="sm" onClick={() => { setActiveTheme(null); setPuzzle(null); }}>
               {lang === "id" ? "Kembali" : "Back"}
             </Button>
           ) : null}
-          <h2 className="text-sm font-black text-white">
+          <h2 className="text-sm font-black text-white truncate m-0">
             {THEME_LIST.find((t) => t.key === activeTheme)?.label ?? activeTheme}
           </h2>
         </div>
-        {solveError ? (
-          <div role="status" className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-neutral-300 text-center">
-            {solveError}{" "}
-            <Button variant="ghost" size="sm" onClick={() => { setActiveTheme(null); setSolveError(null); }}>
-              Sesuaikan Filter
-            </Button>
+        <div className="view-grid-board flex-1 min-h-0 mt-1.5">
+          <div className="min-h-0">
+            {!solveError ? (
+              <PuzzleSolver
+                lang={lang}
+                puzzle={puzzle}
+                fetchHint={fetchHint}
+                submitAttempt={submitAttempt}
+              />
+            ) : null}
           </div>
-        ) : (
-          <PuzzleSolver
-            lang={lang}
-            puzzle={puzzle}
-            fetchHint={fetchHint}
-            submitAttempt={submitAttempt}
-          />
-        )}
+          <div className="view-body pr-1 space-y-2.5 custom-scrollbar min-h-0">
+            {solveError ? (
+              <div role="status" className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-neutral-300 text-center">
+                {solveError}{" "}
+                <Button variant="ghost" size="sm" onClick={() => { setActiveTheme(null); setSolveError(null); }}>
+                  Sesuaikan Filter
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
     );
   }
 
+  // S8 Pola B (spec §3): .view-head 44px (judul + filter rating) + .view-body
+  // grid tema scroll internal.
   return (
-    <div className="max-w-5xl mx-auto w-full flex flex-col gap-3">
-      {/* Filter (design §4.2) */}
-      <div className="flex flex-wrap items-center gap-2">
-        {onBack ? (
-          <Button variant="outline" size="sm" onClick={onBack}>
-            {lang === "id" ? "Kembali" : "Back"}
-          </Button>
-        ) : null}
-        <label className="flex items-center gap-1 text-xs text-neutral-400">
-          Rating
-          <input
-            type="number"
-            min={800}
-            max={2200}
-            placeholder="800"
-            aria-label="Rating minimum"
-            onChange={(e) => clampMin(Number(e.target.value))}
-            className="w-20 px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-white"
-          />
-          –
-          <input
-            type="number"
-            min={800}
-            max={2200}
-            placeholder="2200"
-            aria-label="Rating maksimum"
-            onChange={(e) => {
-              const nv = Math.max(800, Math.min(3000, Math.round(Number(e.target.value))));
-              setMaxRating(Number.isFinite(nv) && e.target.value ? nv : null);
-              if (minRating !== null && nv < minRating) setRangeInvalid(true);
-              else setRangeInvalid(false);
-            }}
-            className="w-20 px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-white"
-          />
-        </label>
-        {rangeInvalid ? (
-          <span className="text-xs text-[var(--error)]" role="status">
-            Rentang rating tidak valid
-          </span>
-        ) : null}
+    <div className="view-root w-full max-w-5xl mx-auto">
+      <div className="view-head flex flex-wrap items-center justify-between gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <h2 className="text-sm font-black text-white m-0">Latihan Tema</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          {onBack ? (
+            <Button variant="outline" size="sm" onClick={onBack}>
+              {lang === "id" ? "Kembali" : "Back"}
+            </Button>
+          ) : null}
+          <label className="flex items-center gap-1 text-xs text-neutral-400">
+            Rating
+            <input
+              type="number"
+              min={800}
+              max={2200}
+              placeholder="800"
+              aria-label="Rating minimum"
+              onChange={(e) => clampMin(Number(e.target.value))}
+              className="w-20 px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-white"
+            />
+            –
+            <input
+              type="number"
+              min={800}
+              max={2200}
+              placeholder="2200"
+              aria-label="Rating maksimum"
+              onChange={(e) => {
+                const nv = Math.max(800, Math.min(3000, Math.round(Number(e.target.value))));
+                setMaxRating(Number.isFinite(nv) && e.target.value ? nv : null);
+                if (minRating !== null && nv < minRating) setRangeInvalid(true);
+                else setRangeInvalid(false);
+              }}
+              className="w-20 px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-white"
+            />
+          </label>
+          {rangeInvalid ? (
+            <span className="text-xs text-[var(--error)]" role="status">
+              Rentang rating tidak valid
+            </span>
+          ) : null}
+        </div>
       </div>
 
-      {/* Grid tema (2 kolom mobile, 3-4 desktop) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 pb-4" role="list" aria-busy={loading}>
+      {/* Grid tema (2 kolom mobile, 3-4 desktop) — satu-satunya region scroll */}
+      <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 pb-4 pt-2" role="list" aria-busy={loading}>
         {sorted.map((t) => {
           const p = progressMap.get(t.key);
           const pct = p?.masteryPct ?? 0;
@@ -232,6 +247,7 @@ export function ThemesMasteryView({ lang = "id", onBack }: Props) {
             </button>
           );
         })}
+        </div>
       </div>
     </div>
   );

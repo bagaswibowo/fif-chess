@@ -177,95 +177,114 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
   );
 
   if (error && !puzzle) {
+    // S8 Pola B: error state tetap di dalam .view-root/.view-body (no-scroll).
     return (
-      <div className="flex flex-col items-center gap-3 py-16" role="status">
-        <p className="text-sm text-neutral-300">{error}</p>
-        <Button variant="outline" onClick={() => void loadNext()}>
-          {lang === "id" ? "Coba Lagi" : "Retry"}
-        </Button>
+      <div className="view-root w-full">
+        <div className="view-head flex items-center gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+          <h2 className="text-sm font-black text-white m-0">Teka-Teki</h2>
+        </div>
+        <div className="view-body flex flex-col items-center gap-3 py-16" role="status" style={{ scrollbarWidth: "thin" }}>
+          <p className="text-sm text-neutral-300">{error}</p>
+          <Button variant="outline" onClick={() => void loadNext()}>
+            {lang === "id" ? "Coba Lagi" : "Retry"}
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      {/* W3: progression tier rating — unlock via akurasi tier sebelumnya */}
-      <div className="max-w-3xl mx-auto w-full">
-        <TierLadder lang={lang} onPickTier={pickTier} selectedTier={tier} />
+    /* S8 Pola A (spec §3): .view-root + .view-head 44px (TierLadder + filter,
+       aksen --nav-accent-puzzle section Teka-Teki) + .view-grid-board
+       (PuzzleSolver: papan kiri ≤540px + panel kanan) dengan panel
+       .view-body sebagai region scroll internal (F8: papan muat utuh). */
+    <div className="view-root w-full min-h-0">
+      <div className="view-head flex items-center shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        {/* T6: bar filter tema + preset rating — TIER LADDER pindah ke panel
+            kanan (view-body) agar head tetap 44px & tidak overflow. */}
+        <div className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 flex flex-wrap items-center gap-2">
+          <label className="text-xs text-neutral-400 flex items-center gap-1">
+            <span aria-hidden="true">🏷️</span> Tema
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              className="ml-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-white"
+            >
+              <option value="">Semua tema</option>
+              {themes.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </label>
+          <div className="flex gap-1" role="radiogroup" aria-label="Preset rating">
+            {RATING_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                role="radio"
+                aria-checked={preset === p.id}
+                onClick={() => setPreset(p.id)}
+                className={`px-2 py-1 rounded-full text-xs font-bold border ${
+                  preset === p.id
+                    ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                    : "border-[var(--border)] text-neutral-300 hover:text-white"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1 ml-auto">
+            <Button size="sm" onClick={applyFilters}>Terapkan</Button>
+            <Button size="sm" variant="outline" onClick={resetFilters}>Reset</Button>
+          </div>
+        </div>
       </div>
 
-      {/* T6: bar filter tema + preset rating */}
-      <div className="max-w-3xl mx-auto w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 flex flex-wrap items-center gap-2">
-        <label className="text-xs text-neutral-400 flex items-center gap-1">
-          <span aria-hidden="true">🏷️</span> Tema
-          <select
-            value={theme}
-            onChange={(e) => setTheme(e.target.value)}
-            className="ml-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-white"
-          >
-            <option value="">Semua tema</option>
-            {themes.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </label>
-        <div className="flex gap-1" role="radiogroup" aria-label="Preset rating">
-          {RATING_PRESETS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              role="radio"
-              aria-checked={preset === p.id}
-              onClick={() => setPreset(p.id)}
-              className={`px-2 py-1 rounded-full text-xs font-bold border ${
-                preset === p.id
-                  ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                  : "border-[var(--border)] text-neutral-300 hover:text-white"
+      <div className="view-grid-board flex-1 min-h-0 mt-1.5">
+        {/* LEFT: papan PuzzleSolver — F8/Pola A §3: papan self-cap internal
+            solver (max-w calc(100dvh-260px) ≈ 508px @ 768dvh ≤ 540) width-driven
+            → muat utuh 1360×768 tanpa scroll halaman; kolom kiri = sisa ruang. */}
+        <div className="min-h-0">
+          <PuzzleSolver
+            lang={lang}
+            puzzle={puzzle}
+            loading={loading}
+            initialStreak={streak}
+            fetchHint={fetchHint}
+            submitAttempt={submitAttempt}
+            onGoRush={onGoRush}
+            // V3: Next Puzzle — muat puzzle baru via API eksisting tanpa reload.
+            onNextPuzzle={() => void loadNext()}
+          />
+        </div>
+        {/* RIGHT: panel .view-body (320px) — TierLadder + banner hasil;
+            satu-satunya region scroll internal (Pola A §3). */}
+        <div className="view-body pr-1 space-y-2.5 custom-scrollbar min-h-0">
+          <TierLadder lang={lang} onPickTier={pickTier} selectedTier={tier} />
+          {/* T6: banner hasil inline aria-live — selalu teks + ikon, bukan warna saja */}
+          {lastResult && (
+            <div
+              role="status"
+              aria-live="polite"
+              className={`w-full rounded-xl border px-4 py-2.5 text-sm font-semibold flex items-center justify-between gap-3 ${
+                lastResult === "correct"
+                  ? "border-[var(--success)] text-emerald-300 bg-[var(--card)]"
+                  : "border-[var(--error)] text-red-300 bg-[var(--card)]"
               }`}
             >
-              {p.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-1 ml-auto">
-          <Button size="sm" onClick={applyFilters}>Terapkan</Button>
-          <Button size="sm" variant="outline" onClick={resetFilters}>Reset</Button>
+              <span>
+                <span aria-hidden="true">{lastResult === "correct" ? "✓ " : "✕ "}</span>
+                {lastResult === "correct" ? "Benar!" : bestStep ? `Kurang tepat — langkah terbaik: ${bestStep}` : "Kurang tepat."}
+              </span>
+              <Button size="sm" onClick={() => void loadNext()}>
+                {lang === "id" ? "Lanjut" : "Next"} <span className="sr-only"> (tekan Enter)</span>
+              </Button>
+            </div>
+          )}
+          {reducedMotion && !lastResult && <p className="sr-only" aria-live="polite">Mode gerak minimal aktif.</p>}
         </div>
       </div>
-
-      <PuzzleSolver
-        lang={lang}
-        puzzle={puzzle}
-        loading={loading}
-        initialStreak={streak}
-        fetchHint={fetchHint}
-        submitAttempt={submitAttempt}
-        onGoRush={onGoRush}
-        // V3: Next Puzzle — muat puzzle baru via API eksisting tanpa reload.
-        onNextPuzzle={() => void loadNext()}
-      />
-
-      {/* T6: banner hasil inline aria-live — selalu teks + ikon, bukan warna saja */}
-      {lastResult && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={`max-w-3xl mx-auto w-full rounded-xl border px-4 py-2.5 text-sm font-semibold flex items-center justify-between gap-3 ${
-            lastResult === "correct"
-              ? "border-[var(--success)] text-emerald-300 bg-[var(--card)]"
-              : "border-[var(--error)] text-red-300 bg-[var(--card)]"
-          }`}
-        >
-          <span>
-            <span aria-hidden="true">{lastResult === "correct" ? "✓ " : "✕ "}</span>
-            {lastResult === "correct" ? "Benar!" : bestStep ? `Kurang tepat — langkah terbaik: ${bestStep}` : "Kurang tepat."}
-          </span>
-          <Button size="sm" onClick={() => void loadNext()}>
-            {lang === "id" ? "Lanjut" : "Next"} <span className="sr-only"> (tekan Enter)</span>
-          </Button>
-        </div>
-      )}
-      {reducedMotion && !lastResult && <p className="sr-only" aria-live="polite">Mode gerak minimal aktif.</p>}
     </div>
   );
 }

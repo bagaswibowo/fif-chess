@@ -218,11 +218,16 @@ export function RushView({ lang = "id", onBack }: Props) {
   }, [remaining, stage, mode, announce]);
 
   if (stage === "pregame") {
+    // S8 Pola B (spec §3): .view-head 44px (judul, aksen --nav-accent-puzzle)
+    // + .view-body rules/chips/CTA scroll internal.
     return (
-      <div className="max-w-xl mx-auto w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center shadow-xl">
-        <IconLightning3D size={48} className="mx-auto" aria-hidden="true" />
-        <h2 className="text-xl font-black text-white mt-2">{lang === "id" ? "Teka-Teki Gegas" : "Puzzle Rush"}</h2>
-
+      <div className="view-root w-full max-w-2xl mx-auto">
+        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+          <IconLightning3D size={18} aria-hidden="true" />
+          <h2 className="text-sm font-black text-white m-0">{lang === "id" ? "Teka-Teki Gegas" : "Puzzle Rush"}</h2>
+        </div>
+        <div className="view-body flex flex-col items-center" style={{ scrollbarWidth: "thin" }}>
+      <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center shadow-xl">
         <div className="text-left mt-4 text-sm text-neutral-300 space-y-1" aria-label="Aturan">
           {RULES.map((r) => (
             <p key={r}>{r}</p>
@@ -281,14 +286,21 @@ export function RushView({ lang = "id", onBack }: Props) {
           </Button>
         </div>
       </div>
+        </div>
+      </div>
     );
   }
 
   if (stage === "over") {
+    // S8 Pola B: .view-head (judul Game Over) + .view-body skor/rekor/leaderboard.
     return (
-      <div className="max-w-xl mx-auto w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center shadow-xl">
-        <IconTrophy3D size={44} className="mx-auto" aria-hidden="true" />
-        <h2 className="text-lg font-black text-white mt-1">Game Over</h2>
+      <div className="view-root w-full max-w-2xl mx-auto">
+        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+          <IconTrophy3D size={18} aria-hidden="true" />
+          <h2 className="text-sm font-black text-white m-0">Game Over</h2>
+        </div>
+        <div className="view-body" style={{ scrollbarWidth: "thin" }}>
+      <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center shadow-xl">
         <p className="text-3xl font-black text-white mt-2 tabular-nums">Skor: {finalScore}</p>
         {newRecord ? (
           <p className="text-sm font-bold text-[var(--primary)] mt-1">Rekor pribadi baru!</p>
@@ -336,6 +348,8 @@ export function RushView({ lang = "id", onBack }: Props) {
           ) : null}
         </div>
       </div>
+        </div>
+      </div>
     );
   }
 
@@ -344,81 +358,101 @@ export function RushView({ lang = "id", onBack }: Props) {
   const heartsLeft = 3 - strikes;
   if (paused) {
     // T6: overlay pause saat tab blur — waktu tidak berkurang; resume via klik.
+    // S8: tetap di dalam .view-root/.view-body agar tidak memicu scroll halaman.
     return (
-      <div className="max-w-3xl mx-auto w-full flex flex-col gap-2">
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-10 text-center" role="status" aria-live="polite">
-          <IconClock3D size={40} className="mx-auto" aria-hidden="true" />
-          <h2 className="text-lg font-black text-white mt-2">Sesi dijeda</h2>
-          <p className="text-sm text-neutral-400 mt-1">Tab tidak aktif — waktu dihentikan sementara.</p>
-          <div className="flex justify-center mt-5">
-            <Button onClick={applyResume}>Lanjutkan</Button>
+      <div className="view-root w-full max-w-3xl mx-auto">
+        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+          <IconClock3D size={18} aria-hidden="true" />
+          <h2 className="text-sm font-black text-white m-0">Teka-Teki Gegas</h2>
+        </div>
+        <div className="view-body flex flex-col items-center" style={{ scrollbarWidth: "thin" }}>
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-10 text-center" role="status" aria-live="polite">
+            <IconClock3D size={40} className="mx-auto" aria-hidden="true" />
+            <h2 className="text-lg font-black text-white mt-2 m-0">Sesi dijeda</h2>
+            <p className="text-sm text-neutral-400 mt-1 m-0">Tab tidak aktif — waktu dihentikan sementara.</p>
+            <div className="flex justify-center mt-5">
+              <Button onClick={applyResume}>Lanjutkan</Button>
+            </div>
           </div>
         </div>
       </div>
     );
   }
   return (
-    <div className="max-w-3xl mx-auto w-full flex flex-col gap-2">
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 flex items-center justify-between gap-3">
-        <span
-          className={`flex items-center gap-1.5 text-lg font-black tabular-nums ${lowTime ? "text-[var(--error)] animate-pulse" : "text-white"}`}
-          aria-label={mode === "endless" ? "Durasi tanpa batas" : `Sisa waktu ${formatClock(remaining)}`}
-        >
-          {mode === "endless" ? <IconInfinity3D size={20} aria-hidden="true" /> : <IconClock3D size={20} aria-hidden="true" />}
-          {mode === "endless" ? formatClock(elapsed) : formatClock(remaining)}
-        </span>
-        <span className="flex items-center gap-1.5 text-lg font-black text-white tabular-nums" key={score}>
-          <IconFire3D size={18} aria-hidden="true" /> Skor: {score}
-        </span>
-        <span
-          className="flex items-center gap-1 text-lg"
-          role="img"
-          aria-label={`Kesempatan tersisa: ${heartsLeft} dari 3`}
-        >
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className={i < heartsLeft ? "text-[var(--primary)]" : "text-neutral-600"}
-              aria-hidden="true"
-            >
-              {i < heartsLeft ? "♥" : "♥"}
-            </span>
-          ))}
-        </span>
-        {confirmStop ? (
-          <span className="flex items-center gap-1 text-xs text-neutral-300">
-            Akhiri sesi?
-            <button className="underline font-bold" onClick={() => void endSession()}>
-              Ya
-            </button>
-            <button className="underline" onClick={() => setConfirmStop(false)}>
-              Lanjut
-            </button>
+    /* S8 Pola A (spec §3): .view-head 44px (HUD timer/skor/heart/stop, aksen
+       --nav-accent-puzzle) + .view-grid-board (PuzzleSolver: papan kiri ≤540px
+       + panel .view-body scroll internal kanan; F8 papan muat utuh). */
+    <div className="view-root w-full min-h-0">
+      <div className="view-head flex items-center justify-between gap-3 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="flex items-center justify-between gap-3 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3">
+          <span
+            className={`flex items-center gap-1.5 text-base font-black tabular-nums ${lowTime ? "text-[var(--error)] animate-pulse" : "text-white"}`}
+            aria-label={mode === "endless" ? "Durasi tanpa batas" : `Sisa waktu ${formatClock(remaining)}`}
+          >
+            {mode === "endless" ? <IconInfinity3D size={18} aria-hidden="true" /> : <IconClock3D size={18} aria-hidden="true" />}
+            {mode === "endless" ? formatClock(elapsed) : formatClock(remaining)}
           </span>
-        ) : (
-          <Button variant="ghost" size="sm" onClick={() => setConfirmStop(true)}>
-            {lang === "id" ? "Berhenti" : "Stop"}
-          </Button>
-        )}
-        <span className="sr-only" aria-live="polite">{announceRef.current}</span>
+          <span className="flex items-center gap-1.5 text-base font-black text-white tabular-nums" key={score}>
+            <IconFire3D size={16} aria-hidden="true" /> Skor: {score}
+          </span>
+          <span
+            className="flex items-center gap-1 text-base"
+            role="img"
+            aria-label={`Kesempatan tersisa: ${heartsLeft} dari 3`}
+          >
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className={i < heartsLeft ? "text-[var(--primary)]" : "text-neutral-600"}
+                aria-hidden="true"
+              >
+                ♥
+              </span>
+            ))}
+          </span>
+          {confirmStop ? (
+            <span className="flex items-center gap-1 text-xs text-neutral-300">
+              Akhiri sesi?
+              <button className="underline font-bold" onClick={() => void endSession()}>
+                Ya
+              </button>
+              <button className="underline" onClick={() => setConfirmStop(false)}>
+                Lanjut
+              </button>
+            </span>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setConfirmStop(true)}>
+              {lang === "id" ? "Berhenti" : "Stop"}
+            </Button>
+          )}
+          <span className="sr-only" aria-live="polite">{announceRef.current}</span>
+        </div>
       </div>
 
-      {disconnect ? (
-        <div role="status" className="rounded-xl border border-[var(--error)] bg-[var(--card)] px-4 py-3 text-sm text-white text-center">
-          Koneksi terputus.{" "}
-          <button className="underline" onClick={() => setDisconnect(false)}>
-            Coba Lagi
-          </button>
+      <div className="view-grid-board flex-1 min-h-0 mt-1.5">
+        {/* LEFT: papan PuzzleSolver — F8/Pola A §3: papan self-cap internal
+            solver (max-w calc(100dvh-260px) ≈ 508px @ 768dvh ≤ 540) width-driven. */}
+        <div className="flex flex-col gap-1.5 min-h-0">
+          <PuzzleSolver
+            lang={lang}
+            puzzle={puzzle}
+            variant="rush"
+            fetchHint={fetchHint}
+            submitAttempt={submitAttempt}
+          />
         </div>
-      ) : null}
-
-      <PuzzleSolver
-        lang={lang}
-        puzzle={puzzle}
-        variant="rush"
-        fetchHint={fetchHint}
-        submitAttempt={submitAttempt}
-      />
+        {/* RIGHT: panel .view-body — banner koneksi + region scroll internal (Pola A §3). */}
+        <div className="view-body pr-1 space-y-1.5 custom-scrollbar min-h-0">
+          {disconnect ? (
+            <div role="status" className="rounded-xl border border-[var(--error)] bg-[var(--card)] px-4 py-3 text-sm text-white text-center">
+              Koneksi terputus.{" "}
+              <button className="underline" onClick={() => setDisconnect(false)}>
+                Coba Lagi
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

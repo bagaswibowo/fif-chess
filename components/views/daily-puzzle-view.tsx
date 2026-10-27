@@ -147,12 +147,15 @@ export function DailyPuzzleView({ lang = "id", onGoPuzzles }: Props) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto w-full flex flex-col gap-3">
-      {/* Navigator tanggal (design §2.2) */}
-      <div className="flex items-center justify-center gap-3 py-1" role="navigation" aria-label="Navigator tanggal harian">
+    /* S8 Pola A (spec §3): .view-root + .view-head 44px (navigator tanggal,
+       aksen --nav-accent-puzzle) + .view-grid-board (PuzzleSolver: papan kiri
+       ≤540px + panel .view-body scroll internal kanan). */
+    <div className="view-root w-full min-h-0">
+      <div className="view-head flex items-center justify-center gap-3 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        {/* Navigator tanggal (design §2.2) */}
         {navBtn(-1)}
         <div className="text-center min-w-48">
-          <div className="text-sm font-black text-white">{formatDailyDate(dateKey)}</div>
+          <div className="text-sm font-black text-white leading-tight">{formatDailyDate(dateKey)}</div>
           <div className="text-[10px] text-neutral-500">Waktu UTC</div>
         </div>
         {navBtn(1)}
@@ -161,56 +164,67 @@ export function DailyPuzzleView({ lang = "id", onGoPuzzles }: Props) {
         </span>
       </div>
 
-      {future ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-neutral-300 text-center" role="status">
-          Tanggal belum tersedia.
-          <Button variant="ghost" size="sm" className="ml-2" onClick={() => setDateKey(todayKey)}>
-            {lang === "id" ? "Kembali ke hari ini" : "Back to today"}
-          </Button>
+      <div className="view-grid-board flex-1 min-h-0 mt-1.5">
+        {/* LEFT: papan PuzzleSolver — F8/Pola A §3: papan self-cap internal
+            solver (max-w calc(100dvh-260px) ≈ 508px @ 768dvh ≤ 540) width-driven. */}
+        <div className="flex flex-col min-h-0 gap-1.5">
+          {future ? (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-neutral-300 text-center" role="status">
+              Tanggal belum tersedia.
+              <Button variant="ghost" size="sm" className="ml-2" onClick={() => setDateKey(todayKey)}>
+                {lang === "id" ? "Kembali ke hari ini" : "Back to today"}
+              </Button>
+            </div>
+          ) : error ? (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-neutral-300 text-center" role="status">
+              {error}
+            </div>
+          ) : (
+            <PuzzleSolver
+              lang={lang}
+              puzzle={puzzle}
+              loading={loading}
+              fetchHint={fetchHint}
+              submitAttempt={submitAttempt}
+            />
+          )}
         </div>
-      ) : error ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-neutral-300 text-center" role="status">
-          {error}
-        </div>
-      ) : (
-        <>
-          {/* Streak harian */}
-          <p className="text-center text-xs text-neutral-400">
-            Streak harian: {dailyStreak} hari
-          </p>
 
-          {/* Banner selesai (design §2.2) */}
-          {solvedToday ? (
-            <div className="rounded-xl border border-[var(--success)] bg-[var(--card)] px-4 py-3 flex items-center gap-2 text-sm text-white" role="status">
-              <IconCheck3D size={16} aria-hidden="true" />
-              Sudah selesai hari ini — lihat solusi atau kembali besok.
-              {onGoPuzzles ? (
-                <Button size="sm" className="ml-auto" onClick={onGoPuzzles}>
-                  {lang === "id" ? "Mainkan Teka-Teki Lain" : "Play another puzzle"}
-                </Button>
+        {/* RIGHT: panel .view-body — streak, banner selesai, bagikan (Pola A §3) */}
+        <div className="view-body pr-1 space-y-2.5 custom-scrollbar min-h-0">
+          {!future && !error ? (
+            <>
+              {/* Streak harian */}
+              <p className="text-center text-xs text-neutral-400">
+                Streak harian: {dailyStreak} hari
+              </p>
+
+              {/* Banner selesai (design §2.2) */}
+              {solvedToday ? (
+                <div className="rounded-xl border border-[var(--success)] bg-[var(--card)] px-4 py-3 flex items-center gap-2 text-sm text-white" role="status">
+                  <IconCheck3D size={16} aria-hidden="true" />
+                  Sudah selesai hari ini — lihat solusi atau kembali besok.
+                  {onGoPuzzles ? (
+                    <Button size="sm" className="ml-auto" onClick={onGoPuzzles}>
+                      {lang === "id" ? "Mainkan Teka-Teki Lain" : "Play another puzzle"}
+                    </Button>
+                  ) : null}
+                </div>
               ) : null}
-            </div>
-          ) : null}
 
-          <PuzzleSolver
-            lang={lang}
-            puzzle={puzzle}
-            loading={loading}
-            fetchHint={fetchHint}
-            submitAttempt={submitAttempt}
-          />
-
-          {/* Bagikan */}
-          <div className="flex justify-center pb-2">
-            <Button onClick={() => void share()}>{lang === "id" ? "Bagikan" : "Share"}</Button>
-          </div>
-          {shareFallback ? (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 text-xs text-neutral-200 text-center" role="status">
-              {shareFallback}
-            </div>
+              {/* Bagikan */}
+              <div className="flex justify-center">
+                <Button onClick={() => void share()}>{lang === "id" ? "Bagikan" : "Share"}</Button>
+              </div>
+              {shareFallback ? (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 text-xs text-neutral-200 text-center" role="status">
+                  {shareFallback}
+                </div>
+              ) : null}
+            </>
           ) : null}
-        </>
-      )}
+        </div>
+      </div>
 
       {/* Toast non-blocking (pola toast Sprint 1) */}
       {toast ? (

@@ -351,8 +351,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
             <div className="stack-tight text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label className="label font-bold text-sm">Kategori Forum:</label>
+                  <label className="label font-bold text-sm" htmlFor="new-topic-category">Kategori Forum:</label>
                   <select
+                    id="new-topic-category"
+                    aria-label="Kategori forum"
                     value={newTopicCategory}
                     onChange={(e) => setNewTopicCategory(e.target.value)}
                     className="w-full p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm text-white focus:outline-none"
@@ -363,8 +365,10 @@ export function CommunityView({ user, lang = "id" }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="label font-bold text-sm">Judul Topik:</label>
+                  <label className="label font-bold text-sm" htmlFor="new-topic-title">Judul Topik:</label>
                   <input
+                    id="new-topic-title"
+                    aria-label="Judul topik diskusi"
                     type="text"
                     value={newTopicTitle}
                     onChange={(e) => setNewTopicTitle(e.target.value)}
@@ -374,7 +378,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 </div>
               </div>
 
-              <label className="label font-bold text-sm mt-1">Isi Diskusi (Rich Text Editor):</label>
+              <label className="label font-bold text-sm mt-1" htmlFor="new-topic-content">Isi Diskusi (Rich Text Editor):</label>
               
               {/* Full Rich Text Editor */}
               <div className="rounded-xl border border-[var(--border)] overflow-hidden">
@@ -387,6 +391,8 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 />
                 <textarea
                   ref={newTopicTextareaRef}
+                  id="new-topic-content"
+                  aria-label="Isi diskusi"
                   value={newTopicContent}
                   onChange={(e) => setNewTopicContent(e.target.value)}
                   rows={6}
@@ -696,6 +702,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
                 />
                 <textarea
                   ref={replyInputRef}
+                  aria-label="Balasan diskusi"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   rows={3}

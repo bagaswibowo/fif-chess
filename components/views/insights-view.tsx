@@ -501,15 +501,19 @@ function InsightShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col gap-3 min-h-0 py-1">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+    /* S8 Pola C (spec §3): .view-root + .view-head 44px (judul + shortcut, aksen
+       --nav-accent-social section Statistik/Insight) + .view-cols: konten
+       detail .view-body kiri + sidebar meta .view-body kanan (angka ringkas +
+       grafik rating — 2 column detail). Filter/tablist stay di head. */
+    <div className="view-root w-full max-w-4xl mx-auto">
+      <div className="view-head flex items-center justify-between gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-social)" }}>
         <div className="flex items-center gap-2">
-          <LineChart size={20} className="text-[var(--primary)]" aria-hidden="true" />
-          <h1 className="text-lg font-black text-white leading-tight">
+          <LineChart size={18} className="text-[var(--primary)]" aria-hidden="true" />
+          <h2 className="text-sm font-black text-white m-0">
             Insight: {isSelf ? "Kamu" : `@${username}`}
-          </h1>
+          </h2>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <button className="ctl ctl-xs inline-flex items-center gap-1" onClick={onOpenLeaderboard}>
             <Trophy size={13} aria-hidden="true" />
             Papan Peringkat
@@ -520,7 +524,9 @@ function InsightShell({
           </button>
         </div>
       </div>
-      {children}
+      <div className="view-body space-y-3 min-h-0 pb-2" style={{ scrollbarWidth: "thin" }}>
+        {children}
+      </div>
     </div>
   );
 }

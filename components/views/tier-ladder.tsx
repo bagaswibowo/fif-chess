@@ -44,15 +44,18 @@ export function TierLadder({
 
   if (!tiers) {
     return (
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 flex gap-2 overflow-x-auto" role="status" aria-busy="true">
-        {tiers === null ? <span className="text-xs text-neutral-400 animate-pulse">Memuat tier…</span> : null}
+      <div className="view-cards rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2" role="status" aria-busy="true">
+        <span className="text-xs text-neutral-400 animate-pulse">Memuat tier…</span>
       </div>
     );
   }
 
+  // S8 Pola D (spec §3): tier = kartu dashboard rapat (.view-cards
+  // auto-rows-min). Grid responsif menggantikan scroll-x — di panel kanan
+  // view 320px jadi 2–4 kolom, tidak memuai tinggi halaman.
   return (
     <div
-      className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 flex gap-2 overflow-x-auto"
+      className="view-cards grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2"
       role="radiogroup"
       aria-label={lang === "id" ? "Tier rating teka-teki" : "Puzzle rating tiers"}
     >

@@ -89,18 +89,45 @@ export function OpeningsLessonsView({
     { id: "kemahiran", label: "Kemahiran", sub: "Mastery riil tema pembukaan." },
   ];
 
+  // S8 Pola A (spec §3): .view-root + .view-head 44px (judul + 3-mode tabs +
+  // shortcut, aksen --nav-accent-learn section Belajar) + .view-grid-board
+  // (konten mode kiri ≤540px + panel .view-body scroll internal kanan).
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col gap-3 pb-4">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+    <div className="view-root w-full min-h-0">
+      <div className="view-head flex items-center gap-2 flex-wrap shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
         <button
-          className="ctl ctl-sm flex items-center gap-1.5"
+          className="ctl ctl-sm flex items-center gap-1.5 shrink-0"
           onClick={() => onNavigate("#/learn")}
           aria-label="Kembali ke daftar pelajaran"
         >
           <ChevronLeft size={15} aria-hidden="true" /> Kembali ke daftar
         </button>
+        <div className="min-w-0">
+          <h2 className="text-sm font-black text-white leading-tight m-0 truncate">
+            {meta.name} <span className="font-mono text-xs text-neutral-400">({eco})</span>
+          </h2>
+          <p className="text-[10px] text-neutral-400 m-0">Materi tertulis — tanpa video.</p>
+        </div>
+        {/* 3-mode tab strip chip (pola ctl ctl-choice, ADR D3.2 state machine klien) */}
+        <div className="flex bg-[var(--card)] p-0.5 rounded-xl border border-[var(--border)] shadow-md min-w-0 flex-1 max-w-md" role="tablist" aria-label="Mode belajar pembukaan">
+          {modeButtons.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              role="tab"
+              aria-selected={mode === m.id}
+              title={m.sub}
+              onClick={() => { setMode(m.id); setStep(0); }}
+              className={`flex-1 py-1 px-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                mode === m.id ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
         <button
-          className="ctl ctl-sm flex items-center gap-1.5"
+          className="ctl ctl-sm flex items-center gap-1.5 shrink-0"
           onClick={() => onNavigate(`#/explorer?opening=${encodeURIComponent(eco)}`)}
           aria-label="Buka di Penjelajah"
         >
@@ -108,117 +135,115 @@ export function OpeningsLessonsView({
         </button>
       </div>
 
-      <div className="flex items-center gap-3">
-        <BookOpen size={22} className="text-[var(--primary)] shrink-0" aria-hidden="true" />
-        <div>
-          <h1 className="text-lg font-black text-white leading-tight">
-            {meta.name} <span className="font-mono text-sm text-neutral-400">({eco})</span>
-          </h1>
-          <p className="text-xs text-neutral-400">
-            Materi tertulis — tanpa video. Buka di Penjelajah untuk garis & hasil riil.
-          </p>
-        </div>
-      </div>
-
-      {/* 3-mode tab strip chip (pola ctl ctl-choice, ADR D3.2 state machine klien) */}
-      <div className="flex bg-[var(--card)] p-1 rounded-xl border border-[var(--border)] shadow-md w-full" role="tablist" aria-label="Mode belajar pembukaan">
-        {modeButtons.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            role="tab"
-            aria-selected={mode === m.id}
-            title={m.sub}
-            onClick={() => { setMode(m.id); setStep(0); }}
-            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
-              mode === m.id ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"
-            }`}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
-
       <p className="sr-only" role="status" aria-live="polite">{modeButtons.find((m) => m.id === mode)?.sub}</p>
 
-      {mode === "jelaskan" && (
-        <div className="grid md:grid-cols-[minmax(0,1fr)_24rem] gap-3 items-start">
-          <div className="rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col items-center">
-            <div
-              className="aspect-square w-full max-w-[min(100%,calc(100dvh-260px))] rounded-xl overflow-hidden border-2 border-[var(--board-dark)] relative"
-              style={{ backgroundColor: boardTheme.dark }}
-              aria-label={`Ilustrasi ${meta.name}, posisi langkah ${step}`}
-            >
-              <Chessboard
-                key={`opening-${eco}-${step}`}
-                options={{
-                  id: `opening-board-${eco}`,
-                  position: activeFen,
-                  boardOrientation: "white",
-                  allowDragging: false,
-                  allowDrawingArrows: false,
-                  boardStyle: { backgroundColor: boardTheme.dark, width: "100%", height: "100%" },
-                  lightSquareStyle: { backgroundColor: boardTheme.light },
-                  darkSquareStyle: { backgroundColor: boardTheme.dark },
-                  pieces: customPieces,
-                  ...notationStyles,
-                }}
-              />
-            </div>
-            <div className="mt-2 flex items-center gap-2 w-full">
-              <button
-                className="ctl ctl-sm"
-                disabled={step <= 0}
-                onClick={() => setStep((s) => Math.max(0, s - 1))}
-                aria-label="Langkah sebelumnya"
+      <div className="view-grid-board flex-1 min-h-0 mt-1.5">
+        {mode === "jelaskan" && (
+          <>
+            {/* LEFT: papan ilustrasi + kontrol langkah (F8: papan self-cap ≤540px) */}
+            <div className="rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col items-center min-h-0">
+              <div
+                className="aspect-square w-full max-w-[min(100%,calc(100dvh-260px))] rounded-xl overflow-hidden border-2 border-[var(--board-dark)] relative"
+                style={{ backgroundColor: boardTheme.dark }}
+                aria-label={`Ilustrasi ${meta.name}, posisi langkah ${step}`}
               >
-                <ChevronLeft size={15} aria-hidden="true" /> Sebelumnya
-              </button>
-              <span className="flex-1 text-center font-mono text-xs text-neutral-300 tabular-nums">
-                {meta.sans.length === 0
-                  ? "Jalur buku belum tersedia untuk ECO ini"
-                  : `Langkah ${step} dari ${line.length - 1}`}
-              </span>
-              <button
-                className="ctl ctl-sm"
-                disabled={step >= line.length - 1}
-                onClick={() => setStep((s) => Math.min(line.length - 1, s + 1))}
-                aria-label="Lanjut langkah"
-              >
-                Lanjut <ChevronRight size={15} aria-hidden="true" />
-              </button>
+                <Chessboard
+                  key={`opening-${eco}-${step}`}
+                  options={{
+                    id: `opening-board-${eco}`,
+                    position: activeFen,
+                    boardOrientation: "white",
+                    allowDragging: false,
+                    allowDrawingArrows: false,
+                    boardStyle: { backgroundColor: boardTheme.dark, width: "100%", height: "100%" },
+                    lightSquareStyle: { backgroundColor: boardTheme.light },
+                    darkSquareStyle: { backgroundColor: boardTheme.dark },
+                    pieces: customPieces,
+                    ...notationStyles,
+                  }}
+                />
+              </div>
+              <div className="mt-2 flex items-center gap-2 w-full">
+                <button
+                  className="ctl ctl-sm"
+                  disabled={step <= 0}
+                  onClick={() => setStep((s) => Math.max(0, s - 1))}
+                  aria-label="Langkah sebelumnya"
+                >
+                  <ChevronLeft size={15} aria-hidden="true" /> Sebelumnya
+                </button>
+                <span className="flex-1 text-center font-mono text-xs text-neutral-300 tabular-nums">
+                  {meta.sans.length === 0
+                    ? "Jalur buku belum tersedia untuk ECO ini"
+                    : `Langkah ${step} dari ${line.length - 1}`}
+                </span>
+                <button
+                  className="ctl ctl-sm"
+                  disabled={step >= line.length - 1}
+                  onClick={() => setStep((s) => Math.min(line.length - 1, s + 1))}
+                  aria-label="Lanjut langkah"
+                >
+                  Lanjut <ChevronRight size={15} aria-hidden="true" />
+                </button>
+              </div>
+              <p className="mt-2 font-mono text-xs text-neutral-400 w-full text-center break-words m-0">
+                {meta.sans.slice(0, step).join(" · ") || "posisi awal"}
+              </p>
             </div>
-            <p className="mt-2 font-mono text-xs text-neutral-400 w-full text-center break-words">
-              {meta.sans.slice(0, step).join(" · ") || "posisi awal"}
-            </p>
-          </div>
-          <div className="panel p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-md w-full min-h-0">
-            <h2 className="text-sm font-black text-white flex items-center gap-2">
-              <BookOpen size={15} className="text-[var(--primary)]" aria-hidden="true" /> Materi
-            </h2>
-            <p className="text-xs text-neutral-500 mt-0.5">Materi tertulis — tanpa video.</p>
-            <div className="mt-2 text-xs text-neutral-300 leading-relaxed whitespace-pre-wrap">
-              {lesson?.body ??
-                `Jalur langkah ${meta.name} (${eco}): ` + (meta.sans.join(" · ") || "belum ada di buku lokal") + "."}
+            {/* RIGHT: panel materi .view-body (Pola A §3) */}
+            <div className="view-body pr-1 custom-scrollbar min-h-0" style={{ scrollbarWidth: "thin" }}>
+              <div className="panel p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-md w-full min-h-0">
+                <h2 className="text-sm font-black text-white flex items-center gap-2 m-0">
+                  <BookOpen size={15} className="text-[var(--primary)]" aria-hidden="true" /> Materi
+                </h2>
+                <p className="text-xs text-neutral-500 mt-0.5 m-0">Materi tertulis — tanpa video.</p>
+                <div className="mt-2 text-xs text-neutral-300 leading-relaxed whitespace-pre-wrap">
+                  {lesson?.body ??
+                    `Jalur langkah ${meta.name} (${eco}): ` + (meta.sans.join(" · ") || "belum ada di buku lokal") + "."}
+                </div>
+                {lesson && (
+                  <button
+                    className="ctl ctl-sm mt-3 inline-flex items-center gap-1.5"
+                    onClick={() => onNavigate(`#/learn/${lesson.id}`)}
+                    aria-label="Buka pelajaran lengkap"
+                  >
+                    Pelajaran lengkap <Target size={13} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
             </div>
-            {lesson && (
-              <button
-                className="ctl ctl-sm mt-3 inline-flex items-center gap-1.5"
-                onClick={() => onNavigate(`#/learn/${lesson.id}`)}
-                aria-label="Buka pelajaran lengkap"
-              >
-                Pelajaran lengkap <Target size={13} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+          </>
+        )}
 
-      {mode === "tantangan" && (
-        <OpeningChallenge authStatus={authStatus} active={challengeTab} />
-      )}
+        {mode === "tantangan" && (
+          <>
+            {/* LEFT: papan drill riil (PuzzleSolver self-cap ≤540px) */}
+            <div className="min-h-0">
+              <OpeningChallenge authStatus={authStatus} active={challengeTab} />
+            </div>
+            {/* RIGHT: panel .view-body — label pencatatan riil (Pola A §3) */}
+            <div className="view-body pr-1 custom-scrollbar min-h-0" style={{ scrollbarWidth: "thin" }}>
+              <p className="text-[11px] text-neutral-500 mt-2" role="status">
+                Tema: {themeLabel("opening")} — progres tercatat riil via POST /api/puzzles/[id]/attempt.
+              </p>
+            </div>
+          </>
+        )}
 
-      {mode === "kemahiran" && <OpeningMastery eco={eco} onSwitchToChallenge={() => setMode("tantangan")} />}
+        {mode === "kemahiran" && (
+          <>
+            <div className="min-h-0">
+              <OpeningMastery eco={eco} onSwitchToChallenge={() => setMode("tantangan")} />
+            </div>
+            <div className="view-body pr-1 custom-scrollbar min-h-0" style={{ scrollbarWidth: "thin" }}>
+              <p className="text-[11px] text-neutral-500" role="status">
+                Kemahiran dihitung per tema pembukaan, bukan per {eco} — tidak ada sumber data riil per-ECO
+                (no-mock).
+              </p>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -318,9 +343,6 @@ function OpeningChallenge({ authStatus, active }: { authStatus: CoursesAuthStatu
         onSolved={() => void loadNext()}
         onNextPuzzle={() => void loadNext()}
       />
-      <p className="mt-2 text-[11px] text-neutral-500" role="status">
-        Tema: {themeLabel("opening")} — progres tercatat riil via POST /api/puzzles/[id]/attempt.
-      </p>
     </div>
   );
 }

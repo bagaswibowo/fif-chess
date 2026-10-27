@@ -104,8 +104,12 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
   }, [tab]);
 
   return (
-    <div className="w-full h-full flex flex-col min-h-0">
-      <div className="flex bg-[var(--card)] p-1 rounded-xl border border-[var(--border)] w-full max-w-xl mx-auto shadow-md shrink-0 mb-2">
+    /* S8 Pola B (spec §3): .view-root + .view-head (tab strip pin 44px, aksen
+       --nav-accent-puzzle section Teka-Teki) + .view-body scroll internal
+       (stats strip + sub-view aktif). Sub-view embed memakai .view-* sendiri. */
+    <div className="view-root w-full">
+      <div className="view-head flex items-center gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+      <div className="flex bg-[var(--card)] p-1 rounded-xl border border-[var(--border)] w-full shadow-md shrink-0">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -120,7 +124,9 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
           </button>
         ))}
       </div>
+      </div>
 
+      <div className="view-body flex flex-col gap-2 min-h-0 py-1" style={{ scrollbarWidth: "thin" }}>
       {/* T6: stats strip personal — angka sebagai teks berlabel */}
       <div
         className="max-w-xl mx-auto w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 flex items-center justify-between gap-3 text-sm shrink-0 mb-2"
@@ -170,13 +176,14 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 min-h-0">
         {tab === "unlimited" && <PuzzleView lang={lang} onGoRush={() => setTab("rush")} />}
         {tab === "daily" && <DailyPuzzleView lang={lang} onGoPuzzles={() => setTab("unlimited")} />}
         {tab === "rush" && <RushView lang={lang} onBack={onBack} />}
         {tab === "themes" && <ThemesMasteryView lang={lang} onBack={onBack} />}
         {tab === "missed" && <MissedPuzzlesView lang={lang} />}
         {tab === "stats" && <PuzzleStatsView lang={lang} />}
+      </div>
       </div>
     </div>
   );
