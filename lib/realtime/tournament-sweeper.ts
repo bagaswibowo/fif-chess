@@ -33,6 +33,7 @@ import { toastsTopic, tournamentTopic, type TournamentUpdated } from "./events.t
 
 const SWEEP_INTERVAL_MS = 30_000;
 let timer: ReturnType<typeof setInterval> | null = null;
+let bootDelay: ReturnType<typeof setTimeout> | null = null;
 let running = false;
 
 /** tournamentId → creator (untuk salinan toastsTopic, D5.1). */
@@ -173,10 +174,17 @@ export function startTournamentSweeper(): void {
   };
   timer = setInterval(tick, SWEEP_INTERVAL_MS);
   timer.unref?.();
-  void tick(); // sweep saat startup
+  // Tick pertama ditunda 5s: RedisBus memuat koneksi ioredis lazy — sweep seketika
+  // di boot membuat XADD gagal (enableOfflineQueue=false) sehingga event flip
+  // hilang + log error "Stream isn't writeable". Flip yang lewat 5 detik tetap
+  // ter-ambil di tick berikutnya (sweep idempoten: semua arena due ter-flip).
+  bootDelay = setTimeout(tick, 5000);
+  bootDelay.unref?.();
 }
 
 export function stopTournamentSweeper(): void {
   if (timer) clearInterval(timer);
   timer = null;
+  if (bootDelay) clearTimeout(bootDelay);
+  bootDelay = null;
 }
