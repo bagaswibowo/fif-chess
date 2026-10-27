@@ -22,8 +22,10 @@
  * di PG).
  */
 import { randomUUID } from "crypto";
-import { query } from "@/lib/db";
-import { loadUsers } from "@/lib/auth-store";
+// Relatif (bukan alias @/): file ini dimuat server.ts via `node --experimental-strip-types`,
+// dan runtime Node ESM tidak merelasi alias tsconfig — hanya relative import dgn ekstensi .ts.
+import { query } from "../db.ts";
+import { loadUsers } from "../auth-store.ts";
 import { onSeekCreated } from "./matcher.ts";
 import { addSeek, getUserSeek, type SeekTicket } from "./seek-pool.ts";
 import { publishBusEvent } from "./bus.ts";

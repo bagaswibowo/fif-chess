@@ -6,7 +6,9 @@
  * Fire-and-forget (ADR-002 #4): error hanya di-log, tidak menggagalkan HTTP.
  */
 import { randomUUID } from "crypto";
-import { query } from "@/lib/db";
+// Relatif (bukan alias @/): file ini dimuat server.ts via `node --experimental-strip-types`,
+// dan runtime Node ESM tidak merelasi alias tsconfig — hanya relative import dgn ekstensi .ts.
+import { query } from "../db.ts";
 import { publishBusEvent } from "./bus.ts";
 import { matcherTopic, gameTopic, type GameAdded, type GameStarted } from "./events.ts";
 import { tryMatch, removeUserSeek, type SeekTicket } from "./seek-pool.ts";
