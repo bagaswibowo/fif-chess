@@ -41,7 +41,9 @@ export type PvpRoom = {
   moves: string[];
   winner: "white" | "black" | "draw" | null;
   outcomeKind?: string;
-  /** S6-T2: field baru opsional (kontrak §2.6) — room lama tidak punya. */
+  /** S6-T2: field baru opsional (docs/design/sprint6-flows.md §2.6; aturan
+   *  format TC di docs/contracts/sprint6.md §1.2 + ADR-009 D2) —
+   *  room lama tidak punya. */
   timeControl?: string;
   rated?: boolean;
 };
@@ -228,8 +230,10 @@ export function PvpPanel({ user, room, yourSide, token, onRoom, onLeave }: Props
         action: "create",
         side: sideChoice,
         invitedUser: inviteUser.trim() || undefined,
-        // S6-T2 (kontrak §2.6): timeControl + rated di-request create;
-        // PvpRoom menambah field opsional tsb agar panel bisa menampilkannya.
+        // S6-T2 (docs/design/sprint6-flows.md §2.6; aturan TC
+        // docs/contracts/sprint6.md §1.2): timeControl + rated di-request
+        // create; PvpRoom menambah field opsional tsb agar panel bisa
+        // menampilkannya.
         timeControl: tc,
         rated,
       });

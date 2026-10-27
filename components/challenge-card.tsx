@@ -49,10 +49,10 @@ function CardBody({ challenge, state, controlLabel, timeControl, rated, onAccept
       </div>
       <h3 className="challenge-card-title">{challenge.fromUsername} menantang Anda</h3>
       {/* S6-T2: baris TC + mode (riil dari payload; tanpa payload → tidak
-          ditampilkan — copy "mengundangnya" hanya muncul bila data ada). */}
+          ditampilkan — copy "mengundangmu" hanya muncul bila data ada). */}
       {timeControl ? (
         <p className="challenge-card-control">
-          {challenge.fromUsername} mengundangnya: {timeControl} · {rated ? "Terbuka (rating)" : "Casual"}
+          {challenge.fromUsername} mengundangmu: {timeControl} · {rated ? "Terbuka (rating)" : "Casual"}
         </p>
       ) : (
         <p className="challenge-card-control">{controlLabel}</p>

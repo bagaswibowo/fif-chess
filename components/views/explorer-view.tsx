@@ -24,6 +24,7 @@ import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Compass, BookOpen, ChevronRight, FlaskConical, Target } from "lucide-react";
 import { OPENING_BOOK } from "@/lib/engines/opening-book";
+import { loadStoredTimeControl, timeCategoryOf, type TimeCategory } from "@/lib/time-control";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -109,6 +110,40 @@ export function ExplorerView({ initialEco, onLoadFen }: {
   const [ecoInput, setEcoInput] = useState(initialEco ?? "");
   const [winRate, setWinRate] = useState<WinRate | null>(null);
   const [wrLoading, setWrLoading] = useState(false);
+
+  // F6 (TL-review finding): filter spec §1.2 yang dulu terlewat — SEMUA
+  // client-side atas tree data lokal (ADR-009 D1.1: server tidak punya
+  // parameter filter; hanya fen + hasil yang diketahui server).
+  // - Sisi: giliran yang bermain di node (FEN field, riil dari posisi).
+  // - Baris ke-: nomor baris (fullmove dari FEN, riil) yang ditampilkan.
+  // - Kategori waktu: arsip tidak menyimpan kategori per garis, jadi chip
+  //   ini adalah FILTER LOKAL: kategori diturunkan dari pilihan preset
+  //   waktu lokal (localStorage.jev_tc_last) via timeCategoryOf — dilabeli
+  //   jujur, tanpa angka/mock baru.
+  const [sideFilter, setSideFilter] = useState<"w" | "b" | "both">("both");
+  const [rowMax, setRowMax] = useState(20);
+  const [timeFilter, setTimeFilter] = useState<TimeCategory | "all">("all");
+  const localTc = useMemo(() => loadStoredTimeControl(), []);
+  const localTcCategory = useMemo(() => timeCategoryOf(localTc), [localTc]);
+
+  // Announce region (aria-live) untuk update filter — cue ganda teks,
+  // bukan perubahan visual saja (floor §0.3).
+  const filterAnnounce = useMemo(() => {
+    const parts: string[] = [];
+    if (sideFilter !== "both") parts.push(`Sisi: ${sideFilter === "w" ? "Putih" : "Hitam"}`);
+    if (rowMax !== 20) parts.push(`Baris ke-${rowMax} ke bawah`);
+    if (timeFilter !== "all") {
+      parts.push(
+        `Waktu: ${timeFilter === "bullet" ? "Bullet" : timeFilter === "blitz" ? "Blitz" : "Rapid"} (filter lokal dari waktu lokal ${localTc})`,
+      );
+    }
+    return parts.length ? parts.join(" · ") : "";
+  }, [sideFilter, rowMax, timeFilter, localTc]);
+
+  /** Kategori waktu lokal aktif? Chip "Semua" selalu lolos; kategori lain
+   *  hanya lolos bila sama dengan kategori waktu lokal — selain itu panel
+   *  win-rate menampilkan empty-state jujur (tanpa angka). */
+  const timeMatchesLocal = timeFilter === "all" || timeFilter === localTcCategory;
 
   /** Muat anak + label opening satu node (POST /api/opening untuk fen node
    *  saat ini — label ECO/nama baris RIIL, bukan placeholder). Idempoten:
@@ -223,7 +258,9 @@ export function ExplorerView({ initialEco, onLoadFen }: {
     [ecoFilter],
   );
 
-  const kids = ecoFilter.trim() ? filterKids(selected.children, ecoFilter.trim().toUpperCase()) : selected.children;
+  const kids = ecoFilter.trim() || sideFilter !== "both" || rowMax !== 20
+    ? filterKids(selected.children, ecoFilter.trim().toUpperCase(), sideFilter, rowMax)
+    : selected.children;
 
   const wrPct = (n: number, total: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
 
@@ -313,8 +350,85 @@ export function ExplorerView({ initialEco, onLoadFen }: {
 
           {/* PANEL — filter ECO + daftar garis + win-rate posisi terpilih */}
           <div className="panel p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-md w-full min-h-0">
+            {/* F6 (spec §1.2): filter Sisi + Baris ke- + Waktu (filter lokal,
+                ADR-009 D1.1) — client-side atas tree data lokal. */}
+            <div className="flex flex-col gap-2.5">
+              <div>
+                <span className="label">Sisi</span>
+                <select
+                  className="field mt-1"
+                  aria-label="Sisi"
+                  value={sideFilter}
+                  onChange={(e) => setSideFilter(e.target.value as "w" | "b" | "both")}
+                >
+                  <option value="both">Keduanya</option>
+                  <option value="w">Putih</option>
+                  <option value="b">Hitam</option>
+                </select>
+              </div>
+              <div>
+                <div className="label flex items-center gap-2">
+                  <span>Baris ke-</span>
+                  <input
+                    id="explorer-row"
+                    type="range"
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={rowMax}
+                    onChange={(e) => setRowMax(Number(e.target.value))}
+                    className="w-36 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ring)]"
+                    style={{ accentColor: "var(--primary)" }}
+                    aria-label={`Baris ke-${rowMax} — tampilkan garis sampai baris ${rowMax}`}
+                  />
+                  <output htmlFor="explorer-row" className="font-mono text-xs text-neutral-400">
+                    Baris ke-{rowMax}
+                  </output>
+                </div>
+              </div>
+              <div>
+                <span className="label">Waktu (filter lokal)</span>
+                <div className="mt-1.5 flex flex-wrap gap-1.5" role="group" aria-label="Kategori waktu">
+                  {(
+                    [
+                      { value: "all", label: "Semua" },
+                      { value: "bullet", label: "Bullet" },
+                      { value: "blitz", label: "Blitz" },
+                      { value: "rapid", label: "Rapid" },
+                    ] as { value: TimeCategory | "all"; label: string }[]
+                  ).map((opt) => {
+                    const active = timeFilter === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`ctl ctl-xs ctl-choice ${active ? "ctl-active" : ""}`}
+                        aria-pressed={active}
+                        aria-label={`Waktu: ${opt.label}${opt.value !== "all" ? " (filter lokal)" : ""}`}
+                        onClick={() => setTimeFilter(opt.value as TimeCategory | "all")}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {timeFilter !== "all" && (
+                  <p className="mt-1 text-[11px] text-neutral-400">
+                    Filter lokal: arsip tidak menyimpan kategori per garis — kategori
+                    ini diturunkan dari waktu lokalmu ({localTc}).
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Announce region: semua perubahan filter dibacakan (floor §0.3) */}
+            <p className="sr-only" role="status" aria-live="polite">
+              {filterAnnounce}
+            </p>
+
+            <div className="mt-2.5" style={{ borderBottom: "1px solid var(--border)", paddingBottom: "0.75rem" }}>
             <span className="label">Kode ECO</span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-1">
               <input
                 className="field flex-1 min-w-0"
                 placeholder="mis. C33"
@@ -341,6 +455,7 @@ export function ExplorerView({ initialEco, onLoadFen }: {
                 Hapus filter
               </button>
             )}
+            </div>
 
             {error && (
               <p className="mt-2 text-xs font-bold" style={{ color: "var(--destructive)" }} role="alert">
@@ -360,7 +475,11 @@ export function ExplorerView({ initialEco, onLoadFen }: {
                 </p>
               ) : kids.length === 0 ? (
                 <p className="text-xs text-neutral-400 py-1" role="status">
-                  {ecoFilter ? "Tidak ada garis dengan filter ECO ini di tingkat saat ini." : "Belum ada partai dengan garis ini di arsip."}
+                  {sideFilter !== "both" || rowMax !== 20
+                    ? "Tidak ada garis untuk kombinasi filter ini di tingkat saat ini."
+                    : ecoFilter
+                    ? "Tidak ada garis dengan filter ECO ini di tingkat saat ini."
+                    : "Belum ada partai dengan garis ini di arsip."}
                 </p>
               ) : (
                 kids.map((k) => (
@@ -382,8 +501,11 @@ export function ExplorerView({ initialEco, onLoadFen }: {
               )}
             </div>
 
-            {/* Win-rate — angka RIIL dari endpoint (teks, bukan bar warna) */}
-            {!wrLoading && !error && winRate && winRate.samples > 0 && (
+            {/* Win-rate — angka RIIL dari endpoint (teks, bukan bar warna).
+                Filter waktu LOKAL: bila kategori terpilih tak cocok dengan
+                kategori waktu lokal, angka disembunyikan (empty-state jujur,
+                tanpa angka palsu — prinsip global no-mock). */}
+            {!wrLoading && !error && winRate && winRate.samples > 0 && timeMatchesLocal && (
               <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2.5">
                 <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wide">Hasil di posisi ini</p>
                 {winRate.samples < 10 ? (
@@ -401,6 +523,12 @@ export function ExplorerView({ initialEco, onLoadFen }: {
             {!wrLoading && !error && winRate && winRate.samples === 0 && (
               <p className="mt-3 text-xs text-neutral-500" role="status">
                 Belum ada partai dengan garis ini di arsip.
+              </p>
+            )}
+            {!wrLoading && !error && winRate && winRate.samples > 0 && !timeMatchesLocal && (
+              <p className="mt-3 text-xs text-neutral-400" role="status">
+                Belum ada partai untuk filter waktu ini — arsip tidak menyimpan
+                kategori per garis (filter lokal dari {localTc}).
               </p>
             )}
           </div>
@@ -431,11 +559,20 @@ function tabBtn(id: TabId, current: TabId, set: (t: TabId) => void, label: strin
   );
 }
 
-/** Saring anak node oleh prefix SAN/ECO — level-1 YAGNI (pola spec §1.2). */
-function filterKids(kids: Node[], q: string): Node[] {
+/** Saring anak node oleh side + baris ke- + prefix ECO — level-1 YAGNI
+ *  (pola spec §1.2). Kategori waktu disengaja DI LUAR: tree berasal dari
+ *  buku statis (tanpa data waktu), jadi waktu hanya memfilter win-rate
+ *  panel — filter lokal, dilabeli jujur. */
+function filterKids(kids: Node[], q: string, sideFilter: "w" | "b" | "both", rowMax: number): Node[] {
   return kids.filter((k) => {
     const eco = (k.eco ?? "").toUpperCase();
-    return eco.includes(q);
+    if (q && !eco.includes(q)) return false;
+    const turn = k.fen.trim().split(/\s+/)[1] ?? "w";
+    if (sideFilter !== "both" && (turn === "b" ? "b" : "w") !== sideFilter) return false;
+    const parts = k.fen.trim().split(/\s+/);
+    const row = parts.length >= 6 ? Number(parts[5]) : k.sans.length / 2 + 1;
+    if (row > rowMax) return false;
+    return true;
   });
 }
 
