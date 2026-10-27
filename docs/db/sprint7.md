@@ -106,9 +106,29 @@ S6 yang menyetelkan; hanya dicatat di sini sebagai bukti snapshot riil.
 
 ## 2. Keputusan DDL per fitur S7 (REUSE-COLUMN vs NEW-TABLE)
 
-Prinsip: **YAGNI — jika beberapa fitur S7 sama-sama "progress riil per user ×
-per resource", gabungkan ke SATU tabel shared `learn_progress`**, bukan satu tabel
-per fitur. Target mingguan & drill adalah **data riil yang sudah ada** (reuse).
+> **REKONSILIASI (decided by orchestrator, 2026-10-27) — WAJIB DIBACA DULU.**
+> Kontrak arsitek `docs/contracts/sprint7.md` (single source yang di-import dev)
+> menetapkan **[NO-NEW-TABLE]**: S7 **TIDAK** menambah tabel PostgreSQL.
+> - Course-step / lesson / bookmark → **file store `DATA_DIR/learn-state.json`**
+>   (pattern REUSE `lib/auth-store.ts`, `users.json`) — low-volume, kosmetik,
+>   tanpa migrasi (ADR-010 D2).
+> - Progress course/drill → **riil, di-derive SQL-side dari `puzzle_attempts`**
+>   (ADR-010 D1) — bukan disimpan di tabel baru.
+> - Weekly target (S7-T3) → **konstanta server `WEEKLY_TARGET=20`**; actuals
+>   di-derive dari `puzzle_attempts` window 7 hari (bukan kolom
+>   `users.weekly_puzzle_target`).
+>
+> Proposal §2 di bawah (tabel shared `learn_progress` + kolom
+> `users.weekly_puzzle_target`) **dicatat sebagai PERTIMBANGAN YANG DITOLAK
+> (rejected for YAGNI)** agar tidak ada dev yang membangun di atas skema yang
+> bertentangan dengan kontrak. Bila deploy menjadi multi-instance / butuh
+> durability cross-instance, proposal `learn_progress` di §5 bisa diangkat ulang.
+> **Sumber kebenaran persistensi S7 = `docs/contracts/sprint7.md` [NO-NEW-TABLE].**
+
+Prinsip (sebelum rekonsiliasi): **YAGNI — jika beberapa fitur S7 sama-sama
+"progress riil per user × per resource", gabungkan ke SATU tabel shared
+`learn_progress`**, bukan satu tabel per fitur. Target mingguan & drill adalah
+**data riil yang sudah ada** (reuse).
 
 ### 2.a Course step completion (S7-T1) → **NEW (masuk tabel shared `learn_progress`)**
 
@@ -241,10 +261,14 @@ baru relevan: hanya jika `puzzle_attempts` jadi besar; filter
 per-(user,correct,time) di-cover `idx_puzzle_attempts_user_correct_time`
 (audit B4, optional). **Tidak ada index S7-mandatory pada puzzle_attempts.**
 
-## 5. Migration idempoten (termasuk di dokumen ini — TIDAK dijalankan di live)
+## 5. Migration idempoten — **DITOLAK (rejected for YAGNI, 2026-10-27)**
 
-Untuk dev agent: backup `pg_dump` dulu (pola sprint4/6,
-`~/backup-jev-pre-sprint7-*.sql` di sxz-server), lalu verifikasi idempoten re-run.
+> Sesuai rekonsiliasi §2: kontrak arsitek `docs/contracts/sprint7.md`
+> menetapkan **[NO-NEW-TABLE]**. Script di bawah **TIDAK DIEKSEKUSI** —
+> dipertahankan hanya sebagai arsip keputusan bila S7 migrasi ke
+> multi-instance / durability cross-instance. **Dev agent S7: LUPUTKAN
+> seluruh DDL di bawah — jalankan 0 migration.** Persistensi S7 = file store
+> `DATA_DIR/learn-state.json` (pattern `lib/auth-store.ts`).
 
 ```sql
 -- Sprint 7 migration — jev_chess (Learn Layer)
@@ -285,12 +309,10 @@ composite B4 = optional follow-up, BUKAN S7 mandatory).
   progres quest di **localStorage key `jev_chess_quest_progress`**
   (`{completed:[], xp}`) — client-only, per-browser, **TIDAK** synced ke PG.
   → Jika S7 mem-merilis course/lesson completion ke `learn_progress` (PG),
-  ada **dua source of truth** (localStorage guest quest vs PG authenticated
-  course/lesson). Rekomendasi DB: route S7-T1/T2 (course/lesson, **user
-  login**) lewat `learn_progress`; biarkan quest learning-hub tetap
-  localStorage untuk **guest/unauthed**; (opsional) backfill localStorage →
-  PG saat user login. Keputusan final di ADR/kontrak architect — DB hanya
-  menyediakan tabelnya.
+  ada **dua source of truth**  (localStorage guest quest vs file-store authenticated course/lesson) — dua
+  source of truth per browser, bukan per DB. Rekomendasi DB: biarkan quest
+  learning-hub tetap **localStorage** (guest); course/lesson (user login) lewat
+  **`learn-state.json`** (kontrak [NO-NEW-TABLE], bukan `learn_progress`).
 - `lib/learning-hub.ts` yang disebut tiket S7 **tidak ada** di repo
   (hanya `components/views/learning-hub.tsx` + `components/learning-hub.tsx`);
   PM/Architect perbaiki referensi tiket agar satu sumber.
@@ -299,16 +321,20 @@ composite B4 = optional follow-up, BUKAN S7 mandatory).
 
 | Fitur S7 | Keputusan | Objek |
 |---|---|---|
-| Course step completion | NEW (shared) | `learn_progress` |
-| Lesson bookmark | NEW (shared, flag) | `learn_progress` |
-| Practice weekly target | NEW-kolom (reuse table) | `users.weekly_puzzle_target` |
+| Course step completion | **FILE STORE** (bukan PG — [NO-NEW-TABLE] kontrak) | `learn-state.json` via `lib/learn-store.ts` |
+| Lesson bookmark + completion | **FILE STORE** (flag di baris user) | `learn-state.json` |
+| Practice weekly target | **KONSTANTA server `WEEKLY_TARGET=20`** + aktual dari PG | `puzzle_attempts` (7-hari window) |
 | Endgame drill progress + leaderboard + multi-filter | REUSE-existing | `puzzle_attempts` + `puzzles.themes` |
 
-- **Index MANDATORY (masuk migration §5):** SATU saja —
-  `uq_learn_progress ON learn_progress (user_id, resource_type, resource_key)`
-  (_UNIQUE constraint/index; user_id leading → sekaligus index per-user).
-  Tidak ada index mandatory di `puzzle_attempts`/`puzzles` untuk S7
-  (composite B4 = optional follow-up; GIN `idx_puzzles_themes_gin` sudah ada).
+> Catatan §7: baris "NEW (shared) `learn_progress`" pada tabel rekap awal
+> dokumen ini sudah digantikan keputusan di atas — proposal DDL §5 DITOLAK
+> (YAGNI, kontrak [NO-NEW-TABLE]); arsip DDL tetap di §5 sebagai fallback
+> multi-instance.
+
+- **Index MANDATORY: TIDAK ADA** untuk S7 (0 migrasi; `learn_progress` tidak
+  dibuat, jadi `uq_learn_progress` tidak relevan). Tidak ada index baru di
+  `puzzle_attempts`/`puzzles` (composite B4 = optional follow-up; GIN
+  `idx_puzzles_themes_gin` sudah ada dan dipakai filter tema §4).
 - Tabel progress yang SUDAH ADA (reuse, tidak bikin baru):
   **`puzzle_attempts`** (progress riil drill/weekly/leaderboard) +
   **`puzzles`** (membership set via `themes`, GIN index).
