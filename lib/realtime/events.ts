@@ -31,6 +31,33 @@ export type TournamentUpdated = {
   entrants: number;
 };
 
+// ── Sprint 7 (ADR-010 D5 — docs/contracts/sprint7.md §1.5/§2.2, additive) ──
+// Classroom = room Pvp in-memory (FIF-XXXXXX, ttl 30 menit REUSE).
+// Tidak ada topik baru (ADR-001 #4): topik REUSE gameTopic(code).
+// gameId = kode room (classroom tidak bisa jadi game pg — tanpa write DB, D5.3).
+/** Catatan papan bersama (in-memory pada room; cap 50 newest FIFO, tanpa
+ * persistensi — hilang saat room di-prune/restart). */
+export interface RoomNote {
+  id: string; // uuid
+  author: string; // username (store, pola whiteUser/blackUser)
+  text: string; // max 500 karakter, trim
+  moveCount: number; // room.moves.length saat dibuat (pin note ke posisi)
+  createdAt: number; // epoch ms
+}
+// D5.1 — lawan join room classroom → notifikasi joiner ke topik room.
+export type ClassroomJoined = {
+  type: "classroom_joined";
+  gameId: string; // = room code
+  user: string; // username joiner
+  side: "white" | "black";
+};
+// D5.1 — op "note" sukses → broadcast catatan baru ke topik room.
+export type ClassroomNote = {
+  type: "classroom_note";
+  gameId: string; // = room code
+  note: RoomNote; // shape §1.5
+};
+
 export type RealtimeEvent =
   | GameAdded
   | GameRemoved
@@ -45,7 +72,9 @@ export type RealtimeEvent =
   | DrawOffered
   | DrawDeclined
   | RematchRequested
-  | TournamentUpdated;
+  | TournamentUpdated
+  | ClassroomJoined
+  | ClassroomNote;
 
 export const gameTopic = (gameId: string) => `game/${gameId}/moves`;
 export const matcherTopic = (userId: string) => `matcher/${userId}`;

@@ -22,6 +22,9 @@ import {
   type MoveMade,
   type DrawOffered,
   type DrawDeclined,
+  type ClassroomJoined,
+  type ClassroomNote,
+  type RoomNote,
 } from "@/lib/realtime/events.ts";
 import { validateFen } from "chess.js";
 
@@ -159,6 +162,9 @@ export async function POST(request: Request) {
   // accept draw tetap op existing "draw" → outcome draw).
   if (op === "draw-offer") return roomDrawOffer(request, userId);
   if (op === "draw-decline") return roomDrawDecline(request, userId);
+  // S7-T4 (ADR-010 D5.1): op note NEW di route existing — catatan papan
+  // classroom in-memory (tanpa write DB; room ttl 30 menit, D5.3).
+  if (op === "note") return roomNote(request, userId);
   // Legacy DB-backed game records (opt-in via op=db-*)
   if (op === "db-create") return handleCreate(request, userId);
   if (op === "db-join") return handleJoin(request, userId);
@@ -383,6 +389,11 @@ type PvpRoom = {
   // agar client kedua (join) & panel menampilkannya — TIDAK dibuang server.
   timeControl?: string;
   rated?: boolean;
+  // S7-T4 (ADR-010 D5.1): ekstensi classroom additive — flag room + catatan
+  // papan in-memory (cap 50 newest FIFO). 0 perubahan skema: hilang saat
+  // room di-prune/restart (D5.3, tanpa persistensi).
+  classroom?: boolean;
+  notes?: RoomNote[];
 };
 const rooms = new Map<string, PvpRoom>();
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -400,6 +411,10 @@ function publicRoom(r: PvpRoom) {
     // S6-T2 (TL F1): field opsional di-include eksplisit agar shape respons
     // stabil & client kedua (join) melihat pilihan jam + mode pairing.
     timeControl: r.timeControl ?? null, rated: r.rated ?? false,
+    // S7-T4 (D5.1, additive): flag classroom + catatan in-memory (cap 50).
+    // S6 response tanpa flag tetap valid (classroom undefined → false,
+    // notes undefined → []) — TL regression gate.
+    classroom: r.classroom ?? false, notes: r.notes ?? [],
   };
 }
 
@@ -448,6 +463,10 @@ async function roomCreate(request: Request, _userId: string) {
   const rated = typeof body.rated === "boolean" ? body.rated : undefined;
 
   const token = randomUUID();
+  // S7-T4 (D5.1): flag opsional `classroom` (create { classroom: true })
+  // menandai room collab 2-pemain — copy UI + publish ClassroomJoined/Note
+  // (additive field; S6 create tanpa flag tetap valid).
+  const classroom = body.classroom === true;
   const room: PvpRoom = {
     code: "FIF-" + randomBytes(3).toString("hex").toUpperCase(),
     createdAt: Date.now(),
@@ -465,6 +484,8 @@ async function roomCreate(request: Request, _userId: string) {
     status: "waiting",
     timeControl,
     rated,
+    classroom: classroom || undefined,
+    notes: [],
   };
   rooms.set(room.code, room);
   return NextResponse.json({ success: true, room: publicRoom(room), yourSide: side, playerToken: token });
@@ -501,6 +522,18 @@ async function roomJoin(request: Request, userId: string) {
   }
   room.status = "active";
   room.lastActive = Date.now();
+  // S7-T4 (D5.1): saat join sukses pada room ber-flag classroom → publish
+  // ClassroomJoined ke topik gameTopic(code) (builder REUSE, ADR-001 #4).
+  // Game flow pvp biasa tidak terpengaruh (flag classroom hanya di-create).
+  if (room.classroom) {
+    const joined: ClassroomJoined = {
+      type: "classroom_joined",
+      gameId: room.code,
+      user: me.username,
+      side: room.creatorSide === "white" ? "black" : "white",
+    };
+    publishBusEvent(gameTopic(room.code), joined);
+  }
   return NextResponse.json({ success: true, room: publicRoom(room), yourSide: room.creatorSide === "white" ? "black" : "white", playerToken: token });
 }
 
@@ -653,4 +686,62 @@ async function roomDrawDecline(request: Request, userId: string) {
   const ev: DrawDeclined = { type: "draw_declined", gameId: room.code };
   publishBusEvent(gameTopic(room.code), ev);
   return NextResponse.json({ success: true });
+}
+
+// ── S7-T4 (ADR-010 D5.1): op "note" — catatan papan classroom in-memory.
+//    TANPA write DB (D5.3): catatan hidup di room (cap 50 newest FIFO,
+//    termakan publicRoom() additive), hilang saat room di-prune/restart.
+//    Guard: 404 room tak ada; 400 room tak active / text kosong / >500
+//    karakter; 403 token invalid / bukan peserta (pola sideOf existing).
+//    Publish ClassroomNote ke topik gameTopic(code) (builder REUSE).
+const NOTE_MAX = 500;
+const NOTE_CAP = 50;
+
+async function roomNote(request: Request, userId: string) {
+  const users = await loadUsers();
+  const me = users.find((u) => u.id === userId);
+  if (!me) return NextResponse.json({ error: "Sesi tidak valid." }, { status: 401 });
+  prune();
+  let body: Record<string, unknown> = {};
+  try { body = (await request.json()) as Record<string, unknown>; } catch { /* empty */ }
+  const code = String(body.code || "").toUpperCase().trim();
+  const playerToken = String(body.playerToken || "");
+  const text = typeof body.text === "string" ? body.text.trim() : "";
+
+  const room = rooms.get(code);
+  if (!room) return NextResponse.json({ error: "Kamar tidak ditemukan.", retryable: false }, { status: 404 });
+  if (room.status !== "active") {
+    return NextResponse.json({ error: "Pertandingan tidak aktif.", retryable: false }, { status: 400 });
+  }
+  if (!text) {
+    return NextResponse.json({ error: "Catatan tidak boleh kosong.", retryable: false }, { status: 400 });
+  }
+  if (text.length > NOTE_MAX) {
+    return NextResponse.json(
+      { error: `Catatan terlalu panjang (maks ${NOTE_MAX} karakter).`, retryable: false },
+      { status: 400 },
+    );
+  }
+  const side = sideOf(room, playerToken, me.username);
+  if (!side) return NextResponse.json({ error: "Token pemain tidak valid." }, { status: 403 });
+
+  room.lastActive = Date.now();
+  // 1 entry appended per call; id uuid (pola randomUUID) + moveCount =
+  // room.moves.length saat dibuat (pin note ke posisi). Cap NOTE_CAP newest.
+  const id = `${code}-${randomUUID()}`;
+  const note: RoomNote = {
+    id,
+    author: me.username,
+    text,
+    moveCount: room.moves.length,
+    createdAt: Date.now(),
+  };
+  room.notes = room.notes ?? [];
+  room.notes.push(note);
+  if (room.notes.length > NOTE_CAP) room.notes.splice(0, room.notes.length - NOTE_CAP);
+
+  const ev: ClassroomNote = { type: "classroom_note", gameId: room.code, note };
+  publishBusEvent(gameTopic(room.code), ev);
+  // Response echo { notes } untuk room (kontrak D5.1).
+  return NextResponse.json({ success: true, notes: room.notes });
 }
