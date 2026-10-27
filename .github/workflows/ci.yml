@@ -17,10 +17,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -28,6 +28,23 @@ jobs:
 
       - name: Lint (if configured)
         run: npm run lint --if-present
+
+      # Runtime graph smoke (S6 incident): Docker entry = `node --experimental-strip-types
+      # server.ts` — native Node ESM does NOT resolve tsconfig `@/` aliases. next build/tsc
+      # both pass with `@/` imports inside the server.ts->lib/realtime graph, but the
+      # container crash-loops at boot (ERR_MODULE_NOT_FOUND). This step loads the same
+      # files the container loads, proving the alias graph is clean before the image ships.
+      - name: Runtime graph load smoke (strip-types)
+        run: |
+          node --experimental-strip-types --no-warnings -e "
+          (async () => {
+            for (const m of ['./lib/realtime/ws-gateway.ts', './lib/realtime/tournament-sweeper.ts']) {
+              const mod = await import(m);
+              console.log('load OK:', m, Object.keys(mod).length, 'exports');
+            }
+            console.log('RUNTIME_GRAPH_OK');
+          })().catch((e) => { console.error('RUNTIME_GRAPH_FAIL:', e.message); process.exit(1); });
+          "
 
       - name: Build Next.js app
         run: npx next build
