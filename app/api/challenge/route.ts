@@ -11,7 +11,8 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { currentUser, loadUsers } from "@/lib/auth-store";
 import { publishBusEvent } from "@/lib/realtime/bus.ts";
-import { matcherTopic, type ChallengeReceived } from "@/lib/realtime/events.ts";
+import { matcherTopic, type ChallengeReceived, type RematchRequested } from "@/lib/realtime/events.ts";
+import { isValidTimeControl } from "@/lib/time-control";
 
 export const runtime = "nodejs";
 
@@ -39,8 +40,16 @@ export async function POST(request: Request) {
   const toUserId = typeof body.toUserId === "string" ? body.toUserId.trim() : "";
   const timeControl = typeof body.timeControl === "string" ? body.timeControl.trim() : "";
   const rated = body.rated === true;
-  if (!toUserId || !/^\d+\+\d+$/.test(timeControl)) {
-    return NextResponse.json({ error: "toUserId dan timeControl ('<menit>+<inkremen>') wajib.", retryable: false }, { status: 400 });
+  // S6-T3 (ADR-009 D3.2): opt-in konteks rematch — bila ada, publish
+  // RematchRequested di atas ChallengeReceived (route ini satu-satunya
+  // tempat event rematch dipublish; lib/rematch.ts hanya memanggil route
+  // ini dengan flag tsb). Challenge biasa tanpa flag tidak berubah.
+  const rematchFromGameId = typeof body.rematchFrom === "string" && body.rematchFrom.trim() ? body.rematchFrom.trim() : null;
+  if (!toUserId || !isValidTimeControl(timeControl)) {
+    // S6-T2 (ADR-009 D2.2): format tunggal "<menit>+<inkremen>" (1..999 menit,
+    // 1..999 detik). Kategori (bullet/blitz/rapid) TIDAK dikirim client —
+    // diturunkan server-side dari menit (aturan api/leaderboard).
+    return NextResponse.json({ error: "toUserId dan timeControl ('<menit>+<inkremen>', mis. '1+0' atau '999+999') wajib.", retryable: false }, { status: 400 });
   }
 
   // Target: store id (auth) — petakan ke pg uuid via username (join key, docs/db/sprint1.md §Migration).
@@ -70,6 +79,16 @@ export async function POST(request: Request) {
 
   const ev: ChallengeReceived = { type: "challenge_received", challengeId, fromUserId: me.id, fromUsername: me.username };
   publishBusEvent(matcherTopic(target.id), ev);
+  // S6-T3 (D3.2): konteks "rematch dari partai X" — di atas ChallengeReceived.
+  if (rematchFromGameId) {
+    const rematch: RematchRequested = {
+      type: "rematch_requested",
+      gameId: rematchFromGameId,
+      challengeId,
+      fromUser: me.username,
+    };
+    publishBusEvent(matcherTopic(target.id), rematch);
+  }
 
   return NextResponse.json({ ok: true, challengeId }, { status: 201 });
 }

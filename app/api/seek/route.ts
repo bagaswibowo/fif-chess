@@ -12,6 +12,7 @@ import { query } from "@/lib/db";
 import { currentUser, loadUsers } from "@/lib/auth-store";
 import { onSeekCreated, cancelSeek } from "@/lib/realtime/matcher.ts";
 import { addSeek, getUserSeek, removeUserSeek, type SeekTicket } from "@/lib/realtime/seek-pool.ts";
+import { isValidTimeControl } from "@/lib/time-control";
 
 export const runtime = "nodejs";
 
@@ -47,8 +48,11 @@ export async function POST(request: Request) {
   }
   const tc = typeof body.tc === "string" ? body.tc.trim() : "";
   const mode = body.mode === "rated" ? "rated" : "casual";
-  if (!/^\d+\+\d+$/.test(tc)) {
-    return NextResponse.json({ error: "TC harus format '<menit>+<inkremen>', mis. '10+0'.", retryable: false }, { status: 400 });
+  // S6-T2 (ADR-009 D2.2): tc custom \d{1,3}+\d{1,3} (1..999 menit + 1..999 detik)
+  // — satu util validasi (lib/time-control.ts); kategori turun di query
+  // (aturan api/leaderboard), bukan dikirim client.
+  if (!isValidTimeControl(tc)) {
+    return NextResponse.json({ error: "TC harus format '<menit>+<inkremen>' (1..999+1..999), mis. '10+0' atau '30+3'.", retryable: false }, { status: 400 });
   }
 
   // Rating + id user dari DB (sumber tunggal rating/FK games; seek tidak menyalin apa pun ke DB).

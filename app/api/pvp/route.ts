@@ -13,9 +13,16 @@
 import { NextResponse } from "next/server";
 import { randomBytes, randomUUID } from "crypto";
 import { query } from "@/lib/db";
-import { currentUser, loadUsers } from "@/lib/auth-store";
+import { currentUser, loadUsers, sessionUserForToken, tokenFromRequest } from "@/lib/auth-store";
 import { publishBusEvent } from "@/lib/realtime/bus.ts";
-import { gameTopic, type GameStarted, type MoveMade } from "@/lib/realtime/events.ts";
+import {
+  gameTopic,
+  type GameAborted,
+  type GameStarted,
+  type MoveMade,
+  type DrawOffered,
+  type DrawDeclined,
+} from "@/lib/realtime/events.ts";
 import { validateFen } from "chess.js";
 
 export const runtime = "nodejs";
@@ -148,6 +155,10 @@ export async function POST(request: Request) {
   if (op === "move") return roomMove(request, userId);
   if (op === "leave") return roomLeave(request, userId);
   if (op === "resign" || op === "draw") return roomOutcome(request, userId, op);
+  // S6-T3 (ADR-009 D3.3): offer-draw + decline (op NEW di route existing;
+  // accept draw tetap op existing "draw" → outcome draw).
+  if (op === "draw-offer") return roomDrawOffer(request, userId);
+  if (op === "draw-decline") return roomDrawDecline(request, userId);
   // Legacy DB-backed game records (opt-in via op=db-*)
   if (op === "db-create") return handleCreate(request, userId);
   if (op === "db-join") return handleJoin(request, userId);
@@ -391,10 +402,14 @@ function sideOf(r: PvpRoom, token: string, username: string): "white" | "black" 
   return null;
 }
 
-async function roomCreate(request: Request, userId: string) {
+async function roomCreate(request: Request, _userId: string) {
   const users = await loadUsers();
-  const me = users.find((u) => u.id === userId);
-  if (!me) return NextResponse.json({ error: "Sesi tidak valid." }, { status: 401 });
+  // S6-T3 (D3.5): pending/rejected TIDAK boleh jadi room creator — kode FIX-1
+  // eksplisit (403) alih-alih 401, sesuai guard kontrak docs/contracts/sprint6.md.
+  const me = sessionUserForToken(tokenFromRequest(request), users);
+  if (!me) return NextResponse.json({ error: "Sesi tidak valid.", code: "unauthenticated" }, { status: 401 });
+  if (me.status === "pending") return NextResponse.json({ error: "Akun menunggu persetujuan admin.", code: "account_pending", retryable: false }, { status: 403 });
+  if (me.status === "rejected") return NextResponse.json({ error: "Akun ditolak admin.", code: "account_rejected", retryable: false }, { status: 403 });
   let body: Record<string, unknown> = {};
   try { body = (await request.json()) as Record<string, unknown>; } catch { /* empty */ }
 
@@ -528,7 +543,23 @@ async function roomLeave(request: Request, userId: string) {
   const code = String(body.code || "").toUpperCase().trim();
   const room = rooms.get(code);
   if (!room) return NextResponse.json({ error: "Kamar tidak ditemukan." }, { status: 404 });
+  if (room.status === "finished") {
+    // S6-T3 (D3.1): leave hanya meng-abort room AKTIF + 0 langkah; room yang
+    // sudah selesai tidak bisa di-abort.
+    return NextResponse.json({ error: "Pertandingan sudah selesai.", retryable: false }, { status: 400 });
+  }
   if (room.creatorUser === me.username || room.whiteUser === me.username || room.blackUser === me.username) {
+    // S6-T3 (ADR-009 D3.1): abort semantics — room AKTIF + 0 langkah →
+    // tutup outcomeKind 'aborted' + publish GameAborted (lawan tidak terjebak
+    // di board) SEBELUM delete. Room dengan langkah berjalan tetap dihapus
+    // diam-diam (behavior existing leave).
+    if (room.status === "active" && room.moves.length === 0) {
+      room.status = "finished";
+      room.outcomeKind = "aborted";
+      room.winner = null;
+      const ev: GameAborted = { type: "game_aborted", gameId: room.code, reason: "aborted" };
+      publishBusEvent(gameTopic(room.code), ev);
+    }
     rooms.delete(code);
   }
   return NextResponse.json({ success: true });
@@ -554,4 +585,54 @@ async function roomOutcome(request: Request, userId: string, op: "resign" | "dra
   room.outcomeKind = op;
   room.winner = op === "resign" ? (side === "white" ? "black" : "white") : "draw";
   return NextResponse.json({ success: true, room: publicRoom(room) });
+}
+
+// ── S6-T3 (ADR-009 D3.3): offer-draw + decline (op NEW di route existing).
+//    Accept = op existing "draw" (roomOutcome winner:'draw'). Semantik
+//    offer-accept: event DrawOffered ke topik room → lawan accept (draw)
+//    atau decline (DrawDeclined). Penawaran kontekstual — tanpa state
+//    pending di room (diff minimal, sesuai ADR-009 D3).
+
+async function roomDrawOffer(request: Request, userId: string) {
+  const users = await loadUsers();
+  const me = users.find((u) => u.id === userId);
+  if (!me) return NextResponse.json({ error: "Sesi tidak valid." }, { status: 401 });
+  let body: Record<string, unknown> = {};
+  try { body = (await request.json()) as Record<string, unknown>; } catch { /* empty */ }
+  const code = String(body.code || "").toUpperCase().trim();
+  const playerToken = String(body.playerToken || "");
+
+  const room = rooms.get(code);
+  if (!room || room.status !== "active") {
+    return NextResponse.json({ error: "Pertandingan tidak aktif." }, { status: 400 });
+  }
+  const side = sideOf(room, playerToken, me.username);
+  if (!side) return NextResponse.json({ error: "Token pemain tidak valid." }, { status: 403 });
+
+  room.lastActive = Date.now();
+  const ev: DrawOffered = { type: "draw_offered", gameId: room.code, fromUser: me.username };
+  publishBusEvent(gameTopic(room.code), ev);
+  return NextResponse.json({ success: true });
+}
+
+async function roomDrawDecline(request: Request, userId: string) {
+  const users = await loadUsers();
+  const me = users.find((u) => u.id === userId);
+  if (!me) return NextResponse.json({ error: "Sesi tidak valid." }, { status: 401 });
+  let body: Record<string, unknown> = {};
+  try { body = (await request.json()) as Record<string, unknown>; } catch { /* empty */ }
+  const code = String(body.code || "").toUpperCase().trim();
+  const playerToken = String(body.playerToken || "");
+
+  const room = rooms.get(code);
+  if (!room || room.status !== "active") {
+    return NextResponse.json({ error: "Pertandingan tidak aktif." }, { status: 400 });
+  }
+  const side = sideOf(room, playerToken, me.username);
+  if (!side) return NextResponse.json({ error: "Token pemain tidak valid." }, { status: 403 });
+
+  room.lastActive = Date.now();
+  const ev: DrawDeclined = { type: "draw_declined", gameId: room.code };
+  publishBusEvent(gameTopic(room.code), ev);
+  return NextResponse.json({ success: true });
 }

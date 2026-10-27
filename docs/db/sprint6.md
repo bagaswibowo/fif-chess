@@ -88,8 +88,12 @@ attempted_at timestamptz not null default now().
 
 ### tournaments
 
-`to_regclass('tournaments')` / `to_regclass('tournament_joiners')` → **NULL, belum ada**
+`to_regclass('tournaments')` / `to_regclass('tournament_players')` → **NULL, belum ada**
 (ekspektasi; dibuat S6, desain di bagian 2).
+**Catatan (2026-10-27, backend S6-T5):** nama tabel join diselaraskan ke
+`tournament_players` sesuai `docs/contracts/sprint6.md` (otoritas);
+`tournament_players` di bawah = draft awal, sudah digantikan (naming aligns
+to contracts/sprint6.md).
 
 ## 2. Keputusan & desain S6
 
@@ -119,35 +123,35 @@ Rasional:
 - Tanpa kolom fee/entry/bot-seed/schedule berulang — YAGNI; tambahkan jika S8
   (Events/Ajang) memang menuntut.
 
-### 2.2 `tournament_joiners` — keputusan standalone (DECIDED)
+### 2.2 `tournament_players` — keputusan standalone (DECIDED)
 
 `docs/contracts/sprint6.md` **TIDAK ADA** (direktori `docs/contracts/` sendiri
 belum ada) → keputusan diambil DB Engineer secara mandiri dan tercatat di sini.
 
 S6-T5 = "list arena live + **register**". Register adalah **write + idempoten +
 hitung kursi** terhadap `max_users` — view read-only tidak bisa memenuhi. Maka:
-**table `tournament_joiners` (bukan view)**, pola persis `friends`
+**table `tournament_players` (bukan view)**, pola persis `friends`
 (sprint4): satu row per (tournament, user), UNIQUE pair → `ON CONFLICT DO NOTHING`
 idempoten, COUNT(*) per row = seats used.
 
 ```sql
-CREATE TABLE IF NOT EXISTS tournament_joiners (
+CREATE TABLE IF NOT EXISTS tournament_players (
   id             uuid NOT NULL DEFAULT gen_random_uuid(),
   tournament_id  uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
   user_id        uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   joined_at      timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT tournament_joiners_pkey PRIMARY KEY (id),
-  CONSTRAINT tournament_joiners_unique_pair UNIQUE (tournament_id, user_id)
+  CONSTRAINT tournament_players_pkey PRIMARY KEY (id),
+  CONSTRAINT tournament_players_unique_pair UNIQUE (tournament_id, user_id)
 );
 -- "User ini daftar di arena mana?" (bukan prefix unik UNIQUE pair → perlu eksplisit)
-CREATE INDEX IF NOT EXISTS idx_tournament_joiners_user
-  ON tournament_joiners (user_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_players_user
+  ON tournament_players (user_id);
 ```
 
 Query register (untuk dev S6-T5): `INSERT ... ON CONFLICT (tournament_id, user_id)
 DO NOTHING` + guard `current_count < max_users` (jika max_users tidak null)
 di `lib/db.ts` `transaction()`; list arena live = `SELECT t.*, count(j.id)::int
-AS seats_used FROM tournaments t LEFT JOIN tournament_joiners j USING (tournament_id)
+AS seats_used FROM tournaments t LEFT JOIN tournament_players j USING (tournament_id)
 WHERE t.status = 'active' GROUP BY t.id` (join kecil; tidak perlu index tambahan
 selain UNIQUE pair yang sudah jadi prefix index untuk `tournament_id`).
 
@@ -186,22 +190,22 @@ CREATE TABLE IF NOT EXISTS tournaments (
     CHECK (status IN ('upcoming','active','finished'))
 );
 
--- 2. tournament_joiners: register idempoten + hitung kursi (pola friends S4).
+-- 2. tournament_players: register idempoten + hitung kursi (pola friends S4).
 --    View read-only tidak bisa mendukung register, jadi table (keputusan
 --    standalone — docs/contracts/sprint6.md tidak ada; lihat §2.2).
-CREATE TABLE IF NOT EXISTS tournament_joiners (
+CREATE TABLE IF NOT EXISTS tournament_players (
   id            uuid NOT NULL DEFAULT gen_random_uuid(),
   tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
   user_id       uuid NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
   joined_at     timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT tournament_joiners_pkey PRIMARY KEY (id),
-  CONSTRAINT tournament_joiners_unique_pair UNIQUE (tournament_id, user_id)
+  CONSTRAINT tournament_players_pkey PRIMARY KEY (id),
+  CONSTRAINT tournament_players_unique_pair UNIQUE (tournament_id, user_id)
 );
 
 -- 3. "User ini daftar di arena mana?" — UNIQUE pair hanya prefix
 --    tournament_id, arah user_id perlu index eksplisit.
-CREATE INDEX IF NOT EXISTS idx_tournament_joiners_user
-  ON tournament_joiners (user_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_players_user
+  ON tournament_players (user_id);
 
 -- 4. MANDATORY for S6-T4 Insights (bukti EXPLAIN ANALYZE: §4.1).
 CREATE INDEX IF NOT EXISTS idx_games_white_ended
@@ -337,7 +341,7 @@ Tidak ada query Insights yang **memaksa** index di luar dua composite di atas.
   `split_part(time_control,'+',1)::int` antara bound). Response pakai
   `lib/db.ts` `query()`; tidak ada mutation.
 - `GET /api/tournaments?status=active` → list arena + `seats_used`
-  (JOIN `tournament_joiners`, bagian 2.2).
+  (JOIN `tournament_players`, bagian 2.2).
 - `POST /api/tournaments/<slug>/register` → INSERT joiner idempoten
   + guard `max_users` di transaction; `DELETE` untuk un-register
   (YAGNI: tanpa refund/riwayat).
