@@ -553,12 +553,36 @@ select.field { padding-right: 2rem; }
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
 }
 
+/* S9-B rev: papan play-layout MAIN (game.tsx) — height-driven di desktop:
+   ukuran sisi = tinggi baris yang tersedia (card - toolbar - 2 strip pemain
+   - legend), dibatasi --board-cap. Mencegah papan meluber melewati barisnya
+   (label file a-h tertutup strip user + card overflow/scrollbar) di viewport
+   pendek/tinggi. Mobile (<1024): width-driven seperti biasa. */
+.board-fit-square {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: var(--board-cap);
+  height: auto;
+}
+
+/* Desktop (≥1024, konteks play-layout): flip ke HEIGHT-DRIVEN — papan
+   memenuhi sisa ruang vertikal card (row flex-1), dibatasi --board-cap.
+   Menjamin label file a-h tidak tertutup strip pemain & card tak overflow. */
+@media (min-width: 1024px) {
+  .board-fit-square {
+    width: auto;
+    height: 100%;
+    max-height: var(--board-cap);
+  }
+}
+
 @media (min-width: 1024px) {
   .play-layout {
     height: 100%;
   }
 
   .play-layout > .board-card {
+    height: 100%;
     max-height: 100%;
     overflow: auto;
     scrollbar-width: thin;

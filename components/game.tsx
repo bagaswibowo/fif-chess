@@ -1649,8 +1649,13 @@ const navigateHash = useCallback((hash: string) => {
               {/* 3. Baris Legenda Badge ala Chess.com */}
               <ChessBadgeLegend className="w-full max-w-[min(100%,var(--board-cap))] mb-2" />
 
-              {/* 4. Papan Catur & Bar Evaluasi Vertikal */}
-              <div className="flex items-center justify-center gap-2 w-full max-w-[min(100%,var(--board-cap))] min-h-0">
+              {/* 4. Papan Catur & Bar Evaluasi Vertikal — HEIGHT-DRIVEN (S9-B rev):
+                  row = flex-1 min-h-0 (isi sisa ruang vertikal card), papan
+                  .board-fit-square = min(100% row, --board-cap) sehingga TIDAK
+                  PERNAH meluber: label file a-h tak tertutup strip, card tak
+                  overflow (tanpa scrollbar). 468px cap berlaku saat ruang
+                  vertikal cukup; di viewport pendek papan mengecil proporsional. */}
+              <div className="flex items-center justify-center gap-2 w-full flex-1 min-h-0">
                 <EvalBar
                   fen={fen}
                   scoreCp={
@@ -1662,7 +1667,7 @@ const navigateHash = useCallback((hash: string) => {
                   }
                   orientation={humanSide}
                 />
-                <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative">
+                <div className="board-fit-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl relative">
                   <Chessboard
                     key={`main-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}-${moves.length}-${fen.split(" ")[0]}`}
                     options={{
