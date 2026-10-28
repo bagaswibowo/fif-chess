@@ -1401,7 +1401,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               className="mt-2"
             />
 
-            <div className="w-full mx-auto aspect-square max-w-[min(100%,calc(100dvh-230px))] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
+            <div className="w-full mx-auto aspect-square max-w-[min(100%,var(--board-cap))] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
               <Chessboard
                 options={{
                   id: "board-ref-full",

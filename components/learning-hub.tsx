@@ -1005,9 +1005,9 @@ export function LearningHub({ lang = "id" }: Props) {
           />
 
           {/* LEGENDA BADGE ALA CHESS.COM DI ATAS PAPAN */}
-          <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))] mb-2" />
+          <ChessBadgeLegend className="w-full max-w-[min(100%,var(--board-cap))] mb-2" />
           <div
-            className="aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full max-w-[min(100%,calc(100dvh-260px))]"
+            className="aspect-square rounded-2xl overflow-hidden border-2 border-[var(--border-strong)] bg-[var(--board-dark)] shadow-2xl w-full max-w-[min(100%,var(--board-cap))]"
           >
             <Chessboard
               key={`trikquest-${puzzle.id}-${boardSide}-${boardThemeId}-${pieceThemeId}`}

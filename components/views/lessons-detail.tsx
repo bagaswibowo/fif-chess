@@ -208,7 +208,7 @@ export function LessonDetail({
           <div className="grid md:grid-cols-[minmax(0,1fr)_24rem] gap-3 items-start w-full">
             <div className="rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col items-center">
               <div
-                className="aspect-square w-full max-w-[min(100%,calc(100dvh-260px))] rounded-xl overflow-hidden border-2 border-[var(--board-dark)] relative"
+                className="aspect-square w-full max-w-[min(100%,var(--board-cap))] rounded-xl overflow-hidden border-2 border-[var(--board-dark)] relative"
                 style={{ backgroundColor: boardTheme.dark }}
                 aria-label={`Ilustrasi papan pelajaran ${lesson.title}`}
               >

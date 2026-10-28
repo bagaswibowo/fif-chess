@@ -162,7 +162,7 @@ export function LiveArenaView({
         {/* TWO-COLUMN SPECTATOR ARENA (Mirip Layout Fullscreen Pemain) */}
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-2 md:gap-3 items-center w-full overflow-hidden">
           {/* SISI KIRI: PAPAN CATUR FULLSCREEN PENONTON */}
-          <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[min(100%,calc(100dvh-180px))] mx-auto space-y-1 md:space-y-1.5">
+          <div className="flex flex-col justify-center items-center h-full max-h-full min-h-0 w-full max-w-[min(100%,var(--board-cap))] mx-auto space-y-1 md:space-y-1.5">
             {/* Kartu Pemain Hitam (Top) */}
             <div className="w-full flex items-center justify-between px-3 py-1.5 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">

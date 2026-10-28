@@ -308,7 +308,7 @@ export function ExplorerView({ initialEco, onLoadFen }: {
             {/* PAPAN — read-only, posisi node terpilih (Pola B: papan di kiri ≤ area konten) */}
             <div className="panel p-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-md w-full min-h-0">
               <div
-                className="aspect-square w-full max-w-[min(100%,480px)] rounded-xl overflow-hidden border border-[var(--border-strong)] bg-[var(--board-dark)]"
+                className="aspect-square w-full max-w-[min(100%,var(--board-cap))] rounded-xl overflow-hidden border border-[var(--border-strong)] bg-[var(--board-dark)]"
                 aria-label={`Papan catur, ${selected.sans.length} langkah, giliran ${turnLabel}`}
               >
                 <Chessboard

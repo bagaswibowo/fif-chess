@@ -526,7 +526,7 @@ export function PuzzleSolver({
           className="board-card rounded-2xl p-3 bg-[var(--card)] border border-[var(--border)] shadow-xl relative"
         >
           <div
-            className={`aspect-square w-full max-w-[min(100%,calc(100dvh-260px))] mx-auto relative ${
+            className={`aspect-square w-full max-w-[min(100%,var(--board-cap))] mx-auto relative ${
               shake ? "puzzle-shake" : ""
             } ${phase === "solved" ? "ring-2 ring-[var(--success)]" : ""} ${phase === "revealed" ? "ring-2 ring-[#f0b429]" : ""}`}
             id="board-primary"

@@ -718,7 +718,7 @@ export function SpectatorView({
       <div className="view-grid-board flex-1 min-h-0 mt-2">
         
         {/* LEFT: Chess Arena (Board + Eval) — F8: papan cap 540px. */}
-        <div className="flex flex-col gap-1.5 min-h-0 w-full max-w-[540px] overflow-hidden">
+        <div className="flex flex-col gap-1.5 min-h-0 w-full max-w-[min(100%,var(--board-cap))] overflow-hidden">
           
           {/* 1. Unified Board Action Controls (ON TOP) */}
           <BoardControls
@@ -762,7 +762,7 @@ export function SpectatorView({
 
           {/* Badge Legend: Di Atas Papan */}
           <div className="flex justify-center w-full shrink-0 mb-1">
-            <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-215px))]" />
+            <ChessBadgeLegend className="w-full max-w-[min(100%,var(--board-cap))]" />
           </div>
 
           {/* 4. Board Container with Sleek Vertical Dual-Bar Eval — F8: papan
@@ -774,7 +774,7 @@ export function SpectatorView({
               className={`flex gap-2 md:gap-3 items-stretch w-full ${
                 fullscreenSpectator
                   ? "lg:w-auto lg:h-full max-h-full"
-                  : "max-w-[540px]"
+                  : "max-w-[min(100%,var(--board-cap))]"
               }`}
             >
               {/* Slim Vertical Dual Eval Bar: Black at top, White at bottom (responsive to orientation) */}

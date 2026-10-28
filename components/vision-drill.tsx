@@ -106,7 +106,7 @@ export function VisionDrill({ lang = "id" }: { lang?: "id" | "en" }) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
         <div className="md:col-span-2 flex flex-col items-center">
-          <div className="w-full max-w-[480px] aspect-square border-2 border-border rounded-lg overflow-hidden grid grid-cols-8 shadow-md">
+          <div className="w-full max-w-[min(100%,var(--board-cap))] aspect-square border-2 border-border rounded-lg overflow-hidden grid grid-cols-8 shadow-md">
             {displayRanks.map((rank, rIdx) =>
               displayFiles.map((file, fIdx) => {
                 const square = `${file}${rank}`;
