@@ -249,8 +249,10 @@ export function LessonDetail({
             </p>
           )}
 
-          {/* Papan ilustrasi kiri + panel materi kanan (reuse layout learning-hub) */}
-          <div className="grid md:grid-cols-[minmax(0,1fr)_24rem] gap-3 items-start w-full">
+          {/* Papan ilustrasi kiri + panel materi kanan (reuse layout learning-hub) —
+              S9-B: panel 22rem (bukan 24rem) agar sel papan = 860-352-12 = 496px,
+              papan ter-cap --board-cap = 468px (seragam Main/Taktik). */}
+          <div className="grid md:grid-cols-[minmax(0,1fr)_22rem] gap-3 items-start w-full">
             <div className="rounded-2xl p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col items-center">
               <div
                 className="aspect-square w-full max-w-[min(100%,var(--board-cap))] rounded-xl overflow-hidden border-2 border-[var(--board-dark)] relative"
