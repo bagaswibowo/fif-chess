@@ -1631,7 +1631,7 @@ const navigateHash = useCallback((hash: string) => {
               />
 
               {/* 2. Kartu Pemain Lawan (Dual Player Strip ala Chess.com) */}
-              <div className="w-full max-w-[min(100%,calc(100dvh-260px))] mb-1.5 shrink-0">
+              <div className="w-full max-w-[min(100%,var(--board-cap))] mb-1.5 shrink-0">
                 <PlayerStrip
                   name={playMode === "ai"
                     ? (selectedAiOpponent === "jev-fly" ? "Master JEV Connectome" : selectedAiOpponent === "fly" ? "Fruit Fly Brain" : selectedAiOpponent === "jev" ? "Jev AI" : "Stockfish 19 NNUE")
@@ -1647,10 +1647,10 @@ const navigateHash = useCallback((hash: string) => {
               </div>
 
               {/* 3. Baris Legenda Badge ala Chess.com */}
-              <ChessBadgeLegend className="w-full max-w-[min(100%,calc(100dvh-260px))] mb-2" />
+              <ChessBadgeLegend className="w-full max-w-[min(100%,var(--board-cap))] mb-2" />
 
               {/* 4. Papan Catur & Bar Evaluasi Vertikal */}
-              <div className="flex items-center justify-center gap-2 w-full max-w-[min(100%,calc(100dvh-260px))] min-h-0">
+              <div className="flex items-center justify-center gap-2 w-full max-w-[min(100%,var(--board-cap))] min-h-0">
                 <EvalBar
                   fen={fen}
                   scoreCp={
@@ -1721,7 +1721,7 @@ const navigateHash = useCallback((hash: string) => {
               </div>
 
               {/* 5. Kartu Pemain User (Dual Player Strip ala Chess.com) */}
-              <div className="w-full max-w-[min(100%,calc(100dvh-260px))] mt-1.5 shrink-0">
+              <div className="w-full max-w-[min(100%,var(--board-cap))] mt-1.5 shrink-0">
                 <PlayerStrip
                   name={currentUser?.fullName ?? (lang === "id" ? "Pak Bagas Wibowo" : "Player")}
                   rating={1650}
