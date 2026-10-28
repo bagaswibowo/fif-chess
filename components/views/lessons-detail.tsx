@@ -2,10 +2,11 @@
 
 /**
  * components/views/lessons-detail.tsx (S7-T2 frontend, ADR-010 D2)
- * Detail pelajaran #/learn/{id}: layout papan kiri + panel materi kanan
- * (reuse PERSIS pola learning-hub `grid lg:grid-cols-[1fr_380px]` — tanpa
- * fork komponen). "Materi tertulis — tanpa video" = sub-judul permanen di
- * panel (honest, anti-slop; jangan player palsu).
+ * Detail pelajaran #/learn/{id}: panel materi full-width di atas +
+ * latihan interaktif di bawah (satu papan saja — ilustrasi statis
+ * dihapus S9: halaman ini hanya menampilkan papan latihan, sesuai
+ * request user). "Materi tertulis — tanpa video" = sub-judul permanen
+ * di panel materi (honest, anti-slop; jangan player palsu).
  *
  * Latihan per lesson (kontrak §1.2, sumber REUSE):
  *   - dbPuzzle   → teka-teki riil pool /api/puzzles/next (PuzzleSolver),
@@ -17,17 +18,13 @@
  * Bookmark + "Tandai selesai" → POST /api/learn/bookmarks (file store).
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Chess } from "chess.js";
-import { Chessboard } from "react-chessboard";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Check, ChevronLeft, ClipboardList, CornerUpRight,
   Star, Swords, Target,
 } from "lucide-react";
 import { type Lesson } from "@/lib/lessons";
 import { COURSES } from "@/lib/courses";
-import { OPENING_BOOK } from "@/lib/engines/opening-book";
-import { useChessTheme } from "@/lib/chess-themes";
 import { authErrorPayload, authErrorText } from "@/lib/use-session";
 import { themeLabel } from "@/lib/puzzle-themes";
 import { SinglePuzzleCard, ThemeDrillCard, BookMoveCard } from "./lessons-exercises";
@@ -52,7 +49,6 @@ export function LessonDetail({
   authStatus: CoursesAuthStatus;
   onNavigate: (hash: string) => void;
 }) {
-  const { customPieces, notationStyles, boardTheme } = useChessTheme();
   const [bookmarked, setBookmarked] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [flagBusy, setFlagBusy] = useState(false);
@@ -181,16 +177,12 @@ export function LessonDetail({
     setExActive(0);
   }, [lesson.id]);
 
-  const illustrationFen =
-    lesson.boardFen ??
-    (lesson.openingEco ? "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" : null);
-
   const guestWall = authStatus === "guest";
   const pendingWall = authStatus === "pending";
 
   // S8 Pola C (spec §3): .view-root + .view-head 44px (judul + CTA, aksen
   // --nav-accent-learn section Belajar) + .view-cols (konten detail .view-body
-  // kiri: papan ilustrasi + materi + latihan; sidebar meta .view-body kanan:
+  // kiri: materi + latihan; sidebar meta .view-body kanan:
   // status flag, CTA kursus, pusat latihan).
   return (
     <div className="view-root w-full min-h-0">
@@ -232,9 +224,9 @@ export function LessonDetail({
         </div>
       </div>
 
-      {/* S9-B: meta sidebar 200px (bukan 300px bawaan .view-cols) agar kolom
-          konten = 860px → papan latihan aktif & ilustrasi teresolusi tepat
-          ke --board-cap (468px) — seragam Main/Taktik. */}
+      {/* Meta sidebar 200px (bukan 300px bawaan .view-cols) agar kolom konten
+          = 860px — papan latihan teresolusi ke --board-cap (468px), seragam
+          Main/Taktik. */}
       <div className="view-cols flex-1 min-h-0 mt-1.5" style={{ gridTemplateColumns: "minmax(0,1fr) 200px" }}>
         {/* LEFT: konten detail — satu-satunya region scroll internal (Pola C §3) */}
         <div className="view-body space-y-3 pb-4 min-h-0" style={{ scrollbarWidth: "thin" }}>
@@ -249,51 +241,22 @@ export function LessonDetail({
             </p>
           )}
 
-          {/* Papan ilustrasi kiri + panel materi kanan (reuse layout learning-hub) —
-              S9-B: panel 22rem (bukan 24rem) agar sel papan = 860-352-12 = 496px,
-              papan ter-cap --board-cap = 468px (seragam Main/Taktik). */}
-          <div className="grid md:grid-cols-[minmax(0,1fr)_22rem] gap-3 items-start w-full">
-            <div className="rounded-2xl p-1 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col items-center">
-              <div
-                className="aspect-square w-full max-w-[min(100%,var(--board-cap))] rounded-xl overflow-hidden border-2 border-[var(--board-dark)] relative"
-                style={{ backgroundColor: boardTheme.dark }}
-                aria-label={`Ilustrasi papan pelajaran ${lesson.title}`}
-              >
-                <Chessboard
-                  key={`lesson-ill-${lesson.id}`}
-                  options={{
-                    id: `lesson-board-${lesson.id}`,
-                    position: illustrationFen ?? "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-                    boardOrientation: "white",
-                    allowDragging: false,
-                    allowDrawingArrows: false,
-                    boardStyle: { backgroundColor: boardTheme.dark, width: "100%", height: "100%" },
-                    lightSquareStyle: { backgroundColor: boardTheme.light },
-                    darkSquareStyle: { backgroundColor: boardTheme.dark },
-                    pieces: customPieces,
-                    ...notationStyles,
-                  }}
-                />
+          {/* Materi full-width (S9): ilustrasi papan statis DIHAPUS — halaman
+              ini hanya punya SATU papan, yaitu papan latihan interaktif di
+              bawah. Teks materi jadi satu panel lebar. */}
+          <div className="panel p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-md w-full min-h-0">
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
+              <div>
+                <h2 className="text-sm font-black text-white flex items-center gap-2 m-0">
+                  <ClipboardList size={15} className="text-[var(--primary)]" aria-hidden="true" /> Materi
+                </h2>
+                <p className="text-xs text-neutral-500 mt-0.5 m-0">
+                  "Materi tertulis — tanpa video."
+                </p>
               </div>
-              <p className="mt-2 text-[11px] text-neutral-500 w-full text-center m-0">
-                Ilustrasi posisi {illustrationFen ? "" : "awal"} — materi tertulis, bukan video.
-              </p>
             </div>
-
-            <div className="panel p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-md w-full min-h-0">
-              <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
-                <div>
-                  <h2 className="text-sm font-black text-white flex items-center gap-2 m-0">
-                    <ClipboardList size={15} className="text-[var(--primary)]" aria-hidden="true" /> Materi
-                  </h2>
-                  <p className="text-xs text-neutral-500 mt-0.5 m-0">
-                    "Materi tertulis — tanpa video. Ilustrasi di papan mengikuti materi."
-                  </p>
-                </div>
-              </div>
-              <div className="mt-2 max-h-[40dvh] overflow-y-auto custom-scrollbar text-xs text-neutral-300 leading-relaxed">
-                <LessonBody text={lesson.body} />
-              </div>
+            <div className="mt-2 max-h-[38dvh] overflow-y-auto custom-scrollbar text-xs text-neutral-300 leading-relaxed">
+              <LessonBody text={lesson.body} />
             </div>
           </div>
 
