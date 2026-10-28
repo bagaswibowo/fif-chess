@@ -474,6 +474,14 @@ select.field { padding-right: 2rem; }
 /* S8 (docs/design/sprint8-ia.md §3): kontrak helper layout view — nama kelas
    ini KONTRAK bagi semua view (agent view memakai class ini, jangan bikin
    class sendiri di TSX). Rantai no-scroll §2: main > .view-root > pola A/B/C/D. */
+/* S9-B (docs/design/s9-board-unify.md): cap papan TERBUTUH — seragam di semua
+   menu ber-papan, standar = menu Main (game.tsx): calc(100dvh - 190px).
+   View memakai max-w-[min(100%,var(--board-cap))] agar ukuran papan konsisten.
+   Opt-out eksplisit (konteks memang berbeda, jangan disamaratakan):
+   clock-moves-fullscreen (mode layar penuh) & game-review (detail review). */
+:root {
+  --board-cap: calc(100dvh - 190px);
+}
 .view-root {
   height: 100%;
   width: 100%;
