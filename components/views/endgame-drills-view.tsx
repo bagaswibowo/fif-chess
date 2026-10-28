@@ -17,6 +17,9 @@ import { DRILL_SETS } from "@/lib/endgame-drills";
 import type { EndgameLeaderboardResponse } from "./learn-shared";
 import type { CoursesAuthStatus } from "./courses-view";
 import type { PuzzleDto } from "@/lib/puzzle-solve";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 type DrillSet = {
   id: string;
@@ -286,8 +289,8 @@ export function EndgameDrillsView({
           <IconShield3D size={20} aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Permainan Akhir</h1>
         </div>
-        <div className="view-body flex flex-col items-center gap-3 py-10" role="status">
-          <p className="text-sm text-neutral-300">{error}</p>
+        <div className="view-body flex flex-col items-center py-10">
+          <ErrorState message={error} ctx="latihan permainan akhir" onRetry={() => void loadSets({ theme, minProgress })} />
         </div>
       </div>
     );
@@ -373,18 +376,13 @@ export function EndgameDrillsView({
       <p className="sr-only" role="status" aria-live="polite">{setCountLabel}</p>
 
       {!sets ? (
-        <div className="flex items-center justify-center py-16" role="status" aria-live="polite">
-          <span className="text-sm font-bold text-neutral-400 animate-pulse">Mencocokkan filter…</span>
-        </div>
+        <LoadingState label="Mencocokkan filter…" skeleton="grid" className="items-stretch self-stretch" />
       ) : sets.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center" role="status">
-          <p className="text-sm font-bold text-neutral-300">Belum ada set untuk filter ini.</p>
-          {filterActive && (
-            <Button variant="outline" size="sm" className="mt-3" onClick={resetFilters}>
-              Reset filter
-            </Button>
-          )}
-        </div>
+        <EmptyState
+          title="Belum ada set untuk filter ini."
+          ctaLabel={filterActive ? "Reset filter" : undefined}
+          onCta={filterActive ? resetFilters : undefined}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {sets.map((s) => {

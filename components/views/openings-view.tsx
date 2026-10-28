@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import {
-  BookOpen, ChevronLeft, ChevronRight, Compass, Loader2, RotateCcw, Target,
+  BookOpen, ChevronLeft, ChevronRight, Compass, RotateCcw, Target,
 } from "lucide-react";
 import { LESSONS } from "@/lib/lessons";
 import { openingByEco } from "@/lib/opening-book";
@@ -31,6 +31,8 @@ import { themeLabel } from "@/lib/puzzle-themes";
 import { PuzzleSolver } from "@/components/puzzle-solver";
 import type { PuzzleDto } from "@/lib/puzzle-solve";
 import type { CoursesAuthStatus } from "./courses-view";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -326,10 +328,7 @@ function OpeningChallenge({ authStatus, active }: { authStatus: CoursesAuthStatu
 
   if (error && !puzzle) {
     return (
-      <div className="flex flex-col items-center gap-3 py-8" role="alert">
-        <p className="text-sm font-bold text-neutral-300">{error}</p>
-        <button className="ctl ctl-sm" onClick={() => void loadNext()}>Coba lagi</button>
-      </div>
+      <ErrorState message={error} ctx="teka-teki" onRetry={() => void loadNext()} />
     );
   }
   return (
@@ -379,21 +378,10 @@ function OpeningMastery({ eco, onSwitchToChallenge }: { eco: string; onSwitchToC
   }, [load]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8" role="status" aria-live="polite">
-        <span className="flex items-center gap-2 text-sm font-bold text-neutral-400 animate-pulse">
-          <Loader2 size={16} className="animate-spin" /> Menghitung kemahiran…
-        </span>
-      </div>
-    );
+    return <LoadingState label="Menghitung kemahiran…" className="py-8" />;
   }
   if (error) {
-    return (
-      <div className="flex flex-col items-center gap-3 py-8" role="alert">
-        <p className="text-sm font-bold text-neutral-300">{error}</p>
-        <button className="ctl ctl-sm" onClick={() => void load()}>Coba lagi</button>
-      </div>
-    );
+    return <ErrorState message={error} ctx="kemahiran pembukaan" onRetry={() => void load()} />;
   }
   const pct = mastery?.masteryPct ?? 0;
   return (

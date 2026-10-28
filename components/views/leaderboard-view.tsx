@@ -12,6 +12,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authErrorPayload, authErrorText } from "@/lib/use-session";
 import { IconTrophy3D } from "@/components/icons3d";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 /** S8: header 44px (segmented + chips kategori) + body tabel scroll internal.
  *  Aksen section Komunitas via --nav-accent-social (kontrak §0 spec S8). */
@@ -131,31 +134,16 @@ export function LeaderboardView({ lang = "id", onOpenProfile, onPlayOnline }: Pr
 
       <div className="view-body" style={{ scrollbarWidth: "thin" }}>
         {error ? (
-          <div className="flex flex-col items-center gap-3 py-8" role="status">
-            <p className="text-sm text-neutral-300">{error}</p>
-            <button
-              onClick={() => void load(scope, gameType)}
-              className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-bold text-white hover:bg-[var(--surface-hover)]"
-            >
-              Coba lagi
-            </button>
-          </div>
+          <ErrorState message={error} ctx="papan peringkat" onRetry={() => void load(scope, gameType)} />
         ) : !data ? (
-          <div className="flex items-center justify-center py-8" role="status" aria-live="polite">
-            <span className="text-sm font-bold text-neutral-400 animate-pulse">Memuat papan peringkat…</span>
-          </div>
+          <LoadingState label="Memuat papan peringkat…" />
         ) : entries.length === 0 ? (
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center flex flex-col items-center gap-3">
-            <p className="text-sm font-bold text-neutral-300">Papan masih kosong — main rated untuk masuk papan</p>
-            {onPlayOnline && (
-              <button
-                onClick={onPlayOnline}
-                className="rounded-lg bg-[var(--nav-accent-social)] px-4 py-2 text-sm font-black text-black shadow-[0_3px_0_rgba(244,114,182,0.4)] active:scale-[0.98]"
-              >
-                Main sekarang
-              </button>
-            )}
-          </div>
+          <EmptyState
+            title="Papan masih kosong"
+            hint="Main rated untuk masuk papan."
+            ctaLabel={onPlayOnline ? "Main sekarang" : undefined}
+            onCta={onPlayOnline}
+          />
         ) : (
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] overflow-hidden">
             <table className="w-full text-sm">

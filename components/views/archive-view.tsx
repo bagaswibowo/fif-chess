@@ -10,6 +10,9 @@
 import { authErrorText } from "@/lib/use-session";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 type ArchiveGame = {
   id: string;
@@ -247,20 +250,16 @@ export function ArchiveView({ onGoReview }: Props) {
 
       <div className="view-body" style={{ scrollbarWidth: "thin" }}>
         {loading ? (
-          <div className="py-12 text-center text-sm text-neutral-400" role="status" aria-live="polite">Memuat…</div>
+          <LoadingState label="Memuat…" />
         ) : error ? (
-          <div className="py-12 text-center flex flex-col items-center gap-3" role="status">
-            <p className="text-sm text-neutral-300">{error}</p>
-            <Button variant="outline" size="sm" onClick={() => void load(filter, page)}>Coba lagi</Button>
-          </div>
+          <ErrorState message={error} ctx="arsip partai" onRetry={() => void load(filter, page)} />
         ) : games.length === 0 ? (
-          <div className="py-12 text-center text-sm text-neutral-400 flex flex-col items-center gap-3" role="status">
-            <p>Belum ada partai</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => (window.location.hash = "#/bots")}>Main vs Bot</Button>
-              <Button size="sm" onClick={() => (window.location.hash = "#/play")}>Main Online</Button>
-            </div>
-          </div>
+          <EmptyState
+            title="Belum ada partai"
+            hint="Main partai untuk memunculkannya di arsip ini."
+            ctaLabel="Main Online"
+            onCta={() => (window.location.hash = "#/play")}
+          />
         ) : (
           <div ref={listTopRef} tabIndex={-1} className="outline-none">
             <ul className="flex flex-col gap-1.5">

@@ -15,10 +15,12 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Library, ChevronLeft, ChevronRight, Check, ArrowRight, Loader2 } from "lucide-react";
+import { Library, ChevronLeft, ChevronRight, Check, ArrowRight } from "lucide-react";
 import { COURSES, courseById, type Course, type CourseStep } from "@/lib/courses";
 import type { CourseProgress } from "./learn-shared";
 import { authErrorPayload, authErrorText } from "@/lib/use-session";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 export type CoursesAuthStatus = "guest" | "pending" | "approved" | null;
 
@@ -154,18 +156,17 @@ export function CoursesView({
           <Library size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Kursus</h1>
         </div>
-        <div className="view-body flex flex-col items-center gap-3 py-10" role="alert" style={{ scrollbarWidth: "thin" }}>
-          <p className="text-sm font-bold text-neutral-300">{listError}</p>
-          <button
-            className="ctl ctl-sm"
-            onClick={() => {
+        <div className="view-body flex flex-col items-center gap-3 py-10" style={{ scrollbarWidth: "thin" }}>
+          <ErrorState
+            message={listError}
+            ctx="kursus"
+            onRetry={() => {
               setSummaries(null);
               setListError(null);
               setRetryKey((k) => k + 1);
             }}
-          >
-            Coba lagi
-          </button>
+            className="items-center"
+          />
         </div>
       </div>
     );
@@ -177,10 +178,8 @@ export function CoursesView({
           <Library size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Kursus</h1>
         </div>
-        <div className="view-body flex items-center justify-center py-10" role="status" aria-live="polite">
-          <span className="flex items-center gap-2 text-sm font-bold text-neutral-400 animate-pulse">
-            <Loader2 size={16} className="animate-spin" /> Mengambil kursus…
-          </span>
+        <div className="view-body flex items-center justify-center py-10" style={{ scrollbarWidth: "thin" }}>
+          <LoadingState label="Mengambil kursus…" skeleton="grid" className="items-stretch self-stretch" />
         </div>
       </div>
     );

@@ -26,10 +26,11 @@ import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import {
   ArrowLeft, ArrowRight, Copy, Loader2, LogOut, MessageSquare, Presentation,
-  Send, Users, X,
+  Send, X,
 } from "lucide-react";
 import { useChessTheme } from "@/lib/chess-themes";
 import { useRealtime } from "@/lib/use-realtime";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   gameTopic,
   type ClassroomJoined,
@@ -398,19 +399,13 @@ export function ClassroomView({ authStatus }: { authStatus: CoursesAuthStatus })
           )}
         </div>
 
-        {/* Status ruang (lobby: belum ada room user) */}
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-neutral-400">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--muted)] inline-block" aria-hidden="true" />
-            Tidak ada yang bergabung.
-          </div>
-          <p className="text-xs text-neutral-400">
-            Buat ruang baru — memunculkan kode {`{code}`} yang bisa dibagikan.
-          </p>
-          <button className="ctl ctl-active inline-flex items-center gap-1.5" onClick={() => void createRoom()} disabled={busy}>
-            <Users size={15} aria-hidden="true" /> Buat ruang baru
-          </button>
-        </div>
+        {/* Status ruang (lobby: belum ada room user) — EmptyState S9-T3 */}
+        <EmptyState
+          title="Tidak ada yang bergabung."
+          hint={"Buat ruang baru — memunculkan kode {code} yang bisa dibagikan."}
+          ctaLabel="Buat ruang baru"
+          onCta={() => void createRoom()}
+        />
       </div>
     );
   }

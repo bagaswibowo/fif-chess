@@ -23,6 +23,9 @@ import { Trophy, Timer, Users, ArrowLeft, CircleSlash, Clock } from "lucide-reac
 import { useRealtime } from "@/lib/use-realtime";
 import { tournamentTopic, type TournamentUpdated } from "@/lib/realtime/events";
 import type { TournamentArena, TournamentPlayer, TournamentStatus } from "@/lib/tournament-types";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 type Props = {
   username?: string; // username sesi ("" = guest)
@@ -181,36 +184,26 @@ export function TournamentsView({ username = "" }: Props) {
           </p>
         )}
         {authNote && (
-          <p className="text-xs font-bold" style={{ color: "var(--warning)" }} role="status" aria-live="polite">
-            {authNote}
-          </p>
+          <ErrorState message={authNote} className="py-3" />
         )}
 
         {error && (
-          <div className="panel p-3 rounded-2xl border bg-[var(--card)]" role="alert" style={{ borderColor: "var(--destructive)" }}>
-            <p className="text-sm text-neutral-200">{error}</p>
-            <button className="ctl ctl-xs mt-2" onClick={() => void load()}>
-              Coba lagi
-            </button>
-          </div>
+          <ErrorState
+            message={error}
+            ctx="arena turnamen"
+            onRetry={() => void load()}
+            className="panel rounded-2xl border bg-[var(--card)] p-3"
+          />
         )}
 
         {loading && !error && (
-          <div role="status" aria-live="polite" className="space-y-2">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="panel p-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] opacity-50">
-                <div className="h-3.5 w-24 rounded bg-[var(--surface)]" />
-                <div className="h-2.5 w-40 rounded bg-[var(--surface)] mt-2" />
-              </div>
-            ))}
-            <p className="text-xs text-neutral-400">Mengambil arena…</p>
-          </div>
+          <LoadingState label="Mengambil arena…" skeleton="grid" className="items-stretch self-stretch" />
         )}
 
         {!loading && !error && visible.length === 0 && (
-          <p className="text-sm text-neutral-400 py-4 text-center" role="status">
-            {filter === "tersedia" ? "Tidak ada arena tersedia saat ini." : "Belum ada turnamen terjadwal."}
-          </p>
+          <EmptyState
+            title={filter === "tersedia" ? "Tidak ada arena tersedia saat ini." : "Belum ada turnamen terjadwal."}
+          />
         )}
 
         <div className="flex flex-col gap-1.5">

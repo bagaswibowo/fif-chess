@@ -25,6 +25,9 @@ import { Chessboard } from "react-chessboard";
 import { Compass, BookOpen, ChevronRight, FlaskConical, Target } from "lucide-react";
 import { OPENING_BOOK } from "@/lib/engines/opening-book";
 import { loadStoredTimeControl, timeCategoryOf, type TimeCategory } from "@/lib/time-control";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -456,9 +459,7 @@ export function ExplorerView({ initialEco, onLoadFen }: {
               )}
 
               {error && (
-                <p className="mt-2 text-xs font-bold" style={{ color: "var(--destructive)" }} role="alert">
-                  {error}
-                </p>
+                <ErrorState message={error} className="mt-2 py-2 items-start text-left" />
               )}
               {wrLoading && (
                 <p className="mt-2 text-xs text-neutral-400" role="status" aria-live="polite">
@@ -468,17 +469,17 @@ export function ExplorerView({ initialEco, onLoadFen }: {
 
               <div className="mt-2 flex flex-col gap-1" role="list" aria-label="Daftar garis pembukaan">
                 {loading ? (
-                  <p role="status" aria-live="polite" className="text-xs text-neutral-400 py-1">
-                    Mencari garis…
-                  </p>
+                  <LoadingState label="Mencari garis…" rows={4} className="items-start" />
                 ) : kids.length === 0 ? (
-                  <p className="text-xs text-neutral-400 py-1" role="status">
-                    {sideFilter !== "both" || rowMax !== 20
-                      ? "Tidak ada garis untuk kombinasi filter ini di tingkat saat ini."
-                      : ecoFilter
-                      ? "Tidak ada garis dengan filter ECO ini di tingkat saat ini."
-                      : "Belum ada partai dengan garis ini di arsip."}
-                  </p>
+                  <EmptyState
+                    title={
+                      sideFilter !== "both" || rowMax !== 20
+                        ? "Tidak ada garis untuk kombinasi filter ini di tingkat saat ini."
+                        : ecoFilter
+                          ? "Tidak ada garis dengan filter ECO ini di tingkat saat ini."
+                          : "Belum ada partai dengan garis ini di arsip."
+                    }
+                  />
                 ) : (
                   kids.map((k) => (
                     <button

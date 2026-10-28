@@ -12,6 +12,9 @@ import { useCallback, useEffect, useState } from "react";
 import { authErrorPayload, authErrorText } from "@/lib/use-session";
 import { Button } from "@/components/ui/button";
 import { IconFriends3D, IconClose3D } from "@/components/icons3d";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 type Person = { id?: string; username: string; rating: number; since?: string; online?: boolean };
 type FriendsPayload = { friends: Person[]; incoming: Person[]; outgoing: Person[] };
@@ -150,8 +153,8 @@ export function FriendsView({ onChallenge, onOpenProfile }: Props) {
           <IconFriends3D size={20} aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Teman</h1>
         </div>
-        <div className="view-body flex flex-col items-center gap-3 py-10" role="status">
-          <p className="text-sm text-neutral-300">{error}</p>
+        <div className="view-body flex flex-col items-center py-10">
+          <ErrorState message={error} ctx="daftar teman" onRetry={load} />
         </div>
       </div>
     );
@@ -163,8 +166,8 @@ export function FriendsView({ onChallenge, onOpenProfile }: Props) {
           <IconFriends3D size={20} aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Teman</h1>
         </div>
-        <div className="view-body flex items-center justify-center py-10" role="status" aria-live="polite">
-          <span className="text-sm font-bold text-neutral-400 animate-pulse">Memuat daftar teman…</span>
+        <div className="view-body flex items-center justify-center py-10">
+          <LoadingState label="Memuat daftar teman…" className="items-stretch self-stretch" />
         </div>
       </div>
     );
@@ -227,9 +230,12 @@ export function FriendsView({ onChallenge, onOpenProfile }: Props) {
             Daftar Teman ({data.friends.length})
           </h2>
           {data.friends.length === 0 ? (
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-center">
-              <p className="text-sm font-bold text-neutral-300">Belum punya teman — tambahkan dengan username.</p>
-            </div>
+            <EmptyState
+              title="Belum punya teman"
+              hint="Tambahkan dengan username."
+              ctaLabel="+ Tambah Teman"
+              onCta={() => setAddOpen(true)}
+            />
           ) : (
             <ul className="flex flex-col gap-1.5">
               {data.friends.map((p) => (

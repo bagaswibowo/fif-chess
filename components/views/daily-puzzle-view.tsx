@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PuzzleSolver } from "@/components/puzzle-solver";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
 import { IconCheck3D } from "@/components/icons3d";
 import { dailyShareText, formatDailyDate, utcDateKey, type PuzzleDto } from "@/lib/puzzle-solve";
 
@@ -176,9 +177,7 @@ export function DailyPuzzleView({ lang = "id", onGoPuzzles }: Props) {
               </Button>
             </div>
           ) : error ? (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-neutral-300 text-center" role="status">
-              {error}
-            </div>
+            <ErrorState message={error} ctx="teka-teki harian" />
           ) : (
             <PuzzleSolver
               lang={lang}
