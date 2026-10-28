@@ -515,9 +515,9 @@ export function CoachModeView({ lang = "id" }: Props) {
 
           {/* Chessboard Row with Vertical Eval Bar */}
           <div className="flex justify-center w-full flex-1 min-h-0">
-            <div className="flex gap-2.5 items-center w-full max-w-[min(100%,var(--board-cap))]">
+            <div className="flex gap-2.5 items-center w-full justify-center">
               <EvalBar fen={fen} scoreCp={evalCp} orientation={boardOrientation} />
-              <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
+              <div className="aspect-square w-[var(--board-cap)] max-w-[calc(100%-2.5rem)] min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
                 <Chessboard
                   key={`coach-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`}
                   options={{

@@ -774,14 +774,14 @@ export function SpectatorView({
               className={`flex gap-2 md:gap-3 items-stretch w-full ${
                 fullscreenSpectator
                   ? "lg:w-auto lg:h-full max-h-full"
-                  : "max-w-[min(100%,var(--board-cap))]"
+                  : "justify-center"
               }`}
             >
               {/* Slim Vertical Dual Eval Bar: Black at top, White at bottom (responsive to orientation) */}
               <EvalBar fen={currentFen} scoreCp={whiteCp} orientation={boardOrientation} />
 
               {/* Chessboard */}
-              <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
+              <div className={`aspect-square ${fullscreenSpectator ? "flex-1 min-w-0" : "w-[var(--board-cap)] max-w-[calc(100%-2.5rem)] min-w-0"} rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative`}>
                 <Chessboard
                   key={`spectator-board-${boardOrientation}-${boardThemeId}-${pieceThemeId}`}
                   options={{
