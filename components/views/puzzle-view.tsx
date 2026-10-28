@@ -194,10 +194,12 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
   }
 
   return (
-    /* S8 Pola A (spec §3): .view-root + .view-head 44px (TierLadder + filter,
-       aksen --nav-accent-puzzle section Teka-Teki) + .view-grid-board
-       (PuzzleSolver: papan kiri ≤540px + panel kanan) dengan panel
-       .view-body sebagai region scroll internal (F8: papan muat utuh). */
+    /* S8 Pola A (spec §3) + S9-P1 board-first fix: .view-root + .view-head 44px
+       (filter, aksen --nav-accent-puzzle) lalu SATU kolom penuh: strip
+       TierLadder 1 baris + banner hasil di atas, PuzzleSolver (board+panel
+       22rem) mendapat lebar penuh 1072px → board = min(704, cap 508px) =
+       508px (±36% lebih besar vs layout S8 3-kolom 372px). Kolom tier 320px
+       dihapus: board-first design §1.1 — papan tidak lagi kolom kelas-3. */
     <div className="view-root w-full min-h-0">
       <div className="view-head flex items-center shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
         {/* T6: bar filter tema + preset rating — TIER LADDER pindah ke panel
@@ -241,11 +243,33 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
         </div>
       </div>
 
-      <div className="view-grid-board flex-1 min-h-0 mt-1.5">
-        {/* LEFT: papan PuzzleSolver — F8/Pola A §3: papan self-cap internal
-            solver (max-w calc(100dvh-260px) ≈ 508px @ 768dvh ≤ 540) width-driven
-            → muat utuh 1360×768 tanpa scroll halaman; kolom kiri = sisa ruang. */}
-        <div className="min-h-0">
+      {/* S9-P1: body satu kolom penuh (min-h-0, scroll internal bila perlu).
+          Strip TierLadder 1 baris di atas + banner hasil, lalu PuzzleSolver
+          lebar penuh — papan jadi selebar area konten, bukan kolom 1fr yang
+          terbelah panel 352px + tier 320px. */}
+      <div className="view-body flex flex-col gap-2 min-h-0 overflow-y-auto custom-scrollbar pr-1 mt-1.5">
+        <TierLadder lang={lang} onPickTier={pickTier} selectedTier={tier} />
+        {/* T6: banner hasil inline aria-live — selalu teks + ikon, bukan warna saja */}
+        {lastResult && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`w-full rounded-xl border px-4 py-2.5 text-sm font-semibold flex items-center justify-between gap-3 ${
+              lastResult === "correct"
+                ? "border-[var(--success)] text-emerald-300 bg-[var(--card)]"
+                : "border-[var(--error)] text-red-300 bg-[var(--card)]"
+            }`}
+          >
+            <span>
+              <span aria-hidden="true">{lastResult === "correct" ? "✓ " : "✕ "}</span>
+              {lastResult === "correct" ? "Benar!" : bestStep ? `Kurang tepat — langkah terbaik: ${bestStep}` : "Kurang tepat."}
+            </span>
+            <Button size="sm" onClick={() => void loadNext()}>
+              {lang === "id" ? "Lanjut" : "Next"} <span className="sr-only"> (tekan Enter)</span>
+            </Button>
+          </div>
+        )}
+        <div className="flex-1 min-h-0">
           <PuzzleSolver
             lang={lang}
             puzzle={puzzle}
@@ -258,32 +282,7 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
             onNextPuzzle={() => void loadNext()}
           />
         </div>
-        {/* RIGHT: panel .view-body (320px) — TierLadder + banner hasil;
-            satu-satunya region scroll internal (Pola A §3). */}
-        <div className="view-body pr-1 space-y-2.5 custom-scrollbar min-h-0">
-          <TierLadder lang={lang} onPickTier={pickTier} selectedTier={tier} />
-          {/* T6: banner hasil inline aria-live — selalu teks + ikon, bukan warna saja */}
-          {lastResult && (
-            <div
-              role="status"
-              aria-live="polite"
-              className={`w-full rounded-xl border px-4 py-2.5 text-sm font-semibold flex items-center justify-between gap-3 ${
-                lastResult === "correct"
-                  ? "border-[var(--success)] text-emerald-300 bg-[var(--card)]"
-                  : "border-[var(--error)] text-red-300 bg-[var(--card)]"
-              }`}
-            >
-              <span>
-                <span aria-hidden="true">{lastResult === "correct" ? "✓ " : "✕ "}</span>
-                {lastResult === "correct" ? "Benar!" : bestStep ? `Kurang tepat — langkah terbaik: ${bestStep}` : "Kurang tepat."}
-              </span>
-              <Button size="sm" onClick={() => void loadNext()}>
-                {lang === "id" ? "Lanjut" : "Next"} <span className="sr-only"> (tekan Enter)</span>
-              </Button>
-            </div>
-          )}
-          {reducedMotion && !lastResult && <p className="sr-only" aria-live="polite">Mode gerak minimal aktif.</p>}
-        </div>
+        {reducedMotion && !lastResult && <p className="sr-only" aria-live="polite">Mode gerak minimal aktif.</p>}
       </div>
     </div>
   );

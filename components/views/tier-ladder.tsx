@@ -51,11 +51,12 @@ export function TierLadder({
   }
 
   // S8 Pola D (spec §3): tier = kartu dashboard rapat (.view-cards
-  // auto-rows-min). Grid responsif menggantikan scroll-x — di panel kanan
-  // view 320px jadi 2–4 kolom, tidak memuai tinggi halaman.
+  // auto-rows-min). S9-P1: dipindah jadi strip 1 baris penuh (4 chip mobile,
+  // 8 chip sm+) — 8 tier 800..2200 muat satu baris tanpa scroll-x & tidak
+  // lagi memakan kolom-kanan 320px (papan jadi lebar penuh, board 508px).
   return (
     <div
-      className="view-cards grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2"
+      className="view-cards grid grid-cols-4 sm:grid-cols-8 gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2"
       role="radiogroup"
       aria-label={lang === "id" ? "Tier rating teka-teki" : "Puzzle rating tiers"}
     >
