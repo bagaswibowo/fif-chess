@@ -168,7 +168,19 @@ export function findUser(users: UserProfile[], username: string) {
 }
 
 function loadSessions(): Record<string, Session> {
-  return readJson<Record<string, Session>>(SESSIONS_FILE, {});
+  const raw = readJson<Record<string, Session> | unknown[]>(SESSIONS_FILE, {});
+  if (Array.isArray(raw) || raw === null || typeof raw !== "object") {
+    // Guard format: sessions.json sempat rusak jadi list hash token (bukan
+    // Record<hash,{userId,exp}>). Sesi lama tak bisa dipulihkan (mapping
+    // userId/exp sudah hilang), jadi reset ke {} — user cukup login sekali.
+    // Tanpa guard ini, startSession menulis property ke array (hilang saat
+    // JSON.stringify) dan SETIAP sesi baru gagal persist -> semua endpoint
+    // 401 padahal UI "masuk" via cache localStorage.
+    console.warn("[auth] sessions.json format salah (bukan object) — mereset ke {}");
+    writeJson(SESSIONS_FILE, {});
+    return {};
+  }
+  return raw;
 }
 
 export function startSession(userId: string) {
