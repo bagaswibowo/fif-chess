@@ -23,3 +23,8 @@
 
 ## Keputusan
 **APPROVED untuk deploy** — CI green, build+smoke clean, seluruh P0/P1/P2 audit terverifikasi fix di build produksi. Push `fif-chess` sudah dilakukan (`06ee81e..36657fc`). Langkah berikutnya (DevOps): recreate container di sxz-server, verifikasi health 200, hapus `s8qa_audit`.
+
+## Rilis Produksi (DILAKSANAKAN 2026-10-28)
+- **Deploy sukses 01:28 UTC** via loop self-healing di VPS `allpenelitian.cloud` (NetBird direct dari host sempat stall 2 jam di data-plane relay Singapore; `sudo netbird down/up` di VPS → RTT 217ms→45ms → SSH KEX pulih → loop VPS `DEPLOY-SUCCESS attempt=1`).
+- **Verifikasi live**: marker `.view-*` S8 ada di CSS chunk produksi; P0 `#/drills` guest: crash=false, shell utuh, aria=1, scroll=0; P1 `#/puzzles`: aria=1, crash=false. Produksi `https://jev-chess.bagaswibowo.app/` 200.
+- **Housekeeping QA selesai**: akun `s8qa_audit` (`u-45a15372`) dihapus dari `data/users.json` (1 entry) + 3 orphan session di `data/sessions.json`; final grep `s8qa_audit`/`u-45a15372` = 0 di kedua file.
