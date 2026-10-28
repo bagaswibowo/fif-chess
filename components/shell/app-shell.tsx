@@ -15,10 +15,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlayingBadge } from "@/components/playing-badge";
+import { readCachedUser } from "@/lib/use-session";
 import {
   Home, Swords, Bot, GraduationCap, Puzzle, Dumbbell, Eye, Trophy,
   Users, User, Archive, Shield, Compass, LineChart,
-  Library, NotebookText, Target, Presentation,
+  Library, NotebookText, Target, Presentation, Clock,
 } from "lucide-react";
 import {
   IconPlay3D, IconMedal3D, IconScan3D,
@@ -36,7 +37,15 @@ export type NavTab =
   | "courses" | "learn" | "practice" | "classroom"
   | "admin";
 
-export type ShellUser = { id: string; username: string; isAdmin: boolean; elo: number | null } | null;
+export type ShellUser = {
+  id: string;
+  username: string;
+  isAdmin: boolean;
+  elo: number | null;
+  // S9-T1 (G0.2): status akun dari session — badge user-chip "Menunggu" saat
+  // pending. Additive: consumer lama tetap valid (field opsional).
+  status?: "pending" | "approved" | "rejected";
+} | null;
 
 type AppShellProps = {
   navTab: NavTab;
@@ -163,6 +172,47 @@ const BOTTOM_ITEMS: { id: NavTab; label: string; icon: React.ComponentType<{ siz
 
 const PLAYER_RESULT = { username: "", rating: 0 };
 
+// S9-T1 (G0.2): pill status akun di user-chip shell. Pending = "Menunggu"
+// (teks + ikon, bukan warna saja — floor DHH a11y). Approved = tanpa pill
+// (titik hijau existing sudah ada); rejected diperlakukan seperti guest
+// (S7 design §0.3) — tidak ada status tambahan.
+function UserStatusPill() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold leading-none text-amber-400">
+      <Clock size={11} aria-hidden="true" />
+      Menunggu
+    </span>
+  );
+}
+
+/**
+ * S9-T1 (G0.2): status akun dari session sungguhan — sumber data sama dgn
+ * useSession (cache localStorage `jev_chess_user` + GET /api/auth), tanpa
+ * menyentuh game.tsx. Returns "pending"/"approved"/"rejected" | null.
+ * Additive: dipakai hanya untuk badge user-chip shell.
+ */
+function useSessionStatus(): "pending" | "approved" | "rejected" | null {
+  const [status, setStatus] = useState<"pending" | "approved" | "rejected" | null>(() =>
+    readCachedUser()?.status ?? null
+  );
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/auth", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        const s: unknown = d?.user?.status;
+        if (alive && (s === "pending" || s === "approved" || s === "rejected")) setStatus(s);
+      })
+      .catch(() => {
+        /* jaringan gagal — pakai cache */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return status;
+}
+
 function usePlayerSearch(query: string, enabled: boolean) {
   const [results, setResults] = useState<{ username: string; rating: number }[]>([]);
   useEffect(() => {
@@ -219,6 +269,12 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
   const moreSheetRef = useRef<HTMLDivElement | null>(null);
   const searchBoxRef = useRef<HTMLDivElement | null>(null);
   const results = usePlayerSearch(query, searchOpen);
+  // G0.2: status akun riil dari session (cache + GET /api/auth) untuk badge
+  // user-chip — sumber data sama dgn useSession, tanpa menyentuh game.tsx.
+  const accountStatus = useSessionStatus();
+  // Merge: ShellUser.status (jika consumer game.tsx sudah wiring) fallback
+  // ke session riil di shell (cache localStorage + GET /api/auth).
+  const accountPending = user ? (user.status ?? accountStatus) === "pending" : false;
 
   const pickResult = useCallback((username: string) => {
     setSearchOpen(false);
@@ -227,6 +283,49 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
     onNavigate("leaderboard");
     void username;
   }, [onNavigate]);
+
+  // S9-T4 (G7.2): navigasi panah bottom-nav — Left/Right antar 6 tombol
+  // (5 item + "Lainnya") dengan wrap; fokus tetap di dalam nav.
+  const handleNavArrowKeys = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const buttons = Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[];
+    const active = document.activeElement;
+    const idx = buttons.findIndex((b) => b === active);
+    if (idx === -1) return;
+    e.preventDefault();
+    const next = e.key === "ArrowRight"
+      ? (idx + 1) % buttons.length
+      : (idx - 1 + buttons.length) % buttons.length;
+    buttons[next]?.focus();
+  }, []);
+
+  // S9-T4 (G7.2): navigasi panah grid more-sheet (2 kolom) — Left/Right
+  // pindah kolom, Up/Down pindah baris (wrap atas/bawah di dalam grid).
+  const handleSheetArrowKeys = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
+    const active = document.activeElement as HTMLElement | null;
+    if (!active) return;
+    const keys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+    if (!keys.includes(e.key)) return;
+    const grid = active.parentElement as HTMLElement | null;
+    if (!grid) return;
+    const buttons = Array.from(grid.querySelectorAll("button")) as HTMLButtonElement[];
+    const idx = buttons.findIndex((b) => b === active);
+    if (idx === -1) return;
+    e.preventDefault();
+    const cols = 2;
+    const col = idx % cols;
+    let target: number;
+    if (e.key === "ArrowRight") target = Math.min(idx + 1, buttons.length - 1);
+    else if (e.key === "ArrowLeft") target = Math.max(idx - 1, 0);
+    else if (e.key === "ArrowDown") {
+      target = idx + cols;
+      if (target >= buttons.length) target = col; // wrap ke baris atas kolom sama
+    } else {
+      target = idx - cols;
+      if (target < 0) target = buttons.length - cols + col; // wrap ke baris bawah
+    }
+    buttons[target]?.focus();
+  }, []);
 
   // Esc menutup search & more-sheet; fokus kembali ke trigger (a11y §8).
   useEffect(() => {
@@ -346,8 +445,12 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
           </button>
           <button
             onClick={onOpenAuth}
-            className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow cursor-pointer"
-            aria-label={user ? `Akun @${user.username}` : "Masuk atau daftar"}
+            className={`w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow cursor-pointer ${
+              accountPending ? "ring-2 ring-amber-500" : ""
+            }`}
+            aria-label={user
+              ? `Akun @${user.username}${accountPending ? ", status menunggu persetujuan" : ""}`
+              : "Masuk atau daftar"}
           >
             {user ? user.username.slice(0, 2).toUpperCase() : "?"}
           </button>
@@ -373,24 +476,29 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
           {SECTIONS.map((s) => {
             const active = activeSection?.title === s.title;
             return (
-              <button
-                key={s.title}
-                onClick={() => onNavigate(s.default)}
-                aria-current={mounted && active && isDesktop ? "page" : undefined}
-                aria-label={`${s.title}${active ? " (bagian aktif)" : ""}`}
-                title={s.title}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left duration-150 ${
-                  active
-                    ? "bg-[var(--primary-strong)]/30 text-[var(--primary)]"
-                    : "text-neutral-300 hover:bg-[var(--surface)] hover:text-white"
-                } focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)]`}
-              >
-                <span style={{ color: s.accent }} className="flex shrink-0" aria-hidden="true">
-                  <s.icon size={22} />
-                </span>
-                <span className="flex-1 truncate">{s.title}</span>
-                {s.badge && active && <PlayingBadge count={playingCount} />}
-              </button>
+              <div key={s.title}>
+                {/* S9-T4 (G7.1b): heading semantik sr-only per grup sidebar —
+                    orientasi SR; label visual tombol section tetap ada (tanpa
+                    duplikat teks di antarmuka). */}
+                <h2 className="sr-only">{s.title}</h2>
+                <button
+                  onClick={() => onNavigate(s.default)}
+                  aria-current={mounted && active && isDesktop ? "page" : undefined}
+                  aria-label={`${s.title}${active ? " (bagian aktif)" : ""}`}
+                  title={s.title}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left duration-150 ${
+                    active
+                      ? "bg-[var(--primary-strong)]/30 text-[var(--primary)]"
+                      : "text-neutral-300 hover:bg-[var(--surface)] hover:text-white"
+                  } focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)]`}
+                >
+                  <span style={{ color: s.accent }} className="flex shrink-0" aria-hidden="true">
+                    <s.icon size={22} />
+                  </span>
+                  <span className="flex-1 truncate">{s.title}</span>
+                  {s.badge && active && <PlayingBadge count={playingCount} />}
+                </button>
+              </div>
             );
           })}
 
@@ -410,6 +518,8 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
               <span aria-hidden="true" className={`text-xs transition-transform duration-150 ${othersOpen ? "rotate-180" : ""}`}>▾</span>
             </button>
             <div id="shell-others" aria-hidden={!othersOpen} className={othersOpen ? "space-y-0.5 mt-0.5" : "hidden"}>
+              {/* S9-T4 (G7.1b): heading sr-only untuk grup "Lainnya" (accordion). */}
+              <h2 className="sr-only">Menu lainnya</h2>
               {visibleOthers.map((it) => renderIconBtn(it, navTab === it.id))}
             </div>
           </div>
@@ -430,13 +540,19 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
           <button
             onClick={onOpenAuth}
             className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] cursor-pointer hover:border-[var(--primary)] transition-all shadow-sm text-left"
-            aria-label={user ? `Profil @${user.username}` : "Masuk atau daftar"}
+            aria-label={user
+              ? `Profil @${user.username}${accountPending ? ", status menunggu persetujuan" : ""}`
+              : "Masuk atau daftar"}
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow shrink-0">
               {user ? user.username.slice(0, 2).toUpperCase() : "?"}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold truncate text-white">{user ? user.username : "Tamu"}</div>
+              <div className="text-xs font-bold truncate text-white flex items-center gap-1.5">
+                <span className="truncate">{user ? user.username : "Tamu"}</span>
+                {/* G0.2: pill status akun — teks + ikon (tidak warna saja). */}
+                {accountPending && <UserStatusPill />}
+              </div>
               <div className="text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] inline-block" aria-hidden="true"></span>
                 <span className="truncate">{user ? `${user.elo ?? "-"} rating` : "Masuk untuk rating"}</span>
@@ -530,12 +646,16 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
           <button
             onClick={onOpenAuth}
             className="flex items-center gap-2 text-sm font-bold text-neutral-300 hover:text-white"
-            aria-label={user ? `Akun @${user.username}` : "Masuk atau daftar"}
+            aria-label={user
+              ? `Akun @${user.username}${accountPending ? ", status menunggu persetujuan" : ""}`
+              : "Masuk atau daftar"}
           >
             <span className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-xs text-white shadow">
               {user ? user.username.slice(0, 2).toUpperCase() : "?"}
             </span>
             <span>{user ? `@${user.username}` : "Masuk"}</span>
+            {/* G0.2: pill status akun — teks + ikon (tidak warna saja). */}
+            {accountPending && <UserStatusPill />}
           </button>
         </div>
 
@@ -582,6 +702,7 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
       <nav
         className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 min-h-14 bg-[var(--card)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md border-t border-[var(--border)] shadow-2xl"
         aria-label="Navigasi bawah"
+        onKeyDown={handleNavArrowKeys}
       >
         <div className="flex justify-around items-center py-1.5 px-0.5 gap-0.5 min-w-full">
           {BOTTOM_ITEMS.map((tab) => (
@@ -650,13 +771,15 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
                 <IconClose3D size={18} />
               </button>
             </div>
-            <div className="p-3 space-y-3">
+            <div className="p-3 space-y-3" onKeyDown={handleSheetArrowKeys}>
               {moreSheetSections.map(({ section, items }) => (
                 <div key={section.title}>
-                  <div className="px-1 pb-1 text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
+                  {/* S9-T4 (G7.1b): label grup → heading h3 visual (tanpa
+                      duplikat teks; hierarki h2 "Menu Lainnya" → h3). */}
+                  <h3 className="px-1 pb-1 text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: section.accent }} aria-hidden="true" />
                     {section.title}
-                  </div>
+                  </h3>
                   <div className="grid grid-cols-2 gap-1">
                     {items.map((it) => (
                       <button
@@ -680,10 +803,10 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
               ))}
               {visibleOthers.length > 0 && (
                 <div>
-                  <div className="px-1 pb-1 text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
+                  <h3 className="px-1 pb-1 text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "var(--nav-accent-drill)" }} aria-hidden="true" />
                     Lainnya
-                  </div>
+                  </h3>
                   <div className="grid grid-cols-2 gap-1">
                     {visibleOthers.map((it) => (
                       <button
