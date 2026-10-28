@@ -718,7 +718,8 @@ export function SpectatorView({
       <div className="view-grid-board flex-1 min-h-0 mt-2">
         
         {/* LEFT: Chess Arena (Board + Eval) — F8: papan cap 540px. */}
-        <div className="flex flex-col gap-1.5 min-h-0 w-full max-w-[min(100%,var(--board-cap))] overflow-hidden">
+        {/* Kap kolom diperlebar +2.5rem (selang EvalBar) agar papan teresolusi ke --board-cap (468px). Mode fullscreen tetap h-full. */}
+        <div className="flex flex-col gap-1.5 min-h-0 w-full max-w-[min(100%,calc(var(--board-cap) + 2.5rem))] overflow-hidden">
           
           {/* 1. Unified Board Action Controls (ON TOP) */}
           <BoardControls

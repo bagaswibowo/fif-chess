@@ -482,7 +482,8 @@ export function CoachModeView({ lang = "id" }: Props) {
       {/* Main Grid: Board Stays Solid on Left, Dynamic Cards on Right */}
       <div className="flex-1 grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-3 items-stretch min-h-0 overflow-y-auto lg:overflow-hidden pt-1">
         {/* LEFT COLUMN: Chessboard strictly anchored */}
-        <div className="flex flex-col justify-between items-center h-full min-h-0 w-full max-w-[min(100%,var(--board-cap))] mx-auto py-0.5 space-y-1">
+        {/* Kap kolom diperlebar +2.5rem (selang EvalBar) agar papan teresolusi ke --board-cap (468px), bukan tercekik EvalBar+gap jadi 428px. Bar di atas/bawah tetap --board-cap. */}
+        <div className="flex flex-col justify-between items-center h-full min-h-0 w-full max-w-[min(100%,calc(var(--board-cap) + 2.5rem))] mx-auto py-0.5 space-y-1">
           {/* Integrated Opponent Bar with Inline Engine Selector, Eval Badge & Captured Pieces */}
           <div className="w-full flex items-center justify-between px-3 py-1 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
             <div className="flex items-center gap-2 min-w-0">
