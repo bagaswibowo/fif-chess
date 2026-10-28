@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconTrophy3D, IconSkull3D, IconBalance3D, IconFlag3D, IconClock3D } from "@/components/icons3d";
+import { IconTrophy3D, IconSkull3D, IconBalance3D, IconFlag3D, IconClock3D, IconStar3D } from "@/components/icons3d";
 import { Confetti } from "@/components/confetti";
 import type { GameOutcome, Side } from "@/lib/chess";
 import type { PlayerGameSummary } from "@/lib/caps-evaluator";
@@ -34,6 +34,11 @@ type Props = {
   /** S6-T3 (dev_note #2): delta rating RIIL dari respons /api/match-result.
    *  null / undefined → badge "Rating diperbarui" tanpa angka (no-mock). */
   ratingDelta?: number | null;
+  /** S9-T2 (T2.3): hanya diuji di momen relevan — di-pass dari parent
+   *  (game.tsx) SAAT user masih guest (user null) selesai main vs bot.
+   *  Prop aditif: undefined di caller lama → baris CTA tidak dirender.
+   *  Saat ada: baris CTA "Daftar untuk simpan progres" membuka modal auth. */
+  onOpenAuth?: () => void;
 };
 
 export function GameOverModal({
@@ -53,6 +58,7 @@ export function GameOverModal({
   rematchRequest = null,
   pendingAccount = false,
   ratingDelta = null,
+  onOpenAuth,
 }: Props) {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [autoReviewCountdown, setAutoReviewCountdown] = useState(false);
@@ -285,6 +291,27 @@ export function GameOverModal({
               </Badge>
             )}
           </div>
+
+          {/* S9-T2 (T2.3): CTA di momen relevan — guest (parent tidak pass
+              onOpenAuth saat user ada) selesai main vs bot. Pola lama
+              "Masuk untuk melihat..." (blokir) digantikan CTA konversi:
+              daftar untuk simpan progres. Prop aditif — caller lama
+              (tanpa prop) tidak merender apa pun. */}
+          {onOpenAuth && !opponentUsername && (
+            <div className="bg-neutral-950/80 border border-neutral-800 rounded-xl p-2.5">
+              <Button
+                variant="outline"
+                onClick={onOpenAuth}
+                className="w-full border-neutral-700 hover:bg-neutral-800 text-neutral-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-white/70"
+                aria-label="Daftar untuk simpan progres"
+              >
+                <span aria-hidden="true" className="text-amber-400">
+                  <IconStar3D size={16} />
+                </span>
+                {lang === "id" ? "Daftar untuk simpan progres" : "Register to save your progress"}
+              </Button>
+            </div>
+          )}
 
           {/* S6-T3: baris aksi Rematch + status rematch masuk (spec §3.2–3.3) */}
           {(canRematch || rematchRequest) && (

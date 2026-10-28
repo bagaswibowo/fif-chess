@@ -62,7 +62,7 @@ import { useChessTheme } from "@/lib/chess-themes";
 import { EvalBar } from "@/components/eval-bar";
 import { useChessClock } from "@/lib/use-chess-clock";
 import { loadStoredTimeControl } from "@/lib/time-control";
-import { IconKingWhite3D, IconKingBlack3D, IconDice3D, IconPlay3D, IconSwap3D } from "@/components/icons3d";
+import { IconKingWhite3D, IconKingBlack3D, IconDice3D, IconPlay3D, IconSwap3D, IconAlert3D, IconClose3D } from "@/components/icons3d";
 import {
   applyUci,
   describeOutcome,
@@ -111,6 +111,11 @@ type NavTab =
   // S7 (design §0.2): layer belajar — navTab baru + deep-link sub-path.
   | "courses" | "learn" | "practice" | "classroom"
   | "admin";
+// S9-T2: satu sumber daftar tab yang terbuka untuk guest — fitur lokal
+// (render tanpa akun). Tab member-only yang di-klik guest TIDAK di-reject:
+// view dirender + notice guest persisten tampil (handleNavClick).
+const guestAllowedTabs: NavTab[] = ["home", "play", "bots", "coach", "review", "scan", "vision"];
+
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
 type CoachSubTab = "coach" | "spectator";
@@ -418,6 +423,10 @@ const navigateHash = useCallback((hash: string) => {
     const [activeDockModal, setActiveDockModal] = useState<DockModalType>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
     const [authNotice, setAuthNotice] = useState<string | null>(null);
+    // S9-T2: notice guest persisten (role=alert, bukan toast 2,8s). Ref
+    // trigger fokus — pola more-sheet app-shell.tsx:231-247 — supaya Esc
+    // mengembalikan fokus ke trigger yang membuka notice (a11y floor).
+    const guestNoticeFocusRef = useRef<HTMLElement | null>(null);
     const [fullscreenClocks, setFullscreenClocks] = useState(false);
 
   // Global Hotkeys: [F] = Putar Papan, [Z] = Fokus 1 Layar
@@ -445,15 +454,35 @@ const navigateHash = useCallback((hash: string) => {
   }, []);
 
   const handleNavClick = (tab: NavTab) => {
+    // S9-T2: guest TIDAK di-reject — semua tab navigate normal.
+    // Tab di luar guestAllowedTabs (member-only) tetap render view,
+    // tetapi notice guest persisten tampil di atas konten (state
+    // authNotice — hilang hanya lewat tombol dismiss / Esc).
     if (!currentUser) {
-      if (tab !== "play" && tab !== "home") {
-        setAuthNotice("Masuk terlebih dahulu untuk membuka fitur ini.");
-        window.setTimeout(() => setAuthNotice(null), 2800);
-        return;
+      guestNoticeFocusRef.current = document.activeElement as HTMLElement | null;
+      if (!guestAllowedTabs.includes(tab)) {
+        setAuthNotice("Fitur ini untuk anggota. Daftar untuk membuka akses penuh.");
+      } else if (authNotice) {
+        // Kembali ke tab guest-allowed → notice di-reset saat nav aktif.
+        setAuthNotice(null);
       }
     }
     navigate(tab);
   };
+
+  // S9-T2: Esc menutup notice guest (pola focus-trap more-sheet,
+  // app-shell.tsx:231-247) — fokus kembali ke trigger pembuka notice.
+  useEffect(() => {
+    if (!authNotice) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setAuthNotice(null);
+        guestNoticeFocusRef.current?.focus?.();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [authNotice]);
 
   // F3 (P2, audit bed0bb5): deep-link lama #/admin utk user non-admin →
   // redirect ke section home. Menunggu sesi ter-resolve dulu (currentUser
@@ -1265,6 +1294,32 @@ const navigateHash = useCallback((hash: string) => {
       <div className="flex-1 flex flex-col min-h-0">
         {challenge && (
           <ChallengeLayer challenge={challenge} state={challengeState} controlLabel={CHALLENGE_CONTROL_LABEL} onAccept={() => void resolveChallenge(true)} onDecline={() => void resolveChallenge(false)} />
+        )}
+        {/* S9-T2: notice guest persisten — inline di atas konten view (bukan
+            floating fixed), role=alert, ikon + teks + tombol dismiss.
+            Persisten: hilang HANYA lewat dismiss / Esc (state authNotice).
+            motion-safe: animasi hanya saat reduced-motion OFF. */}
+        {authNotice && (
+          <div
+            role="alert"
+            className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 mx-2 my-2 sm:mx-4 flex items-center gap-3 rounded-xl border border-[var(--primary)]/40 bg-[var(--card)] px-4 py-3 text-sm font-semibold text-white shadow-lg"
+          >
+            <span aria-hidden="true" className="shrink-0 text-[var(--primary)]">
+              <IconAlert3D size={20} />
+            </span>
+            <span className="flex-1">{authNotice}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthNotice(null);
+                guestNoticeFocusRef.current?.focus?.();
+              }}
+              aria-label="Tutup pengumuman"
+              className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)]"
+            >
+              <IconClose3D size={18} />
+            </button>
+          </div>
         )}
         {/* S4-T2: Home Dashboard — default landing */}
         {currentUser && navTab === "home" && (
@@ -2205,14 +2260,8 @@ const navigateHash = useCallback((hash: string) => {
         )}
       </div>
 
-      {authNotice && (
-        <div
-          role="status"
-          className="fixed left-1/2 top-20 z-50 w-[min(92vw,28rem)] -translate-x-1/2 rounded-xl border border-[var(--primary)]/40 bg-[var(--card)] px-4 py-3 text-center text-sm font-semibold text-white shadow-2xl"
-        >
-          {authNotice}
-        </div>
-      )}
+      {/* S9-T2: notice lama (floating fixed, role=status, auto-dismiss 2,8s)
+          digantikan notice persisten inline di atas konten view. */}
 
 
             {/* DOCK MODALS (Teman, Pesan, Pemberitahuan, Pengaturan) */}
@@ -2266,6 +2315,7 @@ const navigateHash = useCallback((hash: string) => {
         timeControl={pvpRoom?.timeControl ?? null}
         rematchRequest={rematchRequest}
         pendingAccount={currentUser?.status === "pending"}
+        onOpenAuth={currentUser ? undefined : () => setShowAuthModal(true)}
       />
 
       <PromotionDialog
