@@ -28,7 +28,7 @@ export function VersusBotsView({ lang = "id", onSelectBot }: VersusBotsViewProps
        Main) + .view-body grid kartu .view-cards scroll internal. Memilih bot
        CTA → parent pindah ke papan play (Pola A shell; view ini sendiri list). */
     <div className="view-root w-full max-w-5xl mx-auto">
-      <div className="view-head flex items-center justify-between gap-2 flex-wrap shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-play)" }}>
+      <div className="view-head flex items-center justify-between gap-2 flex-wrap shrink-0 px-1">
         <h2 className="text-sm font-black text-white m-0 flex items-center gap-1.5">
           <IconBot3D size={18} aria-hidden="true" />
           {lang === "id" ? "Lawan Bot Komputer" : "Play vs Computer Bots"}

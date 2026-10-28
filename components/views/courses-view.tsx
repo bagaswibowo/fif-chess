@@ -152,7 +152,7 @@ export function CoursesView({
   if (listError && !summaries) {
     return (
       <div className="view-root w-full max-w-5xl mx-auto">
-        <div className="view-head flex items-center gap-3 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+        <div className="view-head flex items-center gap-3 shrink-0">
           <Library size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Kursus</h1>
         </div>
@@ -174,7 +174,7 @@ export function CoursesView({
   if (!summaries) {
     return (
       <div className="view-root w-full max-w-5xl mx-auto">
-        <div className="view-head flex items-center gap-3 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+        <div className="view-head flex items-center gap-3 shrink-0">
           <Library size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Kursus</h1>
         </div>
@@ -199,7 +199,7 @@ export function CoursesView({
 
   return (
     <div className="view-root w-full max-w-5xl mx-auto">
-      <div className="view-head flex items-center gap-3 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+      <div className="view-head flex items-center gap-3 shrink-0">
         <Library size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
         <div className="min-w-0">
           <h1 className="text-sm font-black text-white leading-tight">Kursus</h1>
@@ -311,7 +311,7 @@ function CoursesDetail({
 
   return (
     <div className="view-root w-full max-w-4xl mx-auto">
-      <div className="view-head flex items-center justify-between gap-2 shrink-0 flex-wrap" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+      <div className="view-head flex items-center justify-between gap-2 shrink-0 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
           <Library size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
           <h1 className="text-sm font-black text-white truncate">{course.title}</h1>

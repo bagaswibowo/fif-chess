@@ -149,7 +149,7 @@ export function FriendsView({ onChallenge, onOpenProfile }: Props) {
   if (error) {
     return (
       <div className="view-root w-full max-w-2xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-social)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <IconFriends3D size={20} aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Teman</h1>
         </div>
@@ -162,7 +162,7 @@ export function FriendsView({ onChallenge, onOpenProfile }: Props) {
   if (!data) {
     return (
       <div className="view-root w-full max-w-2xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-social)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <IconFriends3D size={20} aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Teman</h1>
         </div>
@@ -175,7 +175,7 @@ export function FriendsView({ onChallenge, onOpenProfile }: Props) {
 
   return (
     <div className="view-root w-full max-w-2xl mx-auto">
-      <div className="view-head flex items-center justify-between flex-wrap gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-social)" }}>
+      <div className="view-head flex items-center justify-between flex-wrap gap-2 shrink-0">
         <div className="flex items-center gap-2">
           <IconFriends3D size={20} aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Teman</h1>

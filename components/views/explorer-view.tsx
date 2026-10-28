@@ -281,7 +281,7 @@ export function ExplorerView({ initialEco, onLoadFen }: {
 
   return (
     <div className="view-root w-full max-w-5xl mx-auto">
-      <div className="view-head flex items-center gap-2.5 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-drill)" }}>
+      <div className="view-head flex items-center gap-2.5 shrink-0">
         <Compass size={18} className="text-[var(--nav-accent-drill)] shrink-0" aria-hidden="true" />
         <h1 className="text-sm font-black text-white leading-tight shrink-0">Penjelajah Pembukaan</h1>
         <div className="flex-1" aria-hidden="true" />

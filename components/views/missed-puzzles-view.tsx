@@ -104,7 +104,7 @@ export function MissedPuzzlesView({ lang = "id" }: { lang?: "id" | "en" }) {
     // + panel .view-body scroll internal kanan).
     return (
       <div className="view-root w-full min-h-0">
-        <div className="view-head flex items-center justify-between gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center justify-between gap-2 shrink-0 px-1">
           <h2 className="text-sm font-black text-white truncate m-0">
             Koreksi: {active.title || "Teka-teki"}
             <span className="ml-2 text-xs font-bold text-neutral-400">Rating {active.rating}</span>
@@ -143,7 +143,7 @@ export function MissedPuzzlesView({ lang = "id" }: { lang?: "id" | "en" }) {
   if (guest) {
     return (
       <div className="view-root w-full max-w-xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <h2 className="text-sm font-black text-white m-0">Koreksi Teka-Teki</h2>
         </div>
         <div className="view-body flex flex-col items-center gap-3 py-10 text-center" style={{ scrollbarWidth: "thin" }}>
@@ -163,7 +163,7 @@ export function MissedPuzzlesView({ lang = "id" }: { lang?: "id" | "en" }) {
   if (error) {
     return (
       <div className="view-root w-full max-w-2xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <h2 className="text-sm font-black text-white m-0">Koreksi</h2>
         </div>
         <div className="view-body flex flex-col items-center gap-3 py-10" role="status" aria-live="polite" style={{ scrollbarWidth: "thin" }}>
@@ -177,7 +177,7 @@ export function MissedPuzzlesView({ lang = "id" }: { lang?: "id" | "en" }) {
   if (!items || loading) {
     return (
       <div className="view-root w-full max-w-2xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <h2 className="text-sm font-black text-white m-0">Koreksi</h2>
         </div>
         <div className="view-body flex items-center justify-center py-16" role="status" aria-live="polite">
@@ -190,7 +190,7 @@ export function MissedPuzzlesView({ lang = "id" }: { lang?: "id" | "en" }) {
   // ===== Daftar — S8 Pola B (spec §3): .view-head 44px + .view-body list =====
   return (
     <div className="view-root w-full max-w-3xl mx-auto">
-      <div className="view-head flex items-center justify-between gap-2 flex-wrap shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+      <div className="view-head flex items-center justify-between gap-2 flex-wrap shrink-0 px-1">
         <h2 className="text-sm font-black text-white m-0">Koreksi</h2>
         <p className="text-xs font-bold text-neutral-400 m-0">
           {items.length === 0

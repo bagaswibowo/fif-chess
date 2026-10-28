@@ -435,7 +435,7 @@ export function CoachModeView({ lang = "id" }: Props) {
 
       {/* S8 Pola A (spec §3): .view-head pinned (judul + info) — aksen --nav-accent-learn
           (section Belajar, app-shell SECTIONS); var ini satu-satunya yang valid utk coach. */}
-      <div className="view-head bg-[var(--card)] px-3 py-1.5 rounded-xl border border-[var(--border)] shadow-md flex items-center justify-between gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+      <div className="view-head bg-[var(--card)] px-3 py-1.5 rounded-xl border border-[var(--border)] shadow-md flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <IconBot3D size={22} className="shrink-0" />
           <div className="min-w-0">

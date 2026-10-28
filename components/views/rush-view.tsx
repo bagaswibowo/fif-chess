@@ -258,7 +258,7 @@ export function RushView({ lang = "id", onBack, onOpenAuth }: Props) {
     // + .view-body rules/chips/CTA scroll internal.
     return (
       <div className="view-root w-full max-w-2xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <IconLightning3D size={18} aria-hidden="true" />
           <h2 className="text-sm font-black text-white m-0">{lang === "id" ? "Teka-Teki Gegas" : "Puzzle Rush"}</h2>
         </div>
@@ -357,7 +357,7 @@ export function RushView({ lang = "id", onBack, onOpenAuth }: Props) {
     // S8 Pola B: .view-head (judul Game Over) + .view-body skor/rekor/leaderboard.
     return (
       <div className="view-root w-full max-w-2xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <IconTrophy3D size={18} aria-hidden="true" />
           <h2 className="text-sm font-black text-white m-0">Game Over</h2>
         </div>
@@ -423,7 +423,7 @@ export function RushView({ lang = "id", onBack, onOpenAuth }: Props) {
     // S8: tetap di dalam .view-root/.view-body agar tidak memicu scroll halaman.
     return (
       <div className="view-root w-full max-w-3xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <IconClock3D size={18} aria-hidden="true" />
           <h2 className="text-sm font-black text-white m-0">Teka-Teki Gegas</h2>
         </div>
@@ -445,7 +445,7 @@ export function RushView({ lang = "id", onBack, onOpenAuth }: Props) {
        --nav-accent-puzzle) + .view-grid-board (PuzzleSolver: papan kiri ≤540px
        + panel .view-body scroll internal kanan; F8 papan muat utuh). */
     <div className="view-root w-full min-h-0">
-      <div className="view-head flex items-center justify-between gap-3 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+      <div className="view-head flex items-center justify-between gap-3 shrink-0 px-1">
         <div className="flex items-center justify-between gap-3 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3">
           <span
             className={`flex items-center gap-1.5 text-base font-black tabular-nums ${lowTime ? "text-[var(--error)] animate-pulse" : "text-white"}`}

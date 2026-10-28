@@ -180,7 +180,7 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
     // S8 Pola B: error state tetap di dalam .view-root/.view-body (no-scroll).
     return (
       <div className="view-root w-full">
-        <div className="view-head flex items-center gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0 px-1">
           <h2 className="text-sm font-black text-white m-0">Teka-Teki</h2>
         </div>
         <div className="view-body flex flex-col items-center gap-3 py-16" role="status" style={{ scrollbarWidth: "thin" }}>
@@ -201,7 +201,7 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
        508px (±36% lebih besar vs layout S8 3-kolom 372px). Kolom tier 320px
        dihapus: board-first design §1.1 — papan tidak lagi kolom kelas-3. */
     <div className="view-root w-full min-h-0">
-      <div className="view-head flex items-center shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+      <div className="view-head flex items-center shrink-0 px-1">
         {/* T6: bar filter tema + preset rating — TIER LADDER pindah ke panel
             kanan (view-body) agar head tetap 44px & tidak overflow. */}
         <div className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 flex flex-wrap items-center gap-2">

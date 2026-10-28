@@ -108,7 +108,7 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
        --nav-accent-puzzle section Teka-Teki) + .view-body scroll internal
        (stats strip + sub-view aktif). Sub-view embed memakai .view-* sendiri. */
     <div className="view-root w-full">
-      <div className="view-head flex items-center gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+      <div className="view-head flex items-center gap-2 shrink-0 px-1">
       <div className="flex bg-[var(--card)] p-1 rounded-xl border border-[var(--border)] w-full shadow-md shrink-0">
         {TABS.map((t) => (
           <button

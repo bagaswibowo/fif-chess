@@ -97,7 +97,7 @@ export function HomeView({ onNavigate, onPlayGame, onReviewGame }: Props) {
     const Icon = pending ? ShieldAlert : AlertTriangle;
     return (
       <div className="view-root w-full max-w-4xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-play)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <h1 className="text-sm font-black text-white">Beranda</h1>
         </div>
         <div
@@ -123,7 +123,7 @@ export function HomeView({ onNavigate, onPlayGame, onReviewGame }: Props) {
   if (!data) {
     return (
       <div className="view-root w-full max-w-4xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-play)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <h1 className="text-sm font-black text-white">Beranda</h1>
         </div>
         <div className="view-body flex items-center justify-center py-10" role="status" aria-live="polite">
@@ -158,7 +158,7 @@ export function HomeView({ onNavigate, onPlayGame, onReviewGame }: Props) {
   return (
     <div className="view-root w-full max-w-4xl mx-auto">
       {/* Greeting + streak (head 44px) */}
-      <div className="view-head flex items-center justify-between flex-wrap gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-play)" }}>
+      <div className="view-head flex items-center justify-between flex-wrap gap-2 shrink-0">
         <h1 className="text-base font-black text-white">
           Selamat datang, <span className="text-[var(--nav-accent-play)]">{data.username}</span>
         </h1>

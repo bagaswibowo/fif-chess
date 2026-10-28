@@ -272,7 +272,7 @@ export function CommunityView({ user, lang = "id" }: Props) {
   return (
     <div className="view-root w-full max-w-6xl mx-auto">
       {/* Head tunggal (S8 Pola B) — 44px: judul + filter/pill + aksi; tetap terpasang di semua mode agar tidak layout shift */}
-      <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-social)" }}>
+      <div className="view-head flex items-center gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0 shrink-0">
           <IconCommunity3D size={18} />
           <h2 className="text-sm font-black text-white m-0 truncate">

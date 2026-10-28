@@ -96,7 +96,7 @@ export function OpeningsLessonsView({
   // (konten mode kiri ≤540px + panel .view-body scroll internal kanan).
   return (
     <div className="view-root w-full min-h-0">
-      <div className="view-head flex items-center gap-2 flex-wrap shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+      <div className="view-head flex items-center gap-2 flex-wrap shrink-0 px-1">
         <button
           className="ctl ctl-sm flex items-center gap-1.5 shrink-0"
           onClick={() => onNavigate("#/learn")}

@@ -506,7 +506,7 @@ function InsightShell({
        detail .view-body kiri + sidebar meta .view-body kanan (angka ringkas +
        grafik rating — 2 column detail). Filter/tablist stay di head. */
     <div className="view-root w-full max-w-4xl mx-auto">
-      <div className="view-head flex items-center justify-between gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-social)" }}>
+      <div className="view-head flex items-center justify-between gap-2 shrink-0 px-1">
         <div className="flex items-center gap-2">
           <LineChart size={18} className="text-[var(--primary)]" aria-hidden="true" />
           <h2 className="text-sm font-black text-white m-0">

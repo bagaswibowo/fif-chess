@@ -464,7 +464,7 @@ export function PuzzleSolver({
     return (
       <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6" role="status" aria-busy="true">
         <div className="h-4 w-40 rounded bg-[var(--muted)] animate-pulse mb-3" />
-        <div className="aspect-square w-full max-w-md mx-auto rounded-xl bg-[var(--surface)] animate-pulse" />
+        <div className="aspect-square w-full max-w-[min(100%,var(--board-cap))] mx-auto rounded-xl bg-[var(--surface)] animate-pulse" />
         <p className="sr-only">Memuat teka-teki…</p>
       </div>
     );

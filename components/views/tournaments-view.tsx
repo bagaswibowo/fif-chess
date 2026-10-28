@@ -167,7 +167,7 @@ export function TournamentsView({ username = "" }: Props) {
 
   return (
     <div className="view-root w-full max-w-3xl mx-auto">
-      <div className="view-head flex items-center gap-2 shrink-0 flex-wrap" style={{ borderLeft: "3px solid var(--nav-accent-play)" }}>
+      <div className="view-head flex items-center gap-2 shrink-0 flex-wrap">
         <Trophy size={18} className="text-[var(--nav-accent-play)] shrink-0" aria-hidden="true" />
         <h1 className="text-sm font-black text-white leading-tight shrink-0">Turnamen</h1>
         <div className="flex-1" aria-hidden="true" />
@@ -337,7 +337,7 @@ function ArenaDetail({
   // S8: Pola C — detail 2-kolom: konten utama .view-body + sidebar meta .view-body.
   return (
     <div className="view-root w-full max-w-5xl mx-auto">
-      <div className="view-head flex items-center justify-between gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-play)" }}>
+      <div className="view-head flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
           <Trophy size={20} className="text-[var(--nav-accent-play)] shrink-0" aria-hidden="true" />
           <h1 className="text-sm font-black text-white truncate">{arena.name}</h1>

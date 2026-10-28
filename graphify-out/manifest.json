@@ -1,0 +1,3072 @@
+{
+  "app/api/analysis/route.ts": {
+    "mtime": 1793031333.7559423,
+    "ast_hash": "62075204099f158ee6a3133f66ea6c70",
+    "semantic_hash": ""
+  },
+  "app/api/auth/lookupByUsername/route.ts": {
+    "mtime": 1793031333.7559423,
+    "ast_hash": "d4509c9a3b6818a2f009339b79267c4c",
+    "semantic_hash": ""
+  },
+  "app/api/auth/route.ts": {
+    "mtime": 1793031333.7559423,
+    "ast_hash": "6b744672766b97cef84622e2795cfc01",
+    "semantic_hash": ""
+  },
+  "app/api/board-corners/route.ts": {
+    "mtime": 1792603030.9964767,
+    "ast_hash": "023655af73de2504c4646e6616399da7",
+    "semantic_hash": ""
+  },
+  "app/api/bot-chat/route.ts": {
+    "mtime": 1793031333.7559423,
+    "ast_hash": "b00cd2fcd0a67be5635ab9c1b4fbd7e4",
+    "semantic_hash": ""
+  },
+  "app/api/broadcast/route.ts": {
+    "mtime": 1793031333.7559423,
+    "ast_hash": "c2cf1255171617a184b98843474ed6d5",
+    "semantic_hash": ""
+  },
+  "app/api/challenge/[id]/respond/route.ts": {
+    "mtime": 1793031333.7569425,
+    "ast_hash": "52ba9279128b0e723225aea951f5d709",
+    "semantic_hash": ""
+  },
+  "app/api/challenge/route.ts": {
+    "mtime": 1793071667.134569,
+    "ast_hash": "25cf155df6074c10aa2f1bb809a4fbe8",
+    "semantic_hash": ""
+  },
+  "app/api/community/route.ts": {
+    "mtime": 1792603030.9964767,
+    "ast_hash": "fc56b4428851c53aad8138bd55b2f411",
+    "semantic_hash": ""
+  },
+  "app/api/courses/[id]/route.ts": {
+    "mtime": 1793097936.8250067,
+    "ast_hash": "91fa1669982c46aba26b90b75549c31f",
+    "semantic_hash": ""
+  },
+  "app/api/courses/progress.ts": {
+    "mtime": 1793097762.5694883,
+    "ast_hash": "bf355792c93b4f15e2c78df01538a8b4",
+    "semantic_hash": ""
+  },
+  "app/api/courses/route.ts": {
+    "mtime": 1793097916.8981767,
+    "ast_hash": "79f9808bb086273c299260b5bd9183db",
+    "semantic_hash": ""
+  },
+  "app/api/endgames/drills/[setId]/next/route.ts": {
+    "mtime": 1793031333.7569425,
+    "ast_hash": "9394c95f8d30f6d68480e0394298db91",
+    "semantic_hash": ""
+  },
+  "app/api/endgames/drills/leaderboard/route.ts": {
+    "mtime": 1793098576.905479,
+    "ast_hash": "a4f72c5d0693d861aa2b6aa02e8e6af5",
+    "semantic_hash": ""
+  },
+  "app/api/endgames/drills/route.ts": {
+    "mtime": 1793098436.1397336,
+    "ast_hash": "69aecd886de3bdb1e203f33c66a48adf",
+    "semantic_hash": ""
+  },
+  "app/api/engine-move/route.ts": {
+    "mtime": 1793031333.7569425,
+    "ast_hash": "89fbed53cd13db63c657493c094f9d4f",
+    "semantic_hash": ""
+  },
+  "app/api/engine-uci/route.ts": {
+    "mtime": 1793031333.7569425,
+    "ast_hash": "8274d5d9b315e0c5bf2f71d9311ca023",
+    "semantic_hash": ""
+  },
+  "app/api/extra-security/route.ts": {
+    "mtime": 1793031333.7569425,
+    "ast_hash": "ee91576a13e4a1f9df4eb393f4703fe8",
+    "semantic_hash": ""
+  },
+  "app/api/friends/[id]/respond/route.ts": {
+    "mtime": 1793031333.7579424,
+    "ast_hash": "7a5543f1468247ba179b33921d8f300a",
+    "semantic_hash": ""
+  },
+  "app/api/friends/route.ts": {
+    "mtime": 1793031333.7579424,
+    "ast_hash": "cf026b2ee0eb96d603463303ef300775",
+    "semantic_hash": ""
+  },
+  "app/api/games/[id]/favorite/route.ts": {
+    "mtime": 1793031333.7579424,
+    "ast_hash": "0c1c0a40af32bd255c7b4861935fc8a8",
+    "semantic_hash": ""
+  },
+  "app/api/games/[id]/pgn/route.ts": {
+    "mtime": 1793031333.7579424,
+    "ast_hash": "63e2a9e4efcd6a09652544ff32520982",
+    "semantic_hash": ""
+  },
+  "app/api/games/archive/pgn/route.ts": {
+    "mtime": 1793031333.7579424,
+    "ast_hash": "3119c59f2980d3b701304550164b100d",
+    "semantic_hash": ""
+  },
+  "app/api/games/archive/route.ts": {
+    "mtime": 1793119120.8319316,
+    "ast_hash": "0a14f05a2c2586b1cf3d8ba22ee43621",
+    "semantic_hash": ""
+  },
+  "app/api/gate/route.ts": {
+    "mtime": 1792603030.9974766,
+    "ast_hash": "7e51ab74349876d42bd2798459082506",
+    "semantic_hash": ""
+  },
+  "app/api/home/dashboard/route.ts": {
+    "mtime": 1793031333.7589424,
+    "ast_hash": "c58acba42c17b323929548fe668a0bb5",
+    "semantic_hash": ""
+  },
+  "app/api/insights/route.ts": {
+    "mtime": 1793083178.8192906,
+    "ast_hash": "2c527a7e8a170896a4ed5136bdeca9dc",
+    "semantic_hash": ""
+  },
+  "app/api/jev-move/route.ts": {
+    "mtime": 1792603030.9974766,
+    "ast_hash": "6f79e3309134ad31b26b67977f911563",
+    "semantic_hash": ""
+  },
+  "app/api/leaderboard/route.ts": {
+    "mtime": 1793031333.7589424,
+    "ast_hash": "4898d248307cd20a15a2af42db621cfc",
+    "semantic_hash": ""
+  },
+  "app/api/learn/bookmarks/route.ts": {
+    "mtime": 1793097964.359772,
+    "ast_hash": "584045e69de98ccde63cef2d5920313c",
+    "semantic_hash": ""
+  },
+  "app/api/match-result/route.ts": {
+    "mtime": 1793084122.750324,
+    "ast_hash": "e3d05a08bc1169e09496b43e2e2b88a3",
+    "semantic_hash": ""
+  },
+  "app/api/opening/route.ts": {
+    "mtime": 1793031333.7589424,
+    "ast_hash": "437d0fd78006f472a7b18b9364a2713e",
+    "semantic_hash": ""
+  },
+  "app/api/opening/win-rate/route.ts": {
+    "mtime": 1793071882.122687,
+    "ast_hash": "827edcf47048f26b8b489f605b916c45",
+    "semantic_hash": ""
+  },
+  "app/api/practice/weekly/route.ts": {
+    "mtime": 1793097984.5086002,
+    "ast_hash": "db5deec933cb552c0a8d979fa13c771a",
+    "semantic_hash": ""
+  },
+  "app/api/presence/count/route.ts": {
+    "mtime": 1793031333.7589424,
+    "ast_hash": "51c1e77c662e56865ef439a4f67b715e",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/[id]/attempt/route.ts": {
+    "mtime": 1793031333.7589424,
+    "ast_hash": "b326ee277c0bbdff9fd48f13c13a7f58",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/[id]/hint/route.ts": {
+    "mtime": 1793031333.7589424,
+    "ast_hash": "1aa7b88d0faa96b1174d979cc80d0ed1",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/[id]/solution/route.ts": {
+    "mtime": 1793031333.7599425,
+    "ast_hash": "66fe7d57337637a2a3a2ddda0cffe31f",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/daily/route.ts": {
+    "mtime": 1793031333.7599425,
+    "ast_hash": "dc46e8569506c171bf1aa91d5f9d44af",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/missed/route.ts": {
+    "mtime": 1793031333.7599425,
+    "ast_hash": "753c7caee15099a3d35b021abe8a2d14",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/next/route.ts": {
+    "mtime": 1793031333.7599425,
+    "ast_hash": "7591b4aacc870efe28a78477139552ff",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/rush/attempt/route.ts": {
+    "mtime": 1793031333.7599425,
+    "ast_hash": "df1aa1423179dc63d07c1d09e4825b17",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/rush/leaderboard/route.ts": {
+    "mtime": 1793031333.7599425,
+    "ast_hash": "2474c3a97f17a4f75dc6d4a3e90ae72e",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/rush/next/route.ts": {
+    "mtime": 1793031333.7599425,
+    "ast_hash": "effba70eb7b977a7fcfdde162ff2af46",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/rush/start/route.ts": {
+    "mtime": 1793031333.7599425,
+    "ast_hash": "b97797ecdb3d5831bfd0fe17a69acd2f",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/stats/route.ts": {
+    "mtime": 1793031333.7609425,
+    "ast_hash": "d3277568df6f281ae450711358f7a380",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/themes/route.ts": {
+    "mtime": 1793031333.7609425,
+    "ast_hash": "d4c73f9f7ef51f3933c9889ca19d6e7b",
+    "semantic_hash": ""
+  },
+  "app/api/puzzles/tiers/route.ts": {
+    "mtime": 1793031333.7609425,
+    "ast_hash": "cf85ec4e4fc52cf48acdaec4241924e0",
+    "semantic_hash": ""
+  },
+  "app/api/pvp/route.ts": {
+    "mtime": 1793098913.5354605,
+    "ast_hash": "9d7457b799f438dde9c51b0a6e941a09",
+    "semantic_hash": ""
+  },
+  "app/api/scan-board/route.ts": {
+    "mtime": 1793031333.7619424,
+    "ast_hash": "de7baedd21642f3d7beac1ce3212d131",
+    "semantic_hash": ""
+  },
+  "app/api/seek/route.ts": {
+    "mtime": 1793071312.6708136,
+    "ast_hash": "d1e1be9ac047174b367125ba167fd768",
+    "semantic_hash": ""
+  },
+  "app/api/seek/user-seeks/route.ts": {
+    "mtime": 1793031333.7619424,
+    "ast_hash": "dd3b15fc99ad5cd2529936a0d680d0b7",
+    "semantic_hash": ""
+  },
+  "app/api/stats/summary/route.ts": {
+    "mtime": 1793031333.7619424,
+    "ast_hash": "9ae27324f6205b600a841e5167fd279e",
+    "semantic_hash": ""
+  },
+  "app/api/status/route.ts": {
+    "mtime": 1792603030.9974766,
+    "ast_hash": "89b99072e24b187503033ad367efcd38",
+    "semantic_hash": ""
+  },
+  "app/api/threats/route.ts": {
+    "mtime": 1793031333.7619424,
+    "ast_hash": "d98d2b9e635f50a41eab7e5262c9830a",
+    "semantic_hash": ""
+  },
+  "app/api/tournament/[id]/route.ts": {
+    "mtime": 1793072805.911811,
+    "ast_hash": "77b0eccb21d71d346ecb33918f352dd9",
+    "semantic_hash": ""
+  },
+  "app/api/tournament/route.ts": {
+    "mtime": 1793072624.1712785,
+    "ast_hash": "2da6b89d28fad4ea99d816f5c8ae31c9",
+    "semantic_hash": ""
+  },
+  "app/api/twirp/analysis/route.ts": {
+    "mtime": 1793031333.7619424,
+    "ast_hash": "f191ce5edbf95c0c47e428d8959c4115",
+    "semantic_hash": ""
+  },
+  "app/error.tsx": {
+    "mtime": 1792603030.9974766,
+    "ast_hash": "3a6251d0a48608988fb120e7e255b381",
+    "semantic_hash": ""
+  },
+  "app/layout.tsx": {
+    "mtime": 1793031333.7619424,
+    "ast_hash": "b53db7db9a0d7b4084cab81551b24978",
+    "semantic_hash": ""
+  },
+  "app/page.tsx": {
+    "mtime": 1793031333.7629423,
+    "ast_hash": "8dc73c7d0d097b971c8c2270669d5be7",
+    "semantic_hash": ""
+  },
+  "app/sw.js": {
+    "mtime": 1793031333.7629423,
+    "ast_hash": "bac6e1b8760e0fa9eaec519a86012792",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/__init__.py": {
+    "mtime": 1792603034.9344554,
+    "ast_hash": "07de11cb830e59b63f2cfcd828a8a82f",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/__version__.py": {
+    "mtime": 1792603034.9344554,
+    "ast_hash": "f9191202f11510f156f51ddd90780e91",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/__init__.py": {
+    "mtime": 1792603034.9344554,
+    "ast_hash": "acc4e10de941823d09898056b9822788",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/coordinates.py": {
+    "mtime": 1792603034.9344554,
+    "ast_hash": "4d7e700fd5f349e8fb0bc743fd703b0c",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/dataset/__init__.py": {
+    "mtime": 1792603034.9344554,
+    "ast_hash": "2be3d4a027e79136d9e5db5fa53b2ea1",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/dataset/dataset.py": {
+    "mtime": 1792603034.9344554,
+    "ast_hash": "e04e32117b98969fc094c18ec67368ed",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/dataset/datasets.py": {
+    "mtime": 1792603034.9344554,
+    "ast_hash": "c9adce504746347ae723468c18d11490",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/dataset/transforms.py": {
+    "mtime": 1792603034.9344554,
+    "ast_hash": "d006a2c5d837ea51eb14b61e5f81d0d7",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/evaluation.py": {
+    "mtime": 1792603034.9344554,
+    "ast_hash": "02f35b61e8bae369f3c48c1ee8725e16",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/exceptions.py": {
+    "mtime": 1792603034.9344554,
+    "ast_hash": "b199c3878f08635228ac313d21219576",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/io/__init__.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "ce79edb6df28a139a7b7b50387352a2c",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/io/download.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "9ac84febc8364ad0a8c7fe2055be4d3d",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/models.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "9945b3d2137cb20040e08bf110eb4989",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/registry.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "397f715a30b71932836829371a3af05c",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/statistics.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "e03d3c5634fea6992973d0bff4e7340d",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/training/__init__.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "d8c22b76eae7f64a7d49115192cdccf4",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/training/create_configs.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "85590f26e3c33dac8ecfbc1ae6d35706",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/training/optimizer.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "b3811ace484654ac7afe24c18a79e264",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/training/train.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "533136d0566a44b3c04870f621ecc345",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/core/training/train_classifier.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "9b09496bb0fec52d141e08da641f42cf",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/corner_detection/__init__.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "57ff18a7b316d46f4fb56dbf2e3d254a",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/corner_detection/create_configs.py": {
+    "mtime": 1792603034.9354553,
+    "ast_hash": "e3ae9816d63ddd2e78c4531fcdd0f664",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/corner_detection/detect_corners.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "c3d7307dca65f13c8406784ec01eb2d7",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/corner_detection/evaluate.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "37eb15ead43bc96db6ce1124b93b60c7",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/corner_detection/find_best_configs.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "f9c6b235bf58cac48a0a273d02944ba0",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/corner_detection/occupancy_cv.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "4a369d95f813d3d3abc458b2d013d67c",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/corner_detection/opencv_fallback.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "674e17d4546c152a9ac6c6b58145e965",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/corner_detection/opencv_fallback_constants.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "4d9977c7629f3ebb668fd33f04c5653a",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/corner_detection/visualize.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "d31788491cff6704e5c873b728330087",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/data_synthesis/__init__.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "42a2b797f1af145151657568ae0fcab6",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/data_synthesis/create_fens.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "41dd917b2f19403aeb9051095bb38a12",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/data_synthesis/download_dataset.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "f7cb18fdea49ef822d9df7a9fe345021",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/data_synthesis/download_pgn.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "c7128d387ac7a27806e44001a66292dc",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/data_synthesis/split_dataset.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "b6a67accefeabb6f719bbe5e814f6ffd",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/data_synthesis/visualize.py": {
+    "mtime": 1792603034.9364552,
+    "ast_hash": "7c1fafed80a9282de44900c6299c2798",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/occupancy_classifier/__init__.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "3e9003e0589115cbeb9b49ed73103fbb",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/occupancy_classifier/create_configs.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "33bbed352ffe3426483a07c4f81fce36",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/occupancy_classifier/create_dataset.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "4fe81e4cc521a72f7eb721dc94255661",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/occupancy_classifier/download_model.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "68e585f8747f94d5688e210d50636078",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/occupancy_classifier/evaluate.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "c00b4320442fb9a835975769d43573a9",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/occupancy_classifier/models.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "208aa4cf5a1a15232d4636e4be264330",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/occupancy_classifier/train.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "a60fc70c8c82c5c1b85af1f47136f2f7",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/piece_classifier/__init__.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "6d8d25bf17fc5e2d9fe39536690ecc05",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/piece_classifier/create_configs.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "aa1e8d0be49de9b5d397890b4e62d9c7",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/piece_classifier/create_dataset.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "03a9951baadba4dd78158061f0bbd034",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/piece_classifier/download_model.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "a72149e6445bf2f0a86288faae6e8f4f",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/piece_classifier/evaluate.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "fefd2ca4de43046529ebf0e8be738c5b",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/piece_classifier/models.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "1dccf8dc7ffa7fdd423e1d4bf9b664fb",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/piece_classifier/train.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "28bd56ad7a136320d7bc99b4f149baf5",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/recognition/__init__.py": {
+    "mtime": 1792603034.9374554,
+    "ast_hash": "d94c9c0f513df18e16ca27ab239e3095",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/recognition/evaluate.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "e6231e9ccd9696eeee875751fb2c4d6f",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/recognition/recognition.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "6988b32c6e14b143ed9df1d5e56978c5",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/report/__init__.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "88f50d43b3f20d7bed5cd998b0423ab2",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/report/analyze_misclassified_positions.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "334a9a7657ce4093aa2d49cef6d6c149",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/report/prepare_classifier_results.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "d57288e3296130e3d6a49ef253ed55e3",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/report/prepare_confusion_matrix.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "9caedaed86436663969e6410bf4d4c3f",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/report/prepare_error_distribution.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "7c72a973dff70989a3be3d685398740b",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/report/prepare_recognition_results.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "7b3b01913f0178859e3e38e7b3a26a92",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/transfer_learning/__init__.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "fa5585acbe78550ce34c6b3711c2c4f6",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/transfer_learning/create_dataset.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "9a56c0099eb5b59bc7c9459ec7bfa1b5",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/transfer_learning/download_dataset.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "b6af45ed7e89e9e61265b2939b2ded20",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/transfer_learning/download_models.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "8fa43e094a28fa680b3fdebd0c1a601c",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/transfer_learning/evaluate.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "556287a4f215175454f76e9cdfa72f08",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/transfer_learning/recognition.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "997edcc7804ff5abf674dcd5e58f9072",
+    "semantic_hash": ""
+  },
+  "chesscog-service/chesscog/transfer_learning/train.py": {
+    "mtime": 1792603034.9384553,
+    "ast_hash": "b93044d2a13c338b611692a3acb99a31",
+    "semantic_hash": ""
+  },
+  "chesscog-service/server.py": {
+    "mtime": 1793031395.6884704,
+    "ast_hash": "75acf855bba81151e7bfa06d06c34b94",
+    "semantic_hash": ""
+  },
+  "components.json": {
+    "mtime": 1792603038.8264341,
+    "ast_hash": "63b2c4fcf776fec9dbc76e94ea0d70c6",
+    "semantic_hash": ""
+  },
+  "components/admin-panel.tsx": {
+    "mtime": 1792603038.8264341,
+    "ast_hash": "1c455419a4f90e33a215d81707725139",
+    "semantic_hash": ""
+  },
+  "components/auth-panel.tsx": {
+    "mtime": 1792603038.8264341,
+    "ast_hash": "89c49ab1814e5ed393cf7a4ed10e98c3",
+    "semantic_hash": ""
+  },
+  "components/board-chrome.tsx": {
+    "mtime": 1793031333.7629423,
+    "ast_hash": "c4f329ef5e1f3433c42d768f1ffcbad7",
+    "semantic_hash": ""
+  },
+  "components/board-controls.tsx": {
+    "mtime": 1793031333.7629423,
+    "ast_hash": "6fd5d5f2c6cf5839215c40cd7a9ff9d6",
+    "semantic_hash": ""
+  },
+  "components/board-workspace.tsx": {
+    "mtime": 1792603038.8264341,
+    "ast_hash": "eccfe674d067e1721f889f32fe5678d1",
+    "semantic_hash": ""
+  },
+  "components/board/BoardContext.tsx": {
+    "mtime": 1793031333.7629423,
+    "ast_hash": "36e18e5062c4633f1b1b12f4f83976ec",
+    "semantic_hash": ""
+  },
+  "components/board/ChessBoard.tsx": {
+    "mtime": 1793031333.7639425,
+    "ast_hash": "9e57a78c27058a04cce527fc0a267bce",
+    "semantic_hash": ""
+  },
+  "components/board/Piece.tsx": {
+    "mtime": 1793031333.7639425,
+    "ast_hash": "fc72bc1dc395e558d8ae87249c5a903e",
+    "semantic_hash": ""
+  },
+  "components/board/Square.tsx": {
+    "mtime": 1793031333.7639425,
+    "ast_hash": "dd5594d253370711997198e0c5b962ef",
+    "semantic_hash": ""
+  },
+  "components/board/board-controls.tsx": {
+    "mtime": 1792603038.8264341,
+    "ast_hash": "c696e4e8a9e818b7e5c0ac52317c2def",
+    "semantic_hash": ""
+  },
+  "components/board/captured-pieces.tsx": {
+    "mtime": 1792603038.8264341,
+    "ast_hash": "1b114c59683c51e4f9549ec642cbf1bd",
+    "semantic_hash": ""
+  },
+  "components/board/eval-bar.tsx": {
+    "mtime": 1792603038.8274343,
+    "ast_hash": "9b801bf982613eccea51a44929de1613",
+    "semantic_hash": ""
+  },
+  "components/board/index.ts": {
+    "mtime": 1793031333.7639425,
+    "ast_hash": "58b12a58660373695844fe68ba71fd7e",
+    "semantic_hash": ""
+  },
+  "components/board/notation-table.tsx": {
+    "mtime": 1792603038.8274343,
+    "ast_hash": "25846e35346957ce444ee753edfe83e2",
+    "semantic_hash": ""
+  },
+  "components/board/player-strip.tsx": {
+    "mtime": 1793031333.7639425,
+    "ast_hash": "f00ea9dd5739ff7b9c2f59b518fee828",
+    "semantic_hash": ""
+  },
+  "components/board/promotion-dialog.tsx": {
+    "mtime": 1792603038.8274343,
+    "ast_hash": "737e0868457fe066bb8bf7c30e69f98a",
+    "semantic_hash": ""
+  },
+  "components/captured-pieces.tsx": {
+    "mtime": 1792603038.8274343,
+    "ast_hash": "1b114c59683c51e4f9549ec642cbf1bd",
+    "semantic_hash": ""
+  },
+  "components/challenge-card.tsx": {
+    "mtime": 1793081519.4614725,
+    "ast_hash": "992476bcf63b6b31123741db12354d12",
+    "semantic_hash": ""
+  },
+  "components/chess-text-highlight.tsx": {
+    "mtime": 1792603038.8274343,
+    "ast_hash": "e6a4c0f92057575624cd4e0601e41893",
+    "semantic_hash": ""
+  },
+  "components/clock-moves-fullscreen.tsx": {
+    "mtime": 1793031333.7639425,
+    "ast_hash": "e7e7cb5e79417f190ed3aa4a798c5feb",
+    "semantic_hash": ""
+  },
+  "components/coach-mode-view.tsx": {
+    "mtime": 1793031395.6894705,
+    "ast_hash": "68dcb7fb784e113080aba7aa2e35897a",
+    "semantic_hash": ""
+  },
+  "components/community-view.tsx": {
+    "mtime": 1793118663.3365982,
+    "ast_hash": "e8e761ce0777d2c59914c92621396560",
+    "semantic_hash": ""
+  },
+  "components/community/embedded-match-player.tsx": {
+    "mtime": 1792603038.8284342,
+    "ast_hash": "07d7250423c0cf07dae13ceb52b7c41e",
+    "semantic_hash": ""
+  },
+  "components/community/formatted-post-content.tsx": {
+    "mtime": 1793031333.7649424,
+    "ast_hash": "83e66172c9216d9e1aaad718dc5a9080",
+    "semantic_hash": ""
+  },
+  "components/community/game-attachment-modal.tsx": {
+    "mtime": 1792603038.8294342,
+    "ast_hash": "1a8cf3bfedc4155a064fb587577abdfe",
+    "semantic_hash": ""
+  },
+  "components/community/game-evaluator.ts": {
+    "mtime": 1792603038.8294342,
+    "ast_hash": "e953e99cc50906168e194ed90a4cb9de",
+    "semantic_hash": ""
+  },
+  "components/community/rich-text-toolbar.tsx": {
+    "mtime": 1792603038.8294342,
+    "ast_hash": "b3ac8b997f81774e38609f0f290863af",
+    "semantic_hash": ""
+  },
+  "components/community/types.ts": {
+    "mtime": 1792603038.8294342,
+    "ast_hash": "2935033e9f8bd65e4d03757a5e8be16b",
+    "semantic_hash": ""
+  },
+  "components/confetti.tsx": {
+    "mtime": 1793076879.8724775,
+    "ast_hash": "8a052dd06b7177cedbf91406038e1642",
+    "semantic_hash": ""
+  },
+  "components/dock-modals.tsx": {
+    "mtime": 1793031333.7649424,
+    "ast_hash": "04a53b94344c20a95ac038f07cfecd1b",
+    "semantic_hash": ""
+  },
+  "components/eval-bar.tsx": {
+    "mtime": 1793031333.7649424,
+    "ast_hash": "c385c6071abdd392276fc3c5c6e82901",
+    "semantic_hash": ""
+  },
+  "components/flybrain-visualizer.tsx": {
+    "mtime": 1792603038.8294342,
+    "ast_hash": "e9a80cb0261d2bd5c615be43670fc1a5",
+    "semantic_hash": ""
+  },
+  "components/game-over-modal.tsx": {
+    "mtime": 1793074754.8169038,
+    "ast_hash": "d9e6cd4c48394c1ca57c4c236ff2cb60",
+    "semantic_hash": ""
+  },
+  "components/game-review.tsx": {
+    "mtime": 1793121534.4223,
+    "ast_hash": "35607c9c444f7acd29e2efb39dfb52a4",
+    "semantic_hash": ""
+  },
+  "components/game.tsx": {
+    "mtime": 1793121528.81636,
+    "ast_hash": "66d67091808c8de3506c9717c04f5f48",
+    "semantic_hash": ""
+  },
+  "components/game/GameClock.tsx": {
+    "mtime": 1793031333.7679424,
+    "ast_hash": "c359eb99f012f93c218feeea38927afd",
+    "semantic_hash": ""
+  },
+  "components/game/GameControls.tsx": {
+    "mtime": 1793031333.7679424,
+    "ast_hash": "a17338cce3b3472f9507baee5eae2342",
+    "semantic_hash": ""
+  },
+  "components/game/GameView.tsx": {
+    "mtime": 1793031333.7679424,
+    "ast_hash": "68b44e053a550a98dc4df37103e5b1e4",
+    "semantic_hash": ""
+  },
+  "components/game/MoveItem.tsx": {
+    "mtime": 1793031333.7679424,
+    "ast_hash": "abcf19657098778215f82c40d329d1a3",
+    "semantic_hash": ""
+  },
+  "components/game/MoveList.tsx": {
+    "mtime": 1793031333.7679424,
+    "ast_hash": "75b27aedd273797aaf1b7987db14234b",
+    "semantic_hash": ""
+  },
+  "components/game/index.ts": {
+    "mtime": 1793031333.7679424,
+    "ast_hash": "0d395bb666c923241d12d842f4e6948e",
+    "semantic_hash": ""
+  },
+  "components/gate-setup.tsx": {
+    "mtime": 1792603038.830434,
+    "ast_hash": "70047a3de20bde7aaae672f538e58402",
+    "semantic_hash": ""
+  },
+  "components/icons3d.tsx": {
+    "mtime": 1793031333.7679424,
+    "ast_hash": "cee574d7adfd9525966982417431eaa6",
+    "semantic_hash": ""
+  },
+  "components/index.ts": {
+    "mtime": 1793031333.7679424,
+    "ast_hash": "80fbc6dbe0ff74d2a1f991d9b3e53092",
+    "semantic_hash": ""
+  },
+  "components/jev-distribution.tsx": {
+    "mtime": 1792603038.8314342,
+    "ast_hash": "2b2a8bd75df72f22f143dc8305d9335e",
+    "semantic_hash": ""
+  },
+  "components/learning-hub.tsx": {
+    "mtime": 1793031395.6904705,
+    "ast_hash": "40b6b17eb82f9bd3dc66cb2655f35d9f",
+    "semantic_hash": ""
+  },
+  "components/live-arena-view.tsx": {
+    "mtime": 1793031333.7699423,
+    "ast_hash": "14445d1dd7bb292e607403de5d6e0ca6",
+    "semantic_hash": ""
+  },
+  "components/move-list.tsx": {
+    "mtime": 1792603038.8314342,
+    "ast_hash": "d549ab71b78d8a277813bc54c278601f",
+    "semantic_hash": ""
+  },
+  "components/notation-table.tsx": {
+    "mtime": 1792603038.8314342,
+    "ast_hash": "25846e35346957ce444ee753edfe83e2",
+    "semantic_hash": ""
+  },
+  "components/paste-bar.tsx": {
+    "mtime": 1793031333.7699423,
+    "ast_hash": "ad7a76bc300fb03b3dda0a1ae37588e8",
+    "semantic_hash": ""
+  },
+  "components/perspective-crop-modal.tsx": {
+    "mtime": 1792603038.8314342,
+    "ast_hash": "043f8890321a8ee0f72a3cf43b002f64",
+    "semantic_hash": ""
+  },
+  "components/playing-badge.tsx": {
+    "mtime": 1793031333.7699423,
+    "ast_hash": "b4794f804b50b067aebe7908921a7286",
+    "semantic_hash": ""
+  },
+  "components/promotion-dialog.tsx": {
+    "mtime": 1792603038.8314342,
+    "ast_hash": "737e0868457fe066bb8bf7c30e69f98a",
+    "semantic_hash": ""
+  },
+  "components/puzzle-solver.tsx": {
+    "mtime": 1793031333.7699423,
+    "ast_hash": "4b2ad135a927377e3ecb7b9c97a34b2e",
+    "semantic_hash": ""
+  },
+  "components/pvp-panel.tsx": {
+    "mtime": 1793102542.8288102,
+    "ast_hash": "20a858a1d2ce206f63972a2aa829c0c9",
+    "semantic_hash": ""
+  },
+  "components/review-analysis-board.tsx": {
+    "mtime": 1793031333.7699423,
+    "ast_hash": "703f3229918fc92e55e9d381e445f5d5",
+    "semantic_hash": ""
+  },
+  "components/scan-view.tsx": {
+    "mtime": 1793031395.6914704,
+    "ast_hash": "d52c74d73c81f47838868815b9853928",
+    "semantic_hash": ""
+  },
+  "components/shell/app-shell.tsx": {
+    "mtime": 1793119874.6119463,
+    "ast_hash": "7fa7fe16e6a6aaa79888e030d8ee58cd",
+    "semantic_hash": ""
+  },
+  "components/tactical-commentary-card.tsx": {
+    "mtime": 1793031333.7719424,
+    "ast_hash": "30561a7ffee0a353f8154f2331137895",
+    "semantic_hash": ""
+  },
+  "components/ui/alert.tsx": {
+    "mtime": 1792603038.8324342,
+    "ast_hash": "59f2b20b6916d0384bf7d0a63ea68ba6",
+    "semantic_hash": ""
+  },
+  "components/ui/badge.tsx": {
+    "mtime": 1792603038.8324342,
+    "ast_hash": "b2427bd0bd8c25c554f5a648c286e8e4",
+    "semantic_hash": ""
+  },
+  "components/ui/button.tsx": {
+    "mtime": 1792603038.8324342,
+    "ast_hash": "2700bddde0ac66fc6f2fc1b56fcfdc2d",
+    "semantic_hash": ""
+  },
+  "components/ui/card.tsx": {
+    "mtime": 1792603038.8324342,
+    "ast_hash": "7a1907244a8ac28f77cb4d2eaf496811",
+    "semantic_hash": ""
+  },
+  "components/ui/dialog.tsx": {
+    "mtime": 1792603038.8324342,
+    "ast_hash": "140a6a27b4baf69a6ce2cb1f626ab43e",
+    "semantic_hash": ""
+  },
+  "components/ui/scroll-area.tsx": {
+    "mtime": 1792603038.8324342,
+    "ast_hash": "d0750f92e57ffa05f048e249c2f6f012",
+    "semantic_hash": ""
+  },
+  "components/views/archive-view.tsx": {
+    "mtime": 1793116847.8632905,
+    "ast_hash": "41149d83d48db7af5f46ca6a6faa4da5",
+    "semantic_hash": ""
+  },
+  "components/views/classroom-view.tsx": {
+    "mtime": 1793104513.0746841,
+    "ast_hash": "7a73f24ac28ed600739f77b673daad49",
+    "semantic_hash": ""
+  },
+  "components/views/coach-mode-view.tsx": {
+    "mtime": 1793121517.6564794,
+    "ast_hash": "edfbffe13b09e35334c9eca5986b2531",
+    "semantic_hash": ""
+  },
+  "components/views/courses-view.tsx": {
+    "mtime": 1793117409.3718364,
+    "ast_hash": "b01028becaea8636c2444dcc50c9a16f",
+    "semantic_hash": ""
+  },
+  "components/views/daily-puzzle-view.tsx": {
+    "mtime": 1793031333.7719424,
+    "ast_hash": "4972eb3f3b4b2caaf5f27c1bc4f4712d",
+    "semantic_hash": ""
+  },
+  "components/views/endgame-drills-view.tsx": {
+    "mtime": 1793120396.417048,
+    "ast_hash": "8202b3ab02cd7e1cb47b53c52c8ed4a8",
+    "semantic_hash": ""
+  },
+  "components/views/explorer-view.tsx": {
+    "mtime": 1793116947.3444457,
+    "ast_hash": "f929a09ac7424abacdab9fe19616900d",
+    "semantic_hash": ""
+  },
+  "components/views/friends-view.tsx": {
+    "mtime": 1793118094.6432025,
+    "ast_hash": "c8a4774e4d9954131404a8324ad9b8ef",
+    "semantic_hash": ""
+  },
+  "components/views/game-review.tsx": {
+    "mtime": 1792603038.833434,
+    "ast_hash": "c284d806e0debc1cc54199539a31f887",
+    "semantic_hash": ""
+  },
+  "components/views/home-view.tsx": {
+    "mtime": 1793117613.7216156,
+    "ast_hash": "a1673c09b7ff3d1693d904f2a139bf10",
+    "semantic_hash": ""
+  },
+  "components/views/index.ts": {
+    "mtime": 1793031333.7719424,
+    "ast_hash": "6fc06ff42f99e97666c27378b48eb931",
+    "semantic_hash": ""
+  },
+  "components/views/insights-view.tsx": {
+    "mtime": 1793076279.4489565,
+    "ast_hash": "f35ce914c1b0875eee4ae9ee0d15bf51",
+    "semantic_hash": ""
+  },
+  "components/views/leaderboard-view.tsx": {
+    "mtime": 1793116607.9283288,
+    "ast_hash": "b05aebc49b5ce8c81f01c8a5894af440",
+    "semantic_hash": ""
+  },
+  "components/views/learn-shared.ts": {
+    "mtime": 1793096925.7524033,
+    "ast_hash": "85bac0155a5cb844271863f7fb4e7251",
+    "semantic_hash": ""
+  },
+  "components/views/learning-hub.tsx": {
+    "mtime": 1793118034.5449452,
+    "ast_hash": "b4c2584617087047b58d39af3cb08254",
+    "semantic_hash": ""
+  },
+  "components/views/lessons-detail.tsx": {
+    "mtime": 1793104597.400946,
+    "ast_hash": "8de017c4e54823326ec96e41bb51ca0c",
+    "semantic_hash": ""
+  },
+  "components/views/lessons-exercises.tsx": {
+    "mtime": 1793102239.7835925,
+    "ast_hash": "0f8d8ddec249ca7cf195fb48b55ea754",
+    "semantic_hash": ""
+  },
+  "components/views/lessons-view.tsx": {
+    "mtime": 1793117457.6090372,
+    "ast_hash": "e1291e2efcaad832f5c58b945f47d9cb",
+    "semantic_hash": ""
+  },
+  "components/views/missed-puzzles-view.tsx": {
+    "mtime": 1793031333.7729423,
+    "ast_hash": "9920316e9d58e48b28f75cadab4bc6d2",
+    "semantic_hash": ""
+  },
+  "components/views/openings-view.tsx": {
+    "mtime": 1793101844.211249,
+    "ast_hash": "d931cfc74dafa9db5549a1ac058c3980",
+    "semantic_hash": ""
+  },
+  "components/views/practice-view.tsx": {
+    "mtime": 1793117706.727272,
+    "ast_hash": "41e6e7c193e01a62922cd5514c2d8b08",
+    "semantic_hash": ""
+  },
+  "components/views/puzzle-hub.tsx": {
+    "mtime": 1793031333.7729423,
+    "ast_hash": "653d2aa6c4a6b6ccd74e671d616e3931",
+    "semantic_hash": ""
+  },
+  "components/views/puzzle-stats-view.tsx": {
+    "mtime": 1793031333.7729423,
+    "ast_hash": "847ad3f806fd769d444cc2c81de3db7f",
+    "semantic_hash": ""
+  },
+  "components/views/puzzle-tier-strip.ts": {
+    "mtime": 1793031333.7729423,
+    "ast_hash": "600b2e68a06e8f402073d818d599813a",
+    "semantic_hash": ""
+  },
+  "components/views/puzzle-view.tsx": {
+    "mtime": 1793031333.7729423,
+    "ast_hash": "f73c213f883a525136b576cbff0cbdb9",
+    "semantic_hash": ""
+  },
+  "components/views/rush-view.tsx": {
+    "mtime": 1793031333.7729423,
+    "ast_hash": "fdea1b1368e4ddae417e0fe20ce2b281",
+    "semantic_hash": ""
+  },
+  "components/views/scan-view.tsx": {
+    "mtime": 1793121596.1696472,
+    "ast_hash": "2116173fc767c405fd1da22504a36542",
+    "semantic_hash": ""
+  },
+  "components/views/spectator-view.tsx": {
+    "mtime": 1793121474.3849454,
+    "ast_hash": "b84ad35817b7cba6065b19696c35fdcb",
+    "semantic_hash": ""
+  },
+  "components/views/themes-mastery-view.tsx": {
+    "mtime": 1793031333.7739422,
+    "ast_hash": "fba8818733bc3cdcc9e8e47aba85fef5",
+    "semantic_hash": ""
+  },
+  "components/views/tier-ladder.tsx": {
+    "mtime": 1793031333.7739422,
+    "ast_hash": "87352f873bd50b7735f5af6144652d00",
+    "semantic_hash": ""
+  },
+  "components/views/tournaments-view.tsx": {
+    "mtime": 1793117128.5921497,
+    "ast_hash": "1bb34f6d9a7c1e6062399b0a10d1efdf",
+    "semantic_hash": ""
+  },
+  "components/views/versus-bots-view.tsx": {
+    "mtime": 1793031333.7739422,
+    "ast_hash": "8de69ea8a6eaee94068aac8e6e6f0cc4",
+    "semantic_hash": ""
+  },
+  "components/vision-drill.tsx": {
+    "mtime": 1792603038.8344343,
+    "ast_hash": "35f0522a0697f1bb3f7061438f236d14",
+    "semantic_hash": ""
+  },
+  "data/experience.json": {
+    "mtime": 1793031333.819942,
+    "ast_hash": "13d6d765fb26353f338d462e0eec4582",
+    "semantic_hash": ""
+  },
+  "docs/db/db-schema.sql": {
+    "mtime": 1793031333.820942,
+    "ast_hash": "63d5e17857d09216bdfe6ff2b1e97b3d",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint1-migration.sql": {
+    "mtime": 1793031333.820942,
+    "ast_hash": "ff8513a7ace4c094bdb673ba7e54acc7",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint2-migration.sql": {
+    "mtime": 1793031333.8219419,
+    "ast_hash": "2a4d1ffabf37ad43495d0239648f439d",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint3-migration.sql": {
+    "mtime": 1793031333.8219419,
+    "ast_hash": "84b2e4d0e79452b87def9338c409ad65",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint4-migration.sql": {
+    "mtime": 1793031333.8219419,
+    "ast_hash": "faefc7079b8b379bb9f5879286cfc42d",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint6-migration.sql": {
+    "mtime": 1793073051.6937878,
+    "ast_hash": "25536403b85c57711c3b765d7c572662",
+    "semantic_hash": ""
+  },
+  "docs/design/artifacts/chesscom-guest-pages-2026-10-27.json": {
+    "mtime": 1793093876.37478,
+    "ast_hash": "ac23ef33f7a166e9536f1634fb6bee26",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-analysis.json": {
+    "mtime": 1793106576.9906921,
+    "ast_hash": "eabd0d7acdf49ead8b4a5ea1e30a1f42",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-archive.json": {
+    "mtime": 1793106612.7633784,
+    "ast_hash": "cad76ee5fb437f6274eb52a68fd5f2a6",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-community.json": {
+    "mtime": 1793106552.9409032,
+    "ast_hash": "7e241cff4acc635504e089c946c4e2cb",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-daily.json": {
+    "mtime": 1793106583.9886308,
+    "ast_hash": "2fa66eaec4df61a50cfe0e61aebbd4cd",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-home.json": {
+    "mtime": 1793106508.6582916,
+    "ast_hash": "16e01369fbf8a0bfb36e6e260d6012f2",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-leaderboard.json": {
+    "mtime": 1793106563.6058097,
+    "ast_hash": "b937f5a5b5ac26ae5fe2e60ad6437bcb",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-learn.json": {
+    "mtime": 1793106532.1450856,
+    "ast_hash": "7e47630674246ea9d013b84dab5979ee",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-live.json": {
+    "mtime": 1793106593.1315506,
+    "ast_hash": "2c628ae8d9cdf118aacdde37556cf8be",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-messages.json": {
+    "mtime": 1793106600.5674853,
+    "ast_hash": "53ebd7c3386b04b1de4a0a94da45ba49",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-other.json": {
+    "mtime": 1793106557.0218675,
+    "ast_hash": "65b0bf33f7e3fe082066bfc9505e021b",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-play.json": {
+    "mtime": 1793106515.802229,
+    "ast_hash": "eb102a7b6ec6bfb07966d28a6bea27d8",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-profile.json": {
+    "mtime": 1793106606.1354365,
+    "ast_hash": "be3d0f3ea317038053ad7a67c30298fb",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-puzzles.json": {
+    "mtime": 1793106524.343154,
+    "ast_hash": "52de0a9aff401e3a05ed67bb656f520c",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-tournaments.json": {
+    "mtime": 1793106571.0317445,
+    "ast_hash": "2e23f4e2da7c4d6b99f32a8e96cdbba8",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-train.json": {
+    "mtime": 1793106538.376031,
+    "ast_hash": "e0cd490b75764798c3b1e5088dd0e923",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/raw-watch.json": {
+    "mtime": 1793106548.4939423,
+    "ast_hash": "919f36a7ad5e756de62fc35202e2af81",
+    "semantic_hash": ""
+  },
+  "lib/auth-store.ts": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "4e00892dee5dda484ca6ca22a625ac73",
+    "semantic_hash": ""
+  },
+  "lib/bot-chat.ts": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "2d76382400309c3b31b62284a73f0b87",
+    "semantic_hash": ""
+  },
+  "lib/bot-personas.ts": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "ad1f3fe5dc2f9e2f979a7ea7ab262d95",
+    "semantic_hash": ""
+  },
+  "lib/caps-evaluator.ts": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "8605bb39e5e1ddc6eb9d5221bd0494a1",
+    "semantic_hash": ""
+  },
+  "lib/chess-com-engine.ts": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "64d857319ea04c172b4b46f63d73abf4",
+    "semantic_hash": ""
+  },
+  "lib/chess-move-badges.tsx": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "c58c9caa99b5f4bae9f1d9d7056285df",
+    "semantic_hash": ""
+  },
+  "lib/chess-sound.ts": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "864458c7f68b19db23f78c1b2554e4aa",
+    "semantic_hash": ""
+  },
+  "lib/chess-themes.ts": {
+    "mtime": 1793031333.8389418,
+    "ast_hash": "8acaca8d3702d8046bece65397269716",
+    "semantic_hash": ""
+  },
+  "lib/chess.ts": {
+    "mtime": 1793031333.8389418,
+    "ast_hash": "5cdc009a7532ccd710b15e859df7d5ef",
+    "semantic_hash": ""
+  },
+  "lib/coach-audio.ts": {
+    "mtime": 1793031333.8389418,
+    "ast_hash": "a389a99f9f3def5afeeed0ee20022b1e",
+    "semantic_hash": ""
+  },
+  "lib/coach.test.ts": {
+    "mtime": 1792603038.858434,
+    "ast_hash": "d166c79891750b02e4fa5cbaf103e82c",
+    "semantic_hash": ""
+  },
+  "lib/commentary.ts": {
+    "mtime": 1792603038.858434,
+    "ast_hash": "3d8c85c35754b123615387141d82db7a",
+    "semantic_hash": ""
+  },
+  "lib/courses.ts": {
+    "mtime": 1793097335.1720788,
+    "ast_hash": "cdb7a92d59f0f23f8f8b39890ff0f641",
+    "semantic_hash": ""
+  },
+  "lib/db.ts": {
+    "mtime": 1793031333.8389418,
+    "ast_hash": "fe069d88f0e9555d2614cc8926369e59",
+    "semantic_hash": ""
+  },
+  "lib/endgame-drills.ts": {
+    "mtime": 1793031333.8389418,
+    "ast_hash": "1aa960cf2eb13adafdc5d41f518cd997",
+    "semantic_hash": ""
+  },
+  "lib/engines/alekhine_test.ts": {
+    "mtime": 1793031333.8389418,
+    "ast_hash": "42d05d65b4b1b5307611ac0a1104dbaf",
+    "semantic_hash": ""
+  },
+  "lib/engines/concurrency-gate.ts": {
+    "mtime": 1792603038.858434,
+    "ast_hash": "916958f7bcd6bc1c8a48a3a58b02ba48",
+    "semantic_hash": ""
+  },
+  "lib/engines/flybrain.ts": {
+    "mtime": 1793031333.8389418,
+    "ast_hash": "58bc7733651bdc9221ba805ad6a4249c",
+    "semantic_hash": ""
+  },
+  "lib/engines/gab-attention.ts": {
+    "mtime": 1793031333.8389418,
+    "ast_hash": "c9785588798b7d92c16257d809e4af56",
+    "semantic_hash": ""
+  },
+  "lib/engines/hybrid.ts": {
+    "mtime": 1793031395.6914704,
+    "ast_hash": "69c168567bb3e4aa5efe34b91a9d8b69",
+    "semantic_hash": ""
+  },
+  "lib/engines/index.ts": {
+    "mtime": 1793031333.8399417,
+    "ast_hash": "1015828426f373203d8ef57a35bfc885",
+    "semantic_hash": ""
+  },
+  "lib/engines/jev.ts": {
+    "mtime": 1793031333.8399417,
+    "ast_hash": "bd7a5d756343b4661d31081cf14d60fc",
+    "semantic_hash": ""
+  },
+  "lib/engines/lru-cache.ts": {
+    "mtime": 1792603038.858434,
+    "ast_hash": "df9819e31bb2d22712a84cf773d26fbb",
+    "semantic_hash": ""
+  },
+  "lib/engines/opening-book.ts": {
+    "mtime": 1792603038.858434,
+    "ast_hash": "bd2bf03d521d47a8fb3c1a6c0ba8facc",
+    "semantic_hash": ""
+  },
+  "lib/engines/stockfish.ts": {
+    "mtime": 1793031395.6914704,
+    "ast_hash": "17dcd5ebf80618a33ebf445d13e59c94",
+    "semantic_hash": ""
+  },
+  "lib/engines/tactical-gatekeeper.ts": {
+    "mtime": 1793031395.6914704,
+    "ast_hash": "73441ce6aaaba41f6fd901703b211cf6",
+    "semantic_hash": ""
+  },
+  "lib/engines/types.ts": {
+    "mtime": 1793031395.6914704,
+    "ast_hash": "beca15c025d716b965bdf2a343d59d4c",
+    "semantic_hash": ""
+  },
+  "lib/experience.ts": {
+    "mtime": 1793031333.8399417,
+    "ast_hash": "75117eba3631ef66a995c3e4fb0408d8",
+    "semantic_hash": ""
+  },
+  "lib/extra-security.ts": {
+    "mtime": 1793031333.8399417,
+    "ast_hash": "d8ffe5d8331562a443ce222e19ca8c08",
+    "semantic_hash": ""
+  },
+  "lib/flybrain.d.ts": {
+    "mtime": 1793031333.8399417,
+    "ast_hash": "860083626ca268055c868793fa66f516",
+    "semantic_hash": ""
+  },
+  "lib/flybrain/connectome-network.ts": {
+    "mtime": 1792603038.8594341,
+    "ast_hash": "a9848c51fc4ef384876502f54500c824",
+    "semantic_hash": ""
+  },
+  "lib/flybrain/consensus.ts": {
+    "mtime": 1792603038.8594341,
+    "ast_hash": "0201351f156afc705e71bd6fd19ee487",
+    "semantic_hash": ""
+  },
+  "lib/flybrain/encoding.js": {
+    "mtime": 1792603038.8594341,
+    "ast_hash": "38bee0e18e905585b6655c9645872791",
+    "semantic_hash": ""
+  },
+  "lib/flybrain/flybrain.js": {
+    "mtime": 1792603038.8594341,
+    "ast_hash": "04f522352ce404e686d7d7dfff24c716",
+    "semantic_hash": ""
+  },
+  "lib/flybrain/loader.js": {
+    "mtime": 1792603038.8594341,
+    "ast_hash": "8851cda68af001220dfbfdfb66344813",
+    "semantic_hash": ""
+  },
+  "lib/flybrain/mcts.js": {
+    "mtime": 1792603038.8594341,
+    "ast_hash": "b7f901c0a942caee36d09891083b874a",
+    "semantic_hash": ""
+  },
+  "lib/flybrain/service.ts": {
+    "mtime": 1793031333.840942,
+    "ast_hash": "9f621738e225ecd0da956bf4e0928a07",
+    "semantic_hash": ""
+  },
+  "lib/game-history.ts": {
+    "mtime": 1792603038.860434,
+    "ast_hash": "aca7189071e006d151907c8794d1d0da",
+    "semantic_hash": ""
+  },
+  "lib/game-record.ts": {
+    "mtime": 1792603038.860434,
+    "ast_hash": "97d764b172340a44edf6ea6eebd5a72f",
+    "semantic_hash": ""
+  },
+  "lib/gate.ts": {
+    "mtime": 1793031333.840942,
+    "ast_hash": "69aa97e6df0f0ade241ae2d5ebfedd22",
+    "semantic_hash": ""
+  },
+  "lib/hmac.test.ts": {
+    "mtime": 1792603038.860434,
+    "ast_hash": "c5f257425575d99b2a805ac6755b4db1",
+    "semantic_hash": ""
+  },
+  "lib/hmac.ts": {
+    "mtime": 1792603038.860434,
+    "ast_hash": "305dd6c7d75a640bc926407c6df00f4c",
+    "semantic_hash": ""
+  },
+  "lib/jev.test.ts": {
+    "mtime": 1792603038.860434,
+    "ast_hash": "a4e198d43c095e32b42a4b38edbdf316",
+    "semantic_hash": ""
+  },
+  "lib/jev.ts": {
+    "mtime": 1793031333.840942,
+    "ast_hash": "d934e7a6f2449eab443160382a6029e1",
+    "semantic_hash": ""
+  },
+  "lib/kenari-client.ts": {
+    "mtime": 1793031333.840942,
+    "ast_hash": "67b2b0888f8910202b38d518f2bb509f",
+    "semantic_hash": ""
+  },
+  "lib/learn-store.ts": {
+    "mtime": 1793097383.5886765,
+    "ast_hash": "90beb167803e254ef778fb32fdde497c",
+    "semantic_hash": ""
+  },
+  "lib/lessons.ts": {
+    "mtime": 1793097314.641249,
+    "ast_hash": "dfc569a767eda36d22ac885c2176be7b",
+    "semantic_hash": ""
+  },
+  "lib/opening-book.ts": {
+    "mtime": 1793101737.6482422,
+    "ast_hash": "2be4f8b499844f3729e3e48989a0c05e",
+    "semantic_hash": ""
+  },
+  "lib/perspective-warp.ts": {
+    "mtime": 1792603038.860434,
+    "ast_hash": "a8a22df3d35b7cb0c5003e8bef5ce09a",
+    "semantic_hash": ""
+  },
+  "lib/pgn-parse.test.ts": {
+    "mtime": 1793031333.840942,
+    "ast_hash": "b57a8bfd4be4efdd4a8fe17e1e11b1df",
+    "semantic_hash": ""
+  },
+  "lib/pgn-parse.ts": {
+    "mtime": 1793031333.840942,
+    "ast_hash": "8bda3c2f2246a011ba69d6795737a6d0",
+    "semantic_hash": ""
+  },
+  "lib/pgn.ts": {
+    "mtime": 1793031333.840942,
+    "ast_hash": "30becb150883b0d0f68ee46bf46bdbf0",
+    "semantic_hash": ""
+  },
+  "lib/post-game-analysis.ts": {
+    "mtime": 1793031333.840942,
+    "ast_hash": "c4da44f3f0660bfeaa0dd6b014425a5d",
+    "semantic_hash": ""
+  },
+  "lib/puzzle-api.ts": {
+    "mtime": 1793031333.840942,
+    "ast_hash": "cae30ae6ede2159e03cff16084e52c80",
+    "semantic_hash": ""
+  },
+  "lib/puzzle-data.ts": {
+    "mtime": 1792603038.860434,
+    "ast_hash": "ad9e930f487244a86b0bbc4474626953",
+    "semantic_hash": ""
+  },
+  "lib/puzzle-rush.ts": {
+    "mtime": 1793031333.840942,
+    "ast_hash": "e852e9677f99387cfd6dab2d039ef3b0",
+    "semantic_hash": ""
+  },
+  "lib/puzzle-solve.test.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "aca7b1fb5f6ad5cb68f545f9a4f98832",
+    "semantic_hash": ""
+  },
+  "lib/puzzle-solve.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "e5bd6575bd2d11ce078af49cd3bbfd72",
+    "semantic_hash": ""
+  },
+  "lib/puzzle-store.ts": {
+    "mtime": 1792603038.860434,
+    "ast_hash": "2274aeb59b131854da0d2d7778987d57",
+    "semantic_hash": ""
+  },
+  "lib/puzzle-themes.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "358413b097889206dc6cedf59f514b34",
+    "semantic_hash": ""
+  },
+  "lib/rating.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "5d62759e4a75a1e7b20177553d3bfc52",
+    "semantic_hash": ""
+  },
+  "lib/realtime/bus.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "97336b0638329b6cb9d0603dd8f289b0",
+    "semantic_hash": ""
+  },
+  "lib/realtime/events.ts": {
+    "mtime": 1793098650.2338157,
+    "ast_hash": "e25740911499c0f3076f75ef10a6c348",
+    "semantic_hash": ""
+  },
+  "lib/realtime/frame.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "53012a48b01ef22b1053ccf210626ff8",
+    "semantic_hash": ""
+  },
+  "lib/realtime/matcher.ts": {
+    "mtime": 1793086705.1707718,
+    "ast_hash": "1526c293cb42cfccfad00b7178ae6c94",
+    "semantic_hash": ""
+  },
+  "lib/realtime/playing-count.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "685063c1bebe38bc4777948bf067aa9d",
+    "semantic_hash": ""
+  },
+  "lib/realtime/redis-bus.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "5d274de2cf97b0156a71d6f9db3c3a3f",
+    "semantic_hash": ""
+  },
+  "lib/realtime/seek-pool.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "286cd4d7fec9675be50fae82b3ab5102",
+    "semantic_hash": ""
+  },
+  "lib/realtime/tournament-sweeper.ts": {
+    "mtime": 1793088862.7045534,
+    "ast_hash": "444b15fec26d6f75af3079f1aaf89d9d",
+    "semantic_hash": ""
+  },
+  "lib/realtime/ws-gateway.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "dba66526be62f4cd06966a434367a1a3",
+    "semantic_hash": ""
+  },
+  "lib/rematch.ts": {
+    "mtime": 1793070998.055781,
+    "ast_hash": "8318dfade3ba50050c9d05161d85dd1f",
+    "semantic_hash": ""
+  },
+  "lib/sound.ts": {
+    "mtime": 1793031333.8419418,
+    "ast_hash": "5eadd72ac50074fcaa68056bbac52782",
+    "semantic_hash": ""
+  },
+  "lib/stockfish.ts": {
+    "mtime": 1793031395.6924703,
+    "ast_hash": "557b194ff1c2f8157917bbf8ac964c33",
+    "semantic_hash": ""
+  },
+  "lib/tactics.ts": {
+    "mtime": 1792603038.861434,
+    "ast_hash": "fc1b6dc1c1e17e6184f434ddb8b65738",
+    "semantic_hash": ""
+  },
+  "lib/test-icons.ts": {
+    "mtime": 1792603038.861434,
+    "ast_hash": "8ab177b29cfeef303c018c5776588be0",
+    "semantic_hash": ""
+  },
+  "lib/threat-detection.ts": {
+    "mtime": 1793031333.8429418,
+    "ast_hash": "a2d5ae6987c372f6f7308c765d17cefc",
+    "semantic_hash": ""
+  },
+  "lib/time-control.ts": {
+    "mtime": 1793076523.0442162,
+    "ast_hash": "d1e9b971ac2504b4e425291652d0b45b",
+    "semantic_hash": ""
+  },
+  "lib/tournament-types.ts": {
+    "mtime": 1793070926.0594783,
+    "ast_hash": "ea5ed97aaee8f637acbcec08dca2d921",
+    "semantic_hash": ""
+  },
+  "lib/types.ts": {
+    "mtime": 1792603038.861434,
+    "ast_hash": "3bbbc64f29a0b3e9f004443bc7d0db12",
+    "semantic_hash": ""
+  },
+  "lib/use-chess-clock.ts": {
+    "mtime": 1792603038.861434,
+    "ast_hash": "c2e63d0deb77c1f3d50f4768f6f1cc3e",
+    "semantic_hash": ""
+  },
+  "lib/use-realtime.ts": {
+    "mtime": 1793031333.8429418,
+    "ast_hash": "d09522055bb4e15a3a1bb53a65f17822",
+    "semantic_hash": ""
+  },
+  "lib/use-session.ts": {
+    "mtime": 1793031333.8429418,
+    "ast_hash": "badb3935138310deefa64daf1358b024",
+    "semantic_hash": ""
+  },
+  "lib/user-auth.ts": {
+    "mtime": 1792603038.861434,
+    "ast_hash": "10da7396c3d3d685fd643f24ef385ad9",
+    "semantic_hash": ""
+  },
+  "lib/utils.ts": {
+    "mtime": 1792603038.861434,
+    "ast_hash": "0482d21cfeab8cfcfe44f94927e45afb",
+    "semantic_hash": ""
+  },
+  "next.config.ts": {
+    "mtime": 1793031333.8429418,
+    "ast_hash": "24b5dd234ad38eb42778bed0765a8aec",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1793073221.5503716,
+    "ast_hash": "fb9783231d4cabccdddecd45e9fd4902",
+    "semantic_hash": ""
+  },
+  "postcss.config.mjs": {
+    "mtime": 1792603039.789429,
+    "ast_hash": "239f3ebf717465dc636818a1a619398d",
+    "semantic_hash": ""
+  },
+  "public/sw.js": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "bac6e1b8760e0fa9eaec519a86012792",
+    "semantic_hash": ""
+  },
+  "resource/puzzles-all.json": {
+    "mtime": 1793031333.8479419,
+    "ast_hash": "2e6650469b1fced57e515b32a26b2264",
+    "semantic_hash": ""
+  },
+  "resource/puzzles-quest.json": {
+    "mtime": 1793031333.8489418,
+    "ast_hash": "7dc41998e0ed2cb6e74dfa4fa513e1d2",
+    "semantic_hash": ""
+  },
+  "scripts/check-core.ts": {
+    "mtime": 1792603039.8244288,
+    "ast_hash": "7ef0a1a27d6a9e9e7e96609fbae5a1b5",
+    "semantic_hash": ""
+  },
+  "scripts/import-lichess-puzzles.ts": {
+    "mtime": 1793031333.8489418,
+    "ast_hash": "e03ad496958b588bb784395c343e7afa",
+    "semantic_hash": ""
+  },
+  "scripts/migrate-json-to-pg.ts": {
+    "mtime": 1793031333.8489418,
+    "ast_hash": "0adf7251e1e33e9da68a576f5a5776cf",
+    "semantic_hash": ""
+  },
+  "scripts/smoke-realtime.mjs": {
+    "mtime": 1793031333.8489418,
+    "ast_hash": "a7a87f39008daf590062c019e8808948",
+    "semantic_hash": ""
+  },
+  "scripts/test-engine-ports.ts": {
+    "mtime": 1793031333.8489418,
+    "ast_hash": "9b983b7bc87882c240761f97295a97ad",
+    "semantic_hash": ""
+  },
+  "scripts/test-engines-architecture.ts": {
+    "mtime": 1792603039.8244288,
+    "ast_hash": "934fc2f623da83de2c0c7d68c83ca9aa",
+    "semantic_hash": ""
+  },
+  "scripts/test-nature-connectome.ts": {
+    "mtime": 1792603039.8244288,
+    "ast_hash": "300076384712c92708cf53398e924c95",
+    "semantic_hash": ""
+  },
+  "scripts/test-puzzle-parity.mjs": {
+    "mtime": 1793031333.8489418,
+    "ast_hash": "3be71d01b4ebcbc2af52041c39c79685",
+    "semantic_hash": ""
+  },
+  "scripts/test-round.ts": {
+    "mtime": 1793031333.8489418,
+    "ast_hash": "cb0311f5053cef565d84ab51c311b739",
+    "semantic_hash": ""
+  },
+  "scripts/test-tactical-positions.ts": {
+    "mtime": 1792603039.8244288,
+    "ast_hash": "14e5548395659e1784eeddcce8240a3f",
+    "semantic_hash": ""
+  },
+  "scripts/train-10-matches.ts": {
+    "mtime": 1792603039.8244288,
+    "ast_hash": "0be415c9e963e4bed638d240f4dfa9f2",
+    "semantic_hash": ""
+  },
+  "scripts/train-20-matches.ts": {
+    "mtime": 1792603039.8244288,
+    "ast_hash": "0339861d952a9c22ed4e6874af48aec9",
+    "semantic_hash": ""
+  },
+  "scripts/train-3-concurrent.ts": {
+    "mtime": 1793031333.8489418,
+    "ast_hash": "a41fef2845834e6823587110caec5a8d",
+    "semantic_hash": ""
+  },
+  "scripts/train-sf-parallel.ts": {
+    "mtime": 1792603039.8254287,
+    "ast_hash": "8dd011e035d379b5b98ded11f6bff2d4",
+    "semantic_hash": ""
+  },
+  "scripts/train-until-win.ts": {
+    "mtime": 1793031333.8489418,
+    "ast_hash": "6fdbac3e3e312e9db93d1c279723467e",
+    "semantic_hash": ""
+  },
+  "server.ts": {
+    "mtime": 1793072935.36175,
+    "ast_hash": "30cab345622aea52ccb801884b514887",
+    "semantic_hash": ""
+  },
+  "tsconfig.json": {
+    "mtime": 1792603039.8254287,
+    "ast_hash": "6f8998f97a5d55e1dd021004da1a7dd0",
+    "semantic_hash": ""
+  },
+  "vitest.config.ts": {
+    "mtime": 1793031333.8589418,
+    "ast_hash": "f6caa4e276302924fe667f657478bdc4",
+    "semantic_hash": ""
+  },
+  "yolo11-service/entrypoint.sh": {
+    "mtime": 1792603039.8254287,
+    "ast_hash": "1944a1c572be5963c5a0249644dd0906",
+    "semantic_hash": ""
+  },
+  "yolo11-service/server.py": {
+    "mtime": 1793031395.6924703,
+    "ast_hash": "7d7ef675b0e61a6a528f2b8849f708b1",
+    "semantic_hash": ""
+  },
+  "yolo11-service/test_fen_mapping.py": {
+    "mtime": 1792603039.8284287,
+    "ast_hash": "25ed8384356bce137cb1c63cd000f974",
+    "semantic_hash": ""
+  },
+  ".github/workflows/ci.yml": {
+    "mtime": 1793090870.0811386,
+    "ast_hash": "2e8e55923f8a5923651d501154dbf923",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1793120010.728002,
+    "ast_hash": "45a47adfcb66eaa35a5753657193d9e1",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1792603030.9954767,
+    "ast_hash": "5c27369b226fcf2be8a6cfe52224e767",
+    "semantic_hash": ""
+  },
+  "ENGINE-REFERENCES.md": {
+    "mtime": 1793031333.7549424,
+    "ast_hash": "9214d2562605981e3a11c4b96bbab243",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1792603030.9964767,
+    "ast_hash": "ea7c710bb67cfd81c60b5df87207f2c8",
+    "semantic_hash": ""
+  },
+  "architecture-spec.md": {
+    "mtime": 1793031333.7629423,
+    "ast_hash": "e2b0f77238ce0b529aeef77e18a7b172",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/_classifier_base.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "3d828a4b2e70dff7dc7a74f6cec065fb",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/corner_detection.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "1776148104c034b16ddfbdecb6fb5de7",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/corner_detection/_base.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "32de730aad0603230cd3b3e3be075461",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/AlexNet.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "2f70b03bcbcded1351dfe7ff5e95e327",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/AlexNet_centercrop.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "e8b32b386d581bee315e1b1def034495",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN100_3Conv_3Pool_2FC.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "d817096c91efb847f26564671c0898ba",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN100_3Conv_3Pool_2FC_centercrop.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "821cfa1cd79aeba96fa9380fe5ce8dc1",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN100_3Conv_3Pool_3FC.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "ce76c499d496a1e2bec3a7e00108cae5",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN100_3Conv_3Pool_3FC_centercrop.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "9be40a057b10291ad5660205c93be59e",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN50_2Conv_2Pool_2FC.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "b73a4dfcbee870bd5cdc50124f0cbdbf",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN50_2Conv_2Pool_2FC_centercrop.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "c37a3ede47f858279a8536be5b5cbff3",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN50_2Conv_2Pool_3FC.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "bda5a1b2729262d1a3b76f9cc08b7248",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN50_2Conv_2Pool_3FC_centercrop.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "cfca2cd6b6b03d58c90a7db61881d140",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN50_3Conv_1Pool_2FC.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "67d3d38317f49425cecac554bf5146e8",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN50_3Conv_1Pool_2FC_centercrop.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "86cf4e60e8e43e9aa16591b53b6b51e1",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN50_3Conv_1Pool_3FC.yaml": {
+    "mtime": 1792603034.9394553,
+    "ast_hash": "b0b2e017d50f9e8eac25632e5abadc4d",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/CNN50_3Conv_1Pool_3FC_centercrop.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "758bd9be262faa05ac1976aa10cb347a",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/ResNet.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "78ebf6e8197b92f45bb002ce26b98eb6",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/ResNet_centercrop.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "e99f6f3dce5fb967e2d0f6b7c42f473b",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/VGG.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "f838340217c86e52737b108847a00867",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/VGG_centercrop.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "1e245b0acc16bf3f063b68277bd68eb5",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/_base.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "da1df66a9da12b6a385c11dac3b2d06e",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/occupancy_classifier/_base_pretrained.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "104616311b9d20d8a496d82ac2ebe507",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/piece_classifier/AlexNet.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "71b469017072339e2ecb7be70a762e34",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/piece_classifier/CNN100_3Conv_3Pool_2FC.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "326726a8bdda7d003f1c1245c64bd150",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/piece_classifier/CNN100_3Conv_3Pool_3FC.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "9c6643933bf7c9f1538083816dcc48c7",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/piece_classifier/InceptionV3.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "26198568c27a09c11c7780a9bfcd0dde",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/piece_classifier/ResNet.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "bae2d5aa7a198fb594bf4d1488f9f4b9",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/piece_classifier/VGG.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "9febf758ff6051a0ea72077fb83c46c3",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/piece_classifier/_base.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "f3552dc99d685537dcd39a077c61718c",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/piece_classifier/_base_pretrained.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "3ef1dbc54fc56e27e042dc29d525924c",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/transfer_learning/occupancy_classifier/ResNet.yaml": {
+    "mtime": 1792603034.9404552,
+    "ast_hash": "a5f702a24e6a17b709c03153872a7079",
+    "semantic_hash": ""
+  },
+  "chesscog-service/config/transfer_learning/piece_classifier/InceptionV3.yaml": {
+    "mtime": 1792603034.9414554,
+    "ast_hash": "1ce925cca26b8ee1fb8ba8824ea33c48",
+    "semantic_hash": ""
+  },
+  "docker-compose.yml": {
+    "mtime": 1793031333.820942,
+    "ast_hash": "e42801f6129fe1c5921b1f7daaeefbe0",
+    "semantic_hash": ""
+  },
+  "docs/adr/ADR-001-realtime-ws-redis.md": {
+    "mtime": 1793031333.820942,
+    "ast_hash": "6aa2bc95f87cc8468c7c6d89bd3357e9",
+    "semantic_hash": ""
+  },
+  "docs/adr/ADR-002-realtimebus-module.md": {
+    "mtime": 1793031333.820942,
+    "ast_hash": "43f60dc6bc602fdb8f6358e85263743a",
+    "semantic_hash": ""
+  },
+  "docs/adr/ADR-009-sprint6-gameflow.md": {
+    "mtime": 1793067827.7438529,
+    "ast_hash": "459fc34df5c2b99efc71c570bcc32341",
+    "semantic_hash": ""
+  },
+  "docs/adr/ADR-010-sprint7-learn.md": {
+    "mtime": 1793092314.0531962,
+    "ast_hash": "863f126e4961f1574b9778b8287f91f0",
+    "semantic_hash": ""
+  },
+  "docs/contracts/sprint6.md": {
+    "mtime": 1793067936.5073223,
+    "ast_hash": "bd8fe0740a9d21a5d512aa0e97c61c0d",
+    "semantic_hash": ""
+  },
+  "docs/contracts/sprint7.md": {
+    "mtime": 1793092432.3249369,
+    "ast_hash": "d368fcfa01e32065c45760e8dd02acd2",
+    "semantic_hash": ""
+  },
+  "docs/db/db-audit.md": {
+    "mtime": 1793031333.820942,
+    "ast_hash": "e7d813470fc86226baba9faf620b9a5f",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint1.md": {
+    "mtime": 1793031333.820942,
+    "ast_hash": "ca98c774d6881cbf08ede8447f8b3d8b",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint2.md": {
+    "mtime": 1793031333.8219419,
+    "ast_hash": "ad1ee9b38467271db67f70a280282064",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint3.md": {
+    "mtime": 1793031333.8219419,
+    "ast_hash": "0653bdf9a90dce0f539fc7858dec8a67",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint4.md": {
+    "mtime": 1793031333.8219419,
+    "ast_hash": "c92df5425bef383b77c2867a312730d8",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint6.md": {
+    "mtime": 1793073089.580473,
+    "ast_hash": "038eaefa2c60cb05c245b51a71cfbe68",
+    "semantic_hash": ""
+  },
+  "docs/db/sprint7.md": {
+    "mtime": 1793092984.4762154,
+    "ast_hash": "02ebb9456e91b63aa5df9c953937942e",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows.md": {
+    "mtime": 1793106843.846444,
+    "ast_hash": "e6054f9d739b5fdd3bb996a9ac0e0a2b",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-parity-audit.md": {
+    "mtime": 1793103555.176959,
+    "ast_hash": "0e20fde96b5fbbe588a66c113067e10f",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-ui-analysis.md": {
+    "mtime": 1793031333.8219419,
+    "ast_hash": "d78f5c143190df8b68ee8afa2e048cdf",
+    "semantic_hash": ""
+  },
+  "docs/design/exec-plan-4menus.md": {
+    "mtime": 1793031333.8219419,
+    "ast_hash": "13e6e1d454479203077eea22565d9313",
+    "semantic_hash": ""
+  },
+  "docs/design/menu-flows-chesscom.md": {
+    "mtime": 1793031333.8219419,
+    "ast_hash": "7658ab76d703e300b0e1f978a163a7e3",
+    "semantic_hash": ""
+  },
+  "docs/design/sprint1.md": {
+    "mtime": 1793031333.8329418,
+    "ast_hash": "4e423df8d1909e49fd73ff9b7a82d921",
+    "semantic_hash": ""
+  },
+  "docs/design/sprint2.md": {
+    "mtime": 1793031333.8329418,
+    "ast_hash": "e2fec9386ad7b5eeef709470479f2053",
+    "semantic_hash": ""
+  },
+  "docs/design/sprint3.md": {
+    "mtime": 1793031333.8329418,
+    "ast_hash": "75370fa4ae8e83761e82528c9dcfb07a",
+    "semantic_hash": ""
+  },
+  "docs/design/sprint4-flow-audit.md": {
+    "mtime": 1793031333.8329418,
+    "ast_hash": "60801f49bfbe637ce62e5c42634f144e",
+    "semantic_hash": ""
+  },
+  "docs/design/sprint4.md": {
+    "mtime": 1793031333.8329418,
+    "ast_hash": "ca7c8bf66a3a72f5fb402369398f0a43",
+    "semantic_hash": ""
+  },
+  "docs/design/sprint6-flows.md": {
+    "mtime": 1793068126.4912536,
+    "ast_hash": "0ff3e14b842d53b08bccd3d78af8bc6d",
+    "semantic_hash": ""
+  },
+  "docs/design/sprint6.md": {
+    "mtime": 1793031333.8329418,
+    "ast_hash": "c8fed6648cc2f675b4956aeaf077a3ac",
+    "semantic_hash": ""
+  },
+  "docs/design/sprint7-flows.md": {
+    "mtime": 1793092349.2908762,
+    "ast_hash": "642391f5494ddd7c8f34ca8ca5e3a97d",
+    "semantic_hash": ""
+  },
+  "docs/design/sprint7-qa-report.md": {
+    "mtime": 1793031333.8329418,
+    "ast_hash": "ae15b87dfdde09a391ab575b6a4b1927",
+    "semantic_hash": ""
+  },
+  "docs/design/sprint8-ia.md": {
+    "mtime": 1793114676.507745,
+    "ast_hash": "c4465b30b2f1ba5f3afcfad1c3542947",
+    "semantic_hash": ""
+  },
+  "docs/design/ui-flow-spec.md": {
+    "mtime": 1793031333.8329418,
+    "ast_hash": "653e0446e0ac43437c967b700e4ec793",
+    "semantic_hash": ""
+  },
+  "docs/design/ui-parity-v2.md": {
+    "mtime": 1793031333.8329418,
+    "ast_hash": "a321f7f08690d803683d883497bd1c73",
+    "semantic_hash": ""
+  },
+  "docs/planning/project-plan.md": {
+    "mtime": 1793031333.833942,
+    "ast_hash": "09aaac0ed8cda9d52bc9c53c664abd8a",
+    "semantic_hash": ""
+  },
+  "docs/planning/sprint5-menu-consolidation.md": {
+    "mtime": 1793031333.833942,
+    "ast_hash": "d4452a495196e568511a0afae4f9c1f8",
+    "semantic_hash": ""
+  },
+  "docs/qa/s8-menu-audit.md": {
+    "mtime": 1793117987.7365327,
+    "ast_hash": "89bdce827f62584ac76c910ef511996e",
+    "semantic_hash": ""
+  },
+  "docs/qa/sprint5-fix-qa-report.md": {
+    "mtime": 1793031333.8359418,
+    "ast_hash": "15b77fd88b7d3c6c8ab0a6aadf98e574",
+    "semantic_hash": ""
+  },
+  "docs/qa/sprint5-qa-report.md": {
+    "mtime": 1793031333.8359418,
+    "ast_hash": "3408fb53c30d6d8c8c3ced0d4f4fdbf3",
+    "semantic_hash": ""
+  },
+  "docs/qa/sprint6-qa-report.md": {
+    "mtime": 1793031333.8359418,
+    "ast_hash": "6735575f1ec95dfabc871e54014206e5",
+    "semantic_hash": ""
+  },
+  "docs/rea/README.md": {
+    "mtime": 1793031849.3378127,
+    "ast_hash": "2cd2b2bd51ce9763485a1c08296e8312",
+    "semantic_hash": ""
+  },
+  "docs/rea/chess-com-app-4.10.20-SPEC.md": {
+    "mtime": 1793031552.9022372,
+    "ast_hash": "f9d84896dbf4a546df271ca9d4b3a686",
+    "semantic_hash": ""
+  },
+  "docs/rea/chess-web-blueprint.md": {
+    "mtime": 1793031552.8872373,
+    "ast_hash": "3077fc071a1f30973f5c89af14509c6e",
+    "semantic_hash": ""
+  },
+  "docs/rea/chess-web-member-area-capture.md": {
+    "mtime": 1793031836.7719173,
+    "ast_hash": "489b346a8b351b82676d11af0af18b6c",
+    "semantic_hash": ""
+  },
+  "docs/rea/chess-web-menu-feature-map.md": {
+    "mtime": 1793031552.8892372,
+    "ast_hash": "cc6eb7c846af2afaee875e708f990dcb",
+    "semantic_hash": ""
+  },
+  "docs/rea/chess-web-ui-ux-analysis.md": {
+    "mtime": 1793031552.8912373,
+    "ast_hash": "27601e6f8797c5a5a92ebe1b26448135",
+    "semantic_hash": ""
+  },
+  "docs/rea/jev-chess-rea-plan.md": {
+    "mtime": 1793031552.893237,
+    "ast_hash": "04ccbd8fd9a7f702131d60cb73310cb1",
+    "semantic_hash": ""
+  },
+  "docs/rea/rea-feature-trace-chess-com-4.10.20.md": {
+    "mtime": 1793031552.897237,
+    "ast_hash": "173cb7ca60f96a5fcb89894c91bcd6ee",
+    "semantic_hash": ""
+  },
+  "docs/rea/rea-packer-analysis-chess-com-4.10.20.md": {
+    "mtime": 1793031552.8982372,
+    "ast_hash": "84d97bb701a8858ffe01f8f15c617c5f",
+    "semantic_hash": ""
+  },
+  "docs/rea/rea-report-chess-com-4.10.20.md": {
+    "mtime": 1793031552.8952372,
+    "ast_hash": "c40d1f1f7960d4bac8d465c4a6d9326e",
+    "semantic_hash": ""
+  },
+  "docs/rea/rea-storage-crypto-chess-com-4.10.20.md": {
+    "mtime": 1793031552.900237,
+    "ast_hash": "afb820051011b08ccd0434f91a47f4db",
+    "semantic_hash": ""
+  },
+  "docs/reviews/sprint1-final-review.md": {
+    "mtime": 1793031333.8359418,
+    "ast_hash": "28e8704d165b6d4514124afeac9d7a69",
+    "semantic_hash": ""
+  },
+  "docs/reviews/sprint1-t2t3t4-tl-review.md": {
+    "mtime": 1793031333.8359418,
+    "ast_hash": "50297a9cee5b8d8db523033f984a3298",
+    "semantic_hash": ""
+  },
+  "docs/reviews/sprint1-tl-review.md": {
+    "mtime": 1793031333.8359418,
+    "ast_hash": "25f478c6fc5ece1ca78c0fc66b528d7c",
+    "semantic_hash": ""
+  },
+  "docs/reviews/sprint2-tl-review.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "1123213d9c2ee451fadfe7eee6753db3",
+    "semantic_hash": ""
+  },
+  "docs/reviews/sprint3-tl-review.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "9e835239470fb5436d5e604579a08bad",
+    "semantic_hash": ""
+  },
+  "docs/reviews/sprint4-tl-review.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "514c120f892b0b3a004df26c3ce0c10b",
+    "semantic_hash": ""
+  },
+  "docs/reviews/sprint6-tl-review.md": {
+    "mtime": 1793080684.409054,
+    "ast_hash": "50dd1f4ada1aae046222cd50b05a29ed",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S1-T1-ws-gateway-realtimebus.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "8a1987810cd9426a59204c2f368ee6c9",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S1-T2-seek-pool.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "4b3debc6b1afa686c56b23f14eb6a856",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S1-T3-presence-badge.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "314dfdf04aca9a9866d2cf891fb4a1fc",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S1-T4-inline-challenge.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "16c5086ad5f02457d08856b21c5b51c4",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S2-T1-endgame-auto-review.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "f78e6aef58cdc6b0fb9fba9442898711",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S2-T2-game-archive.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "7ffed783cfc3e5adf598266e8caa8df0",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S2-T3-stats-panel.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "02f9e56a0f17cb52fbbe3f0f2ab2740f",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S2-T4-analysis-fastpath.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "00da8317c3abc6f2cad5757d55abbe15",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S3-T1-puzzle-core.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "4514141008e240d118c87415b18e507f",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S3-T2-puzzle-daily.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "93d858a39aa7d7c747eec1ccdee1dd20",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S3-T3-puzzle-rush.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "7dc0e380ea084a0de8ced8a4c2f93c9a",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S3-T4-theme-mastery.md": {
+    "mtime": 1793031333.836942,
+    "ast_hash": "864aa39b3ee42354032532ae32bcffcd",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S3-T5-battle-deferred.md": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "46b3e2c9bed19ee5861d93ab055802d3",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S4-T1-app-shell-sidebar.md": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "83e3020ae0836343d19029f09a5701fc",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S4-T2-home-dashboard.md": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "239a7ba92381d2921699773c22943535",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S4-T3-leaderboard-friends.md": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "14b5d932cd37bc9dcc42d49607e89c5c",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S4-T4-endgame-drills.md": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "e0870f82e1502ae95ee51d36bd861924",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S4-T5-flow-audit.md": {
+    "mtime": 1793031333.837942,
+    "ast_hash": "7eefe52e2ce74a2bc9911173581749dd",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S6-sprint-plan.md": {
+    "mtime": 1793066804.168169,
+    "ast_hash": "106f7c1670aab795edc12b40115a15cf",
+    "semantic_hash": ""
+  },
+  "docs/tickets/S7-learn-layer.md": {
+    "mtime": 1793091019.2007368,
+    "ast_hash": "3f257f97a7a3e7bf05cb0ba732af4ac7",
+    "semantic_hash": ""
+  },
+  "docs/train-yolo11.md": {
+    "mtime": 1792603038.857434,
+    "ast_hash": "9f26884fc7cc87240c10a607c909683a",
+    "semantic_hash": ""
+  },
+  "pm-board-training-plan.md": {
+    "mtime": 1793031333.8439417,
+    "ast_hash": "aa755e7a934f724af2a9450cd21c2f02",
+    "semantic_hash": ""
+  },
+  "yolo11-service/README.md": {
+    "mtime": 1792603039.8254287,
+    "ast_hash": "291c4e25a2d94d16650dc00ae0335910",
+    "semantic_hash": ""
+  },
+  "yolo11-service/requirements.txt": {
+    "mtime": 1792603039.8284287,
+    "ast_hash": "72604637daa2c3a670206e8f5db6c1b6",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-analysis.png": {
+    "mtime": 1793107098.5633125,
+    "ast_hash": "d653517607936fef8c92f25634b95968",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-archive.png": {
+    "mtime": 1793107109.780218,
+    "ast_hash": "3a9ac1c4f5676670a5d04a544bb190a3",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-community.png": {
+    "mtime": 1793107075.1425102,
+    "ast_hash": "4432769b43edf6ce78cefc3f4955591c",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-daily.png": {
+    "mtime": 1793107104.5062623,
+    "ast_hash": "9da27138311f3f61f820ce7a3528023e",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-home.png": {
+    "mtime": 1793107038.4508193,
+    "ast_hash": "408d4a0ecb351c3f7d2174a033e84ee7",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-leaderboard.png": {
+    "mtime": 1793107085.81642,
+    "ast_hash": "af37f722cc2d64b2ff719d42117ff400",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-learn.png": {
+    "mtime": 1793107057.620658,
+    "ast_hash": "79a7996b326804475d325bb3c6390347",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-other.png": {
+    "mtime": 1793107079.1324766,
+    "ast_hash": "882777912ba9129d81195a0567283faa",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-play.png": {
+    "mtime": 1793107044.2177706,
+    "ast_hash": "4120e09ab6ba34e749d10ec0c37f92bf",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-puzzles.png": {
+    "mtime": 1793107051.169712,
+    "ast_hash": "9bd5424683678db87bb38aba69d3cf6b",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-tournaments.png": {
+    "mtime": 1793107091.9163687,
+    "ast_hash": "e87e35f981ebfdc836590a5e85702d59",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-train.png": {
+    "mtime": 1793107062.719615,
+    "ast_hash": "bb3028110cff9192541c27c03496ea96",
+    "semantic_hash": ""
+  },
+  "docs/design/chesscom-flows/shot-watch.png": {
+    "mtime": 1793107070.9235458,
+    "ast_hash": "5692473056012556a204acd470ccab3b",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/01-home-scroll3.png": {
+    "mtime": 1793031333.8219419,
+    "ast_hash": "3535dfe8b552462775549ed2aabcee5b",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/01-home-top.png": {
+    "mtime": 1793031333.822942,
+    "ast_hash": "a415793d5525972d98ac52219ed4d6b3",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/02-home-mid.png": {
+    "mtime": 1793031333.823942,
+    "ast_hash": "086d0d3051d73db76535f3dfa96ad304",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/03-home-bottom.png": {
+    "mtime": 1793031333.823942,
+    "ast_hash": "f6b54cf7b57dbb1ac936e67b832ae896",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/04-puzzles-top.png": {
+    "mtime": 1793031333.8249419,
+    "ast_hash": "e59e817fcf7cf7374910f24aba84ac07",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/04b-puzzles-board.png": {
+    "mtime": 1793031333.825942,
+    "ast_hash": "5ec9f21c74837340213a5b31e624ec9b",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/04c-puzzles-real.png": {
+    "mtime": 1793031333.826942,
+    "ast_hash": "d79535300bc2686a01348ad65998c124",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/05-puzzles-mid.png": {
+    "mtime": 1793031333.827942,
+    "ast_hash": "ca49f43f7994b5aab3914491ace73dac",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/06-leaderboard.png": {
+    "mtime": 1793031333.827942,
+    "ast_hash": "a0213917b937fd3053e4b8b3c4e1d5b3",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/07-archive.png": {
+    "mtime": 1793031333.8289418,
+    "ast_hash": "07c41469f695a360946c1e6e2a09136f",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/08-archive-mid.png": {
+    "mtime": 1793031333.8289418,
+    "ast_hash": "ebde6f638d6c2094233ef1f9c3da21ff",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/09-play-online.png": {
+    "mtime": 1793031333.829942,
+    "ast_hash": "98ef3a2f31277680754f4d5e75239067",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/10-lessons.png": {
+    "mtime": 1793031333.830942,
+    "ast_hash": "23dd958ca7e6441b94928613e1036d01",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/11-daily-puzzle.png": {
+    "mtime": 1793031333.8319418,
+    "ast_hash": "a3a9c2f0afbb9b9f85b59ca475d54339",
+    "semantic_hash": ""
+  },
+  "docs/design/reference-screenshots/12-puzzle-rush.png": {
+    "mtime": 1793031333.8329418,
+    "ast_hash": "1f2ae9f71463ca37af850dd1018c3ed8",
+    "semantic_hash": ""
+  },
+  "docs/qa/evidence/bug1-review-pgn.png": {
+    "mtime": 1793031333.833942,
+    "ast_hash": "0facf518ee516f5756874581c3058844",
+    "semantic_hash": ""
+  },
+  "docs/qa/evidence/bug2-themes-tab.png": {
+    "mtime": 1793031333.8349419,
+    "ast_hash": "f6aad4b6ead7e44afb4fa3d97ebcc6ed",
+    "semantic_hash": ""
+  },
+  "docs/qa/evidence/bug3-aria-current-puzzles.png": {
+    "mtime": 1793031333.8349419,
+    "ast_hash": "046069ec4e703ef59893c5d10e04113d",
+    "semantic_hash": ""
+  },
+  "docs/qa/evidence/bug3-mobile-moresheet.png": {
+    "mtime": 1793031333.8359418,
+    "ast_hash": "32072d380db95ac7853354bcb81fd34e",
+    "semantic_hash": ""
+  },
+  "public/icons/app-icon-maskable.svg": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "43a75d1e5fc6b4d82c91f4d0ee21c818",
+    "semantic_hash": ""
+  },
+  "public/icons/app-icon.svg": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "6e1d161dda1e03651d2783e11543949e",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/battle.png": {
+    "mtime": 1792603039.7904289,
+    "ast_hash": "2f870cd02607d94ec61464dcac12042a",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/board-2x2-green.png": {
+    "mtime": 1792603039.7904289,
+    "ast_hash": "620d6dca6c3d102511eba09b6d22aaf9",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/board-pieces.png": {
+    "mtime": 1792603039.7904289,
+    "ast_hash": "e3a99f1fc3b0034355cfcac74c7066a3",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/calendar-dailypuzzle.png": {
+    "mtime": 1792603039.7904289,
+    "ast_hash": "d247ff008faf8c04d10248668866c8a4",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/communication-bubbles.png": {
+    "mtime": 1792603039.7904289,
+    "ast_hash": "3f57dfbfdc656b339e787e18a9a56f4f",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/crown-gold.png": {
+    "mtime": 1792603039.7904289,
+    "ast_hash": "051193a48926a6f779fe742f24d179ce",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/cup-gold.png": {
+    "mtime": 1792603039.7904289,
+    "ast_hash": "21d449a31928ca585c0aee14c370d105",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/device-bot.png": {
+    "mtime": 1792603039.7904289,
+    "ast_hash": "15c4d8e6d34542cf13499ec6c8a6f6d9",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/device-engine.png": {
+    "mtime": 1792603039.7904289,
+    "ast_hash": "d49ae5183be1da49c1172df54baa4b6e",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/globe.png": {
+    "mtime": 1792603039.7904289,
+    "ast_hash": "29477b3f172157086b3c4a0f1245ee6a",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/magnifier-analysis.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "4b63f6d8577255cdf0d14ec59eb221c4",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/move-best.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "0b0765bcb87f3e497fa2ae351c2ddc14",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/move-blunder.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "70ed7ccf9ed9532f558584c7256a0889",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/move-book.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "9444e798e0a6c09f423ddc4b1c0d2b99",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/move-brilliant.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "fd23e73fb7bd75d54cf87183c6abc4a2",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/move-excellent.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "4dbf70c024fbd0279eaea830ef521c3f",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/move-good.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "9638faea0bb7e3a4e77b9f764457a5c6",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/move-inaccuracy.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "56d374364d696ca4cccee2fe1ddb51b4",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/move-missed-win.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "18ef3eb18876b0652c13902ff901725b",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/move-mistake.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "ef7a4f526eb239d146b688c905a8d028",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/puzzle-piece.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "f55eb7a013d6ddf285049e0412a22b42",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/puzzle-rush.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "5d7ec54fe7497f52a394e68fcf100477",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/tactics-fork.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "8d6c38a9e544bcf1c69c4a67afb27c2d",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/time-blitz.png": {
+    "mtime": 1792603039.791429,
+    "ast_hash": "c6ed9cb7567b447545bb37cf0dc62da1",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/time-bullet.png": {
+    "mtime": 1792603039.792429,
+    "ast_hash": "2bf5a0da00d7675ef476d43c3b3d23f7",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/time-classic.png": {
+    "mtime": 1792603039.792429,
+    "ast_hash": "2dab0e83fb9e37ae719ee3c2ae24cc80",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/time-daily.png": {
+    "mtime": 1792603039.792429,
+    "ast_hash": "996995ec3c89bb3600a336b62ccceeea",
+    "semantic_hash": ""
+  },
+  "public/icons/chess/time-rapid.png": {
+    "mtime": 1792603039.792429,
+    "ast_hash": "91bc9e08457a3d29a15a8b66155c854f",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/bB.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "39621a33d848afe2c92c3e2af0de4307",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/bK.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "64c4c90a6f06b113bfe29332519e07d2",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/bN.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "f6c4c047123f8f2baeb2cd90e4f1155d",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/bP.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "d50016e5a82f709c88104768dff7c798",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/bQ.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "0feceed08cc84e84efae9d43d977dcf4",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/bR.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "93f30ed5005351028ce47b7c46d1200e",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/wB.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "7ecf20149b684c7620e568bd632d4436",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/wK.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "aa1e311907c935e59e34ad70fe3ba010",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/wN.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "43cce57627259680a11d484dd9255468",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/wP.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "a43c8171d1bc7935b8346a213cb49dd5",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/wQ.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "dc526f2c80a5c881537d70d25f378991",
+    "semantic_hash": ""
+  },
+  "public/pieces/chessnut/wR.png": {
+    "mtime": 1793031333.8449419,
+    "ast_hash": "c3476ed2855d9d74296ce7d82cb2b556",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/bB.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "1c11c8ac05811e61d75aad4b8f3727d4",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/bK.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "bc27502ebf7f909c326e16b3b75afb90",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/bN.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "36271dd97cff823f6a1ab1cbb1e32bd2",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/bP.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "7538c65cf3a930e0d268427b0ca7148d",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/bQ.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "51e4e92e077dcd2a8e23a98e9d3e5b82",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/bR.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "4829ca264231ffd8f31af46eee93a9ab",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/wB.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "8c971108de85efb83e716cd233d326ff",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/wK.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "a57acc25601598ea9602cf9b93e2b3fc",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/wN.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "0712cd955f05c74bf3c21125b9328d69",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/wP.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "059edc613e57ee5127574d898c78b37e",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/wQ.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "180da0bc6f4c5cb7656b94af908db292",
+    "semantic_hash": ""
+  },
+  "public/pieces/classic3d/wR.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "6c7e22ce8fe1b05317f3ada2a4fab5b5",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/bB.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "94e01ffed46dddd9b34043adb1510cb1",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/bK.png": {
+    "mtime": 1793031333.8459418,
+    "ast_hash": "83819cc994df742276bbd9d29fcdf38f",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/bN.png": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "f5885957771077d533e9e244c8189f59",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/bP.png": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "2aaa58c6165c7bd8ee1938b2ebc2785f",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/bQ.png": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "8659ac58996ce265493a3d31d9c5b79b",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/bR.png": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "d913073494acbab9b81c56f58bf7d258",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/wB.png": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "b88578a73e0616b217d57b67d2db81f7",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/wK.png": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "6d99e3cce903d697a27ec20fd1ae0207",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/wN.png": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "af820a46c43bca524e8b277629001aae",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/wP.png": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "fd4b0607adc3818ab58626992fdb5054",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/wQ.png": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "5f652fee82baa17936c4739b97b70b5f",
+    "semantic_hash": ""
+  },
+  "public/pieces/staunty/wR.png": {
+    "mtime": 1793031333.8469417,
+    "ast_hash": "da28e76ff08bc2b4445a3c8e6304eb46",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/bB.png": {
+    "mtime": 1792603039.8254287,
+    "ast_hash": "1c11c8ac05811e61d75aad4b8f3727d4",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/bK.png": {
+    "mtime": 1792603039.8254287,
+    "ast_hash": "bc27502ebf7f909c326e16b3b75afb90",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/bN.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "36271dd97cff823f6a1ab1cbb1e32bd2",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/bP.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "7538c65cf3a930e0d268427b0ca7148d",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/bQ.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "51e4e92e077dcd2a8e23a98e9d3e5b82",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/bR.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "4829ca264231ffd8f31af46eee93a9ab",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/wB.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "8c971108de85efb83e716cd233d326ff",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/wK.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "a57acc25601598ea9602cf9b93e2b3fc",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/wN.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "0712cd955f05c74bf3c21125b9328d69",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/wP.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "059edc613e57ee5127574d898c78b37e",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/wQ.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "180da0bc6f4c5cb7656b94af908db292",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces/wR.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "6c7e22ce8fe1b05317f3ada2a4fab5b5",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/bB.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "39621a33d848afe2c92c3e2af0de4307",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/bK.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "64c4c90a6f06b113bfe29332519e07d2",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/bN.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "f6c4c047123f8f2baeb2cd90e4f1155d",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/bP.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "d50016e5a82f709c88104768dff7c798",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/bQ.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "0feceed08cc84e84efae9d43d977dcf4",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/bR.png": {
+    "mtime": 1792603039.8264287,
+    "ast_hash": "93f30ed5005351028ce47b7c46d1200e",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/wB.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "7ecf20149b684c7620e568bd632d4436",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/wK.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "aa1e311907c935e59e34ad70fe3ba010",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/wN.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "43cce57627259680a11d484dd9255468",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/wP.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "a43c8171d1bc7935b8346a213cb49dd5",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/wQ.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "dc526f2c80a5c881537d70d25f378991",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_chessnut/wR.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "c3476ed2855d9d74296ce7d82cb2b556",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/bB.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "94e01ffed46dddd9b34043adb1510cb1",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/bK.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "83819cc994df742276bbd9d29fcdf38f",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/bN.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "f5885957771077d533e9e244c8189f59",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/bP.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "2aaa58c6165c7bd8ee1938b2ebc2785f",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/bQ.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "8659ac58996ce265493a3d31d9c5b79b",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/bR.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "d913073494acbab9b81c56f58bf7d258",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/wB.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "b88578a73e0616b217d57b67d2db81f7",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/wK.png": {
+    "mtime": 1792603039.8274288,
+    "ast_hash": "6d99e3cce903d697a27ec20fd1ae0207",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/wN.png": {
+    "mtime": 1792603039.8284287,
+    "ast_hash": "af820a46c43bca524e8b277629001aae",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/wP.png": {
+    "mtime": 1792603039.8284287,
+    "ast_hash": "fd4b0607adc3818ab58626992fdb5054",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/wQ.png": {
+    "mtime": 1792603039.8284287,
+    "ast_hash": "5f652fee82baa17936c4739b97b70b5f",
+    "semantic_hash": ""
+  },
+  "yolo11-service/pieces_staunty/wR.png": {
+    "mtime": 1792603039.8284287,
+    "ast_hash": "da28e76ff08bc2b4445a3c8e6304eb46",
+    "semantic_hash": ""
+  }
+}

@@ -285,7 +285,7 @@ export function EndgameDrillsView({
   if (error) {
     return (
       <div className="view-root w-full max-w-4xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-drill)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <IconShield3D size={20} aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Permainan Akhir</h1>
         </div>
@@ -303,7 +303,7 @@ export function EndgameDrillsView({
     <div className="view-root w-full max-w-4xl mx-auto">
       {/* S8 Pola B (spec §3): .view-head 44px (judul section, aksen --nav-accent-drill)
           + .view-body satu-satunya region scroll internal (filter + grid set + peringkat). */}
-      <div className="view-head flex items-center justify-between gap-2 shrink-0 flex-wrap" style={{ borderLeft: "3px solid var(--nav-accent-drill)" }}>
+      <div className="view-head flex items-center justify-between gap-2 shrink-0 flex-wrap">
         <div className="flex items-center gap-3">
           <IconShield3D size={22} aria-hidden="true" />
           <h1 className="text-sm font-black text-white">Permainan Akhir</h1>

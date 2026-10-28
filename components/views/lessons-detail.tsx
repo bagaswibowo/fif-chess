@@ -57,12 +57,16 @@ export function LessonDetail({
   const [completed, setCompleted] = useState(false);
   const [flagBusy, setFlagBusy] = useState(false);
   const [flagError, setFlagError] = useState<string | null>(null);
+  // Latihan satu-per-satu: semua kartu tetap dimount (state interna terjaga),
+  // yang ter-render cuma indeks aktif. (hidden, bukan unmount → streak &
+  // progres drill tak reset saat pindah tab.)
+  const [exActive, setExActive] = useState(0);
 
   // 404 / lesson id tak dikenal (deep-link rusak) — copy jujur, bukan blank.
   if (!lesson) {
     return (
       <div className="view-root w-full max-w-2xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <h2 className="text-sm font-black text-white m-0">Pelajaran</h2>
         </div>
         <div className="view-body flex flex-col items-center gap-3 py-16" role="alert" style={{ scrollbarWidth: "thin" }}>
@@ -139,6 +143,44 @@ export function LessonDetail({
     (lesson.exercises.find((e) => e.kind === "themeDrill") as { theme?: string } | undefined)?.theme ??
     MODULE_THEME[lesson.module];
 
+  // Label ringkas per kartu latihan (chip nav) — dari data domain, bukan generik.
+  const exLabel = useCallback((ex: Lesson["exercises"][number]) => {
+    if (ex.kind === "dbPuzzle") return "Teka-teki pool";
+    if (ex.kind === "bookMove") return "Book move";
+    return `Drill ${themeLabel(ex.theme)}`;
+  }, []);
+
+  const exCard = useCallback(
+    (ex: Lesson["exercises"][number], i: number) => {
+      if (ex.kind === "dbPuzzle") {
+        return (
+          <SinglePuzzleCard
+            key={`db-${i}`}
+            label="Teka-teki riil dari pool"
+            theme={defaultTheme}
+          />
+        );
+      }
+      if (ex.kind === "bookMove") {
+        return <BookMoveCard key={`bm-${i}`} fen={ex.fen} />;
+      }
+      return (
+        <ThemeDrillCard
+          key={`td-${i}`}
+          theme={ex.theme}
+          count={ex.count}
+          authStatus={authStatus}
+        />
+      );
+    },
+    [defaultTheme, authStatus],
+  );
+
+  // Ganti lesson (deep-link baru) → latihan kembali ke kartu pertama.
+  useEffect(() => {
+    setExActive(0);
+  }, [lesson.id]);
+
   const illustrationFen =
     lesson.boardFen ??
     (lesson.openingEco ? "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" : null);
@@ -152,7 +194,7 @@ export function LessonDetail({
   // status flag, CTA kursus, pusat latihan).
   return (
     <div className="view-root w-full min-h-0">
-      <div className="view-head flex items-center justify-between gap-2 flex-wrap shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+      <div className="view-head flex items-center justify-between gap-2 flex-wrap shrink-0 px-1">
         <div className="flex items-center gap-3 min-w-0">
           <button
             className="ctl ctl-sm flex items-center gap-1.5 shrink-0"
@@ -250,38 +292,59 @@ export function LessonDetail({
             </div>
           </div>
 
-          {/* Latihan */}
-          <div className="flex flex-col gap-3">
-            <h2 className="text-sm font-black text-white flex items-center gap-2 m-0">
-              <Swords size={16} className="text-[var(--primary)]" aria-hidden="true" /> Latihan
-            </h2>
+          {/* Latihan — SATU PER SATU (user preference S9): semua kartu tetap
+              dimount (state streak/progres drill terjaga), yang terlihat
+              cuma satu. Papan tiap kartu = --board-cap (seragam 468px). */}
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-black text-white flex items-center gap-2 m-0">
+                <Swords size={16} className="text-[var(--primary)]" aria-hidden="true" /> Latihan
+              </h2>
+              {lesson.exercises.length > 1 && (
+                <span className="text-[11px] text-neutral-400 font-mono">
+                  {exActive + 1}/{lesson.exercises.length}
+                </span>
+              )}
+            </div>
             {lesson.exercises.length === 0 ? (
               <p className="text-xs text-neutral-400 m-0" role="status">
                 Pelajaran ini belum punya latihan interaktif — mulai dari jalur Terangkan dulu.
               </p>
             ) : (
-              lesson.exercises.map((ex, i) => {
-                if (ex.kind === "dbPuzzle") {
-                  return (
-                    <SinglePuzzleCard
-                      key={`db-${i}`}
-                      label="Teka-teki riil dari pool"
-                      theme={defaultTheme}
-                    />
-                  );
-                }
-                if (ex.kind === "bookMove") {
-                  return <BookMoveCard key={`bm-${i}`} fen={ex.fen} />;
-                }
-                return (
-                  <ThemeDrillCard
-                    key={`td-${i}`}
-                    theme={ex.theme}
-                    count={ex.count}
-                    authStatus={authStatus}
-                  />
-                );
-              })
+              <>
+                <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Pilih latihan">
+                  {lesson.exercises.map((ex, i) => (
+                    <button
+                      key={`tab-${i}`}
+                      role="tab"
+                      aria-selected={exActive === i}
+                      className={`ctl ctl-sm ${exActive === i ? "ctl-active" : ""}`}
+                      onClick={() => setExActive(i)}
+                    >
+                      {i + 1}. {exLabel(ex)}
+                    </button>
+                  ))}
+                </div>
+                {lesson.exercises.map((ex, i) => (
+                  <div key={`ex-${i}`} hidden={exActive !== i}>
+                    {exCard(ex, i)}
+                  </div>
+                ))}
+                {lesson.exercises.length > 1 && (
+                  <div className="flex items-center justify-between gap-2">
+                    <button className="ctl ctl-sm" disabled={exActive === 0} onClick={() => setExActive((v) => Math.max(0, v - 1))}>
+                      <ChevronLeft size={13} aria-hidden="true" /> Sebelumnya
+                    </button>
+                    <button
+                      className="ctl ctl-sm"
+                      disabled={exActive === lesson.exercises.length - 1}
+                      onClick={() => setExActive((v) => Math.min(lesson.exercises.length - 1, v + 1))}
+                    >
+                      Berikutnya <CornerUpRight size={13} aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

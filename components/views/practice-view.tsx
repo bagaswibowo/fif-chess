@@ -121,7 +121,7 @@ export function PracticeView({
 
   return (
     <div className="view-root w-full max-w-4xl mx-auto">
-      <div className="view-head flex items-center gap-2 shrink-0 flex-wrap" style={{ borderLeft: "3px solid var(--nav-accent-drill)" }}>
+      <div className="view-head flex items-center gap-2 shrink-0 flex-wrap">
         <Target size={18} className="text-[var(--nav-accent-drill)] shrink-0" aria-hidden="true" />
         <div className="min-w-0">
           <h1 className="text-sm font-black text-white leading-tight">Pusat Latihan</h1>

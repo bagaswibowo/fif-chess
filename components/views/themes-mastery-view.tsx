@@ -127,7 +127,7 @@ export function ThemesMasteryView({ lang = "id", onBack }: Props) {
   if (activeTheme) {
     return (
       <div className="view-root w-full min-h-0">
-        <div className="view-head flex items-center gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0 px-1">
           {onBack ? (
             <Button variant="outline" size="sm" onClick={() => { setActiveTheme(null); setPuzzle(null); }}>
               {lang === "id" ? "Kembali" : "Back"}
@@ -167,7 +167,7 @@ export function ThemesMasteryView({ lang = "id", onBack }: Props) {
   // grid tema scroll internal.
   return (
     <div className="view-root w-full max-w-5xl mx-auto">
-      <div className="view-head flex flex-wrap items-center justify-between gap-2 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+      <div className="view-head flex flex-wrap items-center justify-between gap-2 shrink-0 px-1">
         <h2 className="text-sm font-black text-white m-0">Latihan Tema</h2>
         <div className="flex flex-wrap items-center gap-2">
           {onBack ? (

@@ -86,7 +86,7 @@ export function LeaderboardView({ lang = "id", onOpenProfile, onPlayOnline }: Pr
   // tetap hidup saat loading (tidak re-mount).
   return (
     <div className="view-root w-full max-w-2xl mx-auto">
-      <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-social)" }}>
+      <div className="view-head flex items-center gap-2 shrink-0">
         <IconTrophy3D size={20} aria-hidden="true" />
         <h1 className="text-sm font-black text-white shrink-0">Papan Peringkat</h1>
         <div className="flex-1" aria-hidden="true" />

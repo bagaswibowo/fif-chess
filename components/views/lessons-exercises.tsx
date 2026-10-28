@@ -334,7 +334,7 @@ export function BookMoveCard({ fen }: { fen: string }) {
         <span className="text-[10px] text-neutral-500">Tanpa pencatatan — tidak tercatat di progres</span>
       </div>
       <div
-        className="aspect-square w-full max-w-sm rounded-xl overflow-hidden border-2 border-[var(--board-dark)] relative mx-auto"
+        className="aspect-square w-full max-w-[min(100%,var(--board-cap))] rounded-xl overflow-hidden border-2 border-[var(--board-dark)] relative mx-auto"
         style={{ backgroundColor: boardTheme.dark }}
         aria-label={`Papan book move, ${candidates.length} kandidat langkah buku`}
       >

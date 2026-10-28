@@ -62,7 +62,7 @@ export function PuzzleStatsView({ lang = "id" }: { lang?: "id" | "en" }) {
   if (guest) {
     return (
       <div className="view-root w-full max-w-xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <IconTarget3D size={18} aria-hidden="true" />
           <h2 className="text-sm font-black text-white m-0">Statistik Latihan</h2>
         </div>
@@ -81,7 +81,7 @@ export function PuzzleStatsView({ lang = "id" }: { lang?: "id" | "en" }) {
   if (error) {
     return (
       <div className="view-root w-full max-w-2xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <h2 className="text-sm font-black text-white m-0">Statistik Latihan</h2>
         </div>
         <div className="view-body flex flex-col items-center gap-3 py-10" role="status" aria-live="polite" style={{ scrollbarWidth: "thin" }}>
@@ -95,7 +95,7 @@ export function PuzzleStatsView({ lang = "id" }: { lang?: "id" | "en" }) {
   if (!stats) {
     return (
       <div className="view-root w-full max-w-2xl mx-auto">
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <h2 className="text-sm font-black text-white m-0">Statistik Latihan</h2>
         </div>
         <div className="view-body flex items-center justify-center py-16" role="status" aria-live="polite">
@@ -111,7 +111,7 @@ export function PuzzleStatsView({ lang = "id" }: { lang?: "id" | "en" }) {
   // bila data 30 hari memuai).
   return (
     <div className="view-root w-full max-w-3xl mx-auto">
-      <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+      <div className="view-head flex items-center gap-2 shrink-0">
         <IconTarget3D size={18} aria-hidden="true" />
         <h2 className="text-sm font-black text-white m-0">Statistik Latihan</h2>
       </div>

@@ -340,7 +340,7 @@ export function GameReview({ history, onBackToPlay, lang = "id" }: Props) {
     <div className="view-root w-full max-w-7xl mx-auto">
       {/* S8 Pola A (spec §3): .view-head 44px (judul + audio + arsip + back)
           pinned; aksen section Analisis via --nav-accent-learn. */}
-      <div className="view-head flex items-center gap-2 flex-wrap shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+      <div className="view-head flex items-center gap-2 flex-wrap shrink-0">
         <h2 className="section-title m-0 text-base md:text-lg shrink-0">{lang === "id" ? "Riwayat & Review Blunder" : "History & Blunder Review"}</h2>
         {/* S2-T1: Coach audio toggle (design doc §1.3) — mute persist localStorage */}
         <div className="flex items-center gap-2">

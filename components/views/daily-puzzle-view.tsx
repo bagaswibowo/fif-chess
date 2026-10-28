@@ -152,7 +152,7 @@ export function DailyPuzzleView({ lang = "id", onGoPuzzles }: Props) {
        aksen --nav-accent-puzzle) + .view-grid-board (PuzzleSolver: papan kiri
        ≤540px + panel .view-body scroll internal kanan). */
     <div className="view-root w-full min-h-0">
-      <div className="view-head flex items-center justify-center gap-3 shrink-0 px-1" style={{ borderLeft: "3px solid var(--nav-accent-puzzle)" }}>
+      <div className="view-head flex items-center justify-center gap-3 shrink-0 px-1">
         {/* Navigator tanggal (design §2.2) */}
         {navBtn(-1)}
         <div className="text-center min-w-48">

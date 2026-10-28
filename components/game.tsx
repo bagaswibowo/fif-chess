@@ -1583,7 +1583,7 @@ const navigateHash = useCallback((hash: string) => {
               <AdminPanel user={currentUser} />
             ) : (
               <>
-                <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-drill)" }}>
+                <div className="view-head flex items-center gap-2 shrink-0">
                   <h1 className="text-sm font-black text-white">Admin</h1>
                 </div>
                 <div className="view-body flex flex-col items-center justify-center gap-2 py-10 text-center" role="status">

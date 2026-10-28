@@ -209,7 +209,7 @@ export function ArchiveView({ onGoReview }: Props) {
 
   return (
     <div className="view-root w-full max-w-3xl mx-auto">
-      <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-watch)" }}>
+      <div className="view-head flex items-center gap-2 shrink-0">
         <h2 className="text-sm font-black text-white shrink-0">Arsip Partai</h2>
         <div className="flex-1" aria-hidden="true" />
         <div className="flex flex-wrap gap-1 shrink-0" role="tablist" aria-label="Filter arsip">

@@ -743,7 +743,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
       <div className="view-root w-full max-w-4xl mx-auto">
         {/* S8 Pola B (spec §3): .view-head 44px (judul) + .view-body scroll
             internal berisi pusat impor + notifikasi + modal. */}
-        <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+        <div className="view-head flex items-center gap-2 shrink-0">
           <IconScan3D size={18} aria-hidden="true" />
           <h2 className="text-sm font-black text-white m-0">Import Posisi &amp; AI Solver</h2>
         </div>

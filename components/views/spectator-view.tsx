@@ -648,7 +648,7 @@ export function SpectatorView({
       {showConfetti && <Confetti />}
 
       {/* S8 Pola A (spec §3): .view-head pinned (44px min) — label + kontrol laga. */}
-      <div className="view-head panel px-3.5 py-2 rounded-xl border border-[var(--border)] flex items-center justify-between gap-3 shrink-0" style={{ background: "var(--card)", borderLeft: "3px solid var(--nav-accent-learn)" }}>
+      <div className="view-head panel px-3.5 py-2 rounded-xl border border-[var(--border)] flex items-center justify-between gap-3 shrink-0" style={{ background: "var(--card)" }}>
         <div className="flex items-center gap-2.5 min-w-0">
           <IconLightning3D size={22} className="shrink-0" />
           <div className="min-w-0">

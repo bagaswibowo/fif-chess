@@ -154,7 +154,7 @@ function LessonCatalog({ authStatus, onNavigate, initialModule }: { authStatus: 
 
   return (
     <div className="view-root w-full max-w-4xl mx-auto">
-      <div className="view-head flex items-center gap-2 shrink-0 flex-wrap" style={{ borderLeft: "3px solid var(--nav-accent-learn)" }}>
+      <div className="view-head flex items-center gap-2 shrink-0 flex-wrap">
         <NotebookText size={18} className="text-[var(--nav-accent-learn)] shrink-0" aria-hidden="true" />
         <h1 className="text-sm font-black text-white leading-tight shrink-0">Pelajaran</h1>
         <div className="flex-1" aria-hidden="true" />
