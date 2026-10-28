@@ -232,7 +232,10 @@ export function LessonDetail({
         </div>
       </div>
 
-      <div className="view-cols flex-1 min-h-0 mt-1.5">
+      {/* S9-B: meta sidebar 200px (bukan 300px bawaan .view-cols) agar kolom
+          konten = 860px → papan latihan aktif & ilustrasi teresolusi tepat
+          ke --board-cap (468px) — seragam Main/Taktik. */}
+      <div className="view-cols flex-1 min-h-0 mt-1.5" style={{ gridTemplateColumns: "minmax(0,1fr) 200px" }}>
         {/* LEFT: konten detail — satu-satunya region scroll internal (Pola C §3) */}
         <div className="view-body space-y-3 pb-4 min-h-0" style={{ scrollbarWidth: "thin" }}>
           {(flagError || (guestWall && !bookmarked)) && (
