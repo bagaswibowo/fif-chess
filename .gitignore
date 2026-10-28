@@ -58,3 +58,4 @@ scripts/verify-s6*.ts
 
 # S7 scratch verification probes (env-driven, no secrets in tree)
 scripts/verify-s7*.ts
+graphify-out/
