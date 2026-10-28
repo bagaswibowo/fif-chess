@@ -1283,7 +1283,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
             />
 
             <div className="flex justify-center w-full">
-              <div className="flex gap-2.5 items-stretch w-full max-w-[min(100%,calc(100dvh-230px))]">
+              <div className="flex gap-2.5 items-stretch w-full max-w-[min(100%,var(--board-cap))]">
                 <EvalBar fen={liveFen} scoreCp={currentScoreCp} orientation={scanBoardOrientation} />
                 <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--primary)] shadow-lg relative bg-[var(--card)]">
                   <Chessboard
@@ -1595,7 +1595,7 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
               </div>
             )}
 
-            <div className="w-full mx-auto aspect-square max-w-[min(100%,calc(100dvh-230px))] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
+            <div className="w-full mx-auto aspect-square max-w-[min(100%,var(--board-cap))] rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-lg bg-[var(--card)]">
               <Chessboard
                 options={{
                   id: "board-ref-full",
