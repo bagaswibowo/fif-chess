@@ -8,16 +8,42 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconClock3D, IconFire3D, IconInfinity3D, IconLightning3D, IconTrophy3D } from "@/components/icons3d";
 import { formatClock, type PuzzleDto } from "@/lib/puzzle-solve";
+import { authErrorPayload, authErrorText } from "@/lib/use-session";
 import { PuzzleSolver } from "@/components/puzzle-solver";
 
-type Props = { lang?: "id" | "en"; onBack?: () => void };
+type Props = { lang?: "id" | "en"; onBack?: () => void; onOpenAuth?: () => void };
 
 type Mode = "3" | "5" | "endless";
 
 type HintPayload = { from: string; to?: string; direction?: { files: number; ranks: number } } | null;
+
+/** S9-T1: error rush jujur per status — pending deterministik (tanpa retry),
+ *  login = CTA sah, busy/transien = boleh "Coba lagi". */
+type RushAuthError =
+  | { kind: "pending"; message: string }
+  | { kind: "login"; message: string }
+  | { kind: "busy"; message: string };
+
+function rushAuthError(status: number, payload: { code?: string; error?: string }): RushAuthError {
+  if (status === 403) {
+    // account_pending / account_rejected — bukan CTA login, bukan "disconnect".
+    return {
+      kind: "pending",
+      message:
+        payload.code === "account_rejected"
+          ? "Akun Anda ditolak admin."
+          : "Akun menunggu persetujuan admin — selesai setelah disetujui.",
+    };
+  }
+  if (status === 401) {
+    return { kind: "login", message: authErrorText(401, payload, "sesi rush") };
+  }
+  return { kind: "busy", message: "Server sedang sibuk. Coba lagi." };
+}
 
 const RULES = [
   "1. Selesaikan teka-teki sebanyak mungkin.",
@@ -27,7 +53,7 @@ const RULES = [
 
 const MODE_SECONDS: Record<Exclude<Mode, "endless">, number> = { "3": 180, "5": 300 };
 
-export function RushView({ lang = "id", onBack }: Props) {
+export function RushView({ lang = "id", onBack, onOpenAuth }: Props) {
   const [stage, setStage] = useState<"pregame" | "playing" | "over">("pregame");
   const [mode, setMode] = useState<Mode>("3");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -37,6 +63,9 @@ export function RushView({ lang = "id", onBack }: Props) {
   const [remaining, setRemaining] = useState(MODE_SECONDS["3"]);
   const [elapsed, setElapsed] = useState(0);
   const [disconnect, setDisconnect] = useState(false);
+  // S9-T1: error jujur per status (pending/rejected/401/5xx) — menggantikan
+  // setDisconnect(true) mentah yang menelan 403 pending jadi "koneksi terputus".
+  const [authError, setAuthError] = useState<RushAuthError | null>(null);
   const [confirmStop, setConfirmStop] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [newRecord, setNewRecord] = useState(false);
@@ -100,15 +129,19 @@ export function RushView({ lang = "id", onBack }: Props) {
     setBreakdown({ correct: 0, wrong: 0, bestStreak: 0 });
     breakStreakRef.current = { cur: 0, best: 0 };
     setPaused(false);
+    setAuthError(null);
+    setDisconnect(false);
     try {
       const res = await fetch("/api/puzzles/rush/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setDisconnect(true);
+        // S9-T1 (G0.1): 403 pending/rejected ≠ "koneksi terputus" — map jujur
+        // via authErrorText; 401 = CTA login sah; 5xx/busy = boleh retry.
+        setAuthError(rushAuthError(res.status, { code: (data as { code?: string }).code, error: (data as { error?: string }).error }));
         setLoadingBoard(false);
         return;
       }
@@ -176,7 +209,10 @@ export function RushView({ lang = "id", onBack }: Props) {
           }),
         });
         if (!res.ok) {
-          setDisconnect(true);
+          // S9-T1: 403 pending/rejected → panel pending, bukan "koneksi terputus".
+          const payload = await authErrorPayload(res);
+          setAuthError(rushAuthError(res.status, payload));
+          setDisconnect(res.status >= 500 || payload.code === "account_missing" || payload.code === "service_unavailable");
           return null;
         }
         const data = await res.json();
@@ -263,8 +299,34 @@ export function RushView({ lang = "id", onBack }: Props) {
           ))}
         </div>
 
-        {disconnect ? (
-          <p role="status" className="text-sm text-[var(--error)] mt-3">
+        {authError ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mt-3 flex flex-col items-center gap-1.5 text-center"
+          >
+            {authError.kind === "pending" ? (
+              <ShieldAlert size={20} aria-hidden="true" className="text-amber-400" />
+            ) : (
+              <AlertTriangle size={20} aria-hidden="true" className="text-[var(--error)]" />
+            )}
+            <p className="text-sm text-neutral-300">{authError.message}</p>
+            {authError.kind === "pending" ? (
+              <p className="text-xs text-neutral-500">Fitur rush akan terbuka setelah admin menyetujui akunmu.</p>
+            ) : null}
+            {authError.kind === "login" && onOpenAuth ? (
+              <button type="button" className="text-sm font-bold underline underline-offset-2 text-[var(--primary)]" onClick={onOpenAuth}>
+                Masuk atau Daftar
+              </button>
+            ) : null}
+            {authError.kind === "busy" ? (
+              <button type="button" className="text-sm font-bold underline underline-offset-2" onClick={() => void startSession()}>
+                Coba Lagi
+              </button>
+            ) : null}
+          </div>
+        ) : disconnect ? (
+          <p role="status" aria-live="polite" className="text-sm text-[var(--error)] mt-3">
             Koneksi terputus.{" "}
             <button className="underline" onClick={() => void startSession()}>
               Coba Lagi
@@ -443,8 +505,31 @@ export function RushView({ lang = "id", onBack }: Props) {
         </div>
         {/* RIGHT: panel .view-body — banner koneksi + region scroll internal (Pola A §3). */}
         <div className="view-body pr-1 space-y-1.5 custom-scrollbar min-h-0">
+          {authError ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className="rounded-xl border bg-[var(--card)] px-4 py-3 text-sm text-white text-center flex flex-col items-center gap-1.5"
+              style={{ borderColor: authError.kind === "pending" ? "var(--nav-accent-puzzle)" : "var(--error)" }}
+            >
+              {authError.kind === "pending" ? (
+                <ShieldAlert size={18} aria-hidden="true" className="text-amber-400" />
+              ) : (
+                <AlertTriangle size={18} aria-hidden="true" />
+              )}
+              <p className="text-sm text-neutral-300 m-0">{authError.message}</p>
+              {authError.kind === "pending" ? (
+                <p className="text-xs text-neutral-500 m-0">Fitur rush akan terbuka setelah admin menyetujui akunmu.</p>
+              ) : null}
+              {authError.kind === "busy" ? (
+                <button className="underline" onClick={() => setAuthError(null)}>
+                  Coba Lagi
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           {disconnect ? (
-            <div role="status" className="rounded-xl border border-[var(--error)] bg-[var(--card)] px-4 py-3 text-sm text-white text-center">
+            <div role="status" aria-live="polite" className="rounded-xl border border-[var(--error)] bg-[var(--card)] px-4 py-3 text-sm text-white text-center">
               Koneksi terputus.{" "}
               <button className="underline" onClick={() => setDisconnect(false)}>
                 Coba Lagi

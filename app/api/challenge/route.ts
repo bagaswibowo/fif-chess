@@ -9,28 +9,25 @@
  */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentUser, loadUsers } from "@/lib/auth-store";
+import { loadUsers } from "@/lib/auth-store";
+import { resolveSessionUser } from "@/lib/puzzle-api";
 import { publishBusEvent } from "@/lib/realtime/bus.ts";
 import { matcherTopic, type ChallengeReceived, type RematchRequested } from "@/lib/realtime/events.ts";
 import { isValidTimeControl } from "@/lib/time-control";
 
 export const runtime = "nodejs";
 
-async function currentUserId(request: Request): Promise<{ id: string; username: string } | null> {
-  try {
-    const users = await loadUsers();
-    const me = currentUser(request, users);
-    return me ? { id: me.id, username: me.username } : null;
-  } catch {
-    return null;
-  }
+async function currentUserId(request: Request): Promise<{ ok: true; id: string; username: string } | { ok: false; response: Response }> {
+  // S9-T1: sesi-pending/rejected → 403 account_pending/account_rejected (bukan 401).
+  const me = await resolveSessionUser(request);
+  if (!me.ok) return { ok: false, response: me.response };
+  return { ok: true, id: me.user.id, username: me.user.username };
 }
 
 export async function POST(request: Request) {
-  const me = await currentUserId(request);
-  if (!me) {
-    return NextResponse.json({ error: "Authentication required. Login first.", retryable: false }, { status: 401 });
-  }
+  const meRes = await currentUserId(request);
+  if (!meRes.ok) return meRes.response;
+  const me = meRes;
   let body: Record<string, unknown> = {};
   try {
     body = (await request.json()) as Record<string, unknown>;
@@ -95,10 +92,9 @@ export async function POST(request: Request) {
 
 /** Cancel challenge milik pengirim (outstanding) — status 'cancelled' + publish. */
 export async function DELETE(request: Request) {
-  const me = await currentUserId(request);
-  if (!me) {
-    return NextResponse.json({ error: "Authentication required. Login first.", retryable: false }, { status: 401 });
-  }
+  const meRes = await currentUserId(request);
+  if (!meRes.ok) return meRes.response;
+  const me = meRes;
   const challengeId = new URL(request.url).searchParams.get("id") ?? "";
   if (!challengeId) {
     return NextResponse.json({ error: "Query param id wajib.", retryable: false }, { status: 400 });

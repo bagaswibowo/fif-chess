@@ -13,7 +13,8 @@
 import { NextResponse } from "next/server";
 import { randomBytes, randomUUID } from "crypto";
 import { query } from "@/lib/db";
-import { currentUser, loadUsers, sessionUserForToken, tokenFromRequest } from "@/lib/auth-store";
+import { loadUsers, sessionUserForToken, tokenFromRequest } from "@/lib/auth-store";
+import { resolveSessionUser } from "@/lib/puzzle-api";
 import { publishBusEvent } from "@/lib/realtime/bus.ts";
 import {
   gameTopic,
@@ -50,18 +51,13 @@ function clientIp(req: Request) {
   );
 }
 
-async function currentUserId(request: Request): Promise<string | null> {
-  // Identity comes from the signed auth-store session (jev_session cookie),
-  // the same source AdminPanel/community use. The jev_gate cookie carries no
-  // userId and was previously trusted as one - letting clients impersonate
-  // arbitrary user rows (bug F-4).
-  try {
-    const users = await loadUsers();
-    const me = currentUser(request, users);
-    return me ? me.id : null;
-  } catch {
-    return null;
-  }
+async function currentUserId(request: Request): Promise<string | Response> {
+  // S9-T1 (G0.1): sesi-pending/rejected → 403 account_pending/account_rejected
+  // (bukan 401 tanpa code). Id store (u-*) tetap sumber identifikasi ops
+  // in-memory; mapping username→pg uuid (BUG-4) di-opkan di GET-list.
+  const me = await resolveSessionUser(request);
+  if (!me.ok) return me.response;
+  return me.user.id;
 }
 
 export async function GET(request: Request) {
@@ -100,9 +96,7 @@ export async function GET(request: Request) {
 
   // List active games
   const userId = await currentUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  if (typeof userId !== "string") return userId;
 
   // BUG-4 (QA S5): dua akar masalah — (1) ORDER BY g.updated_at tidak ada di
   // skema games; (2) currentUserId mengembalikan store id ("u-...") bukan pg
@@ -148,9 +142,7 @@ export async function POST(request: Request) {
   const op = bodyAction || url.searchParams.get("op") || "create";
 
   const userId = await currentUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Authentication required. Login first.", retryable: false }, { status: 401 });
-  }
+  if (typeof userId !== "string") return userId;
 
   // Live room lifecycle first (matches PvpPanel client actions)
   if (op === "create") return roomCreate(request, userId);

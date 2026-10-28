@@ -8,8 +8,10 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconFire3D, IconPuzzle3D, IconMedal3D, IconHistory3D, IconClock3D, IconPlay3D, IconCheck3D } from "@/components/icons3d";
+import { authErrorPayload, authErrorText } from "@/lib/use-session";
 
 type GameAktif = {
   gameId: string;
@@ -33,6 +35,14 @@ type Dashboard = {
   };
 };
 
+/** S9-T1: hasil fetch dashboard — pesan jujur + retryable (transien vs deterministik). */
+type LoadError = {
+  message: string;
+  retryable: boolean;
+  code?: string;
+  status?: number;
+};
+
 type Props = {
   onNavigate: (tab: "puzzles" | "daily" | "review" | "archive" | "play") => void;
   /** Game aktif dipilih untuk dimainkan (user klik Main) → ke papan. */
@@ -43,19 +53,31 @@ type Props = {
 
 export function HomeView({ onNavigate, onPlayGame, onReviewGame }: Props) {
   const [data, setData] = useState<Dashboard | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<LoadError | null>(null);
 
   const load = useCallback(async () => {
+    setError(null);
     try {
       const res = await fetch("/api/home/dashboard", { cache: "no-store" });
       if (!res.ok) {
-        setError(res.status === 401 ? "Sesi berakhir — masuk kembali." : "Gagal memuat dashboard.");
+        // S9-T1 (G0.3): tidak ada CTA login palsu untuk user pending yang sudah login —
+        // 403 account_pending → pesan deterministik; 503/DB → generik + retry.
+        const payload = await authErrorPayload(res);
+        setError({
+          message: authErrorText(res.status, payload, "dashboard"),
+          retryable: res.status >= 500 || res.status === 0 || payload.code === "account_missing" || payload.code === "service_unavailable",
+          code: payload.code,
+          status: res.status,
+        });
         return;
       }
       setData((await res.json()) as Dashboard);
-      setError(null);
     } catch {
-      setError("Gagal memuat dashboard.");
+      // Jaringan/DB down — transien, boleh retry.
+      setError({
+        message: "Terjadi gangguan layanan. Data dashboard tidak dapat dimuat.",
+        retryable: true,
+      });
     }
   }, []);
 
@@ -70,14 +92,30 @@ export function HomeView({ onNavigate, onPlayGame, onReviewGame }: Props) {
   }, [load]);
 
   if (error) {
+    const pending = error.code === "account_pending" || error.code === "account_rejected";
+    // S9-T1: pending = deterministik (tanpa tombol "Coba lagi"); transien = retry + kode sr-only.
+    const Icon = pending ? ShieldAlert : AlertTriangle;
     return (
       <div className="view-root w-full max-w-4xl mx-auto">
         <div className="view-head flex items-center gap-2 shrink-0" style={{ borderLeft: "3px solid var(--nav-accent-play)" }}>
           <h1 className="text-sm font-black text-white">Beranda</h1>
         </div>
-        <div className="view-body flex flex-col items-center gap-3 py-10" role="status">
-          <p className="text-sm text-neutral-300">{error}</p>
-          <Button variant="outline" onClick={() => void load()}>Coba Lagi</Button>
+        <div
+          className="view-body flex flex-col items-center gap-3 py-10"
+          role={pending ? "status" : "alert"}
+          aria-live={pending ? "polite" : "assertive"}
+        >
+          <Icon size={28} aria-hidden="true" />
+          <p className="text-sm text-neutral-300 text-center">
+            {error.message}
+            {pending ? " Fitur beranda akan terbuka setelah admin menyetujui akunmu." : ""}
+          </p>
+          {error.retryable && (
+            <Button variant="outline" onClick={() => void load()}>Coba Lagi</Button>
+          )}
+          {error.code ? (
+            <span className="sr-only" aria-hidden="false">Kode {error.code}</span>
+          ) : null}
         </div>
       </div>
     );

@@ -13,7 +13,8 @@
  */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentUser, loadUsers } from "@/lib/auth-store";
+import { loadUsers } from "@/lib/auth-store";
+import { resolveSessionUser } from "@/lib/puzzle-api";
 import { publishBusEvent } from "@/lib/realtime/bus.ts";
 import {
   gameTopic,
@@ -25,21 +26,11 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  let userId: string | null = null;
-  let username = "";
-  try {
-    const users = await loadUsers();
-    const me = currentUser(request, users);
-    if (me) {
-      userId = me.id;
-      username = me.username;
-    }
-  } catch {
-    userId = null;
-  }
-  if (!userId) {
-    return NextResponse.json({ error: "Authentication required. Login first.", retryable: false }, { status: 401 });
-  }
+  // S9-T1: sesi-pending/rejected → 403 (bukan 401); sesi tak valid → 401.
+  const meRes = await resolveSessionUser(request);
+  if (!meRes.ok) return meRes.response;
+  const userId = meRes.user.id;
+  const username = meRes.user.username;
   const { id: challengeId } = await ctx.params;
   let body: Record<string, unknown> = {};
   try {

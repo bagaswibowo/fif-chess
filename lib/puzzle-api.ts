@@ -48,6 +48,39 @@ export async function resolvePgUser(request: Request): Promise<PgUserResolution>
   }
 }
 
+export type SessionUserResolution =
+  | { ok: true; user: UserProfile }
+  | { ok: false; response: Response };
+
+/**
+ * FIX-1.2 (S9-T1): varian `resolvePgUser` TANPA query PG — untuk endpoint yang
+ * menyimpan id store (u-*) sendiri dan memetakan username→uuid PG di route
+ * (pola `currentUserId` lama di api/pvp, api/seek, api/stats/summary).
+ * Mapping: tanpa sesi → 401 unauthenticated; pending → 403 account_pending;
+ * rejected → 403 account_rejected; loadUsers gagal → 503 service_unavailable.
+ * Shape respons: { error, code?, retryable } (kontrak FIX-1.2).
+ */
+export async function resolveSessionUser(request: Request): Promise<SessionUserResolution> {
+  let me: UserProfile | null;
+  try {
+    const users: UserProfile[] = await loadUsers();
+    me = sessionUserForToken(tokenFromRequest(request), users);
+  } catch (err) {
+    console.error("[puzzle-api] loadUsers gagal saat resolve session user:", err);
+    return { ok: false, response: NextResponse.json({ error: "Layanan sedang gangguan. Coba lagi nanti.", code: "service_unavailable", retryable: true }, { status: 503 }) };
+  }
+  if (!me) {
+    return { ok: false, response: NextResponse.json({ error: "Authentication required.", code: "unauthenticated", retryable: false }, { status: 401 }) };
+  }
+  if (me.status === "pending") {
+    return { ok: false, response: NextResponse.json({ error: "Akun menunggu persetujuan admin.", code: "account_pending", retryable: false }, { status: 403 }) };
+  }
+  if (me.status === "rejected") {
+    return { ok: false, response: NextResponse.json({ error: "Akun ditolak admin.", code: "account_rejected", retryable: false }, { status: 403 }) };
+  }
+  return { ok: true, user: me };
+}
+
 export type PuzzleDto = {
   id: string;
   title: string;

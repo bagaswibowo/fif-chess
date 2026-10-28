@@ -5,30 +5,33 @@
  */
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { currentUser, loadUsers } from "@/lib/auth-store";
+import { resolveSessionUser } from "@/lib/puzzle-api";
 import { buildPgn } from "@/lib/pgn";
 
 export const runtime = "nodejs";
 
-async function currentUserId(request: Request): Promise<string | null> {
+async function currentUserId(request: Request): Promise<string | Response> {
+  // S9-T1 (G0.1): guard sesi via resolveSessionUser — pending/rejected dapat
+  // 403 account_pending/account_rejected (bukan 401).
+  const me = await resolveSessionUser(request);
+  if (!me.ok) return me.response;
+  // users.json id (u-*) bukan Postgres uuid — petakan via username (sprint1 §Migration).
   try {
-    const users = await loadUsers();
-    const me = currentUser(request, users);
-    if (!me) return null;
-    // users.json id (u-*) bukan Postgres uuid — petakan via username (sprint1 §Migration).
-    const pgRows = await query(`SELECT id FROM users WHERE username = $1 LIMIT 1`, [me.username]);
-    if (pgRows.length === 0) return null;
+    const pgRows = await query(`SELECT id FROM users WHERE username = $1 LIMIT 1`, [me.user.username]);
+    if (pgRows.length === 0) {
+      // Drift R4: sesi valid approved tapi username tak ada di PG → 403 akun belum tersinkron.
+      return NextResponse.json({ error: "Akun belum tersinkron dengan database. Coba lagi nanti.", code: "account_missing", retryable: true }, { status: 403 });
+    }
     return String((pgRows[0] as { id: string }).id);
-  } catch {
-    return null;
+  } catch (err) {
+    console.error("[games/[id]/pgn] DB gagal saat map user PG:", err);
+    return NextResponse.json({ error: "Layanan sedang gangguan. Coba lagi nanti.", code: "service_unavailable", retryable: true }, { status: 503 });
   }
 }
 
 export async function GET(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const userId = await currentUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  if (typeof userId !== "string") return userId;
   const { id } = await ctx.params;
 
   const rows = await query(

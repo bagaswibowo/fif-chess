@@ -9,37 +9,32 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { query } from "@/lib/db";
-import { currentUser, loadUsers } from "@/lib/auth-store";
+import { loadUsers } from "@/lib/auth-store";
+import { resolveSessionUser } from "@/lib/puzzle-api";
 import { onSeekCreated, cancelSeek } from "@/lib/realtime/matcher.ts";
 import { addSeek, getUserSeek, removeUserSeek, type SeekTicket } from "@/lib/realtime/seek-pool.ts";
 import { isValidTimeControl } from "@/lib/time-control";
 
 export const runtime = "nodejs";
 
-async function currentUserId(request: Request): Promise<string | null> {
-  try {
-    const users = await loadUsers();
-    const me = currentUser(request, users);
-    return me ? me.id : null;
-  } catch {
-    return null;
-  }
+async function currentUserId(request: Request): Promise<string | Response> {
+  // S9-T1: 401/403-pending/403-rejected/503 via resolveSessionUser (FIX-1.2);
+  // id store (u-*) tetap sumber identifikasi — mapping username→pg di POST saja.
+  const me = await resolveSessionUser(request);
+  if (!me.ok) return me.response;
+  return me.user.id;
 }
 
 export async function GET(request: Request) {
   const userId = await currentUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  if (typeof userId !== "string") return userId;
   const seek = await getUserSeek(userId);
   return NextResponse.json({ seek });
 }
 
 export async function POST(request: Request) {
   const userId = await currentUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Authentication required. Login first.", retryable: false }, { status: 401 });
-  }
+  if (typeof userId !== "string") return userId;
   let body: Record<string, unknown> = {};
   try {
     body = (await request.json()) as Record<string, unknown>;
@@ -86,9 +81,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   const userId = await currentUserId(request);
-  if (!userId) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  if (typeof userId !== "string") return userId;
   const seek = await getUserSeek(userId);
   const ok = seek ? await cancelSeek(seek.seekId, userId) : false;
   return NextResponse.json({ ok });

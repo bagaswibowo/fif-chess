@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { currentUser, loadUsers, type UserProfile } from "@/lib/auth-store";
+import { type UserProfile } from "@/lib/auth-store";
+import { resolveSessionUser } from "@/lib/puzzle-api";
 import type { ForumThread, ForumPost } from "@/components/community/types";
 
 export const runtime = "nodejs";
@@ -145,8 +146,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const me = currentUser(req, loadUsers());
-  if (!me) return NextResponse.json({ error: "Masuk dulu." }, { status: 401 });
+  // S9-T1: GET feed publik tak tersentuh; POST (create/reply/delete/like)
+  // memetakan sesi-pending → 403 account_pending, bukan 401 "Masuk dulu".
+  const meRes = await resolveSessionUser(req);
+  if (!meRes.ok) return meRes.response;
+  const me = meRes.user;
 
   let body: Record<string, unknown>;
   try {

@@ -3,23 +3,17 @@
  * GET /api/seek/user-seeks → seek aktif milik user (bootstrap/refresh, realtime via WS matcher/<userId>).
  */
 import { NextResponse } from "next/server";
-import { currentUser, loadUsers } from "@/lib/auth-store";
+import { resolveSessionUser } from "@/lib/puzzle-api";
 import { getUserSeek } from "@/lib/realtime/seek-pool.ts";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  let userId: string | null = null;
-  try {
-    const users = await loadUsers();
-    const me = currentUser(request, users);
-    userId = me ? me.id : null;
-  } catch {
-    userId = null;
-  }
-  if (!userId) {
-    return NextResponse.json({ error: "Authentication required.", retryable: false }, { status: 401 });
-  }
+  // S9-T1: sesi-pending/rejected → 403 (bukan 401). In-memory pool (guardrail:
+  // tidak ada query PG di route ini).
+  const meRes = await resolveSessionUser(request);
+  if (!meRes.ok) return meRes.response;
+  const userId = meRes.user.id;
   const seek = await getUserSeek(userId);
   return NextResponse.json({ seeks: seek ? [seek] : [] });
 }
