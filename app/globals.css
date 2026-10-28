@@ -480,7 +480,11 @@ select.field { padding-right: 2rem; }
    Opt-out eksplisit (konteks memang berbeda, jangan disamaratakan):
    clock-moves-fullscreen (mode layar penuh) & game-review (detail review). */
 :root {
-  --board-cap: calc(100dvh - 190px);
+  /* S9-B keputusan final (2026-10-28, user): semua menu SERAMAK render papan
+     468px @768dvh = ukuran efektif menu Main (height-driven, terukur live).
+     100dvh-300px = 468px @768 (proporsional di viewport lain).
+     Main sendiri tak di-token-kan: batasannya tinggi kolom, bukan cap. */
+  --board-cap: calc(100dvh - 300px);
 }
 .view-root {
   height: 100%;
