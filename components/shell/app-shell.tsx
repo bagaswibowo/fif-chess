@@ -19,7 +19,7 @@ import { readCachedUser } from "@/lib/use-session";
 import {
   Home, Swords, Bot, GraduationCap, Puzzle, Dumbbell, Eye, Trophy,
   Users, User, Archive, Shield, Compass, LineChart,
-  Library, NotebookText, Target, Presentation, Clock,
+  Library, NotebookText, Target, Presentation, Clock, Flame,
 } from "lucide-react";
 import {
   IconPlay3D, IconMedal3D, IconScan3D,
@@ -186,6 +186,23 @@ function UserStatusPill() {
 }
 
 /**
+ * T2: pill streak harian di user-chip (pola retensi chess.com — elemen
+ * paling terlihat di seluruh situs). Teks + ikon (DHH floor a11y, bukan
+ * warna saja). Hanya dirender saat streak terdefinisi (>=0).
+ */
+function StreakPill({ streak }: { streak: number }) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-orange-500/40 bg-orange-500/15 px-1.5 py-0.5 text-[10px] font-bold leading-none text-orange-400"
+      aria-label={`${streak} hari beruntun`}
+    >
+      <Flame size={11} aria-hidden="true" />
+      {streak}
+    </span>
+  );
+}
+
+/**
  * S9-T1 (G0.2): status akun dari session sungguhan — sumber data sama dgn
  * useSession (cache localStorage `jev_chess_user` + GET /api/auth), tanpa
  * menyentuh game.tsx. Returns "pending"/"approved"/"rejected" | null.
@@ -211,6 +228,37 @@ function useSessionStatus(): "pending" | "approved" | "rejected" | null {
     };
   }, []);
   return status;
+}
+
+/**
+ * T2 (P0, parity chess.com): streak harian di user-chip — data dari
+ * /api/home/dashboard (field streakHarian, tanpa tabel baru). Fetch
+ * sekali (hydration-gated) HANYA utk user eligible (bukan guest/pending/
+ * rejected) agar chip tidak menampilkan angka palsu. Returns null saat
+ * tak eligible atau fetch gagal (fallback: chip menampilkan rating saja).
+ */
+function useDashboardStreak(user: ShellUser): number | null {
+  const [streak, setStreak] = useState<number | null>(null);
+  const uid = user?.id ?? null;
+  const eligible =
+    user != null && user.status !== "pending" && user.status !== "rejected";
+  useEffect(() => {
+    if (!uid || !eligible) return;
+    let alive = true;
+    fetch("/api/home/dashboard", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { streakHarian?: unknown } | null) => {
+        if (!alive || !d) return;
+        setStreak(typeof d.streakHarian === "number" ? d.streakHarian : null);
+      })
+      .catch(() => {
+        /* jaringan gagal — streak tetap null, chip menampilkan rating saja. */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [uid, eligible]);
+  return streak;
 }
 
 function usePlayerSearch(query: string, enabled: boolean) {
@@ -275,6 +323,9 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
   // Merge: ShellUser.status (jika consumer game.tsx sudah wiring) fallback
   // ke session riil di shell (cache localStorage + GET /api/auth).
   const accountPending = user ? (user.status ?? accountStatus) === "pending" : false;
+  // T2 (P0, parity chess.com): streak harian di user-chip (data riil dari
+  // /api/home/dashboard, bukan mock). Null utk guest/pending/rejected/gagal.
+  const streak = useDashboardStreak(user);
 
   const pickResult = useCallback((username: string) => {
     setSearchOpen(false);
@@ -445,14 +496,24 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
           </button>
           <button
             onClick={onOpenAuth}
-            className={`w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow cursor-pointer ${
+            className={`relative w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold flex items-center justify-center text-xs text-white shadow cursor-pointer ${
               accountPending ? "ring-2 ring-amber-500" : ""
             }`}
             aria-label={user
-              ? `Akun @${user.username}${accountPending ? ", status menunggu persetujuan" : ""}`
+              ? `Akun @${user.username}${accountPending ? ", status menunggu persetujuan" : ""}${streak != null ? `, ${streak} hari beruntun` : ""}`
               : "Masuk atau daftar"}
           >
             {user ? user.username.slice(0, 2).toUpperCase() : "?"}
+            {/* T2: indikator streak di sudut avatar mobile (titik + sr-only). */}
+            {streak != null && streak > 0 && (
+              <span
+                className="absolute -top-1 -right-1 flex items-center gap-0.5 rounded-full bg-orange-500 px-1 text-[9px] font-bold text-white"
+                aria-hidden="true"
+              >
+                <Flame size={8} />
+                {streak}
+              </span>
+            )}
           </button>
         </div>
       </header>
@@ -556,6 +617,7 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
               <div className="text-xs text-neutral-400 flex items-center gap-1.5 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] inline-block" aria-hidden="true"></span>
                 <span className="truncate">{user ? `${user.elo ?? "-"} rating` : "Masuk untuk rating"}</span>
+                {streak != null && <StreakPill streak={streak} />}
               </div>
             </div>
           </button>
@@ -656,6 +718,8 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
             <span>{user ? `@${user.username}` : "Masuk"}</span>
             {/* G0.2: pill status akun — teks + ikon (tidak warna saja). */}
             {accountPending && <UserStatusPill />}
+            {/* T2: streak harian (retensi pola chess.com). */}
+            {streak != null && <StreakPill streak={streak} />}
           </button>
         </div>
 
