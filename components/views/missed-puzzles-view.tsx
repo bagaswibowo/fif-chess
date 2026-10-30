@@ -11,6 +11,7 @@ import { authErrorPayload, authErrorText } from "@/lib/use-session";
 import { useCallback, useEffect, useState } from "react";
 import { PuzzleSolver } from "@/components/puzzle-solver";
 import { Button } from "@/components/ui/button";
+import { Clock } from "lucide-react";
 import type { PuzzleDto } from "@/lib/puzzle-solve";
 
 type MissedItem = PuzzleDto & { lastFailedAt?: string | null };
@@ -21,16 +22,31 @@ export function MissedPuzzlesView({ lang = "id" }: { lang?: "id" | "en" }) {
   const [items, setItems] = useState<MissedItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guest, setGuest] = useState(false);
+  // T1 (G0.1): pending ≠ guest — 403 account_pending disorot jadi status
+  // (ikon jam + teks, tanpa CTA login palsu).
+  const [pending, setPending] = useState(false);
   const [streak, setStreak] = useState(0);
   const [active, setActive] = useState<MissedItem | null>(null);
   const [loading, setLoading] = useState(false);
 
   const loadMissed = useCallback(async (): Promise<MissedItem[]> => {
+    setPending(false);
     try {
       const res = await fetch("/api/puzzles/missed", { cache: "no-store" });
       if (res.status === 401) {
         setGuest(true);
         setError(null);
+        return [];
+      }
+      if (res.status === 403) {
+        const payload = await authErrorPayload(res);
+        if (payload.code === "account_pending") {
+          setPending(true);
+          setError(null);
+          return [];
+        }
+        setGuest(false);
+        setError(authErrorText(res.status, payload, "daftar koreksi"));
         return [];
       }
       if (!res.ok) {
@@ -146,15 +162,37 @@ export function MissedPuzzlesView({ lang = "id" }: { lang?: "id" | "en" }) {
         <div className="view-head flex items-center gap-2 shrink-0">
           <h2 className="text-sm font-black text-white m-0">Koreksi Teka-Teki</h2>
         </div>
-        <div className="view-body flex flex-col items-center gap-3 py-10 text-center" style={{ scrollbarWidth: "thin" }}>
+        <div className="view-body flex flex-col items-center gap-3 py-10 text-center" role="status" aria-live="polite" style={{ scrollbarWidth: "thin" }}>
+          {/* T1 (G0.3): guest = 401 → CTA login sah; pesan dari satu sumber
+              pemetaan authErrorText, bukan literal. */}
           <p className="text-sm text-neutral-400">
-            Masuk untuk melihat daftar teka-teki yang pernah gagal Anda kerjakan.
+            {authErrorText(401, undefined, "daftar teka-teki yang pernah gagal Anda kerjakan.")}
           </p>
           <Button
             onClick={() => (window.location.hash = "#/auth")}
           >
             Masuk
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // T1 (G0.1): akun pending → status, tanpa CTA login palsu.
+  if (pending) {
+    return (
+      <div className="view-root w-full max-w-xl mx-auto">
+        <div className="view-head flex items-center gap-2 shrink-0">
+          <h2 className="text-sm font-black text-white m-0">Koreksi Teka-Teki</h2>
+        </div>
+        <div className="view-body flex flex-col items-center gap-3 py-10 text-center" role="status" aria-live="polite" style={{ scrollbarWidth: "thin" }}>
+          <p className="text-sm font-bold text-amber-400 inline-flex items-center gap-1">
+            <Clock size={16} aria-hidden="true" />
+            Menunggu
+          </p>
+          <p className="text-sm text-neutral-400">
+            Akun menunggu persetujuan admin — daftar koreksi tampil setelah disetujui.
+          </p>
         </div>
       </div>
     );

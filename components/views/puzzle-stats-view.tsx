@@ -8,6 +8,7 @@ import { authErrorPayload, authErrorText } from "@/lib/use-session";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { IconTarget3D } from "@/components/icons3d";
+import { Clock } from "lucide-react";
 
 type WindowStat = { total: number; correct: number; accuracyPct: number | null };
 type Stats = {
@@ -35,13 +36,26 @@ export function PuzzleStatsView({ lang = "id" }: { lang?: "id" | "en" }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guest, setGuest] = useState(false);
+  // T1 (G0.1): pending ≠ guest — 403 account_pending disorot jadi status
+  // (ikon jam + teks, tanpa CTA login palsu), bukan error/retry.
+  const [pending, setPending] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
+    setPending(false);
     try {
       const res = await fetch("/api/puzzles/stats", { cache: "no-store" });
       if (res.status === 401) {
         setGuest(true);
+        return;
+      }
+      if (res.status === 403) {
+        const payload = await authErrorPayload(res);
+        if (payload.code === "account_pending") {
+          setPending(true);
+          return;
+        }
+        setError(authErrorText(res.status, payload, "statistik latihan"));
         return;
       }
       if (!res.ok) {
@@ -67,12 +81,35 @@ export function PuzzleStatsView({ lang = "id" }: { lang?: "id" | "en" }) {
           <h2 className="text-sm font-black text-white m-0">Statistik Latihan</h2>
         </div>
         <div className="view-body flex flex-col items-center gap-3 py-10 text-center" role="status" aria-live="polite" style={{ scrollbarWidth: "thin" }}>
+          {/* T1 (G0.3): guest = 401 → CTA login sah; pesan dari satu sumber
+              pemetaan authErrorText, bukan literal. */}
           <p className="text-sm text-neutral-400">
-            Masuk untuk melihat akurasi, perkembangan rating, dan tema yang perlu dilatih.
+            {authErrorText(401, undefined, "akurasi, perkembangan rating, dan tema yang perlu dilatih.")}
           </p>
           <Button onClick={() => (window.location.hash = "#/auth")}>
             Masuk
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (pending) {
+    // T1 (G0.1): akun pending → status, tanpa CTA login palsu.
+    return (
+      <div className="view-root w-full max-w-xl mx-auto">
+        <div className="view-head flex items-center gap-2 shrink-0">
+          <IconTarget3D size={18} aria-hidden="true" />
+          <h2 className="text-sm font-black text-white m-0">Statistik Latihan</h2>
+        </div>
+        <div className="view-body flex flex-col items-center gap-3 py-10 text-center" role="status" aria-live="polite" style={{ scrollbarWidth: "thin" }}>
+          <p className="text-sm font-bold text-amber-400 inline-flex items-center gap-1">
+            <Clock size={16} aria-hidden="true" />
+            Menunggu
+          </p>
+          <p className="text-sm text-neutral-400">
+            Akun menunggu persetujuan admin — statistik tampil setelah disetujui.
+          </p>
         </div>
       </div>
     );

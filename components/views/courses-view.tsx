@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Library, ChevronLeft, ChevronRight, Check, ArrowRight } from "lucide-react";
+import { Clock, Library, ChevronLeft, ChevronRight, Check, ArrowRight } from "lucide-react";
 import { COURSES, courseById, type Course, type CourseStep } from "@/lib/courses";
 import type { CourseProgress } from "./learn-shared";
 import { authErrorPayload, authErrorText } from "@/lib/use-session";
@@ -190,11 +190,14 @@ export function CoursesView({
     return { course: c, pct: courseSummaryProgress(c, match) };
   });
 
+  // T1 (G0): pesan status per authStatus — literal "Masuk untuk" diganti
+  // pemanggilan authErrorText(401) agar satu sumber pemetaan 401/403/503
+  // (lib/use-session). Guest = CTA login sah; pending = status + badge jam.
   const authNote =
     authStatus === "pending"
       ? "Akun menunggu persetujuan admin."
       : authStatus === "guest"
-        ? "Masuk untuk melihat progresmu"
+        ? authErrorText(401, undefined, "progresmu")
         : null;
 
   return (
@@ -207,8 +210,17 @@ export function CoursesView({
         </div>
         <div className="flex-1" aria-hidden="true" />
         {authNote && (
-          <p role="status" className="text-xs font-bold text-neutral-400 shrink-0">
-            {authNote}
+          <p
+            role={authStatus === "pending" ? "status" : undefined}
+            className="text-xs font-bold text-neutral-400 shrink-0 inline-flex items-center gap-1"
+          >
+            {authStatus === "pending" && (
+              <span className="inline-flex items-center gap-1 font-bold text-amber-400" aria-hidden="true">
+                <Clock size={13} />
+                Menunggu
+              </span>
+            )}
+            <span>{authNote}</span>
           </p>
         )}
       </div>

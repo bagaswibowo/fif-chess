@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PuzzleSolver } from "@/components/puzzle-solver";
 import { Button } from "@/components/ui/button";
 import { IconTrophy3D, IconShield3D } from "@/components/icons3d";
-import { SlidersHorizontal, Users, X } from "lucide-react";
+import { Clock, SlidersHorizontal, Users, X } from "lucide-react";
 import { DRILL_SETS } from "@/lib/endgame-drills";
 import type { EndgameLeaderboardResponse } from "./learn-shared";
 import type { CoursesAuthStatus } from "./courses-view";
@@ -457,12 +457,21 @@ export function EndgameDrillsView({
         {boardState === "auth" && (
           <div className="py-2" role="status">
             <p className="text-xs font-bold text-neutral-300">
-              {authStatus === "pending"
-                ? "Akun menunggu persetujuan admin — peringkat tampil setelah disetujui."
-                : "Peringkat latihan membutuhkan akun."}
+              {authStatus === "pending" ? (
+                <span className="inline-flex items-center gap-1 font-bold text-amber-400">
+                  <Clock size={13} aria-hidden="true" />
+                  Menunggu
+                </span>
+              ) : (
+                "Akun membutuhkan akses untuk melihat peringkat latihan."
+              )}
             </p>
-            {authStatus !== "pending" && (
-              <p className="mt-1 text-xs font-bold text-neutral-400">Masuk untuk melihat peringkat.</p>
+            {authStatus === "pending" ? (
+              <p className="mt-1 text-xs font-bold text-neutral-400">Peringkat tampil setelah akun disetujui admin.</p>
+            ) : (
+              // T1 (G0.3): guest/rejected = bukan pending → CTA login sah via
+              // satu sumber pemetaan (authErrorText(401)), bukan literal.
+              <p className="mt-1 text-xs font-bold text-neutral-400">{authErrorText(401, undefined, "peringkat")}</p>
             )}
           </div>
         )}

@@ -7,7 +7,7 @@
 // tidak dipilih.
 
 import { useCallback, useEffect, useState } from "react";
-import { Flag, Handshake, X } from "lucide-react";
+import { Clock, Flag, Handshake, X } from "lucide-react";
 import type { SessionUser } from "@/lib/use-session";
 import type { Side } from "@/lib/chess";
 import { isValidTimeControl, loadStoredTimeControl, saveStoredTimeControl } from "@/lib/time-control";
@@ -217,10 +217,20 @@ export function PvpPanel({ user, room, yourSide, token, onRoom, onLeave }: Props
   }, [refreshInvites]);
 
   if (!user) {
-    return <p className="prose-note">Masuk dulu untuk bermain PvP: kamu perlu username agar lawan bisa mengundanganmu.</p>;
+    // T1 (G0.3): 401 = benar-benar guest → CTA login sah (pola authErrorText).
+    return <p className="prose-note">Masuk untuk bermain PvP: kamu perlu username agar lawan bisa mengundanganmu.</p>;
   }
   if (user.status === "pending") {
-    return <p className="prose-note" role="status">Akun menunggu persetujuan admin — fitur PvP belum tersedia.</p>;
+    // T1: pending = status, bukan CTA login — ikon + teks (DHH floor a11y).
+    return (
+      <p className="prose-note" role="status">
+        <span className="inline-flex items-center gap-1 font-bold text-amber-400" aria-hidden="true">
+          <Clock size={13} />
+          Menunggu
+        </span>{" "}
+        — akun menunggu persetujuan admin, fitur PvP belum tersedia.
+      </p>
+    );
   }
   if (user.status === "rejected") {
     return <p className="prose-note" role="status">Akun Anda ditolak admin.</p>;
