@@ -159,21 +159,9 @@ export function BoardChrome({ topLabel, bottomLabel, topRating, bottomRating, fl
       <PlayerBar label={topLabel} rating={topRating} side="top" onOpenSettings={() => setGearOpen((v) => !v)} />
       <GearPopover open={gearOpen} onClose={() => setGearOpen(false)} />
 
-      {/* Container papan + koordinat overlay — koordinat absolute, tidak menggeser square */}
+      {/* Container papan murni tanpa duplikasi koordinat luar */}
       <div className="relative order-2">
         {children}
-        <div className="absolute inset-0 pointer-events-none" aria-hidden="true" data-board-coords="">
-          <div className="absolute left-0.5 bottom-0.5 flex h-full items-end justify-between flex-col pb-[2px]" style={{ width: "14px" }}>
-            {rankOrder.map((r) => (
-              <span key={r} className="board-coord-text">{r}</span>
-            ))}
-          </div>
-          <div className="absolute bottom-0.5 left-0.5 flex w-full justify-end items-center gap-[calc(12.5%-14px)]" style={{ height: "14px" }}>
-            {fileOrder.map((f) => (
-              <span key={f} className="board-coord-text">{f}</span>
-            ))}
-          </div>
-        </div>
       </div>
 
       <PlayerBar label={bottomLabel} rating={bottomRating} side="bottom" />
