@@ -14,8 +14,6 @@ export const runtime = "nodejs";
 const FILES = "abcdefgh";
 
 export async function GET(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await resolvePgUser(request);
-  if (!auth.ok) return auth.response;
   const { id } = await ctx.params;
   const params = new URL(request.url).searchParams;
   const stageNum = Number(params.get("stage")) || 0;

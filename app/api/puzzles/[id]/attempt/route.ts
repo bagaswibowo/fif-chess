@@ -12,8 +12,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const auth = await resolvePgUser(request);
-  if (!auth.ok) return auth.response;
-  const me = auth.user;
+  const me = auth.ok ? auth.user : null;
   const { id } = await ctx.params;
   let body: Record<string, unknown>;
   try {
@@ -36,10 +35,15 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: "Puzzle tidak ditemukan.", retryable: false }, { status: 404 });
   }
 
-  await query(
-    "INSERT INTO puzzle_attempts (user_id, puzzle_id, correct, time_spent_sec) VALUES ($1::uuid, $2::uuid, $3, $4)",
-    [me.pgId, id, correct, Math.round(timeSpent)],
-  );
-  const streak = await currentStreak(me.pgId);
-  return NextResponse.json({ ok: true, correct, streak });
+  if (me) {
+    await query(
+      "INSERT INTO puzzle_attempts (user_id, puzzle_id, correct, time_spent_sec) VALUES ($1::uuid, $2::uuid, $3, $4)",
+      [me.pgId, id, correct, Math.round(timeSpent)],
+    );
+    const streak = await currentStreak(me.pgId);
+    return NextResponse.json({ ok: true, correct, streak });
+  } else {
+    // Mode tamu: kirim respons sukses tanpa insert ke database
+    return NextResponse.json({ ok: true, correct, streak: 0, guest: true });
+  }
 }

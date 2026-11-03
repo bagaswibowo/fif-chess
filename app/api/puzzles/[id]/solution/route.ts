@@ -12,8 +12,6 @@ import { resolvePgUser } from "@/lib/puzzle-api";
 export const runtime = "nodejs";
 
 export async function GET(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await resolvePgUser(request);
-  if (!auth.ok) return auth.response;
   const { id } = await ctx.params;
   const rows = await query<{ solution_moves: unknown }>(
     "SELECT solution_moves FROM puzzles WHERE id = $1::uuid LIMIT 1",
