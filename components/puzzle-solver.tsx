@@ -523,7 +523,7 @@ export function PuzzleSolver({
           bottomLabel={lang === "id" ? "Kamu" : "You"}
           topRating={puzzle.rating}
           flipped={orientation === "black"}
-          className="board-card rounded-2xl p-3 bg-[var(--card)] border border-[var(--border)] shadow-xl relative"
+          className="board-layout-main flex flex-col items-center justify-center relative w-full"
         >
           <div
             className={`aspect-square w-full max-w-[min(100%,var(--board-cap))] mx-auto relative ${

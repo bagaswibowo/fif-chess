@@ -1635,9 +1635,9 @@ const navigateHash = useCallback((hash: string) => {
 
 
         {navTab === "play" && (
-          <div className="play-layout lg:h-full lg:max-h-full lg:min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem] gap-4 items-start w-full min-h-0 max-w-[1320px] mx-auto">
-            {/* CENTER CHESSBOARD ARENA: Desain Seragam Mengikuti Layout Chess.com */}
-            <div className="board-card rounded-2xl p-2 md:p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-center items-center h-full max-h-full">
+          <div className="play-layout lg:h-full lg:max-h-full lg:min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem] gap-5 items-center justify-center w-full min-h-0 max-w-[1400px] mx-auto">
+            {/* CENTER CHESSBOARD ARENA: Desain Murni Chess.com (Tanpa outer card border) */}
+            <div className="board-layout-main w-full flex flex-col justify-center items-center h-full max-h-full min-h-0">
               {/* 1. Kartu Pemain Lawan (Player Strip Top) */}
               <div className="w-full max-w-[min(100%,var(--board-cap))] mb-1.5 shrink-0">
                 <PlayerStrip
