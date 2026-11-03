@@ -48,6 +48,17 @@ type Props = {
   moveBadges?: Record<string, MoveBadge>;
 };
 
+function isTimeLow(timeStr: string): boolean {
+  if (!timeStr) return false;
+  const parts = timeStr.trim().split(":");
+  if (parts.length === 2) {
+    const mins = parseInt(parts[0], 10);
+    const secs = parseInt(parts[1], 10);
+    return mins === 0 && secs <= 15;
+  }
+  return false;
+}
+
 export function ClockMovesFullscreen({
 
   onClose,
@@ -258,13 +269,27 @@ export function ClockMovesFullscreen({
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <CapturedPiecesBar fen={fen} side={currentOrientation === "white" ? "black" : "white"} />
-              <div className={`px-2 py-0.5 rounded-lg font-mono font-black text-xs sm:text-sm border ${
-                activeSide !== currentOrientation
-                  ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow"
-                  : "bg-[var(--surface)] text-neutral-300 border-[var(--border)]"
-              }`}>
-                {currentOrientation === "white" ? blackTime : whiteTime}
-              </div>
+              {(() => {
+                const oppTime = currentOrientation === "white" ? blackTime : whiteTime;
+                const isOppTurn = activeSide !== currentOrientation;
+                const isUrgent = isOppTurn && isTimeLow(oppTime);
+                return (
+                  <div
+                    role="timer"
+                    aria-live="polite"
+                    aria-label={`Sisa waktu lawan: ${oppTime}`}
+                    className={`px-2 py-0.5 rounded-lg font-mono font-black text-xs sm:text-sm border transition-all ${
+                      isUrgent
+                        ? "bg-red-500/20 text-red-400 border-red-500 shadow-md animate-pulse ring-2 ring-red-400/30"
+                        : isOppTurn
+                        ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow"
+                        : "bg-[var(--surface)] text-neutral-300 border-[var(--border)]"
+                    }`}
+                  >
+                    {oppTime}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -336,13 +361,26 @@ export function ClockMovesFullscreen({
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <CapturedPiecesBar fen={fen} side={currentOrientation} />
-              <div className={`px-2 py-0.5 rounded-lg font-mono font-black text-xs sm:text-sm border ${
-                isHumanTurn
-                  ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow"
-                  : "bg-[var(--surface)] text-neutral-300 border-[var(--border)]"
-              }`}>
-                {currentOrientation === "white" ? whiteTime : blackTime}
-              </div>
+              {(() => {
+                const myTime = currentOrientation === "white" ? whiteTime : blackTime;
+                const isUrgent = isHumanTurn && isTimeLow(myTime);
+                return (
+                  <div
+                    role="timer"
+                    aria-live="polite"
+                    aria-label={`Sisa waktumu: ${myTime}`}
+                    className={`px-2 py-0.5 rounded-lg font-mono font-black text-xs sm:text-sm border transition-all ${
+                      isUrgent
+                        ? "bg-red-500/20 text-red-400 border-red-500 shadow-md animate-pulse ring-2 ring-red-400/40"
+                        : isHumanTurn
+                        ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow"
+                        : "bg-[var(--surface)] text-neutral-300 border-[var(--border)]"
+                    }`}
+                  >
+                    {myTime}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
