@@ -12,7 +12,7 @@ export type BoardThemeId =
   | "noir"
   | "amber";
 
-export type PieceThemeId = "standard" | "staunty" | "chessnut" | "classic3d";
+export type PieceThemeId = "neo" | "standard" | "staunty" | "chessnut" | "classic3d";
 
 export interface BoardTheme {
   id: BoardThemeId;
@@ -35,6 +35,7 @@ export const BOARD_THEMES: BoardTheme[] = [
 ];
 
 export const PIECE_THEMES: { id: PieceThemeId; name: string; desc: string }[] = [
+  { id: "neo", name: "Chess.com Neo", desc: "Bidak Khas Chess.com Asli (Vector Modern)" },
   { id: "standard", name: "Vector 2D", desc: "Standar Lichess (SVG)" },
   { id: "staunty", name: "Staunton 3D", desc: "Kayu & Akrilik Realistis" },
   { id: "chessnut", name: "Chessnut 3D", desc: "Geometris Modern Solid" },
@@ -47,15 +48,16 @@ export function getCustomPieces(pieceTheme: PieceThemeId): any {
   if (pieceTheme === "standard") return undefined;
   const pieces: Record<string, (props?: any) => React.ReactElement> = {};
   for (const p of PIECE_TYPES) {
+    const fn = pieceTheme === "neo" ? `${p.toLowerCase()}.png` : `${p}.png`;
     pieces[p] = (props?: any) =>
       React.createElement("img", {
-        src: `/pieces/${pieceTheme}/${p}.png`,
+        src: `/pieces/${pieceTheme}/${fn}`,
         alt: p,
         style: {
           width: "100%",
           height: "100%",
           objectFit: "contain",
-          filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.45))",
+          filter: pieceTheme === "neo" ? "drop-shadow(0 2px 4px rgba(0,0,0,0.35))" : "drop-shadow(0 3px 6px rgba(0,0,0,0.45))",
           userSelect: "none",
           pointerEvents: "none",
           ...props?.svgStyle,
@@ -124,12 +126,12 @@ export function useChessTheme() {
     return "wood";
   });
   const [pieceThemeId, setPieceThemeId] = useState<PieceThemeId>(() => {
-    if (typeof window === "undefined") return "standard";
+    if (typeof window === "undefined") return "neo";
     try {
       const p = localStorage.getItem("jev_piece_theme") as PieceThemeId;
       if (PIECE_THEMES.some((t) => t.id === p)) return p;
     } catch {}
-    return "standard";
+    return "neo";
   });
 
   useEffect(() => {
@@ -137,7 +139,7 @@ export function useChessTheme() {
     const load = () => {
       try {
         const b = (localStorage.getItem("jev_board_theme") as BoardThemeId) || "wood";
-        const p = (localStorage.getItem("jev_piece_theme") as PieceThemeId) || "standard";
+        const p = (localStorage.getItem("jev_piece_theme") as PieceThemeId) || "neo";
         if (BOARD_THEMES.some((t) => t.id === b)) setBoardThemeId(b);
         if (PIECE_THEMES.some((t) => t.id === p)) setPieceThemeId(p);
         const board = BOARD_THEMES.find((t) => t.id === b) || BOARD_THEMES[0];

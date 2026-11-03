@@ -44,6 +44,7 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
   const [applied, setApplied] = useState<{ theme: string; min: number | null; max: number | null }>({ theme: "", min: null, max: null });
   // W3: tier terpilih (progression rating 800..2200) — null = tanpa filter tier.
   const [tier, setTier] = useState<number | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   // T6: banner hasil inline (aria-live) + tombol Lanjut
   const [lastResult, setLastResult] = useState<"correct" | "wrong" | null>(null);
   const [bestStep, setBestStep] = useState<string | null>(null);
@@ -201,54 +202,67 @@ export function PuzzleView({ lang = "id", onGoRush }: Props) {
        508px (±36% lebih besar vs layout S8 3-kolom 372px). Kolom tier 320px
        dihapus: board-first design §1.1 — papan tidak lagi kolom kelas-3. */
     <div className="view-root w-full min-h-0">
-      <div className="view-head flex items-center shrink-0 px-1">
-        {/* T6: bar filter tema + preset rating — TIER LADDER pindah ke panel
-            kanan (view-body) agar head tetap 44px & tidak overflow. */}
-        <div className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 flex flex-wrap items-center gap-2">
-          <label className="text-xs text-neutral-400 flex items-center gap-1">
-            <span aria-hidden="true">🏷️</span> Tema
-            <select
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              className="ml-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-white"
-            >
-              <option value="">Semua tema</option>
-              {themes.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </label>
-          <div className="flex gap-1" role="radiogroup" aria-label="Preset rating">
-            {RATING_PRESETS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                role="radio"
-                aria-checked={preset === p.id}
-                onClick={() => setPreset(p.id)}
-                className={`px-2 py-1 rounded-full text-xs font-bold border ${
-                  preset === p.id
-                    ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                    : "border-[var(--border)] text-neutral-300 hover:text-white"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1 ml-auto">
-            <Button size="sm" onClick={applyFilters}>Terapkan</Button>
-            <Button size="sm" variant="outline" onClick={resetFilters}>Reset</Button>
-          </div>
-        </div>
+      {/* Baris filter & ladder ringkas bergaya Chess.com (Dapat disembunyikan agar papan maksimal) */}
+      <div className="flex items-center justify-between gap-2 px-1 py-0.5 text-xs">
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--card)] border border-[var(--border)] text-[#989795] hover:text-white transition-colors"
+        >
+          <span>⚙️ Filter &amp; Tingkat Kesulitan</span>
+          <span>{showFilters ? "▴" : "▾"}</span>
+        </button>
+        {tier && (
+          <span className="text-[11px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
+            Tingkat {tier}–{tier + 199}
+          </span>
+        )}
       </div>
 
-      {/* S9-P1: body satu kolom penuh (min-h-0, scroll internal bila perlu).
-          Strip TierLadder 1 baris di atas + banner hasil, lalu PuzzleSolver
-          lebar penuh — papan jadi selebar area konten, bukan kolom 1fr yang
-          terbelah panel 352px + tier 320px. */}
-      <div className="view-body flex flex-col gap-2 min-h-0 overflow-y-auto custom-scrollbar pr-1 mt-1.5">
-        <TierLadder lang={lang} onPickTier={pickTier} selectedTier={tier} />
+      {showFilters && (
+        <div className="p-2 mb-1 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2 animate-in fade-in">
+          <TierLadder lang={lang} onPickTier={pickTier} selectedTier={tier} />
+          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--border)]">
+            <label className="text-xs text-neutral-400 flex items-center gap-1">
+              <span aria-hidden="true">🏷️</span> Tema
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                className="ml-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-white"
+              >
+                <option value="">Semua tema</option>
+                {themes.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+            <div className="flex gap-1" role="radiogroup" aria-label="Preset rating">
+              {RATING_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={preset === p.id}
+                  onClick={() => setPreset(p.id)}
+                  className={`px-2 py-1 rounded-full text-xs font-bold border ${
+                    preset === p.id
+                      ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                      : "border-[var(--border)] text-neutral-300 hover:text-white"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1 ml-auto">
+              <Button size="sm" onClick={applyFilters}>Terapkan</Button>
+              <Button size="sm" variant="outline" onClick={resetFilters}>Reset</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* S9-P1: body satu kolom penuh (min-h-0) */}
+      <div className="view-body flex flex-col gap-2 min-h-0 overflow-y-auto custom-scrollbar pr-1">
         {/* T6: banner hasil inline aria-live — selalu teks + ikon, bukan warna saja */}
         {lastResult && (
           <div

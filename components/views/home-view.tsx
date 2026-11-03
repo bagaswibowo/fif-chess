@@ -106,7 +106,7 @@ function MiniBoard({ fen, className = "" }: { fen: string; className?: string })
             >
               {piece && (
                 <img
-                  src={`/pieces/staunty/${piece}.png`}
+                  src={`/pieces/neo/${piece.toLowerCase()}.png`}
                   alt={piece}
                   className="w-[88%] h-[88%] object-contain select-none pointer-events-none drop-shadow"
                   loading="lazy"

@@ -724,9 +724,9 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
         </div>
 
         {/* S8: strip subtab 44px (spec §2/§3) — sticky di atas konten, hanya
-            saat section aktif punya ≥2 subtab. Subtab default aktif = navTab
-            (dipilih shell via section click); strip ini memilih antar subtab. */}
-        {subtabs && (
+            saat section aktif punya ≥2 subtab. Opt-out di halaman papan (play/puzzles/review)
+            agar papan tidak tertekan ke bawah & persis Chess.com. */}
+        {subtabs && !["play", "puzzles", "review"].includes(navTab) && (
           <div
             role="tablist"
             aria-label={`Bagian ${activeSection!.title}`}
@@ -753,11 +753,15 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
           </div>
         )}
 
-        {/* MAIN CONTENT */}
+        {/* MAIN CONTENT — Padding disederhanakan di mode papan catur agar tidak tumpang tindih */}
         <main
           id="main-content"
           tabIndex={-1}
-          className="app-main flex-1 flex flex-col p-2.5 md:p-5 xl:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5 overflow-hidden h-full max-h-screen w-full min-h-0 focus:outline-none"
+          className={`app-main flex-1 flex flex-col ${
+            ["play", "puzzles", "review"].includes(navTab)
+              ? "p-1 md:p-2"
+              : "p-2.5 md:p-5 xl:p-6"
+          } pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-2 overflow-hidden h-full max-h-screen w-full min-h-0 focus:outline-none`}
         >
           {children}
         </main>      </div>
