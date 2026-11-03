@@ -480,8 +480,8 @@ select.field { padding-right: 2rem; }
    Opt-out eksplisit (konteks memang berbeda, jangan disamaratakan):
    clock-moves-fullscreen (mode layar penuh) & game-review (detail review). */
 :root {
-  /* Chess.com Parity: Board occupies full available vertical space (100dvh minus two ~48px player strips and margin) */
-  --board-cap: min(calc(100dvh - 125px), calc(100vw - 440px));
+  /* Chess.com Parity: Board occupies full available vertical space without clipping ranks 1-8 */
+  --board-cap: min(calc(100dvh - 210px), calc(100vw - 460px), 700px);
 }
 .view-root {
   height: 100%;
