@@ -114,7 +114,7 @@ type NavTab =
 // S9-T2: satu sumber daftar tab yang terbuka untuk guest — fitur lokal
 // (render tanpa akun). Tab member-only yang di-klik guest TIDAK di-reject:
 // view dirender + notice guest persisten tampil (handleNavClick).
-const guestAllowedTabs: NavTab[] = ["home", "play", "bots", "coach", "review", "scan", "vision"];
+const guestAllowedTabs: NavTab[] = ["home", "play", "bots", "coach", "review", "scan", "vision", "puzzles", "explorer", "courses", "learn", "practice", "classroom"];
 
 type RightTab = "game-setup" | "analysis" | "moves";
 type PlayMode = "ai" | "pvp";
@@ -1322,11 +1322,13 @@ const navigateHash = useCallback((hash: string) => {
           </div>
         )}
         {/* S4-T2: Home Dashboard — default landing */}
-        {currentUser && navTab === "home" && (
+        {navTab === "home" && (
           <HomeView
+            user={currentUser}
             onNavigate={(t) => navigate(t as NavTab)}
             onPlayGame={() => navigate("play")}
             onReviewGame={() => navigate("review")}
+            onAuthRequest={() => setShowAuthModal(true)}
           />
         )}
         {/* S4-T3: Leaderboard & Friends */}
@@ -1406,7 +1408,7 @@ const navigateHash = useCallback((hash: string) => {
             <ClassroomView authStatus={authStatus} />
           </div>
         )}
-        {!currentUser ? (
+        {!currentUser && !guestAllowedTabs.includes(navTab) ? (
           <div className="auth-page w-full max-w-lg mx-auto p-3 pt-6 sm:p-6 min-h-[calc(100vh-4rem)] flex flex-col justify-start md:justify-center items-center overflow-y-auto">
             <div className="w-full max-w-md mx-auto">
               <AuthPanel

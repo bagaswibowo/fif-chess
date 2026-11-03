@@ -69,13 +69,17 @@ export type HomeNavTarget =
   | "leaderboard"
   | "tournaments";
 
+import type { SessionUser } from "@/lib/use-session";
+
 type Props = {
+  user?: SessionUser | null;
   onNavigate: (tab: HomeNavTarget) => void;
   onPlayGame?: (gameId: string) => void;
   onReviewGame?: (gameId: string) => void;
+  onAuthRequest?: () => void;
 };
 
-export function HomeView({ onNavigate, onPlayGame, onReviewGame }: Props) {
+export function HomeView({ user, onNavigate, onPlayGame, onReviewGame, onAuthRequest }: Props) {
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState<LoadError | null>(null);
   const [selectedTc, setSelectedTc] = useState<string>("10+0");
@@ -85,6 +89,21 @@ export function HomeView({ onNavigate, onPlayGame, onReviewGame }: Props) {
     try {
       const res = await fetch("/api/home/dashboard", { cache: "no-store" });
       if (!res.ok) {
+        if (res.status === 401) {
+          setData({
+            username: user?.username ?? "Tamu",
+            rating: user?.elo ?? 1200,
+            solvedToday: 0,
+            streakHarian: 0,
+            gamesAktif: [],
+            tasksState: {
+              puzzleDone: false,
+              dailyPuzzleDone: false,
+              lastGameToReview: null,
+            },
+          });
+          return;
+        }
         const payload = await authErrorPayload(res);
         setError({
           message: authErrorText(res.status, payload, "dashboard"),
@@ -198,19 +217,37 @@ export function HomeView({ onNavigate, onPlayGame, onReviewGame }: Props) {
   return (
     <div className="view-root w-full max-w-5xl mx-auto space-y-4 pb-6">
       {/* Header bar: Greeting + Rating + Streak */}
-      <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+      <div className="flex items-center justify-between flex-wrap gap-3 px-1">
         <div>
           <h1 className="text-lg font-black text-white tracking-tight">
-            Selamat datang, <span className="text-[var(--nav-accent-play)]">@{data.username}</span>
+            Selamat datang, <span className="text-[var(--nav-accent-play)]">{data.username === "Tamu" ? "Pemain Catur" : "@" + data.username}</span>
           </h1>
-          <p className="text-xs text-neutral-400">Rating Elo: <span className="text-white font-bold">{data.rating}</span></p>
+          <p className="text-xs text-neutral-400">
+            {data.username === "Tamu" ? (
+              <span>Main catur online, taktik, dan analisis bersama komunitas Tel-U</span>
+            ) : (
+              <span>Rating Elo: <span className="text-white font-bold">{data.rating}</span></span>
+            )}
+          </p>
         </div>
-        <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-sm"
-          aria-label={`Streak ${data.streakHarian} hari`}
-        >
-          <IconFire3D size={18} aria-hidden="true" />
-          <span className="text-xs font-black text-white">Streak {data.streakHarian} Hari</span>
+        <div className="flex items-center gap-2">
+          {data.username === "Tamu" && onAuthRequest && (
+            <button
+              onClick={onAuthRequest}
+              className="px-3 py-1.5 rounded-lg text-xs font-black bg-[var(--surface)] border border-[var(--nav-accent-play)] text-[var(--nav-accent-play)] hover:bg-[var(--nav-accent-play)]/10 transition-colors"
+            >
+              Masuk / Daftar
+            </button>
+          )}
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-sm"
+            aria-label={`Streak ${data.streakHarian} hari`}
+          >
+            <IconFire3D size={18} aria-hidden="true" />
+            <span className="text-xs font-black text-white">
+              {data.streakHarian > 0 ? `Streak ${data.streakHarian} Hari` : "Mulai Rekor Anda"}
+            </span>
+          </div>
         </div>
       </div>
 
