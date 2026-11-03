@@ -1636,24 +1636,9 @@ const navigateHash = useCallback((hash: string) => {
 
         {navTab === "play" && (
           <div className="play-layout lg:h-full lg:max-h-full lg:min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem] gap-4 items-start w-full min-h-0 max-w-[1320px] mx-auto">
-            {/* CENTER CHESSBOARD ARENA: Desain Seragam Mengikuti Layout Trik & Quest */}
-            <div className="board-card rounded-2xl p-2.5 md:p-3 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-start items-center">
-              {/* 1. Toolbar Kontrol Papan */}
-              <BoardControls
-                variant="toolbar"
-                orientation={boardOrientation}
-                onFlipOrientation={flipBoardOrientation}
-                isFullscreen={fullscreenClocks}
-                onToggleFullscreen={() => setFullscreenClocks((open) => !open)}
-                showShortcuts={true}
-                className="w-full shrink-0 mb-1.5"
-                onSaveTrick={saveOpponentTrick}
-                trickSaved={opponentTacticSaved}
-                canSaveTrick={gameActive && moves.length > 0}
-                trickLabel={lang === "id" ? "Simpan Trik Lawan" : "Simpan Trik"}
-              />
-
-              {/* 2. Kartu Pemain Lawan (Dual Player Strip ala Chess.com) */}
+            {/* CENTER CHESSBOARD ARENA: Desain Seragam Mengikuti Layout Chess.com */}
+            <div className="board-card rounded-2xl p-2 md:p-2.5 bg-[var(--card)] border border-[var(--border)] shadow-xl w-full flex flex-col justify-center items-center h-full max-h-full">
+              {/* 1. Kartu Pemain Lawan (Player Strip Top) */}
               <div className="w-full max-w-[min(100%,var(--board-cap))] mb-1.5 shrink-0">
                 <PlayerStrip
                   name={playMode === "ai"
@@ -1669,15 +1654,7 @@ const navigateHash = useCallback((hash: string) => {
                 />
               </div>
 
-              {/* 3. Baris Legenda Badge ala Chess.com */}
-              <ChessBadgeLegend className="w-full max-w-[min(100%,var(--board-cap))] mb-2" />
-
-              {/* 4. Papan Catur & Bar Evaluasi Vertikal — HEIGHT-DRIVEN (S9-B rev):
-                  row = flex-1 min-h-0 (isi sisa ruang vertikal card), papan
-                  .board-fit-square = min(100% row, --board-cap) sehingga TIDAK
-                  PERNAH meluber: label file a-h tak tertutup strip, card tak
-                  overflow (tanpa scrollbar). 468px cap berlaku saat ruang
-                  vertikal cukup; di viewport pendek papan mengecil proporsional. */}
+              {/* 2. Papan Catur & Bar Evaluasi Vertikal — HEIGHT-DRIVEN CHESS.COM PARITY */}
               <div className="flex items-center justify-center gap-2 w-full flex-1 min-h-0">
                 <EvalBar
                   fen={fen}
@@ -1748,7 +1725,7 @@ const navigateHash = useCallback((hash: string) => {
                 </div>
               </div>
 
-              {/* 5. Kartu Pemain User (Dual Player Strip ala Chess.com) */}
+              {/* 3. Kartu Pemain User (Dual Player Strip ala Chess.com) */}
               <div className="w-full max-w-[min(100%,var(--board-cap))] mt-1.5 shrink-0">
                 <PlayerStrip
                   name={currentUser?.fullName ?? (lang === "id" ? "Pak Bagas Wibowo" : "Player")}
@@ -1758,6 +1735,23 @@ const navigateHash = useCallback((hash: string) => {
                   isActiveTurn={humanToMove && gameActive && !effectiveOutcome.over}
                   isCriticalTime={false}
                   capturedElements={<CapturedPiecesBar fen={fen} side={humanSide} />}
+                />
+              </div>
+
+              {/* 4. Kontrol Cepat Papan di Bawah Strip */}
+              <div className="w-full max-w-[min(100%,var(--board-cap))] mt-1 shrink-0">
+                <BoardControls
+                  variant="toolbar"
+                  orientation={boardOrientation}
+                  onFlipOrientation={flipBoardOrientation}
+                  isFullscreen={fullscreenClocks}
+                  onToggleFullscreen={() => setFullscreenClocks((open) => !open)}
+                  showShortcuts={true}
+                  className="w-full shrink-0"
+                  onSaveTrick={saveOpponentTrick}
+                  trickSaved={opponentTacticSaved}
+                  canSaveTrick={gameActive && moves.length > 0}
+                  trickLabel={lang === "id" ? "Simpan Trik Lawan" : "Simpan Trik"}
                 />
               </div>
             </div>
