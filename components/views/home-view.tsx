@@ -132,7 +132,8 @@ export function HomeView({ user, onNavigate, onPlayGame, onReviewGame, onAuthReq
   const elo = user?.elo ?? 1200;
 
   return (
-    <div className="w-full max-w-[1260px] mx-auto px-2 sm:px-4 py-3 space-y-6 text-[#c3c2c1]">
+    <div className="w-full h-full overflow-y-auto custom-scrollbar px-2 sm:px-4 py-2 text-[#c3c2c1]" style={{ scrollbarWidth: "thin" }}>
+      <div className="w-full max-w-[1260px] mx-auto space-y-6 pb-16">
       {/* 1. HEADER PROFILE & STREAK (Pola Chess.com: Avatar + User Tagline + 0 Day Streak) */}
       <header className="flex items-center justify-between flex-wrap gap-4 pb-2 border-b border-[#363431]">
         <div className="flex items-center gap-3">
@@ -695,6 +696,7 @@ export function HomeView({ user, onNavigate, onPlayGame, onReviewGame, onAuthReq
             </div>
           </div>
         </aside>
+      </div>
       </div>
     </div>
   );
