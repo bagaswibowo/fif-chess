@@ -1738,16 +1738,16 @@ const navigateHash = useCallback((hash: string) => {
                 />
               </div>
 
-              {/* 4. Kontrol Cepat Papan di Bawah Strip */}
-              <div className="w-full max-w-[min(100%,var(--board-cap))] mt-1 shrink-0">
+              {/* 4. Kontrol Cepat Papan di Bawah Strip (Compact minimalis Chess.com) */}
+              <div className="w-full max-w-[min(100%,var(--board-cap))] mt-1 shrink-0 flex justify-end">
                 <BoardControls
-                  variant="toolbar"
+                  variant="compact"
                   orientation={boardOrientation}
                   onFlipOrientation={flipBoardOrientation}
                   isFullscreen={fullscreenClocks}
                   onToggleFullscreen={() => setFullscreenClocks((open) => !open)}
                   showShortcuts={true}
-                  className="w-full shrink-0"
+                  className="justify-end"
                   onSaveTrick={saveOpponentTrick}
                   trickSaved={opponentTacticSaved}
                   canSaveTrick={gameActive && moves.length > 0}

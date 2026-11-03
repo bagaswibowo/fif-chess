@@ -74,12 +74,12 @@ export function PlayerStrip({
       </div>
 
       <div
-        className={`font-mono text-xs sm:text-sm font-bold px-2 py-0.5 rounded border transition-colors ${
+        className={`font-mono text-xs sm:text-sm font-black px-2.5 py-1 rounded-md border transition-all ${
           isCriticalTime
-            ? "bg-red-950/80 text-red-400 border-red-800/70 animate-pulse"
+            ? "bg-red-500/20 text-red-400 border-red-500 shadow-md animate-pulse ring-1 ring-red-400/50"
             : isActiveTurn
-            ? "bg-neutral-800 text-neutral-100 border-neutral-700"
-            : "bg-neutral-950 text-neutral-400 border-neutral-800/60"
+            ? "bg-white text-black border-white shadow-md"
+            : "bg-[#181715] text-[#989795] border-[#363431]"
         }`}
       >
         {clockFormatted}
