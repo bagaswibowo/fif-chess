@@ -104,86 +104,33 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
   }, [tab]);
 
   return (
-    /* S8 Pola B (spec §3): .view-root + .view-head (tab strip pin 44px, aksen
-       --nav-accent-puzzle section Teka-Teki) + .view-body scroll internal
-       (stats strip + sub-view aktif). Sub-view embed memakai .view-* sendiri. */
-    <div className="view-root w-full">
-      <div className="view-head flex items-center gap-2 shrink-0 px-1">
-      <div className="flex bg-[var(--card)] p-1 rounded-xl border border-[var(--border)] w-full shadow-md shrink-0">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            aria-current={tab === t.id ? "page" : undefined}
-            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
-              tab === t.id ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"
-            }`}
-          >
-            {lang === "id" ? t.labelId : t.labelEn}
-          </button>
-        ))}
-      </div>
-      </div>
-
-      <div className="view-body flex flex-col gap-2 min-h-0 py-1" style={{ scrollbarWidth: "thin" }}>
-      {/* T6: stats strip personal — angka sebagai teks berlabel */}
-      <div
-        className="max-w-xl mx-auto w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 flex items-center justify-between gap-3 text-sm shrink-0 mb-2"
-        role="status"
-        aria-label="Statistik teka-teki pribadi"
-      >
-        {guest ? (
-          <>
-            <span className="text-xs text-neutral-400">Statistik tersimpan setelah masuk.</span>
+    <div className="view-root w-full h-full min-h-0 flex flex-col">
+      {/* Tab Navigasi Puzzle Ringkas — Memaksimalkan Ruang Vertikal Papan */}
+      <div className="shrink-0 px-1 pb-1">
+        <div className="flex bg-[var(--card)] p-0.5 rounded-xl border border-[var(--border)] w-full max-w-2xl mx-auto shadow-sm">
+          {TABS.map((t) => (
             <button
-              onClick={() => (window.location.hash = "#/auth")}
-              className="text-xs font-bold text-[var(--primary)] underline"
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              aria-current={tab === t.id ? "page" : undefined}
+              className={`flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all ${
+                tab === t.id ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"
+              }`}
             >
-              Masuk untuk menyimpan rating
+              {lang === "id" ? t.labelId : t.labelEn}
             </button>
-          </>
-        ) : (
-          <>
-            <span className="flex flex-col leading-tight">
-              <span className="text-base font-black text-white tabular-nums">{stats?.puzzleRating ?? "—"}</span>
-              <span className="text-[10px] text-neutral-400">Rating puzzle</span>
-            </span>
-            <span className="flex flex-col leading-tight">
-              <span className="text-base font-black text-white tabular-nums">{stats?.streak ?? "—"}</span>
-              <span className="text-[10px] text-neutral-400">Beruntun harian</span>
-            </span>
-            {/* W3: progress tier aktif (teks berlabel, bukan warna saja) */}
-            <span className="flex flex-col leading-tight">
-              <span className="text-base font-black text-white tabular-nums">
-                {stats?.tierProgress ? stats.tierProgress.tier : "—"}
-              </span>
-              <span className="text-[10px] text-neutral-400">
-                {stats?.tierProgress
-                  ? `Tier ${stats.tierProgress.tier}–${stats.tierProgress.tier + 199} · akurasi ${stats.tierProgress.accuracy}% (${stats.tierProgress.solved}/${stats.tierProgress.attempted} teka-teki)`
-                  : "Tier rating"}
-              </span>
-            </span>
-            <span className="flex flex-col leading-tight">
-              <span className="text-base font-black text-emerald-400 tabular-nums">{stats?.solvedToday ?? "—"}</span>
-              <span className="text-[10px] text-neutral-400">Benar hari ini</span>
-            </span>
-            <span className="flex flex-col leading-tight">
-              <span className="text-base font-black text-red-400 tabular-nums">{stats?.failedToday ?? "—"}</span>
-              <span className="text-[10px] text-neutral-400">Gagal hari ini</span>
-            </span>
-          </>
-        )}
+          ))}
+        </div>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {tab === "unlimited" && <PuzzleView lang={lang} onGoRush={() => setTab("rush")} />}
         {tab === "daily" && <DailyPuzzleView lang={lang} onGoPuzzles={() => setTab("unlimited")} />}
         {tab === "rush" && <RushView lang={lang} onBack={onBack} />}
         {tab === "themes" && <ThemesMasteryView lang={lang} onBack={onBack} />}
         {tab === "missed" && <MissedPuzzlesView lang={lang} />}
         {tab === "stats" && <PuzzleStatsView lang={lang} />}
-      </div>
       </div>
     </div>
   );
