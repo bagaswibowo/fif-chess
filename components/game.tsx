@@ -1571,7 +1571,28 @@ const navigateHash = useCallback((hash: string) => {
             />
           </div>
         )}
-        {navTab === "scan" && <div className="view-root"><ScanView onLoadFen={(f) => { setGameStartFen(f); setFen(f); setMoves([]); setNavTab("play"); }} lang={lang} /></div>}
+        {navTab === "scan" && (
+          <div className="view-root">
+            <ScanView
+              onLoadFen={(f) => {
+                setGameStartFen(f);
+                setFen(f);
+                setMoves([]);
+                setNavTab("play");
+              }}
+              onAnalyzeFen={(f) => {
+                setGameStartFen(f);
+                setFen(f);
+                setMoves([]);
+                setCustomOutcome(null);
+                setReviewGame({ startFen: f, moves: [] });
+                setReviewPly(0);
+                setNavTab("review");
+              }}
+              lang={lang}
+            />
+          </div>
+        )}
         {navTab === "community" && <div className="view-root"><CommunityView user={currentUser} lang={lang} /></div>}
         {/* F3 (P2, audit bed0bb5): deep-link lama #/admin utk non-admin dulu
             blank (AdminPanel return null). Guard render: panel tidak di-mount

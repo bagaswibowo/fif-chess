@@ -21,6 +21,7 @@ import {
   IconTrophy3D,
   IconCheck3D,
   IconClose3D,
+  IconAiBrain3D,
 } from "@/components/icons3d";
 import { CapturedPiecesBar } from "@/components/captured-pieces";
 import { EvalBar } from "@/components/eval-bar";
@@ -30,6 +31,7 @@ import { NotationTable } from "@/components/notation-table";
 
 type Props = {
   onLoadFen: (fen: string) => void;
+  onAnalyzeFen?: (fen: string) => void;
   lang?: "id" | "en";
 };
 
@@ -161,7 +163,7 @@ function compressImage(dataUrl: string, maxDim = 800): Promise<string> {
   });
 }
 
-export function ScanView({ onLoadFen, lang = "id" }: Props) {
+export function ScanView({ onLoadFen, onAnalyzeFen, lang = "id" }: Props) {
   // State: Mulai dengan posisi kosong (belum ada papan yang dimuat)
   const [hasPositionLoaded, setHasPositionLoaded] = useState<boolean>(false);
   const [initialFen, setInitialFen] = useState<string>("");
@@ -1041,6 +1043,14 @@ export function ScanView({ onLoadFen, lang = "id" }: Props) {
           >
             <IconPlay3D size={14} />
             <span>Buka di Menu Bermain</span>
+          </button>
+          <button
+            onClick={() => (onAnalyzeFen ? onAnalyzeFen(liveFen) : onLoadFen(liveFen))}
+            className="ctl ctl-xs font-bold flex items-center gap-1.5 bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 transition-colors"
+            title="Buka Posisi Ini di Papan Analisis Stockfish 19"
+          >
+            <IconAiBrain3D size={14} />
+            <span>Buka di Papan Analisis</span>
           </button>
         </div>
       </div>
