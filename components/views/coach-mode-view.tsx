@@ -469,7 +469,7 @@ export function CoachModeView({ lang = "id" }: Props) {
             F8: kolom h-full min-h-0 (rantai min-h-0 §2 spec) → papan row
             flex-1 height-driven: muat UTUH area konten 1360×768 tanpa scroll
             internal (tinggi row deterministik = area konten shell). */}
-        <div className="flex flex-col justify-between items-center w-full max-w-[540px] mx-auto space-y-1.5 h-full min-h-0">
+        <div className="flex flex-col justify-between items-center w-full max-w-[min(100%,var(--board-cap))] mx-auto space-y-1.5 h-full min-h-0">
           {/* Integrated Opponent Bar with Inline Engine Selector, Eval Badge & Captured Pieces */}
           <div className="w-full flex items-center justify-between px-3 py-1 bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm shrink-0">
             <div className="flex items-center gap-2 min-w-0">
@@ -505,7 +505,7 @@ export function CoachModeView({ lang = "id" }: Props) {
               (≤540) → muat utuh di area 1360×768 tanpa scroll internal.
               (height-driven h-full akan collapse di rantai BoardShell auto-height.) */}
           <div className="flex justify-center w-full">
-            <div className="flex gap-2.5 items-stretch w-full max-w-[min(100%,540px)]">
+            <div className="flex gap-2.5 items-stretch w-full max-w-[min(100%,var(--board-cap))]">
               <EvalBar fen={fen} scoreCp={evalCp} orientation={boardOrientation} />
               <div className="aspect-square flex-1 min-w-0 rounded-2xl overflow-hidden border-2 border-[var(--border)] shadow-2xl bg-[var(--board-dark)] relative">
                 <Chessboard

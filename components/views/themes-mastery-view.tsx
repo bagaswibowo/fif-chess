@@ -137,27 +137,25 @@ export function ThemesMasteryView({ lang = "id", onBack }: Props) {
             {THEME_LIST.find((t) => t.key === activeTheme)?.label ?? activeTheme}
           </h2>
         </div>
-        <div className="view-grid-board flex-1 min-h-0 mt-1.5">
-          <div className="min-h-0">
-            {!solveError ? (
+        {/* Area Papan PuzzleSolver Lebar Penuh (Ukuran Seragam Mengikuti Menu Main) */}
+        <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar mt-1.5 flex flex-col gap-2">
+          {solveError ? (
+            <div role="status" className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-neutral-300 text-center shrink-0">
+              {solveError}{" "}
+              <Button variant="ghost" size="sm" onClick={() => { setActiveTheme(null); setSolveError(null); }}>
+                Sesuaikan Filter
+              </Button>
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0 w-full">
               <PuzzleSolver
                 lang={lang}
                 puzzle={puzzle}
                 fetchHint={fetchHint}
                 submitAttempt={submitAttempt}
               />
-            ) : null}
-          </div>
-          <div className="view-body pr-1 space-y-2.5 custom-scrollbar min-h-0">
-            {solveError ? (
-              <div role="status" className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-neutral-300 text-center">
-                {solveError}{" "}
-                <Button variant="ghost" size="sm" onClick={() => { setActiveTheme(null); setSolveError(null); }}>
-                  Sesuaikan Filter
-                </Button>
-              </div>
-            ) : null}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     );

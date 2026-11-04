@@ -137,19 +137,17 @@ export function MissedPuzzlesView({ lang = "id" }: { lang?: "id" | "en" }) {
             Kembali
           </Button>
         </div>
-        <div className="view-grid-board flex-1 min-h-0 mt-1.5">
-          <div className="min-h-0">
-            <PuzzleSolver
-              lang={lang}
-              puzzle={active}
-              loading={loading}
-              initialStreak={streak}
-              fetchHint={fetchHint}
-              submitAttempt={submitAttempt}
-              onSolved={() => void refresh()}
-            />
-          </div>
-          <div className="view-body pr-1 custom-scrollbar min-h-0" />
+        {/* Area Papan PuzzleSolver Lebar Penuh (Ukuran Seragam Mengikuti Menu Main) */}
+        <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar mt-1.5">
+          <PuzzleSolver
+            lang={lang}
+            puzzle={active}
+            loading={loading}
+            initialStreak={streak}
+            fetchHint={fetchHint}
+            submitAttempt={submitAttempt}
+            onSolved={() => void refresh()}
+          />
         </div>
       </div>
     );

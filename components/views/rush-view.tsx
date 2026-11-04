@@ -491,10 +491,41 @@ export function RushView({ lang = "id", onBack, onOpenAuth }: Props) {
         </div>
       </div>
 
-      <div className="view-grid-board flex-1 min-h-0 mt-1.5">
-        {/* LEFT: papan PuzzleSolver — F8/Pola A §3: papan self-cap internal
-            solver (max-w calc(100dvh-260px) ≈ 508px @ 768dvh ≤ 540) width-driven. */}
-        <div className="flex flex-col gap-1.5 min-h-0">
+      {/* Area Papan PuzzleSolver Lebar Penuh (Ukuran Seragam Mengikuti Menu Main) */}
+      <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar mt-1.5 flex flex-col gap-2">
+        {authError ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-xl border bg-[var(--card)] px-4 py-3 text-sm text-white text-center flex flex-col items-center gap-1.5 shrink-0"
+            style={{ borderColor: authError.kind === "pending" ? "var(--nav-accent-puzzle)" : "var(--error)" }}
+          >
+            {authError.kind === "pending" ? (
+              <ShieldAlert size={18} aria-hidden="true" className="text-amber-400" />
+            ) : (
+              <AlertTriangle size={18} aria-hidden="true" />
+            )}
+            <p className="text-sm text-neutral-300 m-0">{authError.message}</p>
+            {authError.kind === "pending" ? (
+              <p className="text-xs text-neutral-500 m-0">Fitur rush akan terbuka setelah admin menyetujui akunmu.</p>
+            ) : null}
+            {authError.kind === "busy" ? (
+              <button className="underline" onClick={() => setAuthError(null)}>
+                Coba Lagi
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {disconnect ? (
+          <div role="status" aria-live="polite" className="rounded-xl border border-[var(--error)] bg-[var(--card)] px-4 py-3 text-sm text-white text-center shrink-0">
+            Koneksi terputus.{" "}
+            <button className="underline" onClick={() => setDisconnect(false)}>
+              Coba Lagi
+            </button>
+          </div>
+        ) : null}
+
+        <div className="flex-1 min-h-0 w-full">
           <PuzzleSolver
             lang={lang}
             puzzle={puzzle}
@@ -502,40 +533,6 @@ export function RushView({ lang = "id", onBack, onOpenAuth }: Props) {
             fetchHint={fetchHint}
             submitAttempt={submitAttempt}
           />
-        </div>
-        {/* RIGHT: panel .view-body — banner koneksi + region scroll internal (Pola A §3). */}
-        <div className="view-body pr-1 space-y-1.5 custom-scrollbar min-h-0">
-          {authError ? (
-            <div
-              role="status"
-              aria-live="polite"
-              className="rounded-xl border bg-[var(--card)] px-4 py-3 text-sm text-white text-center flex flex-col items-center gap-1.5"
-              style={{ borderColor: authError.kind === "pending" ? "var(--nav-accent-puzzle)" : "var(--error)" }}
-            >
-              {authError.kind === "pending" ? (
-                <ShieldAlert size={18} aria-hidden="true" className="text-amber-400" />
-              ) : (
-                <AlertTriangle size={18} aria-hidden="true" />
-              )}
-              <p className="text-sm text-neutral-300 m-0">{authError.message}</p>
-              {authError.kind === "pending" ? (
-                <p className="text-xs text-neutral-500 m-0">Fitur rush akan terbuka setelah admin menyetujui akunmu.</p>
-              ) : null}
-              {authError.kind === "busy" ? (
-                <button className="underline" onClick={() => setAuthError(null)}>
-                  Coba Lagi
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-          {disconnect ? (
-            <div role="status" aria-live="polite" className="rounded-xl border border-[var(--error)] bg-[var(--card)] px-4 py-3 text-sm text-white text-center">
-              Koneksi terputus.{" "}
-              <button className="underline" onClick={() => setDisconnect(false)}>
-                Coba Lagi
-              </button>
-            </div>
-          ) : null}
         </div>
       </div>
     </div>
