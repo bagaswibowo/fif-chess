@@ -481,8 +481,9 @@ select.field { padding-right: 2rem; }
    clock-moves-fullscreen (mode layar penuh) & game-review (detail review). */
 :root {
   /* Standar ukuran papan seragam di semua menu mengikuti menu Main (game.tsx):
-     min(calc(100dvh - 210px), calc(100vw - 460px), 700px) */
-  --board-cap: min(calc(100dvh - 210px), calc(100vw - 460px), 700px);
+     min(calc(100dvh - 260px), calc(100vw - 460px), 660px) — menjamin papan besar
+     (640px @900dvh) dan muat utuh 1 layar tanpa terpotong di rank 1 */
+  --board-cap: min(calc(100dvh - 260px), calc(100vw - 460px), 660px);
 }
 .view-root {
   height: 100%;

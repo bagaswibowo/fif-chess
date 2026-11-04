@@ -127,54 +127,56 @@ export function PuzzleHub({ lang = "id", onBack, initialTab = "unlimited" }: Pro
       </div>
 
       <div className="view-body flex flex-col gap-2 min-h-0 py-1" style={{ scrollbarWidth: "thin" }}>
-      {/* T6: stats strip personal — angka sebagai teks berlabel */}
-      <div
-        className="max-w-xl mx-auto w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 flex items-center justify-between gap-3 text-sm shrink-0 mb-2"
-        role="status"
-        aria-label="Statistik teka-teki pribadi"
-      >
-        {guest ? (
-          <>
-            <span className="text-xs text-neutral-400">Statistik tersimpan setelah masuk.</span>
-            <button
-              onClick={() => (window.location.hash = "#/auth")}
-              className="text-xs font-bold text-[var(--primary)] underline"
-            >
-              Masuk untuk menyimpan rating
-            </button>
-          </>
-        ) : (
-          <>
-            <span className="flex flex-col leading-tight">
-              <span className="text-base font-black text-white tabular-nums">{stats?.puzzleRating ?? "—"}</span>
-              <span className="text-[10px] text-neutral-400">Rating puzzle</span>
-            </span>
-            <span className="flex flex-col leading-tight">
-              <span className="text-base font-black text-white tabular-nums">{stats?.streak ?? "—"}</span>
-              <span className="text-[10px] text-neutral-400">Beruntun harian</span>
-            </span>
-            {/* W3: progress tier aktif (teks berlabel, bukan warna saja) */}
-            <span className="flex flex-col leading-tight">
-              <span className="text-base font-black text-white tabular-nums">
-                {stats?.tierProgress ? stats.tierProgress.tier : "—"}
+      {/* T6: stats strip personal — tampil di tab unlimited & stats (di tab harian & gegas tidak diduplikasi agar papan leluasa) */}
+      {tab !== "daily" && tab !== "rush" && (
+        <div
+          className="max-w-xl mx-auto w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-1.5 flex items-center justify-between gap-3 text-sm shrink-0 mb-1.5"
+          role="status"
+          aria-label="Statistik teka-teki pribadi"
+        >
+          {guest ? (
+            <>
+              <span className="text-xs text-neutral-400">Statistik tersimpan setelah masuk.</span>
+              <button
+                onClick={() => (window.location.hash = "#/auth")}
+                className="text-xs font-bold text-[var(--primary)] underline"
+              >
+                Masuk untuk menyimpan rating
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="flex flex-col leading-tight">
+                <span className="text-base font-black text-white tabular-nums">{stats?.puzzleRating ?? "—"}</span>
+                <span className="text-[10px] text-neutral-400">Rating puzzle</span>
               </span>
-              <span className="text-[10px] text-neutral-400">
-                {stats?.tierProgress
-                  ? `Tier ${stats.tierProgress.tier}–${stats.tierProgress.tier + 199} · akurasi ${stats.tierProgress.accuracy}% (${stats.tierProgress.solved}/${stats.tierProgress.attempted} teka-teki)`
-                  : "Tier rating"}
+              <span className="flex flex-col leading-tight">
+                <span className="text-base font-black text-white tabular-nums">{stats?.streak ?? "—"}</span>
+                <span className="text-[10px] text-neutral-400">Beruntun harian</span>
               </span>
-            </span>
-            <span className="flex flex-col leading-tight">
-              <span className="text-base font-black text-emerald-400 tabular-nums">{stats?.solvedToday ?? "—"}</span>
-              <span className="text-[10px] text-neutral-400">Benar hari ini</span>
-            </span>
-            <span className="flex flex-col leading-tight">
-              <span className="text-base font-black text-red-400 tabular-nums">{stats?.failedToday ?? "—"}</span>
-              <span className="text-[10px] text-neutral-400">Gagal hari ini</span>
-            </span>
-          </>
-        )}
-      </div>
+              {/* W3: progress tier aktif (teks berlabel, bukan warna saja) */}
+              <span className="flex flex-col leading-tight">
+                <span className="text-base font-black text-white tabular-nums">
+                  {stats?.tierProgress ? stats.tierProgress.tier : "—"}
+                </span>
+                <span className="text-[10px] text-neutral-400">
+                  {stats?.tierProgress
+                    ? `Tier ${stats.tierProgress.tier}–${stats.tierProgress.tier + 199} · akurasi ${stats.tierProgress.accuracy}% (${stats.tierProgress.solved}/${stats.tierProgress.attempted} teka-teki)`
+                    : "Tier rating"}
+                </span>
+              </span>
+              <span className="flex flex-col leading-tight">
+                <span className="text-base font-black text-emerald-400 tabular-nums">{stats?.solvedToday ?? "—"}</span>
+                <span className="text-[10px] text-neutral-400">Benar hari ini</span>
+              </span>
+              <span className="flex flex-col leading-tight">
+                <span className="text-base font-black text-red-400 tabular-nums">{stats?.failedToday ?? "—"}</span>
+                <span className="text-[10px] text-neutral-400">Gagal hari ini</span>
+              </span>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="flex-1 min-h-0">
         {tab === "unlimited" && <PuzzleView lang={lang} onGoRush={() => setTab("rush")} />}
