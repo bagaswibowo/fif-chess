@@ -25,10 +25,10 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Request body must be JSON.", retryable: false }, { status: 400 });
   }
-  const sessionId = String(body.sessionId ?? "");
-  const puzzleId = String(body.puzzle_id ?? "");
+  const sessionId = String(body.sessionId ?? body.session_id ?? "");
+  const puzzleId = String(body.puzzleId ?? body.puzzle_id ?? "");
   const correct = body.correct === true;
-  const timeSpent = Number(body.time_spent_sec);
+  const timeSpent = Number(body.time_spent_sec ?? body.timeSpentSec ?? 0);
   if (!sessionId || !puzzleId || !Number.isFinite(timeSpent) || timeSpent < 0 || timeSpent > 3600) {
     return NextResponse.json({ error: "sessionId, puzzle_id, time_spent_sec wajib valid.", retryable: false }, { status: 400 });
   }
@@ -59,6 +59,8 @@ export async function POST(request: Request) {
   const gameOver = s.strikes >= 3 || isExpired(s);
 
   let newRecord = false;
+  let nextPuzzle = null;
+
   if (gameOver) {
     const upd = await query(
       `UPDATE users SET rush_best = $2, rush_best_at = NOW()
@@ -69,11 +71,40 @@ export async function POST(request: Request) {
     newRecord = upd.length > 0;
     await deleteSession(sessionId);
   } else {
+    // Ambil puzzle berikutnya secara adaptif sesuai rating baru sesi
+    const lo = Math.max(800, s.rating - 100);
+    const hi = Math.min(2200, s.rating + 100);
+    const rows = await query(
+      `SELECT id, title, fen, solution_moves, rating, themes
+       FROM puzzles
+       WHERE rating BETWEEN $1 AND $2
+         AND ($3::int = 0 OR id::text <> ALL($4::text[]))
+       ORDER BY random() LIMIT 1`,
+      [lo, hi, s.puzzleIds.length, s.puzzleIds],
+    );
+    if (rows.length > 0) {
+      const row = rows[0] as Record<string, unknown>;
+      const moves = row.solution_moves as unknown;
+      nextPuzzle = {
+        id: String(row.id),
+        title: row.title,
+        fen: row.fen,
+        rating: Number(row.rating),
+        themes: row.themes ?? [],
+        moveCount: Array.isArray(moves) ? moves.length : 0,
+      };
+      s.puzzleIds.push(nextPuzzle.id);
+    }
     await saveSession(sessionId, s);
   }
 
   return NextResponse.json({
-    strikes: s.strikes, score: s.score, gameOver, newRecord,
-    nextRating: s.rating, puzzleIdsShown: s.puzzleIds.length,
+    strikes: s.strikes,
+    score: s.score,
+    gameOver,
+    newRecord,
+    nextRating: s.rating,
+    puzzleIdsShown: s.puzzleIds.length,
+    puzzle: nextPuzzle,
   });
 }

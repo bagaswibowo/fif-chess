@@ -132,10 +132,11 @@ export function RushView({ lang = "id", onBack, onOpenAuth }: Props) {
     setAuthError(null);
     setDisconnect(false);
     try {
+      const apiMode = mode === "3" ? "3min" : mode === "5" ? "5min" : mode;
       const res = await fetch("/api/puzzles/rush/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode }),
+        body: JSON.stringify({ mode: apiMode }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -151,7 +152,15 @@ export function RushView({ lang = "id", onBack, onOpenAuth }: Props) {
       setRemaining(MODE_SECONDS[mode as "3" | "5"] ?? 0);
       setElapsed(0);
       setStage("playing");
-      setPuzzle((data.puzzle as PuzzleDto) ?? null);
+      let activePuzzle = (data.puzzle as PuzzleDto) ?? null;
+      if (!activePuzzle && data.sessionId) {
+        const nextRes = await fetch(`/api/puzzles/rush/next?sessionId=${data.sessionId}`, { cache: "no-store" });
+        if (nextRes.ok) {
+          const nextData = await nextRes.json().catch(() => ({}));
+          if (nextData?.puzzle) activePuzzle = nextData.puzzle as PuzzleDto;
+        }
+      }
+      setPuzzle(activePuzzle);
     } catch {
       setDisconnect(true);
     }
@@ -234,7 +243,15 @@ export function RushView({ lang = "id", onBack, onOpenAuth }: Props) {
           return null;
         }
         // Puzzle berikutnya langsung slide in — tanpa layar antara (§3.3).
-        setPuzzle((data.puzzle as PuzzleDto) ?? null);
+        let nextPuzzle = (data.puzzle as PuzzleDto) ?? null;
+        if (!nextPuzzle && sessionId) {
+          const nextRes = await fetch(`/api/puzzles/rush/next?sessionId=${sessionId}`, { cache: "no-store" });
+          if (nextRes.ok) {
+            const nextData = await nextRes.json().catch(() => ({}));
+            if (nextData?.puzzle) nextPuzzle = nextData.puzzle as PuzzleDto;
+          }
+        }
+        setPuzzle(nextPuzzle);
         return data.strikes ?? null;
       } catch {
         setDisconnect(true);

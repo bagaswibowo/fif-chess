@@ -3,8 +3,9 @@
  * POST { mode: "3min"|"5min"|"endless" } -> { sessionId, timeLeftSec }.
  */
 import { NextResponse } from "next/server";
+import { query } from "@/lib/db";
 import { resolvePgUser } from "@/lib/puzzle-api";
-import { createSession, getSession, timeLeftSec, type RushMode } from "@/lib/puzzle-rush";
+import { createSession, getSession, saveSession, timeLeftSec, type RushMode } from "@/lib/puzzle-rush";
 
 export const runtime = "nodejs";
 
@@ -23,11 +24,44 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Request body must be JSON.", retryable: false }, { status: 400 });
   }
-  const mode = String(body.mode ?? "") as RushMode;
+  const rawMode = String(body.mode ?? "");
+  const mode = (rawMode === "3" ? "3min" : rawMode === "5" ? "5min" : rawMode) as RushMode;
   if (!MODES.includes(mode)) {
     return NextResponse.json({ error: "mode harus 3min|5min|endless.", retryable: false }, { status: 400 });
   }
   const sessionId = await createSession(me.pgId, mode);
   const s = (await getSession(sessionId))!;
-  return NextResponse.json({ sessionId, mode, timeLeftSec: timeLeftSec(s) });
+
+  // Ambil puzzle awal pertama sesuai rating awal sesi (1000)
+  const lo = Math.max(800, s.rating - 100);
+  const hi = Math.min(2200, s.rating + 100);
+  const rows = await query(
+    `SELECT id, title, fen, solution_moves, rating, themes
+     FROM puzzles
+     WHERE rating BETWEEN $1 AND $2
+     ORDER BY random() LIMIT 1`,
+    [lo, hi],
+  );
+  let firstPuzzle = null;
+  if (rows.length > 0) {
+    const row = rows[0] as Record<string, unknown>;
+    const moves = row.solution_moves as unknown;
+    firstPuzzle = {
+      id: String(row.id),
+      title: row.title,
+      fen: row.fen,
+      rating: Number(row.rating),
+      themes: row.themes ?? [],
+      moveCount: Array.isArray(moves) ? moves.length : 0,
+    };
+    s.puzzleIds.push(firstPuzzle.id);
+    await saveSession(sessionId, s);
+  }
+
+  return NextResponse.json({
+    sessionId,
+    mode,
+    timeLeftSec: timeLeftSec(s),
+    puzzle: firstPuzzle,
+  });
 }
