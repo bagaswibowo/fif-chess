@@ -1089,10 +1089,10 @@ export function ScanView({ onLoadFen, onAnalyzeFen, lang = "id" }: Props) {
           <button
             onClick={() => onLoadFen(liveFen)}
             className="ctl ctl-xs ctl-primary font-bold flex items-center gap-1.5"
-            title="Buka Posisi Ini di Menu Bermain"
+            title="Lanjut Bermain Posisi Ini di Website"
           >
             <IconPlay3D size={14} />
-            <span>Buka di Menu Bermain</span>
+            <span>Lanjut Bermain di Website</span>
           </button>
           <button
             onClick={() => (onAnalyzeFen ? onAnalyzeFen(liveFen) : onLoadFen(liveFen))}

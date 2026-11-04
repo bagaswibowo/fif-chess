@@ -646,87 +646,87 @@ export function AppShell({ navTab, onNavigate, user, playingCount, lang, onToggl
 
       {/* MAIN CONTENT WRAP */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
-        {/* DESKTOP TOPBAR dengan search combobox */}
-        <div className="hidden md:flex items-center justify-between gap-4 h-14 px-4 bg-[var(--card)] border-b border-[var(--border)] shrink-0 z-20">
-          <div ref={searchBoxRef} className="relative w-full max-w-[420px]" role="combobox" aria-expanded={searchOpen && results.length > 0} aria-haspopup="listbox">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] focus-within:border-[var(--primary)] transition-all">
-              <IconSearch3D size={16} aria-hidden="true" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setSearchOpen(true);
-                  setHighlight(-1);
-                }}
-                onFocus={() => setSearchOpen(true)}
-                onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
-                onKeyDown={(e) => {
-                  if (e.key === "ArrowDown") {
-                    e.preventDefault();
-                    setHighlight((h) => Math.min(h + 1, results.length - 1));
-                  } else if (e.key === "ArrowUp") {
-                    e.preventDefault();
-                    setHighlight((h) => Math.max(h - 1, 0));
-                  } else if (e.key === "Enter" && results[highlight]) {
-                    pickResult(results[highlight].username);
-                  }
-                }}
-                placeholder="Cari pemain atau partai…"
-                aria-label="Cari pemain atau partai"
-                aria-autocomplete="list"
-                aria-controls="shell-search-results"
-                className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 outline-none"
-              />
-            </div>
-            {searchOpen && (
-              <ul id="shell-search-results" role="listbox" className="absolute left-0 right-0 top-[calc(100%+4px)] z-40 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-2xl overflow-hidden">
-                {results.length === 0 ? (
-                  <li className="px-3 py-2.5 text-sm text-neutral-400" aria-live="polite">
-                    {query.trim() ? `Tidak ada hasil untuk "${query.trim()}"` : "Ketik untuk mencari pemain…"}
-                  </li>
-                ) : (
-                  results.map((r, i) => (
-                    <li key={r.username} role="option" aria-selected={i === highlight}>
-                      <button
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          pickResult(r.username);
-                        }}
-                        onMouseEnter={() => setHighlight(i)}
-                        className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors ${i === highlight ? "bg-[var(--surface)] text-white" : "text-neutral-300"}`}
-                      >
-                        <span className="font-bold">@{r.username}</span>
-                        <span className="text-xs text-neutral-400">{r.rating}</span>
-                      </button>
+        {/* DESKTOP TOPBAR: Hanya di halaman non-board (Beranda, Komunitas, dll) ala Chess.com */}
+        {!["play", "puzzles", "review", "bots", "scan"].includes(navTab) && (
+          <div className="hidden md:flex items-center justify-between gap-4 h-14 px-4 bg-[var(--card)] border-b border-[var(--border)] shrink-0 z-20">
+            <div ref={searchBoxRef} className="relative w-full max-w-[420px]" role="combobox" aria-expanded={searchOpen && results.length > 0} aria-haspopup="listbox">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] focus-within:border-[var(--primary)] transition-all">
+                <IconSearch3D size={16} aria-hidden="true" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setSearchOpen(true);
+                    setHighlight(-1);
+                  }}
+                  onFocus={() => setSearchOpen(true)}
+                  onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setHighlight((h) => Math.min(h + 1, results.length - 1));
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setHighlight((h) => Math.max(h - 1, 0));
+                    } else if (e.key === "Enter" && results[highlight]) {
+                      pickResult(results[highlight].username);
+                    }
+                  }}
+                  placeholder="Cari pemain atau partai…"
+                  aria-label="Cari pemain atau partai"
+                  aria-autocomplete="list"
+                  aria-controls="shell-search-results"
+                  className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 outline-none"
+                />
+              </div>
+              {searchOpen && (
+                <ul id="shell-search-results" role="listbox" className="absolute left-0 right-0 top-[calc(100%+4px)] z-40 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-2xl overflow-hidden">
+                  {results.length === 0 ? (
+                    <li className="px-3 py-2.5 text-sm text-neutral-400" aria-live="polite">
+                      {query.trim() ? `Tidak ada hasil untuk "${query.trim()}"` : "Ketik untuk mencari pemain…"}
                     </li>
-                  ))
-                )}
-              </ul>
-            )}
+                  ) : (
+                    results.map((r, i) => (
+                      <li key={r.username} role="option" aria-selected={i === highlight}>
+                        <button
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            pickResult(r.username);
+                          }}
+                          onMouseEnter={() => setHighlight(i)}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors ${i === highlight ? "bg-[var(--surface)] text-white" : "text-neutral-300"}`}
+                        >
+                          <span className="font-bold">@{r.username}</span>
+                          <span className="text-xs text-neutral-400">{r.rating}</span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </div>
+            <button
+              onClick={onOpenAuth}
+              className="flex items-center gap-2 text-sm font-bold text-neutral-300 hover:text-white"
+              aria-label={user
+                ? `Akun @${user.username}${accountPending ? ", status menunggu persetujuan" : ""}`
+                : "Masuk atau daftar"}
+            >
+              <span className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-xs text-white shadow">
+                {user ? user.username.slice(0, 2).toUpperCase() : "?"}
+              </span>
+              <span>{user ? `@${user.username}` : "Masuk"}</span>
+              {/* G0.2: pill status akun — teks + ikon (tidak warna saja). */}
+              {accountPending && <UserStatusPill />}
+              {/* T2: streak harian (retensi pola chess.com). */}
+              {streak != null && <StreakPill streak={streak} />}
+            </button>
           </div>
-          <button
-            onClick={onOpenAuth}
-            className="flex items-center gap-2 text-sm font-bold text-neutral-300 hover:text-white"
-            aria-label={user
-              ? `Akun @${user.username}${accountPending ? ", status menunggu persetujuan" : ""}`
-              : "Masuk atau daftar"}
-          >
-            <span className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-xs text-white shadow">
-              {user ? user.username.slice(0, 2).toUpperCase() : "?"}
-            </span>
-            <span>{user ? `@${user.username}` : "Masuk"}</span>
-            {/* G0.2: pill status akun — teks + ikon (tidak warna saja). */}
-            {accountPending && <UserStatusPill />}
-            {/* T2: streak harian (retensi pola chess.com). */}
-            {streak != null && <StreakPill streak={streak} />}
-          </button>
-        </div>
+        )}
 
-        {/* S8: strip subtab 44px (spec §2/§3) — sticky di atas konten, hanya
-            saat section aktif punya ≥2 subtab. Opt-out di halaman papan (play/puzzles/review)
-            agar papan tidak tertekan ke bawah & persis Chess.com. */}
-        {subtabs && !["play", "puzzles", "review"].includes(navTab) && (
+        {/* S8: strip subtab 44px — hanya di halaman non-board */}
+        {subtabs && !["play", "puzzles", "review", "bots", "scan"].includes(navTab) && (
           <div
             role="tablist"
             aria-label={`Bagian ${activeSection!.title}`}

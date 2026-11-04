@@ -1945,25 +1945,37 @@ const navigateHash = useCallback((hash: string) => {
                         /* SETUP — Chess.com Dark Interface */
                         <div className="space-y-2">
                           <div className="space-y-1">
-                            <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Pilih lawan</div>
-                            <div className="flex w-full rounded-full border border-[var(--border)] bg-[var(--surface)] p-0.5" role="tablist" aria-label="Jenis lawan">
+                            <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">Pilih Lawan</div>
+                            <div className="flex w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 gap-1" role="tablist" aria-label="Jenis lawan">
                               <button
                                 type="button"
                                 role="tab"
                                 aria-selected={playMode === "ai"}
                                 onClick={() => setPlayMode("ai")}
-                                className={`flex-1 rounded-full py-1 text-xs font-black transition-all ${playMode === "ai" ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"}`}
+                                className={`flex-1 rounded-lg py-1.5 text-xs font-black transition-all ${playMode === "ai" ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"}`}
                               >
-                                Lawan Engine AI
+                                Lawan Machine AI
                               </button>
                               <button
                                 type="button"
                                 role="tab"
                                 aria-selected={playMode === "pvp"}
                                 onClick={() => setPlayMode("pvp")}
-                                className={`flex-1 rounded-full py-1 text-xs font-black transition-all ${playMode === "pvp" ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"}`}
+                                className={`flex-1 rounded-lg py-1.5 text-xs font-black transition-all ${playMode === "pvp" ? "bg-[var(--primary)] text-white shadow-sm" : "text-neutral-400 hover:text-white"}`}
                               >
                                 Lawan Pemain
+                              </button>
+                              <button
+                                type="button"
+                                role="tab"
+                                onClick={() => {
+                                  setCoachSubTab("spectator");
+                                  navigate("coach");
+                                }}
+                                className="flex-1 rounded-lg py-1.5 text-xs font-black transition-all bg-purple-950/40 border border-purple-700/50 text-purple-300 hover:text-white hover:bg-purple-900/60"
+                                title="Mode Inovasi Riset: Simulasi Mesin Catur Lawan Mesin Catur untuk Belajar"
+                              >
+                                ⚔️ Engine vs Engine
                               </button>
                             </div>
                           </div>
