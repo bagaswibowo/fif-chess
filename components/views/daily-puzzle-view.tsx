@@ -73,7 +73,8 @@ export function DailyPuzzleView({ lang = "id", onGoPuzzles }: Props) {
     }
   }, [dateKey, load]);
 
-  const future = dateKey >= todayKey;
+  const isFuture = dateKey > todayKey;
+  const cannotGoNext = dateKey >= todayKey;
   const pastDisabled = dateKey <= "2000-01-01"; // batas bawah sejarah dump
 
   const fetchHint = useCallback(
@@ -125,13 +126,13 @@ export function DailyPuzzleView({ lang = "id", onGoPuzzles }: Props) {
   }, [dateKey, solvedToday, showToast, lang]);
 
   const navBtn = (dir: -1 | 1) => {
-    const disabled = dir === 1 ? future : pastDisabled;
+    const disabled = dir === 1 ? cannotGoNext : pastDisabled;
     return (
       <button
         type="button"
         aria-label={dir === -1 ? (lang === "id" ? "Hari Sebelumnya" : "Previous day") : lang === "id" ? "Hari Berikutnya" : "Next day"}
         aria-disabled={disabled}
-        aria-describedby={dir === 1 && future ? "daily-future-note" : undefined}
+        aria-describedby={dir === 1 && cannotGoNext ? "daily-future-note" : undefined}
         onClick={() => {
           if (disabled) return;
           setDateKey((k) => shiftDateKey(k, dir));
@@ -190,7 +191,7 @@ export function DailyPuzzleView({ lang = "id", onGoPuzzles }: Props) {
 
       {/* Area Papan PuzzleSolver Lebar Penuh (Ukuran Seragam Mengikuti Menu Main) */}
       <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar">
-        {future ? (
+        {isFuture ? (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-8 text-sm text-neutral-300 text-center" role="status">
             Tanggal belum tersedia.
             <Button variant="ghost" size="sm" className="ml-2" onClick={() => setDateKey(todayKey)}>
